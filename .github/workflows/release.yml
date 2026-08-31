@@ -115,7 +115,26 @@ jobs:
           ``Mews.Plugins.Abstractions`` is attached for anyone building a plugin in their own
           repository. See PLUGIN-GUIDE.md.
           "@
-          gh release create "v$v" `
-            "artifacts/Mews-$v-win-x64.zip" `
-            (Get-ChildItem artifacts/nuget/*.nupkg | ForEach-Object { $_.FullName }) `
-            --title "Mews $v" --notes $notes
+          $assets = @("artifacts/Mews-$v-win-x64.zip") +
+                    (Get-ChildItem artifacts/nuget/*.nupkg | ForEach-Object { $_.FullName })
+
+          # Re-pushing a tag is normal, whether from a history rewrite or a rebuilt asset, so
+          # update an existing release rather than failing on it. The try/catch is because a
+          # missing release makes gh exit non-zero, and depending on the PowerShell version
+          # that either sets $LASTEXITCODE or throws outright.
+          $exists = $false
+          try {
+            gh release view "v$v" *> $null
+            $exists = ($LASTEXITCODE -eq 0)
+          } catch {
+            $exists = $false
+          }
+
+          if ($exists) {
+            Write-Host "Release v$v already exists, updating it."
+            gh release edit "v$v" --title "Mews $v" --notes $notes
+            gh release upload "v$v" @assets --clobber
+          } else {
+            Write-Host "Creating release v$v."
+            gh release create "v$v" @assets --title "Mews $v" --notes $notes
+          }
