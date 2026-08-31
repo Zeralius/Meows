@@ -1,0 +1,27 @@
+# Store everything as LF in the repository, check out with whatever the platform wants.
+* text=auto
+
+# Windows tooling is happier with CRLF for these.
+*.sln       text eol=crlf
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
+*.ps1       text eol=crlf
+
+# These run on Linux runners or in Git Bash, so keep them LF everywhere.
+*.sh        text eol=lf
+*.yml       text eol=lf
+*.yaml      text eol=lf
+
+# Leave these alone entirely.
+*.png       binary
+*.jpg       binary
+*.ico       binary
+*.zip       binary
+*.nupkg     binary
+*.snupkg    binary
+*.dll       binary
+*.exe       binary
+*.pdb       binary
+
+# Better diffs.
+*.cs        text diff=csharp
