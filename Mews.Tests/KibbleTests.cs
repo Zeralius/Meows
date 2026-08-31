@@ -876,3 +876,248 @@ public sealed class ComicPageOrderTests
         }
     }
 }
+
+/// <summary>Sending a pick in as separate files rather than as one comic.</summary>
+public sealed class KibbleFileModeTests
+{
+    private static (KibbleViewModel Model, TempWorkspace Temp) Open(params string[] names)
+    {
+        var temp = new TempWorkspace();
+        temp.WriteConfig(temp.AddGroup("Alpha"));
+
+        var folder = Path.Combine(temp.Root, "intake");
+        Directory.CreateDirectory(folder);
+        foreach (var name in names)
+            File.WriteAllBytes(Path.Combine(folder, name), System.Text.Encoding.UTF8.GetBytes(name));
+
+        var model = new KibbleViewModel(new FakeHost(Path.Combine(temp.Root, "hostdata")));
+        model.SetBotRoot(temp.Workspace.Root);
+        model.LoadFolder(folder);
+        model.BundleMode = BundleMode.AsFiles;
+        return (model, temp);
+    }
+
+    [Fact]
+    public void The_pick_arrives_as_separate_files_not_one_archive()
+    {
+        var (m, temp) = Open("a.png", "b.png", "c.png");
+        using var _t = temp;
+
+        m.SetSelection([.. m.Incoming]);
+        m.SendToCommand.Execute(m.Destinations[0]);
+
+        var queued = temp.Workspace.Scan(temp.Workspace.ToSendFolder(m.Destinations[0].Group));
+        Assert.Equal(3, queued.Count);
+        Assert.All(queued, q => Assert.NotEqual(".cbz", Path.GetExtension(q)));
+        Assert.Equal(
+            new[] { "a.png", "b.png", "c.png" },
+            queued.Select(Path.GetFileName).OrderBy(x => x).ToArray());
+        Assert.Empty(m.Incoming);
+    }
+
+    [Fact]
+    public void Comic_mode_still_produces_one_archive()
+    {
+        var (m, temp) = Open("a.png", "b.png");
+        using var _t = temp;
+        m.BundleMode = BundleMode.AsComic;
+
+        m.SetSelection([.. m.Incoming]);
+        m.SendToCommand.Execute(m.Destinations[0]);
+
+        var queued = temp.Workspace.Scan(temp.Workspace.ToSendFolder(m.Destinations[0].Group));
+        Assert.Single(queued);
+        Assert.Equal(".cbz", Path.GetExtension(queued[0]));
+    }
+
+    [Fact]
+    public void File_mode_shows_no_page_numbers()
+    {
+        var (m, temp) = Open("a.png", "b.png");
+        using var _t = temp;
+
+        m.SetSelection([.. m.Incoming]);
+
+        Assert.True(m.IsBundle);
+        Assert.All(m.Incoming, f => Assert.Equal(0, f.PageNumber));
+    }
+
+    [Fact]
+    public void Switching_to_comic_mode_brings_the_numbers_back()
+    {
+        var (m, temp) = Open("a.png", "b.png");
+        using var _t = temp;
+        m.SetSelection([.. m.Incoming]);
+        Assert.All(m.Incoming, f => Assert.Equal(0, f.PageNumber));
+
+        m.BundleMode = BundleMode.AsComic;
+
+        Assert.Equal(1, m.Incoming[0].PageNumber);
+        Assert.Equal(2, m.Incoming[1].PageNumber);
+    }
+
+    [Fact]
+    public void A_refused_file_is_kept_and_the_rest_still_go()
+    {
+        var (m, temp) = Open("a.png", "notes.txt", "b.png");
+        using var _t = temp;
+
+        m.SetSelection([.. m.Incoming]);
+        m.SendToCommand.Execute(m.Destinations[0]);
+
+        // The txt is not something the bot posts, so it stays behind on its own.
+        Assert.Equal(2, temp.Workspace.Scan(temp.Workspace.ToSendFolder(m.Destinations[0].Group)).Count);
+        Assert.Single(m.Incoming);
+        Assert.Equal("notes.txt", m.Incoming[0].FileName);
+        Assert.True(m.IsBlocked);
+        Assert.Contains("notes.txt", m.BlockedReason!);
+    }
+
+    [Fact]
+    public void A_gif_is_fine_as_a_file_even_though_it_cannot_be_a_page()
+    {
+        var (m, temp) = Open("a.png", "loop.gif");
+        using var _t = temp;
+
+        m.SetSelection([.. m.Incoming]);
+        m.SendToCommand.Execute(m.Destinations[0]);
+
+        // The comic path refuses a gif. Sending it as itself is exactly what it is for.
+        Assert.Equal(2, temp.Workspace.Scan(temp.Workspace.ToSendFolder(m.Destinations[0].Group)).Count);
+        Assert.Empty(m.Incoming);
+    }
+
+    [Fact]
+    public void Undo_puts_the_whole_batch_back()
+    {
+        var (m, temp) = Open("a.png", "b.png", "c.png");
+        using var _t = temp;
+
+        m.SetSelection([.. m.Incoming]);
+        m.SendToCommand.Execute(m.Destinations[0]);
+        Assert.Empty(m.Incoming);
+
+        m.UndoCommand.Execute(null);
+
+        Assert.Equal(3, m.Incoming.Count);
+        Assert.Empty(temp.Workspace.Scan(temp.Workspace.ToSendFolder(m.Destinations[0].Group)));
+    }
+
+    [Fact]
+    public void The_two_buttons_under_the_groups_switch_the_mode()
+    {
+        var (m, temp) = Open("a.png", "b.png");
+        using var _t = temp;
+
+        // Exactly what the buttons are bound to.
+        m.ChooseComicCommand.Execute(null);
+        Assert.True(m.IsComicMode);
+        Assert.False(m.IsFileMode);
+
+        m.ChooseFilesCommand.Execute(null);
+        Assert.True(m.IsFileMode);
+        Assert.False(m.IsComicMode);
+    }
+
+    [Fact]
+    public void The_heading_says_which_mode_is_armed_before_you_commit()
+    {
+        var (m, temp) = Open("a.png", "b.png", "c.png");
+        using var _t = temp;
+        m.SetSelection([.. m.Incoming]);
+
+        m.ChooseFilesCommand.Execute(null);
+        Assert.Equal("SEND 3 FILES", m.SendVerb);
+        Assert.Contains("in the order shown", m.BundleText);
+
+        m.ChooseComicCommand.Execute(null);
+        Assert.Equal("SEND AS ONE COMIC", m.SendVerb);
+        Assert.Contains("zipped into one comic", m.BundleText);
+    }
+
+    [Fact]
+    public void The_mode_is_remembered()
+    {
+        var (m, temp) = Open("a.png", "b.png");
+        using var _t = temp;
+
+        Assert.True(m.IsFileMode);
+        Assert.False(m.IsComicMode);
+        Assert.Contains("SEND", m.SendVerb);
+    }
+}
+
+public sealed class SendManyTests
+{
+    private static string[] Write(TempWorkspace temp, params string[] names)
+    {
+        var folder = Path.Combine(temp.Root, "in");
+        Directory.CreateDirectory(folder);
+        var paths = new List<string>();
+        foreach (var n in names)
+        {
+            var path = Path.Combine(folder, n);
+            File.WriteAllBytes(path, System.Text.Encoding.UTF8.GetBytes(n));
+            paths.Add(path);
+        }
+
+        return paths.ToArray();
+    }
+
+    [Fact]
+    public void Stamping_on_intake_keeps_the_order_they_were_sent_in()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var files = Write(temp, "third.png", "first.png", "second.png");
+
+        var results = Intake.SendMany(files, temp.Workspace, group, IntakeStamp.QueuedNow);
+
+        // The bot posts oldest first, so the times have to ascend in the order given, not in
+        // name order and not all at once.
+        var times = results.Select(r => File.GetLastWriteTimeUtc(r.Destination!)).ToList();
+        Assert.True(times[0] < times[1], "first sent should be oldest");
+        Assert.True(times[1] < times[2], "second sent should come before third");
+    }
+
+    [Fact]
+    public void Keeping_the_source_date_leaves_each_file_alone()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var files = Write(temp, "a.png", "b.png");
+        var when = new DateTime(2020, 6, 7, 8, 9, 10, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(files[0], when);
+
+        var results = Intake.SendMany(files, temp.Workspace, group, IntakeStamp.KeepSource);
+
+        Assert.Equal(when, File.GetLastWriteTimeUtc(results[0].Destination!));
+    }
+
+    [Fact]
+    public void One_refusal_does_not_stop_the_others()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var files = Write(temp, "a.png", "notes.txt", "b.png");
+
+        var results = Intake.SendMany(files, temp.Workspace, group, IntakeStamp.KeepSource);
+
+        Assert.True(results[0].Moved);
+        Assert.Equal(IntakeOutcome.NotPostable, results[1].Outcome);
+        Assert.True(results[2].Moved);
+        Assert.True(File.Exists(files[1]));
+    }
+
+    [Fact]
+    public void Results_come_back_in_the_order_they_went_in()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var files = Write(temp, "z.png", "y.png", "x.png");
+
+        var results = Intake.SendMany(files, temp.Workspace, group, IntakeStamp.KeepSource);
+
+        Assert.Equal(files, results.Select(r => r.SourcePath).ToArray());
+    }
+}

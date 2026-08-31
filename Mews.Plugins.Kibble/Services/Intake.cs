@@ -234,6 +234,51 @@ public static class Intake
         }
     }
 
+    /// <summary>
+    /// Moves several files into the queue one by one, in the order they were given. Every file
+    /// is checked on its own, so one refusal does not stop the rest: the results come back in
+    /// the same order and say individually what happened to each.
+    /// </summary>
+    public static IReadOnlyList<IntakeResult> SendMany(
+        IReadOnlyList<string> sources,
+        BotWorkspace workspace,
+        GroupConfig group,
+        IntakeStamp stamp)
+    {
+        var results = new List<IntakeResult>();
+
+        // Stamping a batch all at once would give every file the same modified time, and the
+        // bot orders its queue by that, so the order they were sent in would dissolve into
+        // whatever the filesystem felt like. A second apart keeps it.
+        var queuedAt = DateTime.UtcNow;
+        var position = 0;
+
+        foreach (var source in sources)
+        {
+            var result = Send(source, workspace, group, stamp);
+            results.Add(result);
+
+            if (!result.Moved)
+                continue;
+
+            if (stamp == IntakeStamp.QueuedNow)
+            {
+                try
+                {
+                    File.SetLastWriteTimeUtc(result.Destination!, queuedAt.AddSeconds(position));
+                }
+                catch (Exception)
+                {
+                    // The file is queued either way. Only its place in the order is at stake.
+                }
+            }
+
+            position++;
+        }
+
+        return results;
+    }
+
     /// <summary>Puts a file, or a whole bundled comic, back where it came from.</summary>
     public static bool Undo(IntakeResult result)
     {

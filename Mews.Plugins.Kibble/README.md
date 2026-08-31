@@ -24,7 +24,7 @@ quietly starts re-posting the archive, and nobody notices for a while.
 
 | | |
 |---|---|
-| **Left** | Every group as a destination, driest first, each with a number key and its runway |
+| **Left** | Every group as a destination, driest first, each with a number key and its runway. Underneath, what a multi-file pick goes in as |
 | **Middle** | The folder you opened, as a thumbnail grid. Ctrl and shift pick several. Sort it with the dropdown |
 | **Right** | Full preview of the selected file, its size and date, and the queue order setting |
 
@@ -40,19 +40,42 @@ three days, green above it. Under a day is reported in hours rather than as `0,8
 
 **Files move, they do not copy.** **Undo** puts the last one back exactly where it came from.
 
-## Making a comic out of several files
+## Sending several at once
 
 Ctrl click to add files to the pick, shift click to take a run of them. Arrow keys and shift
-arrow work too. With two or more picked, the left column changes to **SEND AS ONE COMIC**, and
-sending zips them into a single `.cbz` in the group's queue, so they post as one comic instead of
-as a run of unrelated images.
+arrow work too. With two or more picked, the buttons under the group list decide what a send
+actually does:
+
+| | |
+|---|---|
+| **One comic** | Zip the pick into a single `.cbz`, so it posts as one comic |
+| **Separate files** | Move them in as they are, so each one posts on its own |
+
+The choice is remembered, and the heading above the groups says which one is armed before you
+commit to it.
+
+**Separate files** is the plain bulk move. Files go in one by one in the order the grid is
+showing, so the sort dropdown decides it. Each is checked on its own, which means a file the
+group refuses is simply left behind while the rest go through, and the reason is shown for the
+one that stayed. Anything the bot can post is fair game here, including gifs and pdfs that could
+never be comic pages.
+
+If you are queueing with **Date them as they are queued**, a batch would otherwise land on the
+same timestamp and the bot orders its queue by exactly that, so the files are stamped a second
+apart to hold the order you sent them in.
+
+## Making a comic out of several files
+
+With **One comic** armed, sending zips the pick into a single `.cbz` in the group's queue, so
+they post as one comic instead of as a run of unrelated images.
 
 Name the archive in the box on the right. It defaults to the folder you opened, since that is
 usually the set. Anything a file name cannot hold is dropped, and an empty box becomes `comic`.
 
 **Every picked tile shows the page it will be**, as a number in its corner, so the order is
 something you can see before the archive exists rather than something you discover afterwards.
-Two dropdown choices decide those numbers:
+The numbers are a comic idea only, so they do not appear in **Separate files** mode, where the
+order is simply the order the grid is already showing. Two dropdown choices decide them:
 
 | | |
 |---|---|
@@ -75,7 +98,8 @@ The original timestamps are put back if you undo, since the ones inside the arch
 and exist only to pin the order.
 
 Only photos and videos can be pages, because that is all a Telegram media group takes. A gif, a
-pdf or another archive in the pick is refused by name and nothing is moved. The bot posts a long
+pdf or another archive in the pick is refused by name and nothing is moved. Send those as
+**Separate files** instead, which is the whole reason that mode exists. The bot posts a long
 comic in batches of ten pages, so there is no page limit to worry about here.
 
 **Undo unpacks the comic** back into the files it was made from and deletes the archive. The

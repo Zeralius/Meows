@@ -19,6 +19,18 @@ public sealed class KibbleSettings
     public GridSort Sort { get; set; } = GridSort.NameAscending;
 
     public PageOrder PageOrder { get; set; } = PageOrder.ByName;
+
+    public BundleMode BundleMode { get; set; } = BundleMode.AsComic;
+}
+
+/// <summary>What a send does when several files are picked.</summary>
+public enum BundleMode
+{
+    /// <summary>Zip them into one .cbz, so they post as a single comic.</summary>
+    AsComic,
+
+    /// <summary>Move them in as they are, so each one posts on its own.</summary>
+    AsFiles,
 }
 
 /// <summary>How the folder you opened is laid out in the middle column.</summary>
@@ -73,6 +85,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         _sourceFolder = _settings.LastSourceFolder ?? "";
 
         SendToCommand = new RelayCommand(SendTo, CanSend);
+        ChooseComicCommand = new RelayCommand(() => BundleMode = BundleMode.AsComic);
+        ChooseFilesCommand = new RelayCommand(() => BundleMode = BundleMode.AsFiles);
         SkipCommand = new RelayCommand(SkipSelected, () => Selected is not null);
         RefreshCommand = new RelayCommand(() => LoadFolder(SourceFolder), () => SourceFolder.Length > 0);
         UndoCommand = new RelayCommand(UndoLastBatch, () => _lastBatch.Count > 0);
@@ -263,6 +277,37 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// Comic or separate files. Only matters with several picked, but it is remembered, so it
+    /// is worth being able to set it before you start picking.
+    /// </summary>
+    public BundleMode BundleMode
+    {
+        get => _settings.BundleMode;
+        set
+        {
+            if (_settings.BundleMode == value)
+                return;
+            _settings.BundleMode = value;
+            SaveSettings();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsComicMode));
+            OnPropertyChanged(nameof(IsFileMode));
+            OnPropertyChanged(nameof(SendVerb));
+            OnPropertyChanged(nameof(BundleText));
+            BlockedReason = null;
+            NumberThePicked();
+        }
+    }
+
+    public bool IsComicMode => BundleMode == BundleMode.AsComic;
+
+    public bool IsFileMode => BundleMode == BundleMode.AsFiles;
+
+    public RelayCommand ChooseComicCommand { get; }
+
+    public RelayCommand ChooseFilesCommand { get; }
+
     public int SelectionCount => _selection.Count;
 
     /// <summary>
@@ -274,7 +319,9 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         foreach (var file in Incoming)
             file.PageNumber = 0;
 
-        if (_selection.Count < Intake.MinBundle)
+        // Only a comic has pages. Sending files in as themselves has an order, but it is just
+        // the order the grid is already showing, so a number on each tile would say nothing.
+        if (_selection.Count < Intake.MinBundle || IsFileMode)
             return;
 
         var page = 1;
@@ -288,16 +335,27 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
             ? _selection.OrderBy(f => f.FileName, Comparer<string>.Create(MediaRules.CompareNatural))
             : _selection;
 
+    /// <summary>
+    /// The pick in the order the grid is showing it, which is what the sort dropdown decides.
+    /// This is the order separate files are queued in, so what you see is what the bot gets.
+    /// </summary>
+    private IEnumerable<IncomingFileViewModel> GridOrder() =>
+        Incoming.Where(_selection.Contains);
+
     /// <summary>Two or more picked means the next send makes a comic out of them.</summary>
     public bool IsBundle => _selection.Count >= Intake.MinBundle;
 
     public string SelectionText => _selection.Count > 1 ? $"{_selection.Count} picked" : "";
 
     /// <summary>What the destination buttons are about to do, so the left column stays honest.</summary>
-    public string SendVerb => IsBundle ? "SEND AS ONE COMIC" : "SEND TO";
+    public string SendVerb => IsBundle
+        ? (IsComicMode ? "SEND AS ONE COMIC" : $"SEND {_selection.Count} FILES")
+        : "SEND TO";
 
     public string BundleText => IsBundle
-        ? $"{_selection.Count} files will be zipped into one comic and queued as a single post."
+        ? (IsComicMode
+            ? $"{_selection.Count} files will be zipped into one comic and queued as a single post."
+            : $"{_selection.Count} files will be queued as they are, in the order shown, each posting on its own.")
         : "";
 
     /// <summary>Name for the archive. Defaults to the folder you opened, since that is usually the set.</summary>
@@ -434,7 +492,10 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
         if (IsBundle)
         {
-            SendBundle(destination);
+            if (IsComicMode)
+                SendBundle(destination);
+            else
+                SendSeparately(destination);
             return;
         }
 
@@ -504,6 +565,59 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         destination.Refresh();
         StatusMessage = $"Sent {files.Count} pages as {Path.GetFileName(result.Destination!)}, {destination.RunwayText}";
         _host.Log($"Queued comic {Path.GetFileName(result.Destination!)} ({files.Count} pages) into {destination.Name}");
+        RaiseGridState();
+    }
+
+    /// <summary>
+    /// Moves the pick into the queue as separate files, in the order the grid is showing them.
+    /// A file the group refuses is left behind with the others gone, which is the honest
+    /// outcome: the rest of the batch is fine and that one still needs a decision.
+    /// </summary>
+    private void SendSeparately(DestinationViewModel destination)
+    {
+        var files = GridOrder().ToList();
+        var results = Intake.SendMany(
+            files.Select(f => f.Path).ToList(), _workspace!, destination.Group, Stamp);
+
+        var sent = new List<IncomingFileViewModel>();
+        var refused = new List<string>();
+
+        for (var i = 0; i < files.Count; i++)
+        {
+            if (results[i].Moved)
+                sent.Add(files[i]);
+            else
+                refused.Add($"{files[i].FileName}: {results[i].Detail}");
+        }
+
+        if (sent.Count == 0)
+        {
+            BlockedReason = string.Join("\n", refused);
+            _host.Log($"Nothing sent to {destination.Name}: {refused.Count} refused");
+            return;
+        }
+
+        _lastBatch.Clear();
+        _lastBatch.AddRange(results.Where(r => r.Moved));
+        UndoCommand.RaiseCanExecuteChanged();
+
+        var next = NextAfterAll(sent);
+        foreach (var file in sent)
+        {
+            Incoming.Remove(file);
+            file.Dispose();
+        }
+
+        SetSelection([]);
+        Selected = next;
+
+        destination.Refresh();
+        BlockedReason = refused.Count > 0 ? string.Join("\n", refused) : null;
+        StatusMessage = refused.Count == 0
+            ? $"Sent {sent.Count} files to {destination.Name}, {destination.RunwayText}"
+            : $"Sent {sent.Count} to {destination.Name}, {refused.Count} refused";
+        _host.Log($"Queued {sent.Count} file(s) into {destination.Name}" +
+                  (refused.Count > 0 ? $", {refused.Count} refused" : ""));
         RaiseGridState();
     }
 

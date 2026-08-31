@@ -20,6 +20,20 @@
             <Setter Property="Background" Value="#17171C" />
             <Setter Property="BorderBrush" Value="#2A2A32" />
         </Style>
+        <Style Selector="Button.mode">
+            <Setter Property="Background" Value="#1C1C22" />
+            <Setter Property="BorderBrush" Value="#2E2E36" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Button.mode.on">
+            <Setter Property="Background" Value="#24384A" />
+            <Setter Property="BorderBrush" Value="#3E6C90" />
+        </Style>
         <Style Selector="ListBoxItem">
             <Setter Property="Padding" Value="4" />
             <Setter Property="Margin" Value="0,0,4,4" />
@@ -90,7 +104,24 @@
                                Classes="label"
                                Margin="14,6,14,12"
                                TextWrapping="Wrap"
-                               Text="Press 1 to 9 to send, space to skip. Ctrl click or shift click to pick several and send them as one comic." />
+                               Text="Press 1 to 9 to send, space to skip. Ctrl click or shift click to pick several." />
+
+                    <!-- What a send does when several are picked. -->
+                    <StackPanel DockPanel.Dock="Bottom" Margin="14,10,14,0" Spacing="4">
+                        <TextBlock Classes="label" Text="Several picked go in as" />
+                        <Grid ColumnDefinitions="*,6,*">
+                            <Button Grid.Column="0"
+                                    Classes="mode"
+                                    Classes.on="{Binding IsComicMode}"
+                                    Command="{Binding ChooseComicCommand}"
+                                    Content="One comic" />
+                            <Button Grid.Column="2"
+                                    Classes="mode"
+                                    Classes.on="{Binding IsFileMode}"
+                                    Command="{Binding ChooseFilesCommand}"
+                                    Content="Separate files" />
+                        </Grid>
+                    </StackPanel>
                     <ScrollViewer>
                         <ItemsControl ItemsSource="{Binding Destinations}" Margin="8,0">
                             <ItemsControl.ItemTemplate>
@@ -282,18 +313,24 @@
                                            TextWrapping="Wrap"
                                            FontSize="11"
                                            Foreground="#BBD6EC" />
-                                <TextBlock Classes="label" Text="Comic name" />
-                                <TextBox Text="{Binding ArchiveName}"
-                                         PlaceholderText="comic"
-                                         FontSize="12" />
-                                <TextBlock Classes="label" Text="Page order" />
-                                <ComboBox ItemsSource="{Binding PageOrderOptions}"
-                                          SelectedItem="{Binding SelectedPageOrder}"
-                                          FontSize="11"
-                                          HorizontalAlignment="Stretch" />
+                                <StackPanel Spacing="6" IsVisible="{Binding IsComicMode}">
+                                    <TextBlock Classes="label" Text="Comic name" />
+                                    <TextBox Text="{Binding ArchiveName}"
+                                             PlaceholderText="comic"
+                                             FontSize="12" />
+                                    <TextBlock Classes="label" Text="Page order" />
+                                    <ComboBox ItemsSource="{Binding PageOrderOptions}"
+                                              SelectedItem="{Binding SelectedPageOrder}"
+                                              FontSize="11"
+                                              HorizontalAlignment="Stretch" />
+                                    <TextBlock Classes="label"
+                                               TextWrapping="Wrap"
+                                               Text="Saved as .cbz. The number on each tile is the page it will be." />
+                                </StackPanel>
                                 <TextBlock Classes="label"
                                            TextWrapping="Wrap"
-                                           Text="Saved as .cbz. The number on each tile is the page it will be." />
+                                           IsVisible="{Binding IsFileMode}"
+                                           Text="They go in one by one, in the order the grid is showing, so the sort above decides it." />
                             </StackPanel>
                         </Border>
 
