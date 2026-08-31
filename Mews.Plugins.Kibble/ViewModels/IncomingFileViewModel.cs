@@ -113,16 +113,40 @@ public sealed class IncomingFileViewModel : ObservableObject, IDisposable
 
     public bool ShowGlyph => _thumbnail is null;
 
+    /// <summary>
+    /// Whether a decode has been run for this tile. False after a cancelled one, so a later
+    /// pass tries again. Public because "did every visible tile get asked?" is the invariant
+    /// worth pinning down, and a blank tile is otherwise indistinguishable from a decode that
+    /// legitimately produced nothing.
+    /// </summary>
+    public bool ThumbnailAttempted => _attempted;
+
+    /// <summary>
+    /// Decodes once. A file that has no thumbnail to give, a video or a pdf, is not asked
+    /// twice, but being cancelled does not count as having tried: the flag goes back so a
+    /// later pass picks the tile up, instead of leaving it blank for the rest of the session.
+    /// </summary>
     public async Task LoadThumbnailAsync(int width, CancellationToken token)
     {
         if (_attempted)
             return;
         _attempted = true;
 
-        var bitmap = await Task.Run(() => Decode(width), token).ConfigureAwait(true);
+        Bitmap? bitmap;
+        try
+        {
+            bitmap = await Task.Run(() => Decode(width), token).ConfigureAwait(true);
+        }
+        catch (OperationCanceledException)
+        {
+            _attempted = false;
+            throw;
+        }
+
         if (token.IsCancellationRequested)
         {
             bitmap?.Dispose();
+            _attempted = false;
             return;
         }
 

@@ -74,6 +74,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     private KibbleSettings _settings;
     private BotWorkspace? _workspace;
     private CancellationTokenSource? _thumbnailCts;
+    private Task _thumbnailPass = Task.CompletedTask;
 
     private IncomingFileViewModel? _selected;
     private Bitmap? _previewImage;
@@ -538,7 +539,6 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         Selected = Incoming.FirstOrDefault();
         StatusMessage = Describe(folder);
         RaiseGridState();
-        _ = LoadThumbnailsAsync();
     }
 
     private string Describe(string folder)
@@ -575,6 +575,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
             Selected = Incoming.FirstOrDefault();
 
         RaiseWindowState();
+        _thumbnailPass = LoadThumbnailsAsync();
     }
 
     /// <summary>Tops the window back up after files leave it, without disturbing the rest.</summary>
@@ -588,13 +589,16 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         }
 
         RaiseWindowState();
+
+        // Tiles that slide in to replace sent ones are brand new and have nothing decoded yet.
+        // Both places that add tiles start the decode, so no caller can forget to.
+        _thumbnailPass = LoadThumbnailsAsync();
     }
 
     private void LoadMore()
     {
         _loadedTarget = ClampTarget((long)_loadedTarget + Batch);
         TopUp();
-        _ = LoadThumbnailsAsync();
     }
 
     /// <summary>Lazy load switched on or off, or the batch size changed.</summary>
@@ -603,7 +607,6 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         _loadedTarget = ClampTarget(Batch);
         SetSelection([]);
         Rebuild();
-        _ = LoadThumbnailsAsync();
     }
 
     private void SortPending()
@@ -642,7 +645,6 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         SortPending();
         SetSelection([]);
         Rebuild();
-        _ = LoadThumbnailsAsync();
     }
 
     /// <summary>Sends the selection to a destination, by click or by number key.</summary>
@@ -891,7 +893,6 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
         StatusMessage = restored > 0 ? $"Put {restored} file(s) back" : "Nothing to undo";
         RaiseGridState();
-        _ = LoadThumbnailsAsync();
     }
 
     private void Reload()
@@ -962,6 +963,9 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
             dry.Count == 1 ? "1 group has run dry" : $"{dry.Count} groups have run dry",
             $"{string.Join(", ", dry)}. The bot will re-post from the archive instead of new material.");
     }
+
+    /// <summary>The decode pass currently running, so a test can wait for it instead of sleeping.</summary>
+    public Task ThumbnailPass => _thumbnailPass;
 
     private async Task LoadThumbnailsAsync()
     {

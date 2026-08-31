@@ -1309,3 +1309,113 @@ public sealed class KibbleLazyLoadTests
         Assert.Contains("showing 10 of 50", m.StatusMessage);
     }
 }
+
+/// <summary>
+/// Thumbnails. A tile with nothing on it is indistinguishable from one whose file genuinely has
+/// no preview, so what these pin down is that every visible tile was at least asked.
+/// </summary>
+public sealed class KibbleThumbnailTests
+{
+    private static (KibbleViewModel Model, TempWorkspace Temp) Open(int count, int pageSize)
+    {
+        var temp = new TempWorkspace();
+        temp.WriteConfig(temp.AddGroup("Alpha"));
+        var folder = Path.Combine(temp.Root, "intake");
+        Directory.CreateDirectory(folder);
+        for (var i = 1; i <= count; i++)
+            File.WriteAllBytes(Path.Combine(folder, $"f{i:D4}.png"), System.Text.Encoding.UTF8.GetBytes($"f{i}"));
+
+        var model = new KibbleViewModel(new FakeHost(Path.Combine(temp.Root, "hostdata")));
+        model.SetBotRoot(temp.Workspace.Root);
+        model.PageSize = pageSize;
+        model.LazyLoad = true;
+        model.LoadFolder(folder);
+        return (model, temp);
+    }
+
+    [Fact]
+    public async Task Every_tile_in_the_first_batch_is_asked()
+    {
+        var (m, temp) = Open(count: 30, pageSize: 10);
+        using var _t = temp;
+
+        await m.ThumbnailPass;
+
+        Assert.All(m.Incoming, f => Assert.True(f.ThumbnailAttempted));
+    }
+
+    [Fact]
+    public async Task Tiles_that_slide_in_after_a_send_are_asked_too()
+    {
+        var (m, temp) = Open(count: 30, pageSize: 10);
+        using var _t = temp;
+        await m.ThumbnailPass;
+
+        m.SetSelection([m.Incoming[0]]);
+        m.SendToCommand.Execute(m.Destinations[0]);
+        await m.ThumbnailPass;
+
+        // The replacement tile arrives brand new. Before this was fixed it stayed blank for
+        // good, so working through a folder left more and more empty squares behind.
+        Assert.Equal(10, m.Incoming.Count);
+        Assert.All(m.Incoming, f => Assert.True(f.ThumbnailAttempted));
+    }
+
+    [Fact]
+    public async Task A_whole_batch_leaving_still_leaves_every_replacement_asked()
+    {
+        var (m, temp) = Open(count: 30, pageSize: 10);
+        using var _t = temp;
+        await m.ThumbnailPass;
+
+        m.SetSelection([.. m.Incoming]);
+        m.SendToCommand.Execute(m.Destinations[0]);
+        await m.ThumbnailPass;
+
+        Assert.Equal(10, m.Incoming.Count);
+        Assert.All(m.Incoming, f => Assert.True(f.ThumbnailAttempted));
+    }
+
+    [Fact]
+    public async Task Load_more_asks_the_new_batch()
+    {
+        var (m, temp) = Open(count: 30, pageSize: 10);
+        using var _t = temp;
+        await m.ThumbnailPass;
+
+        m.LoadMoreCommand.Execute(null);
+        await m.ThumbnailPass;
+
+        Assert.Equal(20, m.Incoming.Count);
+        Assert.All(m.Incoming, f => Assert.True(f.ThumbnailAttempted));
+    }
+
+    [Fact]
+    public async Task Sorting_leaves_everything_on_screen_asked()
+    {
+        var (m, temp) = Open(count: 30, pageSize: 10);
+        using var _t = temp;
+        await m.ThumbnailPass;
+
+        m.SelectedSort = m.SortOptions.First(o => o.Value == GridSort.NewestFirst);
+        await m.ThumbnailPass;
+
+        Assert.All(m.Incoming, f => Assert.True(f.ThumbnailAttempted));
+    }
+
+    [Fact]
+    public async Task A_cancelled_decode_does_not_count_as_having_tried()
+    {
+        using var temp = new TempWorkspace();
+        var path = Path.Combine(temp.Root, "a.png");
+        File.WriteAllBytes(path, [1, 2, 3]);
+        var file = new IncomingFileViewModel(path, 3, DateTime.UtcNow);
+
+        using var cts = new CancellationTokenSource();
+        await cts.CancelAsync();
+        await Assert.ThrowsAnyAsync<OperationCanceledException>(() => file.LoadThumbnailAsync(150, cts.Token));
+
+        // Otherwise one cancelled pass, from a sort or a Load more, blanks a tile permanently.
+        Assert.False(file.ThumbnailAttempted);
+    }
+}

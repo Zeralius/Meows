@@ -35,6 +35,11 @@ Both number rows work, top and numpad. Past the ninth group you click instead. A
 selection moves forward through the grid, so a folder is sorted without ever reaching for the
 mouse.
 
+Those keys are listened for on the window rather than on whatever happens to have focus. That
+matters more than it sounds: sending removes the tile that had focus, so a handler hanging off
+focus works exactly once and then goes quiet until you click something. Typing in the comic name
+box is still safe, since keys aimed at a text box or a dropdown are left alone.
+
 Runway is colour coded, so the left column reads without being read: red for dry, amber under
 three days, green above it. Under a day is reported in hours rather than as `0,8 days`.
 
