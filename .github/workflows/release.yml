@@ -132,7 +132,9 @@ jobs:
 
           if ($exists) {
             Write-Host "Release v$v already exists, updating it."
-            gh release edit "v$v" --title "Mews $v" --notes $notes
+            # --draft=false matters: deleting a tag demotes its release to a draft, and
+            # editing one does not publish it again on its own.
+            gh release edit "v$v" --title "Mews $v" --notes $notes --draft=false
             gh release upload "v$v" @assets --clobber
           } else {
             Write-Host "Creating release v$v."
