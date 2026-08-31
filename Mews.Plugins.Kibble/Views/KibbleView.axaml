@@ -340,6 +340,11 @@
                                            FontSize="11"
                                            Foreground="#BBD6EC" />
                                 <StackPanel Spacing="6" IsVisible="{Binding IsComicMode}">
+                                    <TextBlock Classes="label" Text="Name from" />
+                                    <ComboBox ItemsSource="{Binding NamingOptions}"
+                                              SelectedItem="{Binding SelectedNaming}"
+                                              FontSize="11"
+                                              HorizontalAlignment="Stretch" />
                                     <TextBlock Classes="label" Text="Comic name" />
                                     <TextBox Text="{Binding ArchiveName}"
                                              PlaceholderText="comic"

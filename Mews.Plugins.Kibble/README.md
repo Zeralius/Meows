@@ -74,8 +74,28 @@ apart to hold the order you sent them in.
 With **One comic** armed, sending zips the pick into a single `.cbz` in the group's queue, so
 they post as one comic instead of as a run of unrelated images.
 
-Name the archive in the box on the right. It defaults to the folder you opened, since that is
-usually the set. Anything a file name cannot hold is dropped, and an empty box becomes `comic`.
+Name the archive in the box on the right. **Name from** decides what it is filled with:
+
+| | |
+|---|---|
+| **The folder name** | The folder you opened. Clashes get a number, so `set_2`, `set_3`. The default |
+| **Words the files share** | Built from the picked file names themselves |
+| **Folder name plus a random tag** | `bigfolder-k7m2`, so two picks never collide |
+
+**Words the files share** counts how often each word turns up across the picked names, keeps the
+ones in at least two files, and joins the commonest first. Picking `foxy_cafe_01`, `foxy_cafe_02`
+and `foxy_diner_03` gives `foxy cafe`. Pure numbers are thrown away, because page numbers are
+exactly what differs between the files rather than what they share, and a word repeated inside
+one file only counts once so a single shouty name cannot outvote the rest. When the files share
+nothing, which is what happens with hash named downloads, it falls back to the folder name rather
+than inventing something out of the hashes.
+
+The **random tag** settles when the pick first becomes a comic and then holds still while you add
+more files, since a name that reshuffles under you is not one you can trust. Start a fresh pick
+and you get a fresh tag.
+
+Whatever the rule suggests, the box stays yours: type over it and that is the name. Anything a
+file name cannot hold is dropped, and an empty box becomes `comic`.
 
 **Every picked tile shows the page it will be**, as a number in its corner, so the order is
 something you can see before the archive exists rather than something you discover afterwards.

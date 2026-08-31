@@ -25,6 +25,8 @@ public sealed class KibbleSettings
     public bool LazyLoad { get; set; }
 
     public int PageSize { get; set; } = 200;
+
+    public ComicNaming Naming { get; set; } = ComicNaming.Folder;
 }
 
 /// <summary>
@@ -59,6 +61,12 @@ public sealed record SortOption(GridSort Value, string Label)
     public override string ToString() => Label;
 }
 
+/// <summary>A naming rule with words on it.</summary>
+public sealed record NamingOption(ComicNaming Value, string Label)
+{
+    public override string ToString() => Label;
+}
+
 /// <summary>A page order with words on it.</summary>
 public sealed record PageOrderOption(PageOrder Value, string Label)
 {
@@ -88,6 +96,12 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
     /// <summary>How many of them we have actually built tiles for.</summary>
     private int _loadedTarget;
+
+    /// <summary>The folder's own name, which every naming rule falls back to.</summary>
+    private string _folderName = "";
+
+    /// <summary>Whether the last selection was already a comic, so a random tag holds still.</summary>
+    private bool _wasBundle;
     private string _sourceFolder = "";
     private string _statusMessage = "Open a folder to start.";
     private string? _errorMessage;
@@ -246,6 +260,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         _selection.Clear();
         _selection.AddRange(ordered);
         NumberThePicked();
+        SuggestName();
+        _wasBundle = IsBundle;
         BlockedReason = null;
         OnPropertyChanged(nameof(SelectionCount));
         OnPropertyChanged(nameof(IsBundle));
@@ -441,6 +457,57 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
             : $"{_selection.Count} files will be queued as they are, in the order shown, each posting on its own.")
         : "";
 
+    public IReadOnlyList<NamingOption> NamingOptions { get; } =
+    [
+        new(ComicNaming.Folder, "The folder name"),
+        new(ComicNaming.Weighted, "Words the files share"),
+        new(ComicNaming.RandomTag, "Folder name plus a random tag"),
+    ];
+
+    public NamingOption SelectedNaming
+    {
+        get => NamingOptions.First(o => o.Value == _settings.Naming);
+        set
+        {
+            if (value is null || _settings.Naming == value.Value)
+                return;
+            _settings.Naming = value.Value;
+            SaveSettings();
+            OnPropertyChanged();
+
+            // Show what the rule gives straight away, rather than at the next click.
+            _wasBundle = false;
+            SuggestName();
+        }
+    }
+
+    /// <summary>
+    /// Fills the name box from whichever rule is chosen. Weighted follows the pick, so it is
+    /// recomputed every time the pick changes. A random tag deliberately does not: it is settled
+    /// when the pick first becomes a comic and then holds still, because a name that reshuffles
+    /// under you while you are adding files is not a name you can trust.
+    /// </summary>
+    private void SuggestName()
+    {
+        if (_settings.Naming == ComicNaming.Folder)
+        {
+            if (!_wasBundle)
+                ArchiveName = _folderName;
+            return;
+        }
+
+        if (!IsBundle)
+        {
+            ArchiveName = _folderName;
+            return;
+        }
+
+        if (_settings.Naming == ComicNaming.Weighted)
+            ArchiveName = ComicName.Weighted(_selection.Select(f => f.FileName), _folderName);
+        else if (!_wasBundle)
+            ArchiveName = ComicName.WithRandomTag(_folderName);
+    }
+
     /// <summary>Name for the archive. Defaults to the folder you opened, since that is usually the set.</summary>
     public string ArchiveName
     {
@@ -511,7 +578,9 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         SourceFolder = folder;
         _settings.LastSourceFolder = folder;
         SaveSettings();
-        ArchiveName = Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        _folderName = Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        _wasBundle = false;
+        ArchiveName = _folderName;
 
         try
         {

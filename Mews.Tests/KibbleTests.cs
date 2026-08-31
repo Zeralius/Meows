@@ -1419,3 +1419,230 @@ public sealed class KibbleThumbnailTests
         Assert.False(file.ThumbnailAttempted);
     }
 }
+
+/// <summary>Naming a comic from the files that go into it.</summary>
+public sealed class ComicNameTests
+{
+    [Fact]
+    public void The_commonest_shared_words_become_the_name()
+    {
+        var name = ComicName.Weighted(["foxy_cafe_01.png", "foxy_cafe_02.png", "foxy_diner_03.png"], "fallback");
+
+        // foxy is in all three, cafe in two, diner in only one.
+        Assert.Equal("foxy cafe", name);
+    }
+
+    [Fact]
+    public void Page_numbers_are_what_differs_so_they_are_dropped()
+    {
+        var name = ComicName.Weighted(["set_01.png", "set_02.png", "set_03.png"], "fallback");
+
+        Assert.Equal("set", name);
+    }
+
+    [Fact]
+    public void Hash_named_downloads_fall_back_to_the_folder()
+    {
+        var name = ComicName.Weighted(
+            ["5d54bd8760307d78940e1f38f144004e.png", "9af12cc4410207e881a0f27b6633115f.png"],
+            "furry paws");
+
+        // Nothing is shared, so inventing something from the hashes would be worse than useless.
+        Assert.Equal("furry paws", name);
+    }
+
+    [Fact]
+    public void A_word_repeated_inside_one_file_does_not_outvote_the_others()
+    {
+        var name = ComicName.Weighted(["loud_loud_loud_alpha.png", "quiet_alpha.png"], "fallback");
+
+        // alpha is in both files, loud only in one, however many times it says it.
+        Assert.Equal("alpha", name);
+    }
+
+    [Fact]
+    public void The_shared_words_keep_the_order_they_read_in()
+    {
+        var name = ComicName.Weighted(["red_barn_one.png", "red_barn_two.png"], "fallback");
+
+        Assert.Equal("red barn", name);
+    }
+
+    [Fact]
+    public void A_single_file_still_gives_its_own_words()
+    {
+        var name = ComicName.Weighted(["lonely_cabin.png"], "fallback");
+
+        Assert.Equal("lonely cabin", name);
+    }
+
+    [Fact]
+    public void Nothing_picked_falls_back()
+    {
+        Assert.Equal("fallback", ComicName.Weighted([], "fallback"));
+    }
+
+    [Fact]
+    public void A_random_tag_hangs_off_the_folder_name()
+    {
+        var name = ComicName.WithRandomTag("bigfolder");
+
+        Assert.StartsWith("bigfolder-", name);
+        Assert.Equal("bigfolder".Length + 5, name.Length);
+    }
+
+    [Fact]
+    public void Two_random_tags_are_not_the_same()
+    {
+        var names = Enumerable.Range(0, 40).Select(_ => ComicName.WithRandomTag("set")).ToHashSet();
+
+        // The whole point is that picks never collide, so 40 draws should not all agree.
+        Assert.True(names.Count > 30, $"only {names.Count} distinct out of 40");
+    }
+
+    [Fact]
+    public void Characters_a_file_name_cannot_hold_never_survive()
+    {
+        var weighted = ComicName.Weighted([], "bad/name:here");
+        var random = ComicName.WithRandomTag("bad/name:here");
+
+        Assert.DoesNotContain('/', weighted);
+        Assert.DoesNotContain(':', weighted);
+        Assert.DoesNotContain('/', random);
+    }
+}
+
+public sealed class KibbleNamingTests
+{
+    private static (KibbleViewModel Model, TempWorkspace Temp) Open(params string[] names)
+    {
+        var temp = new TempWorkspace();
+        temp.WriteConfig(temp.AddGroup("Alpha"));
+        var folder = Path.Combine(temp.Root, "bigfolder");
+        Directory.CreateDirectory(folder);
+        foreach (var n in names)
+            File.WriteAllBytes(Path.Combine(folder, n), System.Text.Encoding.UTF8.GetBytes(n));
+
+        var model = new KibbleViewModel(new FakeHost(Path.Combine(temp.Root, "hostdata")));
+        model.SetBotRoot(temp.Workspace.Root);
+        model.LoadFolder(folder);
+        return (model, temp);
+    }
+
+    private static void Naming(KibbleViewModel m, ComicNaming rule) =>
+        m.SelectedNaming = m.NamingOptions.First(o => o.Value == rule);
+
+    [Fact]
+    public void The_folder_rule_leaves_the_name_alone()
+    {
+        var (m, temp) = Open("foxy_cafe_01.png", "foxy_cafe_02.png");
+        using var _t = temp;
+
+        m.SetSelection([.. m.Incoming]);
+
+        Assert.Equal("bigfolder", m.ArchiveName);
+    }
+
+    [Fact]
+    public void Weighted_names_the_comic_after_the_pick()
+    {
+        var (m, temp) = Open("foxy_cafe_01.png", "foxy_cafe_02.png", "foxy_diner_03.png");
+        using var _t = temp;
+        Naming(m, ComicNaming.Weighted);
+
+        m.SetSelection([.. m.Incoming]);
+
+        Assert.Equal("foxy cafe", m.ArchiveName);
+    }
+
+    [Fact]
+    public void Weighted_follows_the_pick_as_it_changes()
+    {
+        var (m, temp) = Open("red_barn_one.png", "red_barn_two.png", "blue_lake_three.png");
+        using var _t = temp;
+        Naming(m, ComicNaming.Weighted);
+        var barn = m.Incoming.Where(f => f.FileName.StartsWith("red")).ToList();
+
+        m.SetSelection(barn);
+        Assert.Equal("red barn", m.ArchiveName);
+
+        // A pick where no word appears in two files has nothing to go on, so it falls back.
+        var mixed = new[] { m.Incoming[0], m.Incoming.First(f => f.FileName.StartsWith("blue")) };
+        m.SetSelection(mixed);
+        Assert.Equal("bigfolder", m.ArchiveName);
+    }
+
+    [Fact]
+    public void A_random_tag_holds_still_while_you_add_to_the_pick()
+    {
+        var (m, temp) = Open("a.png", "b.png", "c.png");
+        using var _t = temp;
+        Naming(m, ComicNaming.RandomTag);
+
+        m.SetSelection([m.Incoming[0], m.Incoming[1]]);
+        var first = m.ArchiveName;
+        m.SetSelection([.. m.Incoming]);
+
+        Assert.StartsWith("bigfolder-", first);
+        Assert.Equal(first, m.ArchiveName);
+    }
+
+    [Fact]
+    public void A_fresh_pick_gets_a_fresh_tag()
+    {
+        var (m, temp) = Open("a.png", "b.png", "c.png", "d.png");
+        using var _t = temp;
+        Naming(m, ComicNaming.RandomTag);
+
+        m.SetSelection([m.Incoming[0], m.Incoming[1]]);
+        var first = m.ArchiveName;
+        m.SetSelection([]);
+        m.SetSelection([m.Incoming[2], m.Incoming[3]]);
+
+        Assert.NotEqual(first, m.ArchiveName);
+        Assert.StartsWith("bigfolder-", m.ArchiveName);
+    }
+
+    [Fact]
+    public void The_suggested_name_is_what_the_archive_is_actually_called()
+    {
+        var (m, temp) = Open("foxy_cafe_01.png", "foxy_cafe_02.png");
+        using var _t = temp;
+        Naming(m, ComicNaming.Weighted);
+
+        m.SetSelection([.. m.Incoming]);
+        var expected = m.ArchiveName;
+        m.SendToCommand.Execute(m.Destinations[0]);
+
+        var queued = temp.Workspace.Scan(temp.Workspace.ToSendFolder(m.Destinations[0].Group));
+        Assert.Equal($"{expected}.cbz", Path.GetFileName(queued[0]));
+    }
+
+    [Fact]
+    public void You_can_still_type_over_the_suggestion()
+    {
+        var (m, temp) = Open("foxy_cafe_01.png", "foxy_cafe_02.png");
+        using var _t = temp;
+        Naming(m, ComicNaming.Weighted);
+        m.SetSelection([.. m.Incoming]);
+
+        m.ArchiveName = "my own name";
+        m.SendToCommand.Execute(m.Destinations[0]);
+
+        var queued = temp.Workspace.Scan(temp.Workspace.ToSendFolder(m.Destinations[0].Group));
+        Assert.Equal("my own name.cbz", Path.GetFileName(queued[0]));
+    }
+
+    [Fact]
+    public void Switching_rule_updates_the_box_without_waiting_for_a_click()
+    {
+        var (m, temp) = Open("foxy_cafe_01.png", "foxy_cafe_02.png");
+        using var _t = temp;
+        m.SetSelection([.. m.Incoming]);
+        Assert.Equal("bigfolder", m.ArchiveName);
+
+        Naming(m, ComicNaming.Weighted);
+
+        Assert.Equal("foxy cafe", m.ArchiveName);
+    }
+}
