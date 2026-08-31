@@ -12,9 +12,7 @@ Built with Avalonia 12.1.1 on .NET 10, targeting Windows.
 | **Shell** | `Mews/` (window, tab host, plugin loader). [README](Mews/README.md) |
 | **Contract** | `Mews.Plugins.Abstractions/`, the interfaces a plugin implements |
 | **Plugins** | `Mews.Plugins.TelegramPoster/` [README](Mews.Plugins.TelegramPoster/README.md)<br>`Mews.Plugins.Purrge/` [README](Mews.Plugins.Purrge/README.md) |
-| **Ideas** | [IDEAS.md](IDEAS.md), for modules not built yet |
 | **Writing one** | [PLUGIN-GUIDE.md](PLUGIN-GUIDE.md), the full contract |
-| **History** | [CHANGELOG.md](CHANGELOG.md) |
 | **Tests** | `Mews.Tests/`, run with `dotnet test` |
 
 ## Running it

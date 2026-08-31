@@ -55,3 +55,8 @@ desktop.ini
 # plugin that wants a local .env does not leak one by accident.
 .env
 *.local.json
+
+## Kept local, not published
+# Working notes rather than part of the shipped project.
+IDEAS.md
+CHANGELOG.md
