@@ -82,11 +82,25 @@ Mews uses `major.minor.patch`:
 | Part | Bump it for |
 |---|---|
 | **major** (`1.0.0`) | Big changes to the UI or the backend. Anything that reshapes how the app works or looks |
-| **minor** (`0.1.0`) | A new plugin, or a smaller change to an existing one |
-| **patch** (`0.0.1`) | Bug fixes only, with no new behaviour |
+| **minor** (`0.1.0`) | A new plugin, or a substantial new capability inside one |
+| **patch** (`0.0.1`) | A smaller feature, or a bug fix |
+
+The line that needs judgement is minor against patch, since both cover new behaviour. The
+question to ask is whether it changes what the app is *for*. A new plugin, or a new way of
+working inside one, is minor. Another option on something that already exists is a patch.
+
+What that has meant so far:
+
+| Version | Change | Why |
+|---|---|---|
+| `0.2.0` | Kibble added | A new plugin |
+| `0.3.1` | Kibble builds comics | A new way of working, not just another option |
+| `0.3.3` | Sorting, and page numbers on picked files | Two smaller features on top of what was there |
+| `0.1.1`, `0.1.2` | Release workflow fixes | Bug fixes |
 
 The app version lives in `Mews/Mews.csproj` and shows at the bottom left of the window, so you
-can always tell which build is running.
+can always tell which build is running. Every change moves it, including a documentation fix
+like this paragraph, so a version always points at exactly one state of the repository.
 
 ### The plugin contract is versioned separately
 
