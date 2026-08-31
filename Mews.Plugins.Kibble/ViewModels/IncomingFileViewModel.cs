@@ -9,7 +9,6 @@ public sealed class IncomingFileViewModel : ObservableObject, IDisposable
 {
     private Bitmap? _thumbnail;
     private bool _attempted;
-    private bool _isSelected;
 
     public IncomingFileViewModel(string path)
     {
@@ -60,12 +59,6 @@ public sealed class IncomingFileViewModel : ObservableObject, IDisposable
         MediaKind.Photo => "🖼",
         _ => "?",
     };
-
-    public bool IsSelected
-    {
-        get => _isSelected;
-        set => SetField(ref _isSelected, value);
-    }
 
     public Bitmap? Thumbnail
     {

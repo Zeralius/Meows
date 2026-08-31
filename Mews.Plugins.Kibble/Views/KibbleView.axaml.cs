@@ -14,6 +14,7 @@ public partial class KibbleView : UserControl, IDisposable
         InitializeComponent();
         this.FindControl<Button>("OpenFolderButton")!.Click += OnOpenFolder;
         this.FindControl<Button>("ChooseBotButton")!.Click += OnChooseBotRoot;
+        this.FindControl<ListBox>("FileGrid")!.SelectionChanged += OnSelectionChanged;
 
         // Tunnel, so a number key reaches us before a focused button treats it as its own.
         AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
@@ -24,6 +25,18 @@ public partial class KibbleView : UserControl, IDisposable
     private KibbleViewModel? Model => DataContext as KibbleViewModel;
 
     /// <summary>
+    /// Ctrl and shift ranges are the list control's job, so the view model is simply told what
+    /// came out of it rather than tracking clicks itself.
+    /// </summary>
+    private void OnSelectionChanged(object? sender, SelectionChangedEventArgs e)
+    {
+        if (sender is not ListBox list || Model is not { } model)
+            return;
+
+        model.SetSelection(list.SelectedItems?.OfType<IncomingFileViewModel>() ?? []);
+    }
+
+    /// <summary>
     /// The point of the whole tab: 1 to 9 sends the selected file to that destination, space
     /// skips it. Going through a folder should not need the mouse.
     /// </summary>
@@ -32,7 +45,8 @@ public partial class KibbleView : UserControl, IDisposable
         if (Model is not { } model)
             return;
 
-        // Never steal keys from a text box or a dropdown.
+        // Never steal keys from a text box or a dropdown. The comic name box is one, so
+        // typing a name with digits in it must not fire off nine sends.
         if (e.Source is TextBox or ComboBox)
             return;
 

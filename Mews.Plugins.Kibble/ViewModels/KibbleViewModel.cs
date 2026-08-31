@@ -29,6 +29,10 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
     private IncomingFileViewModel? _selected;
     private Bitmap? _previewImage;
+    private string _archiveName = "";
+
+    /// <summary>Everything highlighted in the grid. One entry is a plain send, more is a comic.</summary>
+    private readonly List<IncomingFileViewModel> _selection = [];
     private string _sourceFolder = "";
     private string _statusMessage = "Open a folder to start.";
     private string? _errorMessage;
@@ -45,7 +49,6 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
         SendToCommand = new RelayCommand(SendTo, CanSend);
         SkipCommand = new RelayCommand(SkipSelected, () => Selected is not null);
-        SelectFileCommand = new RelayCommand(p => Selected = p as IncomingFileViewModel);
         RefreshCommand = new RelayCommand(() => LoadFolder(SourceFolder), () => SourceFolder.Length > 0);
         UndoCommand = new RelayCommand(UndoLastBatch, () => _lastBatch.Count > 0);
         OpenSourceCommand = new RelayCommand(() => OpenInExplorer(SourceFolder), () => SourceFolder.Length > 0);
@@ -62,8 +65,6 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     public RelayCommand SendToCommand { get; }
 
     public RelayCommand SkipCommand { get; }
-
-    public RelayCommand SelectFileCommand { get; }
 
     public RelayCommand RefreshCommand { get; }
 
@@ -156,13 +157,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         get => _selected;
         set
         {
-            var previous = _selected;
             if (!SetField(ref _selected, value))
                 return;
-            if (previous is not null)
-                previous.IsSelected = false;
-            if (value is not null)
-                value.IsSelected = true;
             OnPropertyChanged(nameof(HasSelection));
             BlockedReason = null;
             SendToCommand.RaiseCanExecuteChanged();
@@ -172,6 +168,43 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     }
 
     public bool HasSelection => _selected is not null;
+
+    /// <summary>
+    /// Told to us by the grid, because ctrl and shift ranges are the list control's job and
+    /// reimplementing them by hand would only get them subtly wrong.
+    /// </summary>
+    public void SetSelection(IEnumerable<IncomingFileViewModel> files)
+    {
+        _selection.Clear();
+        _selection.AddRange(files);
+        BlockedReason = null;
+        OnPropertyChanged(nameof(SelectionCount));
+        OnPropertyChanged(nameof(IsBundle));
+        OnPropertyChanged(nameof(BundleText));
+        OnPropertyChanged(nameof(SelectionText));
+        OnPropertyChanged(nameof(SendVerb));
+    }
+
+    public int SelectionCount => _selection.Count;
+
+    /// <summary>Two or more picked means the next send makes a comic out of them.</summary>
+    public bool IsBundle => _selection.Count >= Intake.MinBundle;
+
+    public string SelectionText => _selection.Count > 1 ? $"{_selection.Count} picked" : "";
+
+    /// <summary>What the destination buttons are about to do, so the left column stays honest.</summary>
+    public string SendVerb => IsBundle ? "SEND AS ONE COMIC" : "SEND TO";
+
+    public string BundleText => IsBundle
+        ? $"{_selection.Count} files will be zipped into one comic and queued as a single post."
+        : "";
+
+    /// <summary>Name for the archive. Defaults to the folder you opened, since that is usually the set.</summary>
+    public string ArchiveName
+    {
+        get => _archiveName;
+        set => SetField(ref _archiveName, value);
+    }
 
     public Bitmap? PreviewImage
     {
@@ -236,6 +269,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         SourceFolder = folder;
         _settings.LastSourceFolder = folder;
         SaveSettings();
+        ArchiveName = Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
 
         try
         {
@@ -270,6 +304,12 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         if (destination is null)
             return;
 
+        if (IsBundle)
+        {
+            SendBundle(destination);
+            return;
+        }
+
         var file = Selected;
         var result = Intake.Send(file.Path, _workspace, destination.Group, Stamp);
 
@@ -296,6 +336,48 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         RaiseGridState();
     }
 
+    /// <summary>
+    /// Zips the picked files into one comic in the group's queue. The bot posts a .cbz as a
+    /// single comic, in batches of ten pages, so this turns a page set into one post rather
+    /// than a run of unrelated ones.
+    /// </summary>
+    private void SendBundle(DestinationViewModel destination)
+    {
+        var files = _selection
+            .OrderBy(f => f.FileName, Comparer<string>.Create(MediaRules.CompareNatural))
+            .ToList();
+
+        var result = Intake.SendAsComic(
+            files.Select(f => f.Path).ToList(), _workspace!, destination.Group, Stamp, ArchiveName);
+
+        if (!result.Moved)
+        {
+            // Same as a refused single file. Everything stays picked and in the grid.
+            BlockedReason = result.Detail;
+            _host.Log($"Not sent: comic to {destination.Name}: {result.Detail}");
+            return;
+        }
+
+        _lastBatch.Clear();
+        _lastBatch.Add(result);
+        UndoCommand.RaiseCanExecuteChanged();
+
+        var next = NextAfterAll(files);
+        foreach (var file in files)
+        {
+            Incoming.Remove(file);
+            file.Dispose();
+        }
+
+        SetSelection([]);
+        Selected = next;
+
+        destination.Refresh();
+        StatusMessage = $"Sent {files.Count} pages as {Path.GetFileName(result.Destination!)}, {destination.RunwayText}";
+        _host.Log($"Queued comic {Path.GetFileName(result.Destination!)} ({files.Count} pages) into {destination.Name}");
+        RaiseGridState();
+    }
+
     private bool CanSend(object? parameter) => _workspace is not null && Selected is not null;
 
     private void SkipSelected()
@@ -314,6 +396,23 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         return Incoming.ElementAtOrDefault(index + 1) ?? Incoming.ElementAtOrDefault(index - 1);
     }
 
+    /// <summary>Where to land after a bundle leaves, following the last page rather than the first.</summary>
+    private IncomingFileViewModel? NextAfterAll(IReadOnlyList<IncomingFileViewModel> removed)
+    {
+        var taken = removed.ToHashSet();
+        var last = removed.Select(f => Incoming.IndexOf(f)).Where(i => i >= 0).DefaultIfEmpty(-1).Max();
+
+        for (var i = last + 1; i < Incoming.Count; i++)
+            if (!taken.Contains(Incoming[i]))
+                return Incoming[i];
+
+        for (var i = Math.Min(last, Incoming.Count - 1); i >= 0; i--)
+            if (!taken.Contains(Incoming[i]))
+                return Incoming[i];
+
+        return null;
+    }
+
     private void UndoLastBatch()
     {
         var restored = 0;
@@ -321,8 +420,18 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         {
             if (!Intake.Undo(result))
                 continue;
-            restored++;
-            Incoming.Add(new IncomingFileViewModel(result.SourcePath));
+
+            // A bundle went in as many files and came back as many, so put all of them back
+            // in the grid rather than just the one the result is named after.
+            var paths = result.Bundled is { Count: > 0 } bundled
+                ? bundled.Select(b => b.Path).ToList()
+                : [result.SourcePath];
+
+            foreach (var path in paths)
+            {
+                restored++;
+                Incoming.Add(new IncomingFileViewModel(path));
+            }
         }
 
         _lastBatch.Clear();
@@ -486,6 +595,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         foreach (var file in Incoming)
             file.Dispose();
         Incoming.Clear();
+        SetSelection([]);
         Selected = null;
         PreviewImage = null;
         RaiseGridState();

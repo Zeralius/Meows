@@ -1,3 +1,4 @@
+using System.IO.Compression;
 using Mews.Bot;
 
 namespace Mews.Plugins.Kibble.Services;
@@ -21,9 +22,20 @@ public enum IntakeOutcome
     Failed,
 }
 
-public sealed record IntakeResult(IntakeOutcome Outcome, string SourcePath, string? Destination, string? Detail)
+/// <summary>A file that went into a comic, with the timestamp it had before it did.</summary>
+public sealed record BundledPage(string Path, DateTime Modified);
+
+public sealed record IntakeResult(
+    IntakeOutcome Outcome,
+    string SourcePath,
+    string? Destination,
+    string? Detail,
+    IReadOnlyList<BundledPage>? Bundled = null)
 {
     public bool Moved => Outcome == IntakeOutcome.Sent;
+
+    /// <summary>True when this send bundled several files into one archive.</summary>
+    public bool IsBundle => Bundled is { Count: > 0 };
 }
 
 /// <summary>
@@ -95,11 +107,130 @@ public static class Intake
         }
     }
 
-    /// <summary>Puts a file back where it came from, for undo.</summary>
+    /// <summary>Files to pick before bundling is worth doing at all.</summary>
+    public const int MinBundle = 2;
+
+    /// <summary>
+    /// Checks a set of files that would become one comic. Null means it is fine to send.
+    /// </summary>
+    public static IntakeResult? InspectBundle(IReadOnlyList<string> sources)
+    {
+        if (sources.Count < MinBundle)
+            return new IntakeResult(IntakeOutcome.NotPostable, sources.FirstOrDefault() ?? "", null,
+                $"Pick at least {MinBundle} files to make a comic.");
+
+        var offender = sources.FirstOrDefault(s => !MediaRules.CanBeComicPage(s));
+        if (offender is not null)
+            return new IntakeResult(IntakeOutcome.NotPostable, offender, null,
+                $"{Path.GetFileName(offender)} cannot be a comic page. A media group takes photos and " +
+                "videos only, so gifs, pdfs and archives have to be sent on their own.");
+
+        return null;
+    }
+
+    /// <summary>
+    /// Bundles several files into one .cbz in the group's queue, so they post as a single
+    /// comic instead of as separate items.
+    /// </summary>
+    public static IntakeResult SendAsComic(
+        IReadOnlyList<string> sources,
+        BotWorkspace workspace,
+        GroupConfig group,
+        IntakeStamp stamp,
+        string archiveName)
+    {
+        var problem = InspectBundle(sources);
+        if (problem is not null)
+            return problem;
+
+        // Page order has to survive whichever comic_order the destination group happens to
+        // use, and Kibble does not control that setting. So the archive is written to satisfy
+        // all three at once: pages go in natural name order, each entry gets an index prefix
+        // so "name" sorts them the same way, and entry times ascend so "date" agrees.
+        // "zip_order" is then simply the order they were written.
+        var ordered = sources
+            .OrderBy(x => Path.GetFileName(x) ?? x, Comparer<string>.Create(MediaRules.CompareNatural))
+            .ToList();
+
+        var pages = new List<BundledPage>();
+        var temp = Path.Combine(Path.GetTempPath(), $"kibble_{Guid.NewGuid():N}.cbz");
+
+        try
+        {
+            foreach (var page in ordered)
+                pages.Add(new BundledPage(page, File.GetLastWriteTimeUtc(page)));
+
+            var width = ordered.Count.ToString().Length;
+            var entryTime = new DateTime(1980, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+            using (var zip = ZipFile.Open(temp, ZipArchiveMode.Create))
+            {
+                for (var i = 0; i < ordered.Count; i++)
+                {
+                    var name = $"{(i + 1).ToString().PadLeft(width, '0')}_{Path.GetFileName(ordered[i])}";
+
+                    // No compression on purpose. These are jpgs, pngs and mp4s, all already
+                    // compressed, so deflating them costs time and saves close to nothing.
+                    var entry = zip.CreateEntry(name, CompressionLevel.NoCompression);
+                    entry.LastWriteTime = entryTime.AddMinutes(i);
+
+                    using var into = entry.Open();
+                    using var from = File.OpenRead(ordered[i]);
+                    from.CopyTo(into);
+                }
+            }
+
+            // Read it back through the same code the bot uses, before anything is deleted. If
+            // the pages do not come out, the selection is still sitting in the grid.
+            var readBack = MediaRules.ComicPages(temp, group.ComicOrder ?? "name");
+            if (readBack.Count != ordered.Count)
+                return new IntakeResult(IntakeOutcome.EmptyComic, ordered[0], null,
+                    $"The archive read back with {readBack.Count} of {ordered.Count} pages, so nothing was queued.");
+
+            var folder = workspace.ToSendFolder(group);
+            Directory.CreateDirectory(folder);
+            var target = UniquePath(folder, EnsureCbz(archiveName));
+
+            File.Move(temp, target);
+
+            // A comic is as old as the material in it, so keeping the source date takes the
+            // oldest page. Using the newest would push a set of old art to the back.
+            File.SetLastWriteTimeUtc(target,
+                stamp == IntakeStamp.KeepSource ? pages.Min(x => x.Modified) : DateTime.UtcNow);
+
+            foreach (var page in ordered)
+                File.Delete(page);
+
+            return new IntakeResult(IntakeOutcome.Sent, ordered[0], target, null, pages);
+        }
+        catch (Exception ex)
+        {
+            return new IntakeResult(IntakeOutcome.Failed, ordered.FirstOrDefault() ?? "", null, ex.Message);
+        }
+        finally
+        {
+            if (File.Exists(temp))
+            {
+                try
+                {
+                    File.Delete(temp);
+                }
+                catch (Exception)
+                {
+                    // A leftover in the temp folder is not worth failing the send over.
+                }
+            }
+        }
+    }
+
+    /// <summary>Puts a file, or a whole bundled comic, back where it came from.</summary>
     public static bool Undo(IntakeResult result)
     {
         if (!result.Moved || result.Destination is null)
             return false;
+
+        if (result.Bundled is { Count: > 0 } bundled)
+            return UndoComic(result.Destination, bundled);
 
         try
         {
@@ -113,6 +244,60 @@ public static class Intake
         {
             return false;
         }
+    }
+
+    /// <summary>
+    /// Unpacks a comic back into the files it was made from, then removes the archive. The
+    /// bytes come out of the archive itself rather than a copy kept aside, so an undo cannot
+    /// restore something subtly different from what went in.
+    /// </summary>
+    private static bool UndoComic(string archive, IReadOnlyList<BundledPage> pages)
+    {
+        try
+        {
+            if (!File.Exists(archive))
+                return false;
+
+            using (var zip = ZipFile.OpenRead(archive))
+            {
+                // Entries were written in the same order as the recorded pages. If that no
+                // longer holds, something else has touched the archive, and unpacking it
+                // would put the wrong bytes under the wrong names.
+                var entries = zip.Entries;
+                if (entries.Count != pages.Count)
+                    return false;
+
+                for (var i = 0; i < pages.Count; i++)
+                {
+                    if (File.Exists(pages[i].Path))
+                        continue;
+
+                    Directory.CreateDirectory(Path.GetDirectoryName(pages[i].Path)!);
+                    entries[i].ExtractToFile(pages[i].Path);
+
+                    // The entry times were synthetic, written only to pin page order, so the
+                    // real ones come back from what was recorded at send time.
+                    File.SetLastWriteTimeUtc(pages[i].Path, pages[i].Modified);
+                }
+            }
+
+            File.Delete(archive);
+            return true;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>Whatever the name box holds, turned into a usable .cbz file name.</summary>
+    private static string EnsureCbz(string name)
+    {
+        var cleaned = string.Concat((name ?? "").Trim().Split(Path.GetInvalidFileNameChars()));
+        if (cleaned.Length == 0)
+            cleaned = "comic";
+
+        return cleaned.EndsWith(".cbz", StringComparison.OrdinalIgnoreCase) ? cleaned : cleaned + ".cbz";
     }
 
     /// <summary>

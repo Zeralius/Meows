@@ -49,6 +49,12 @@ public static partial class MediaRules
 
     public static bool IsComic(string path) => KindOf(path) == MediaKind.Comic;
 
+    /// <summary>
+    /// Whether this file could be a page inside a comic. A media group takes photos and videos
+    /// only, so a gif, a pdf or another archive has to be posted on its own.
+    /// </summary>
+    public static bool CanBeComicPage(string path) => ComicPageKinds.Contains(KindOf(path));
+
     /// <summary>Something Avalonia can decode. Video and pdf just get a glyph.</summary>
     public static bool IsRenderableImage(string path) =>
         KindOf(path) is MediaKind.Photo or MediaKind.Animation;

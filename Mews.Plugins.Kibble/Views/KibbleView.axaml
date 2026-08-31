@@ -20,16 +20,18 @@
             <Setter Property="Background" Value="#17171C" />
             <Setter Property="BorderBrush" Value="#2A2A32" />
         </Style>
-        <Style Selector="Button.tile">
-            <Setter Property="Background" Value="Transparent" />
+        <Style Selector="ListBoxItem">
             <Setter Property="Padding" Value="4" />
+            <Setter Property="Margin" Value="0,0,4,4" />
+            <Setter Property="CornerRadius" Value="5" />
         </Style>
-        <Style Selector="Button.tile:pointerover /template/ ContentPresenter">
+        <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="#23232B" />
         </Style>
-        <Style Selector="Button.tile.picked /template/ ContentPresenter">
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
             <Setter Property="Background" Value="#24384A" />
             <Setter Property="BorderBrush" Value="#3E6C90" />
+            <Setter Property="BorderThickness" Value="1" />
         </Style>
     </UserControl.Styles>
 
@@ -52,6 +54,10 @@
                                IsVisible="{Binding !HasSource}" />
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <TextBlock Classes="label" Text="{Binding RemainingText}" />
+                        <TextBlock Text="{Binding SelectionText}"
+                                   FontSize="11"
+                                   Foreground="#7FB0DA"
+                                   IsVisible="{Binding IsBundle}" />
                         <TextBlock Classes="label" Text="{Binding SummaryText}" />
                         <TextBlock Classes="label" Text="{Binding StatusMessage}" />
                     </StackPanel>
@@ -79,12 +85,12 @@
             <!-- Destinations -->
             <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="SEND TO · DRIEST FIRST" />
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{Binding SendVerb}" />
                     <TextBlock DockPanel.Dock="Bottom"
                                Classes="label"
                                Margin="14,6,14,12"
                                TextWrapping="Wrap"
-                               Text="Press 1 to 9 to send the selected file, or space to skip it." />
+                               Text="Press 1 to 9 to send, space to skip. Ctrl click or shift click to pick several and send them as one comic." />
                     <ScrollViewer>
                         <ItemsControl ItemsSource="{Binding Destinations}" Margin="8,0">
                             <ItemsControl.ItemTemplate>
@@ -144,59 +150,54 @@
                            IsVisible="{Binding IsEmpty}"
                            Text="Nothing here. Open a folder to start, or you have cleared it out, which is the idea." />
 
-                <ScrollViewer>
-                    <ItemsControl ItemsSource="{Binding Incoming}" Margin="8">
-                        <ItemsControl.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <WrapPanel />
-                            </ItemsPanelTemplate>
-                        </ItemsControl.ItemsPanel>
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:IncomingFileViewModel">
-                                <Button Classes="tile"
-                                        Classes.picked="{Binding IsSelected}"
-                                        BorderThickness="1"
-                                        CornerRadius="5"
-                                        Margin="0,0,4,4"
-                                        ToolTip.Tip="{Binding FileName}"
-                                        Command="{Binding $parent[UserControl].((vm:KibbleViewModel)DataContext).SelectFileCommand}"
-                                        CommandParameter="{Binding}">
-                                    <StackPanel Width="150" Spacing="4">
-                                        <Border Width="150" Height="150"
-                                                Background="#101014"
-                                                CornerRadius="4"
-                                                ClipToBounds="True">
-                                            <Panel>
-                                                <Image Source="{Binding Thumbnail}"
-                                                       Stretch="UniformToFill"
-                                                       IsVisible="{Binding HasThumbnail}" />
-                                                <TextBlock Text="{Binding KindGlyph}"
-                                                           FontSize="26"
-                                                           Opacity="0.35"
-                                                           HorizontalAlignment="Center"
-                                                           VerticalAlignment="Center"
-                                                           IsVisible="{Binding ShowGlyph}" />
-                                                <Border Background="#CC5C2B30"
-                                                        CornerRadius="3"
-                                                        Padding="4,1"
-                                                        Margin="4"
-                                                        HorizontalAlignment="Left"
-                                                        VerticalAlignment="Top"
-                                                        IsVisible="{Binding !IsPostable}">
-                                                    <TextBlock Text="THE BOT SKIPS THIS" FontSize="9" />
-                                                </Border>
-                                            </Panel>
+                <ListBox Name="FileGrid"
+                         ItemsSource="{Binding Incoming}"
+                         SelectedItem="{Binding Selected}"
+                         SelectionMode="Multiple"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:IncomingFileViewModel">
+                            <StackPanel Width="150" Spacing="4" ToolTip.Tip="{Binding FileName}">
+                                <Border Width="150" Height="150"
+                                        Background="#101014"
+                                        CornerRadius="4"
+                                        ClipToBounds="True">
+                                    <Panel>
+                                        <Image Source="{Binding Thumbnail}"
+                                               Stretch="UniformToFill"
+                                               IsVisible="{Binding HasThumbnail}" />
+                                        <TextBlock Text="{Binding KindGlyph}"
+                                                   FontSize="26"
+                                                   Opacity="0.35"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   IsVisible="{Binding ShowGlyph}" />
+                                        <Border Background="#CC5C2B30"
+                                                CornerRadius="3"
+                                                Padding="4,1"
+                                                Margin="4"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Top"
+                                                IsVisible="{Binding !IsPostable}">
+                                            <TextBlock Text="THE BOT SKIPS THIS" FontSize="9" />
                                         </Border>
-                                        <TextBlock Text="{Binding FileName}"
-                                                   FontSize="10"
-                                                   MaxWidth="150"
-                                                   TextTrimming="CharacterEllipsis" />
-                                    </StackPanel>
-                                </Button>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </ScrollViewer>
+                                    </Panel>
+                                </Border>
+                                <TextBlock Text="{Binding FileName}"
+                                           FontSize="10"
+                                           MaxWidth="150"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
             </DockPanel>
 
             <GridSplitter Grid.Column="3" Background="#22222A" ResizeDirection="Columns" />
@@ -245,6 +246,27 @@
                                        Foreground="#FFC168"
                                        TextWrapping="Wrap"
                                        FontSize="11" />
+                        </Border>
+
+                        <Border Background="#1B2A38"
+                                BorderBrush="#31536E"
+                                BorderThickness="1"
+                                CornerRadius="6"
+                                Padding="10,8"
+                                IsVisible="{Binding IsBundle}">
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{Binding BundleText}"
+                                           TextWrapping="Wrap"
+                                           FontSize="11"
+                                           Foreground="#BBD6EC" />
+                                <TextBlock Classes="label" Text="Comic name" />
+                                <TextBox Text="{Binding ArchiveName}"
+                                         PlaceholderText="comic"
+                                         FontSize="12" />
+                                <TextBlock Classes="label"
+                                           TextWrapping="Wrap"
+                                           Text="Saved as .cbz. Pages go in by name, so page2 lands before page10." />
+                            </StackPanel>
                         </Border>
 
                         <Button Content="Skip this one"

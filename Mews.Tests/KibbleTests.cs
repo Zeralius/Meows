@@ -1,5 +1,6 @@
 using Mews.Bot;
 using Mews.Plugins.Kibble.Services;
+using Mews.Plugins.Kibble.ViewModels;
 
 namespace Mews.Tests;
 
@@ -286,5 +287,359 @@ public sealed class ContentHashTests
         File.WriteAllBytes(p, [1, 2, 3]);
 
         Assert.Null(ContentHash.FindMatch(p, []));
+    }
+}
+
+public sealed class ComicBundleTests
+{
+    private static string[] Pages(TempWorkspace temp, params string[] names)
+    {
+        var folder = Path.Combine(temp.Root, "incoming");
+        Directory.CreateDirectory(folder);
+        var paths = new List<string>();
+        foreach (var name in names)
+        {
+            var path = Path.Combine(folder, name);
+            // Distinct bytes per page, so a mixed up order is detectable.
+            File.WriteAllBytes(path, System.Text.Encoding.UTF8.GetBytes(name));
+            paths.Add(path);
+        }
+
+        return paths.ToArray();
+    }
+
+    private static List<string> EntryNames(string archive)
+    {
+        using var zip = System.IO.Compression.ZipFile.OpenRead(archive);
+        return zip.Entries.Select(e => e.FullName).ToList();
+    }
+
+    [Fact]
+    public void Picked_files_become_one_archive_in_the_queue()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var pages = Pages(temp, "a.png", "b.png", "c.png");
+
+        var result = Intake.SendAsComic(pages, temp.Workspace, group, IntakeStamp.KeepSource, "my set");
+
+        Assert.True(result.Moved);
+        Assert.True(result.IsBundle);
+        Assert.Equal(".cbz", Path.GetExtension(result.Destination));
+        Assert.Equal("my set.cbz", Path.GetFileName(result.Destination));
+        // One queued item, not three.
+        Assert.Single(temp.Workspace.Scan(temp.Workspace.ToSendFolder(group)));
+        Assert.All(pages, p => Assert.False(File.Exists(p)));
+    }
+
+    [Fact]
+    public void The_bot_can_read_every_page_back_out()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var pages = Pages(temp, "1.png", "2.png", "3.png");
+
+        var result = Intake.SendAsComic(pages, temp.Workspace, group, IntakeStamp.KeepSource, "set");
+
+        Assert.Equal(3, MediaRules.ComicPages(result.Destination!).Count);
+    }
+
+    [Fact]
+    public void Page_order_holds_under_every_comic_order_the_group_might_use()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        // Deliberately awkward: picked out of order, and numbered so a plain string sort
+        // would put page10 before page2.
+        var pages = Pages(temp, "page10.png", "page2.png", "page1.png");
+
+        var result = Intake.SendAsComic(pages, temp.Workspace, group, IntakeStamp.KeepSource, "set");
+
+        var expected = new[] { "page1.png", "page2.png", "page10.png" };
+        foreach (var mode in new[] { "name", "date", "zip_order" })
+        {
+            var actual = MediaRules.ComicPages(result.Destination!, mode)
+                .Select(n => n[(n.IndexOf('_') + 1)..])
+                .ToArray();
+
+            Assert.Equal(expected, actual);
+        }
+    }
+
+    [Fact]
+    public void An_index_prefix_is_what_makes_name_order_survive()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var pages = Pages(temp, "zebra.png", "apple.png");
+
+        var result = Intake.SendAsComic(pages, temp.Workspace, group, IntakeStamp.KeepSource, "set");
+
+        Assert.Equal(new[] { "1_apple.png", "2_zebra.png" }, EntryNames(result.Destination!));
+    }
+
+    [Fact]
+    public void A_gif_cannot_be_a_comic_page_and_nothing_is_moved()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var pages = Pages(temp, "a.png", "loop.gif");
+
+        var result = Intake.SendAsComic(pages, temp.Workspace, group, IntakeStamp.KeepSource, "set");
+
+        Assert.Equal(IntakeOutcome.NotPostable, result.Outcome);
+        Assert.Contains("loop.gif", result.Detail!);
+        Assert.All(pages, p => Assert.True(File.Exists(p)));
+        Assert.Empty(temp.Workspace.Scan(temp.Workspace.ToSendFolder(group)));
+    }
+
+    [Fact]
+    public void One_file_is_not_a_comic()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var pages = Pages(temp, "only.png");
+
+        var result = Intake.SendAsComic(pages, temp.Workspace, group, IntakeStamp.KeepSource, "set");
+
+        Assert.Equal(IntakeOutcome.NotPostable, result.Outcome);
+        Assert.True(File.Exists(pages[0]));
+    }
+
+    [Fact]
+    public void Keeping_the_source_date_takes_the_oldest_page()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var pages = Pages(temp, "a.png", "b.png");
+        var oldest = new DateTime(2019, 5, 6, 7, 8, 9, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(pages[0], oldest);
+        File.SetLastWriteTimeUtc(pages[1], new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        var result = Intake.SendAsComic(pages, temp.Workspace, group, IntakeStamp.KeepSource, "set");
+
+        // A comic is as old as the material in it, so the set posts in its rightful place.
+        Assert.Equal(oldest, File.GetLastWriteTimeUtc(result.Destination!));
+    }
+
+    [Fact]
+    public void Stamping_on_intake_dates_the_comic_now()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var pages = Pages(temp, "a.png", "b.png");
+        File.SetLastWriteTimeUtc(pages[0], new DateTime(2019, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        var result = Intake.SendAsComic(pages, temp.Workspace, group, IntakeStamp.QueuedNow, "set");
+
+        Assert.True(File.GetLastWriteTimeUtc(result.Destination!) > new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+    }
+
+    [Fact]
+    public void Undo_unpacks_the_comic_back_into_the_files_it_came_from()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var pages = Pages(temp, "a.png", "b.png", "c.png");
+        var when = new DateTime(2021, 2, 3, 4, 5, 6, DateTimeKind.Utc);
+        foreach (var page in pages)
+            File.SetLastWriteTimeUtc(page, when);
+
+        var result = Intake.SendAsComic(pages, temp.Workspace, group, IntakeStamp.KeepSource, "set");
+        Assert.True(Intake.Undo(result));
+
+        Assert.False(File.Exists(result.Destination!));
+        foreach (var page in pages)
+        {
+            Assert.True(File.Exists(page));
+            Assert.Equal(Path.GetFileName(page), File.ReadAllText(page));
+            // The entry times inside the zip were synthetic, so the real one has to come back.
+            Assert.Equal(when, File.GetLastWriteTimeUtc(page));
+        }
+    }
+
+    [Fact]
+    public void A_name_clash_does_not_overwrite_an_earlier_comic()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+
+        var first = Intake.SendAsComic(Pages(temp, "a.png", "b.png"), temp.Workspace, group, IntakeStamp.KeepSource, "set");
+        var second = Intake.SendAsComic(Pages(temp, "c.png", "d.png"), temp.Workspace, group, IntakeStamp.KeepSource, "set");
+
+        Assert.True(first.Moved);
+        Assert.True(second.Moved);
+        Assert.NotEqual(first.Destination, second.Destination);
+        Assert.Equal(2, temp.Workspace.Scan(temp.Workspace.ToSendFolder(group)).Count);
+    }
+
+    [Fact]
+    public void An_empty_name_still_produces_a_usable_file()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+
+        var result = Intake.SendAsComic(Pages(temp, "a.png", "b.png"), temp.Workspace, group, IntakeStamp.KeepSource, "   ");
+
+        Assert.Equal("comic.cbz", Path.GetFileName(result.Destination));
+    }
+
+    [Fact]
+    public void Characters_a_file_name_cannot_hold_are_dropped()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+
+        var result = Intake.SendAsComic(Pages(temp, "a.png", "b.png"), temp.Workspace, group, IntakeStamp.KeepSource, "a/b:c*d");
+
+        Assert.Equal("abcd.cbz", Path.GetFileName(result.Destination));
+        Assert.True(File.Exists(result.Destination!));
+    }
+}
+
+/// <summary>
+/// The wiring between picking files in the grid and what actually gets queued. The grid itself
+/// is a ListBox, so ctrl and shift ranges are the control's job, but everything downstream of
+/// "here is what the user picked" is ours and is worth pinning down.
+/// </summary>
+public sealed class KibbleSelectionTests
+{
+    private static (KibbleViewModel Model, FakeHost Host, TempWorkspace Temp, string Folder) Open(params string[] names)
+    {
+        var temp = new TempWorkspace();
+        temp.WriteConfig(temp.AddGroup("Alpha"), temp.AddGroup("Beta", "-100222"));
+
+        var folder = Path.Combine(temp.Root, "intake");
+        Directory.CreateDirectory(folder);
+        foreach (var name in names)
+            File.WriteAllBytes(Path.Combine(folder, name), System.Text.Encoding.UTF8.GetBytes(name));
+
+        var host = new FakeHost(Path.Combine(temp.Root, "hostdata"));
+        var model = new KibbleViewModel(host);
+        model.SetBotRoot(temp.Workspace.Root);
+        model.LoadFolder(folder);
+        return (model, host, temp, folder);
+    }
+
+    [Fact]
+    public void One_picked_file_is_a_plain_send_not_a_comic()
+    {
+        var (model, _, temp, _) = Open("a.png", "b.png");
+        using var _t = temp;
+
+        model.SetSelection([model.Incoming[0]]);
+
+        Assert.False(model.IsBundle);
+        Assert.Equal("SEND TO", model.SendVerb);
+    }
+
+    [Fact]
+    public void Two_picked_files_turn_the_next_send_into_a_comic()
+    {
+        var (model, _, temp, _) = Open("a.png", "b.png");
+        using var _t = temp;
+
+        model.SetSelection([model.Incoming[0], model.Incoming[1]]);
+
+        Assert.True(model.IsBundle);
+        Assert.Equal("SEND AS ONE COMIC", model.SendVerb);
+        Assert.Equal("2 picked", model.SelectionText);
+    }
+
+    [Fact]
+    public void Sending_a_pick_of_three_queues_one_comic_and_empties_the_grid()
+    {
+        var (model, _, temp, _) = Open("page1.png", "page2.png", "page10.png");
+        using var _t = temp;
+
+        model.SetSelection([.. model.Incoming]);
+        var alpha = model.Destinations.First(d => d.Name == "Alpha");
+        model.SendToCommand.Execute(alpha);
+
+        var queued = temp.Workspace.Scan(temp.Workspace.ToSendFolder(alpha.Group));
+        Assert.Single(queued);
+        Assert.Equal(".cbz", Path.GetExtension(queued[0]));
+        Assert.Equal(3, MediaRules.ComicPages(queued[0]).Count);
+        Assert.Empty(model.Incoming);
+        Assert.False(model.IsBundle);
+    }
+
+    [Fact]
+    public void A_number_key_sends_the_pick_to_that_destination()
+    {
+        var (model, _, temp, _) = Open("a.png", "b.png", "c.png");
+        using var _t = temp;
+
+        model.SetSelection([model.Incoming[0], model.Incoming[1]]);
+        // Same path the 1 to 9 keys take: an index rather than a clicked object.
+        model.SendToCommand.Execute(1);
+
+        var first = model.Destinations[0];
+        Assert.Single(temp.Workspace.Scan(temp.Workspace.ToSendFolder(first.Group)));
+        Assert.Single(model.Incoming);
+    }
+
+    [Fact]
+    public void A_single_pick_still_moves_the_file_itself()
+    {
+        var (model, _, temp, _) = Open("a.png", "b.png");
+        using var _t = temp;
+
+        model.SetSelection([model.Incoming[0]]);
+        var alpha = model.Destinations.First(d => d.Name == "Alpha");
+        model.SendToCommand.Execute(alpha);
+
+        var queued = temp.Workspace.Scan(temp.Workspace.ToSendFolder(alpha.Group));
+        Assert.Single(queued);
+        Assert.Equal("a.png", Path.GetFileName(queued[0]));
+    }
+
+    [Fact]
+    public void A_pick_containing_something_that_cannot_be_a_page_is_refused_and_kept()
+    {
+        var (model, _, temp, _) = Open("a.png", "loop.gif");
+        using var _t = temp;
+
+        model.SetSelection([.. model.Incoming]);
+        var alpha = model.Destinations.First(d => d.Name == "Alpha");
+        model.SendToCommand.Execute(alpha);
+
+        Assert.True(model.IsBlocked);
+        Assert.Contains("loop.gif", model.BlockedReason!);
+        Assert.Equal(2, model.Incoming.Count);
+        Assert.Empty(temp.Workspace.Scan(temp.Workspace.ToSendFolder(alpha.Group)));
+    }
+
+    [Fact]
+    public void Undo_puts_every_page_of_a_comic_back_in_the_grid()
+    {
+        var (model, _, temp, _) = Open("a.png", "b.png", "c.png");
+        using var _t = temp;
+
+        model.SetSelection([model.Incoming[0], model.Incoming[1]]);
+        var alpha = model.Destinations.First(d => d.Name == "Alpha");
+        model.SendToCommand.Execute(alpha);
+        Assert.Single(model.Incoming);
+
+        model.UndoCommand.Execute(null);
+
+        Assert.Equal(3, model.Incoming.Count);
+        Assert.Empty(temp.Workspace.Scan(temp.Workspace.ToSendFolder(alpha.Group)));
+    }
+
+    [Fact]
+    public void The_comic_is_named_after_the_folder_by_default()
+    {
+        var (model, _, temp, folder) = Open("a.png", "b.png");
+        using var _t = temp;
+
+        Assert.Equal(Path.GetFileName(folder), model.ArchiveName);
+
+        model.SetSelection([.. model.Incoming]);
+        var alpha = model.Destinations.First(d => d.Name == "Alpha");
+        model.SendToCommand.Execute(alpha);
+
+        var queued = temp.Workspace.Scan(temp.Workspace.ToSendFolder(alpha.Group));
+        Assert.Equal($"{Path.GetFileName(folder)}.cbz", Path.GetFileName(queued[0]));
     }
 }

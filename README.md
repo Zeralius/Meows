@@ -157,7 +157,7 @@ dotnet test
 
 `Mews.Tests/` covers the pure and filesystem logic: group validation, config round-tripping and
 next-up resolution, the staged duplicate scan, queue runway maths, file intake and its refusals,
-contract version rules, and token writing.
+comic bundling and its page order, contract version rules, and token writing.
 Anything needing an Avalonia render backend or a running dispatcher is deliberately out of
 scope, so the suite stays headless and works on a runner.
 

@@ -25,12 +25,12 @@ quietly starts re-posting the archive, and nobody notices for a while.
 | | |
 |---|---|
 | **Left** | Every group as a destination, driest first, each with a number key and its runway |
-| **Middle** | The folder you opened, as a thumbnail grid |
+| **Middle** | The folder you opened, as a thumbnail grid. Ctrl and shift pick several |
 | **Right** | Full preview of the selected file, its size and date, and the queue order setting |
 
 ## Sorting a folder
 
-Press **1** to **9** to send the selected file to that destination, or **space** to skip it.
+Press **1** to **9** to send the selection to that destination, or **space** to skip it.
 Both number rows work, top and numpad. Past the ninth group you click instead. After a send the
 selection moves forward through the grid, so a folder is sorted without ever reaching for the
 mouse.
@@ -39,6 +39,36 @@ Runway is colour coded, so the left column reads without being read: red for dry
 three days, green above it. Under a day is reported in hours rather than as `0,8 days`.
 
 **Files move, they do not copy.** **Undo** puts the last one back exactly where it came from.
+
+## Making a comic out of several files
+
+Ctrl click to add files to the pick, shift click to take a run of them. Arrow keys and shift
+arrow work too. With two or more picked, the left column changes to **SEND AS ONE COMIC**, and
+sending zips them into a single `.cbz` in the group's queue, so they post as one comic instead of
+as a run of unrelated images.
+
+Name the archive in the box on the right. It defaults to the folder you opened, since that is
+usually the set. Anything a file name cannot hold is dropped, and an empty box becomes `comic`.
+
+Page order is the thing worth explaining. The bot has a per group `comic_order` of `name`, `date`
+or `zip_order`, and Kibble does not control which one a group uses, so the archive is written to
+satisfy all three at once:
+
+- pages go in sorted naturally, so `page2` lands before `page10`
+- each entry gets an index prefix, so sorting by `name` gives that same order
+- entry times ascend, so sorting by `date` gives it too
+- and `zip_order` is simply the order they were written
+
+The original timestamps are put back if you undo, since the ones inside the archive are synthetic
+and exist only to pin the order.
+
+Only photos and videos can be pages, because that is all a Telegram media group takes. A gif, a
+pdf or another archive in the pick is refused by name and nothing is moved. The bot posts a long
+comic in batches of ten pages, so there is no page limit to worry about here.
+
+**Undo unpacks the comic** back into the files it was made from and deletes the archive. The
+bytes come out of the archive itself rather than a copy kept aside, so an undo cannot hand back
+something subtly different from what went in.
 
 ## What it refuses to do
 
@@ -49,7 +79,9 @@ anyway. Kibble refuses when:
   you ever try. The folder listing shows everything rather than hiding unsupported files,
   because a file the bot cannot use is exactly what you want to see.
 - **the group already has it.** Checked by content, not by name, against both `To_Send` and
-  `Already_Sent`, so a renamed copy of something already posted is still caught.
+  `Already_Sent`, so a renamed copy of something already posted is still caught. This is a check
+  on single files. A comic you build here is a new archive, so there is nothing yet to match it
+  against.
 - **a comic archive has no pages in it.**
 
 Dedupe is deliberately **per destination**. Two groups wanting the same picture is normal, so
