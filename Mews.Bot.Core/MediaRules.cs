@@ -42,6 +42,15 @@ public static partial class MediaRules
 
     public const int MediaGroupLimit = 10;
 
+    /// <summary>
+    /// Opens a file for reading without stopping anyone else moving or deleting it.
+    /// Thumbnails and previews load in the background while the very same files are being
+    /// queued or posted, and a plain File.OpenRead holds enough of a lock to make that move
+    /// fail with "used by another process".
+    /// </summary>
+    public static FileStream OpenShared(string path) =>
+        new(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
+
     public static MediaKind KindOf(string path) =>
         ByExtension.TryGetValue(Path.GetExtension(path), out var kind) ? kind : MediaKind.Unsupported;
 
@@ -91,7 +100,7 @@ public static partial class MediaRules
     {
         try
         {
-            using var zip = ZipFile.OpenRead(archivePath);
+            using var zip = new ZipArchive(OpenShared(archivePath), ZipArchiveMode.Read);
             var entries = zip.Entries
                 .Where(e => !string.IsNullOrEmpty(e.Name))
                 .Where(e => !e.FullName.Contains("__MACOSX", StringComparison.Ordinal))
@@ -125,7 +134,7 @@ public static partial class MediaRules
 
         try
         {
-            using var zip = ZipFile.OpenRead(archivePath);
+            using var zip = new ZipArchive(OpenShared(archivePath), ZipArchiveMode.Read);
             var entry = zip.GetEntry(first);
             if (entry is null)
                 return null;

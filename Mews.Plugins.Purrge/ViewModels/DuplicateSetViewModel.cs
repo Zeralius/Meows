@@ -159,7 +159,9 @@ internal static class PreviewSupport
     {
         try
         {
-            using var stream = System.IO.File.OpenRead(path);
+            // Shared, so previewing a file cannot stop it being sent to the Recycle Bin.
+            using var stream = new System.IO.FileStream(path, System.IO.FileMode.Open,
+                System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite | System.IO.FileShare.Delete);
             return Bitmap.DecodeToWidth(stream, width);
         }
         catch (Exception)

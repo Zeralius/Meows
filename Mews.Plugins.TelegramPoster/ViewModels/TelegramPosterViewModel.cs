@@ -532,7 +532,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
                 if (!MediaRules.IsRenderableImage(path))
                     return null;
 
-                using var stream = File.OpenRead(path);
+                using var stream = MediaRules.OpenShared(path);
                 return Bitmap.DecodeToWidth(stream, PreviewWidth);
             }
             catch (Exception)

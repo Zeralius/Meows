@@ -110,7 +110,7 @@ public sealed class IncomingFileViewModel : ObservableObject, IDisposable
             if (!MediaRules.IsRenderableImage(Path))
                 return null;
 
-            using var stream = File.OpenRead(Path);
+            using var stream = MediaRules.OpenShared(Path);
             return Bitmap.DecodeToWidth(stream, width);
         }
         catch (Exception)
