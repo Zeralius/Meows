@@ -54,17 +54,26 @@ jobs:
         run: |
           dotnet build Mews.Plugins.TelegramPoster/Mews.Plugins.TelegramPoster.csproj --configuration Release
           dotnet build Mews.Plugins.Purrge/Mews.Plugins.Purrge.csproj --configuration Release
+          dotnet build Mews.Plugins.Kibble/Mews.Plugins.Kibble.csproj --configuration Release
 
       - name: Stage the plugins into the package
         shell: pwsh
         run: |
-          foreach ($p in 'Mews.Plugins.TelegramPoster', 'Mews.Plugins.Purrge') {
+          # Copy the whole build output rather than just the plugin dll. A plugin may bring
+          # libraries of its own, and Telegram Poster and Kibble both need Mews.Bot.Core.dll,
+          # which is loaded from the plugin's own folder. Avalonia and the contract are not
+          # here to be copied: the csproj files keep them out so the shell stays the one
+          # source of both.
+          foreach ($p in 'Mews.Plugins.TelegramPoster', 'Mews.Plugins.Purrge', 'Mews.Plugins.Kibble') {
             $dest = "artifacts/Mews-win-x64/plugins/$p"
             New-Item -ItemType Directory -Force $dest | Out-Null
-            Copy-Item "$p/bin/Release/$p.dll" $dest
-            Copy-Item "$p/bin/Release/$p.deps.json" $dest -ErrorAction SilentlyContinue
+            Copy-Item "$p/bin/Release/*.dll" $dest
+            Copy-Item "$p/bin/Release/*.deps.json" $dest -ErrorAction SilentlyContinue
           }
-          Get-ChildItem artifacts/Mews-win-x64/plugins -Directory | ForEach-Object { "staged $($_.Name)" }
+          Get-ChildItem artifacts/Mews-win-x64/plugins -Directory | ForEach-Object {
+            $files = (Get-ChildItem $_.FullName -File | ForEach-Object Name) -join ', '
+            "staged $($_.Name): $files"
+          }
 
       - name: Drop third-party native symbols
         shell: pwsh
@@ -80,10 +89,15 @@ jobs:
       - name: Sanity check the package
         shell: pwsh
         run: |
+          # A plugin whose dependency is missing fails at activation, long after this job has
+          # gone green, so the shared library is checked here by name.
           $root = 'artifacts/Mews-win-x64'
           foreach ($f in "$root/Mews.exe",
                          "$root/plugins/Mews.Plugins.TelegramPoster/Mews.Plugins.TelegramPoster.dll",
-                         "$root/plugins/Mews.Plugins.Purrge/Mews.Plugins.Purrge.dll") {
+                         "$root/plugins/Mews.Plugins.TelegramPoster/Mews.Bot.Core.dll",
+                         "$root/plugins/Mews.Plugins.Purrge/Mews.Plugins.Purrge.dll",
+                         "$root/plugins/Mews.Plugins.Kibble/Mews.Plugins.Kibble.dll",
+                         "$root/plugins/Mews.Plugins.Kibble/Mews.Bot.Core.dll") {
             if (-not (Test-Path $f)) { throw "Missing from the package: $f" }
           }
           "package looks complete"
@@ -110,7 +124,7 @@ jobs:
           Self-contained Windows x64 build. No .NET runtime needed.
 
           Download ``Mews-$v-win-x64.zip``, unzip it anywhere, and run ``Mews.exe``.
-          The Telegram Poster and Purrge plugins are included; activate them on the Plugins tab.
+          Telegram Poster, Purrge and Kibble are included; activate them on the Plugins tab.
 
           ``Mews.Plugins.Abstractions`` is attached for anyone building a plugin in their own
           repository. See PLUGIN-GUIDE.md.

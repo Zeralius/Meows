@@ -1,7 +1,7 @@
 using System.IO.Compression;
 using System.Text.RegularExpressions;
 
-namespace Mews.Plugins.TelegramPoster.Services;
+namespace Mews.Bot;
 
 public enum MediaKind
 {

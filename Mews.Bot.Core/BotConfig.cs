@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Mews.Plugins.TelegramPoster.Model;
+namespace Mews.Bot;
 
 /// <summary>config.json as bot.py reads it. Names map through the snake_case policy.</summary>
 public sealed class BotConfig
@@ -64,15 +64,4 @@ public sealed class ScheduleConfig
     public int? Minute { get; set; }
 
     public int? IntervalMinutes { get; set; }
-}
-
-/// <summary>What we remember between runs.</summary>
-public sealed class TelegramPosterSettings
-{
-    public string? BotRoot { get; set; }
-
-    public string? PythonPath { get; set; }
-
-    /// <summary>Where it was cloned from. Saved per machine once you change it.</summary>
-    public string? RepositoryUrl { get; set; }
 }

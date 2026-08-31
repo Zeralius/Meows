@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Mews.Bot;
 
 namespace Mews.Plugins.TelegramPoster.Services;
 

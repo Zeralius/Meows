@@ -1,17 +1,17 @@
 using Avalonia.Media.Imaging;
-using Mews.Plugins.Abstractions;
-using Mews.Plugins.TelegramPoster.Services;
 using Mews.Bot;
+using Mews.Plugins.Abstractions;
 
-namespace Mews.Plugins.TelegramPoster.ViewModels;
+namespace Mews.Plugins.Kibble.ViewModels;
 
-/// <summary>One file in the queue or the archive.</summary>
-public sealed class MediaItemViewModel : ObservableObject, IDisposable
+/// <summary>One file waiting in the folder you opened.</summary>
+public sealed class IncomingFileViewModel : ObservableObject, IDisposable
 {
     private Bitmap? _thumbnail;
-    private bool _thumbnailAttempted;
+    private bool _attempted;
+    private bool _isSelected;
 
-    public MediaItemViewModel(string path)
+    public IncomingFileViewModel(string path)
     {
         Path = path;
         FileName = System.IO.Path.GetFileName(path);
@@ -40,7 +40,7 @@ public sealed class MediaItemViewModel : ObservableObject, IDisposable
 
     public DateTime Modified { get; }
 
-    public bool IsComic => Kind == MediaKind.Comic;
+    public bool IsPostable => Kind != MediaKind.Unsupported;
 
     public string SizeText => SizeBytes switch
     {
@@ -51,25 +51,21 @@ public sealed class MediaItemViewModel : ObservableObject, IDisposable
 
     public string ModifiedText => Modified == DateTime.MinValue ? "?" : Modified.ToString("yyyy-MM-dd HH:mm");
 
-    /// <summary>Stand-in for anything we cannot draw.</summary>
     public string KindGlyph => Kind switch
     {
         MediaKind.Video => "▶",
         MediaKind.Document => "📄",
         MediaKind.Comic => "📚",
         MediaKind.Animation => "GIF",
+        MediaKind.Photo => "🖼",
         _ => "?",
     };
 
-    public string KindText => Kind switch
+    public bool IsSelected
     {
-        MediaKind.Photo => "Photo",
-        MediaKind.Video => "Video",
-        MediaKind.Animation => "Animation",
-        MediaKind.Document => "Document",
-        MediaKind.Comic => "Comic archive",
-        _ => "Unsupported",
-    };
+        get => _isSelected;
+        set => SetField(ref _isSelected, value);
+    }
 
     public Bitmap? Thumbnail
     {
@@ -77,12 +73,11 @@ public sealed class MediaItemViewModel : ObservableObject, IDisposable
         private set
         {
             var old = _thumbnail;
-            if (SetField(ref _thumbnail, value))
-            {
-                OnPropertyChanged(nameof(HasThumbnail));
-                OnPropertyChanged(nameof(ShowGlyph));
-                old?.Dispose();
-            }
+            if (!SetField(ref _thumbnail, value))
+                return;
+            OnPropertyChanged(nameof(HasThumbnail));
+            OnPropertyChanged(nameof(ShowGlyph));
+            old?.Dispose();
         }
     }
 
@@ -90,12 +85,11 @@ public sealed class MediaItemViewModel : ObservableObject, IDisposable
 
     public bool ShowGlyph => _thumbnail is null;
 
-    /// <summary>Decodes off the UI thread. Comics show their first page.</summary>
     public async Task LoadThumbnailAsync(int width, CancellationToken token)
     {
-        if (_thumbnailAttempted)
+        if (_attempted)
             return;
-        _thumbnailAttempted = true;
+        _attempted = true;
 
         var bitmap = await Task.Run(() => Decode(width), token).ConfigureAwait(true);
         if (token.IsCancellationRequested)
@@ -111,7 +105,7 @@ public sealed class MediaItemViewModel : ObservableObject, IDisposable
     {
         try
         {
-            if (IsComic)
+            if (MediaRules.IsComic(Path))
             {
                 var cover = MediaRules.ComicCover(Path);
                 if (cover is null)
@@ -128,7 +122,6 @@ public sealed class MediaItemViewModel : ObservableObject, IDisposable
         }
         catch (Exception)
         {
-            // Avalonia cannot read every codec. That is a display problem, not a posting one.
             return null;
         }
     }

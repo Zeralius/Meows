@@ -1,7 +1,6 @@
 using System.Text.Json;
-using Mews.Plugins.TelegramPoster.Model;
 
-namespace Mews.Plugins.TelegramPoster.Services;
+namespace Mews.Bot;
 
 /// <summary>Reading and writing a telegram-posting-bot checkout on disk.</summary>
 public sealed class BotWorkspace

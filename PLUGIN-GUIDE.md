@@ -4,8 +4,8 @@ Everything useful in Mews lives in a plugin. The shell finds them, lets you acti
 gives each one a tab. That is nearly all it does.
 
 This guide covers the whole contract. For the shape of a finished plugin, read
-[Telegram Poster](Mews.Plugins.TelegramPoster/README.md) or
-[Purrge](Mews.Plugins.Purrge/README.md) alongside it.
+[Telegram Poster](Mews.Plugins.TelegramPoster/README.md),
+[Purrge](Mews.Plugins.Purrge/README.md) or [Kibble](Mews.Plugins.Kibble/README.md) alongside it.
 
 ---
 
@@ -211,14 +211,20 @@ Then build each plugin in Release. Release output goes to `bin/`, deliberately *
 `plugins/` folder, so this cannot disturb a Debug shell you have running:
 
 ```bash
-dotnet build Mews.Plugins.TelegramPoster/Mews.Plugins.TelegramPoster.csproj -c Release && dotnet build Mews.Plugins.Purrge/Mews.Plugins.Purrge.csproj -c Release
+for p in Mews.Plugins.TelegramPoster Mews.Plugins.Purrge Mews.Plugins.Kibble; do dotnet build "$p/$p.csproj" -c Release; done
 ```
 
-Stage each one into the folder the deployed shell scans:
+Stage each one into the folder the deployed shell scans. Copy the **whole** build output rather
+than just the plugin DLL. A plugin's own libraries are loaded from its folder, so a plugin with
+any dependency fails at activation if you cherry-pick, and it fails long after the build looked
+fine. Telegram Poster and Kibble both need `Mews.Bot.Core.dll` this way:
 
 ```bash
-for p in Mews.Plugins.TelegramPoster Mews.Plugins.Purrge; do mkdir -p "artifacts/Mews-win-x64/plugins/$p" && cp "$p/bin/Release/$p.dll" "$p/bin/Release/$p.deps.json" "artifacts/Mews-win-x64/plugins/$p/"; done
+for p in Mews.Plugins.TelegramPoster Mews.Plugins.Purrge Mews.Plugins.Kibble; do mkdir -p "artifacts/Mews-win-x64/plugins/$p" && cp "$p"/bin/Release/*.dll "$p"/bin/Release/*.deps.json "artifacts/Mews-win-x64/plugins/$p/"; done
 ```
+
+Avalonia and `Mews.Plugins.Abstractions` are not in that output to be copied, because the csproj
+files keep them out. That is on purpose: the shell has to be the only source of both.
 
 Finally drop the third-party native symbols. This matters more than it sounds. `libSkiaSharp.pdb`
 and `libHarfBuzzSharp.pdb` are about 100 MB of a 206 MB output. Mews' own PDBs stay, so stack

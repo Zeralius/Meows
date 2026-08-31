@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using Mews.Plugins.Abstractions;
 using Mews.Plugins.TelegramPoster.Model;
 using Mews.Plugins.TelegramPoster.Services;
+using Mews.Bot;
 
 namespace Mews.Plugins.TelegramPoster.ViewModels;
 

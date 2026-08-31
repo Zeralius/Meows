@@ -11,7 +11,8 @@ Built with Avalonia 12.1.1 on .NET 10, targeting Windows.
 |---|---|
 | **Shell** | `Mews/` (window, tab host, plugin loader). [README](Mews/README.md) |
 | **Contract** | `Mews.Plugins.Abstractions/`, the interfaces a plugin implements |
-| **Plugins** | `Mews.Plugins.TelegramPoster/` [README](Mews.Plugins.TelegramPoster/README.md)<br>`Mews.Plugins.Purrge/` [README](Mews.Plugins.Purrge/README.md) |
+| **Plugins** | `Mews.Plugins.TelegramPoster/` [README](Mews.Plugins.TelegramPoster/README.md)<br>`Mews.Plugins.Purrge/` [README](Mews.Plugins.Purrge/README.md)<br>`Mews.Plugins.Kibble/` [README](Mews.Plugins.Kibble/README.md) |
+| **Shared** | `Mews.Bot.Core/`, the bot's config and media rules, used by Telegram Poster and Kibble |
 | **Writing one** | [PLUGIN-GUIDE.md](PLUGIN-GUIDE.md), the full contract |
 | **Tests** | `Mews.Tests/`, run with `dotnet test` |
 
@@ -130,9 +131,9 @@ manually with a version typed in. It:
 1. rejects a tag that is not `major.minor.patch`
 2. runs the tests, so a failing build never ships
 3. publishes the shell self-contained for win-x64, stamped with the tag version
-4. builds and **stages both plugins** into `plugins/`, which publishing alone does not do
+4. builds and **stages every plugin** into `plugins/`, which publishing alone does not do
 5. drops the third-party native symbols, roughly half the output
-6. fails the run if `Mews.exe` or either plugin DLL is missing from the package
+6. fails the run if `Mews.exe`, a plugin DLL, or a library a plugin needs is missing
 7. zips it and attaches it to a GitHub release, along with the contract `.nupkg`
 
 To cut a release:
@@ -155,7 +156,8 @@ dotnet test
 ```
 
 `Mews.Tests/` covers the pure and filesystem logic: group validation, config round-tripping and
-next-up resolution, the staged duplicate scan, contract version rules, and token writing.
+next-up resolution, the staged duplicate scan, queue runway maths, file intake and its refusals,
+contract version rules, and token writing.
 Anything needing an Avalonia render backend or a running dispatcher is deliberately out of
 scope, so the suite stays headless and works on a runner.
 

@@ -21,9 +21,11 @@
   <!-- Covers pure and filesystem logic. Anything needing an Avalonia render backend or a
        running dispatcher is deliberately out of scope, so this suite stays headless. -->
   <ItemGroup>
+    <ProjectReference Include="..\Mews.Bot.Core\Mews.Bot.Core.csproj" />
     <ProjectReference Include="..\Mews\Mews.csproj" />
     <ProjectReference Include="..\Mews.Plugins.TelegramPoster\Mews.Plugins.TelegramPoster.csproj" />
     <ProjectReference Include="..\Mews.Plugins.Purrge\Mews.Plugins.Purrge.csproj" />
+    <ProjectReference Include="..\Mews.Plugins.Kibble\Mews.Plugins.Kibble.csproj" />
   </ItemGroup>
 
 </Project>

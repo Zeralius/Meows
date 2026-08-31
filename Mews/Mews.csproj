@@ -11,7 +11,7 @@
 
         <!-- The app version. Moves independently of the plugin contract version;
              see the versioning section in README.md. -->
-        <Version>0.1.2</Version>
+        <Version>0.2.0</Version>
     </PropertyGroup>
 
     <ItemGroup>
