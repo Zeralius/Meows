@@ -1,0 +1,29 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <!-- Packable so a plugin can be developed in its own repository, with no reference to
+         the Mews sources at all. The version is the contract version: a plugin built against
+         it must be loaded by a shell carrying the same major version. -->
+    <PropertyGroup>
+        <PackageId>Mews.Plugins.Abstractions</PackageId>
+        <Version>0.1.0</Version>
+        <Description>The contract a Mews plugin implements: IMewsPlugin, IMewsHost, notifications, background work.</Description>
+        <Authors>Dennis</Authors>
+        <PackageTags>mews;plugin;avalonia</PackageTags>
+        <IncludeSymbols>true</IncludeSymbols>
+        <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- The XML docs on the interfaces are the reference an external author reads. -->
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Avalonia" Version="12.1.1" />
+    </ItemGroup>
+
+</Project>

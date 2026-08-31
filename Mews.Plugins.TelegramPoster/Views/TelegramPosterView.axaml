@@ -1,0 +1,476 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Mews.Plugins.TelegramPoster.ViewModels"
+             xmlns:svc="using:Mews.Plugins.TelegramPoster.Services"
+             x:Class="Mews.Plugins.TelegramPoster.Views.TelegramPosterView"
+             x:DataType="vm:TelegramPosterViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,14,0,6" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="#17171C" />
+            <Setter Property="BorderBrush" Value="#2A2A32" />
+        </Style>
+        <!-- Default padding is wide enough to lose a whole column off the grid. -->
+        <Style Selector="ListBox.grid > ListBoxItem">
+            <Setter Property="Padding" Value="4" />
+            <Setter Property="Margin" Value="0" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <!-- Workspace and bot control -->
+        <Border DockPanel.Dock="Top"
+                Background="#1C1C22"
+                BorderBrush="#2A2A32"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding BotRootText}"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Classes="label" Text="{Binding TokenStatusText}" />
+                        <TextBlock Classes="label" Text="{Binding ScheduledSummaryText}" />
+                        <TextBlock Classes="label" Text="{Binding StatusMessage}" />
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding BotStatusText}"
+                               VerticalAlignment="Center"
+                               Opacity="0.65" />
+                    <Button Content="Start bot" Command="{Binding StartBotCommand}" />
+                    <Button Content="Stop" Command="{Binding StopBotCommand}" />
+                    <Button Content="Reload" Command="{Binding ReloadCommand}" />
+                    <Button Name="ChooseRootButton" Content="Bot folder…" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="#3A1F22"
+                BorderBrush="#5C2B30"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFB4B4" TextWrapping="Wrap" />
+        </Border>
+
+        <!-- Missing-tool warnings go to the shell notification centre now, so they are still
+             seen when you are looking at another tab. -->
+
+        <Border DockPanel.Dock="Top"
+                Background="#1F2A33"
+                BorderBrush="#2E4757"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding NeedsToken}">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8"
+                  DataContext="{Binding Setup}" x:DataType="vm:BotSetupViewModel">
+                <TextBlock Grid.Column="0" Text="🔑" VerticalAlignment="Center" />
+                <TextBox Grid.Column="1"
+                         Text="{Binding TokenInput}"
+                         PasswordChar="•"
+                         PlaceholderText="No BOT_TOKEN in .env. Paste it here to write one" />
+                <Button Grid.Column="2" Content="Save to .env" Command="{Binding SaveTokenCommand}" />
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="#332B18"
+                BorderBrush="#5A4A22"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasGroupIssues}">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="⛔" Foreground="#FF8A8A" IsVisible="{Binding HasGroupErrors}" />
+                <TextBlock Text="⚠" Foreground="#E0B25E" IsVisible="{Binding !HasGroupErrors}" />
+                <TextBlock Text="{Binding GroupIssueSummary}" TextWrapping="Wrap" Opacity="0.85" />
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer IsVisible="{Binding ShowSetup}" Padding="28,22">
+            <StackPanel MaxWidth="720" HorizontalAlignment="Left" Spacing="6"
+                        DataContext="{Binding Setup}" x:CompileBindings="True"
+                        x:DataType="vm:BotSetupViewModel">
+
+                <TextBlock Text="Set up the posting bot" FontSize="21" FontWeight="SemiBold" />
+                <TextBlock Opacity="0.55" TextWrapping="Wrap"
+                           Text="Mews drives an existing telegram-posting-bot checkout; it does not contain one. Point it at a clone, or make one here." />
+
+                <Border Background="#3A1F22" BorderBrush="#5C2B30" BorderThickness="1"
+                        CornerRadius="6" Padding="12,9" Margin="0,10,0,0"
+                        IsVisible="{Binding HasError}">
+                    <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFB4B4" TextWrapping="Wrap" />
+                </Border>
+
+                <TextBlock Classes="section" Text="1 · CLONE THE REPOSITORY" />
+                <TextBlock Classes="label" Text="Repository URL" />
+                <TextBox Text="{Binding RepositoryUrl}"
+                         PlaceholderText="https://your-gitlab/user/telegram-posting-bot.git" />
+                <TextBlock Classes="label" Margin="0,8,0,0" Text="Clone into" />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                    <TextBox Grid.Column="0" Text="{Binding Destination}" />
+                    <Button Grid.Column="1" Name="BrowseDestinationButton" Content="Browse…" />
+                </Grid>
+                <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,8,0,0">
+                    <Button Content="Clone" Command="{Binding CloneCommand}" />
+                    <TextBlock VerticalAlignment="Center" Opacity="0.6" Text="{Binding StatusMessage}" />
+                </StackPanel>
+                <TextBlock Classes="label" TextWrapping="Wrap" Margin="0,4,0,0"
+                           Text="A private repository uses your existing git credentials. Mews never sees them, and the interactive prompt is disabled so a missing credential fails instead of hanging." />
+
+                <TextBlock Classes="section" Text="2 · PYTHON DEPENDENCIES" />
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Content="Install requirements.txt" Command="{Binding InstallCommand}" />
+                    <Button Content="Check" Command="{Binding CheckDependenciesCommand}" />
+                    <TextBlock VerticalAlignment="Center" Opacity="0.6" Text="{Binding DependencyStatusText}" />
+                </StackPanel>
+                <TextBlock Classes="label" Text="{Binding ToolStatusText}" Margin="0,4,0,0" />
+                <TextBlock Classes="label" TextWrapping="Wrap"
+                           Text="Installs with the interpreter shown above. If you keep the bot in a virtualenv, activate it and install there instead." />
+
+                <TextBlock Classes="section" Text="3 · BOT TOKEN" />
+                <TextBlock Classes="label" TextWrapping="Wrap"
+                           Text="Written to .env, which is gitignored and never arrives with a clone. Mews only ever reports whether a token exists, never its value." />
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,4,0,0">
+                    <TextBox Grid.Column="0"
+                             Text="{Binding TokenInput}"
+                             PasswordChar="•"
+                             PlaceholderText="123456:ABC-DEF…" />
+                    <Button Grid.Column="1" Content="Save to .env" Command="{Binding SaveTokenCommand}" />
+                </Grid>
+
+                <TextBlock Classes="label" Margin="0,16,0,0" TextWrapping="Wrap"
+                           Text="Already have a clone? Use the Bot folder… button in the header instead." />
+            </StackPanel>
+        </ScrollViewer>
+
+        <Grid ColumnDefinitions="290,4,*,4,400" IsVisible="{Binding !ShowSetup}">
+
+            <!-- Groups -->
+            <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top"
+                               Classes="section"
+                               Margin="14,12,14,6"
+                               Text="GROUPS · CHECKED = SCHEDULED" />
+                    <ListBox ItemsSource="{Binding Groups}"
+                             SelectedItem="{Binding SelectedGroup}"
+                             Background="Transparent"
+                             BorderThickness="0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:GroupViewModel">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,3">
+                                    <CheckBox Grid.Column="0"
+                                              VerticalAlignment="Center"
+                                              MinWidth="0"
+                                              IsChecked="{Binding IsEnabled}"
+                                              ToolTip.Tip="Include this group in the bot's schedule" />
+                                    <StackPanel Grid.Column="1"
+                                                Spacing="2"
+                                                Opacity="{Binding RowOpacity}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="●"
+                                                       Foreground="#E0A33E"
+                                                       ToolTip.Tip="Unsaved changes"
+                                                       IsVisible="{Binding IsDirty}" />
+                                            <TextBlock Text="⛔"
+                                                       Foreground="#FF8A8A"
+                                                       ToolTip.Tip="{Binding IssueTooltip}"
+                                                       IsVisible="{Binding HasErrors}" />
+                                            <TextBlock Text="⚠"
+                                                       Foreground="#E0B25E"
+                                                       ToolTip.Tip="{Binding IssueTooltip}"
+                                                       IsVisible="{Binding HasWarningsOnly}" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding QueueSummary}"
+                                                   FontSize="11"
+                                                   Opacity="0.55" />
+                                        <TextBlock Text="{Binding NextPostText}"
+                                                   FontSize="11"
+                                                   Opacity="0.4" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Background="#22222A" ResizeDirection="Columns" />
+
+            <!-- Media -->
+            <DockPanel Grid.Column="2">
+                <Border DockPanel.Dock="Top"
+                        BorderBrush="#2A2A32"
+                        BorderThickness="0,0,0,1"
+                        Padding="14,9">
+                    <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" ColumnSpacing="8">
+                        <!-- TextBlock, not Content, or Avalonia eats the underscore as an
+                             access key and you get "ToSend". -->
+                        <RadioButton Grid.Column="0"
+                                     GroupName="MediaSource"
+                                     IsChecked="{Binding ShowQueue, Mode=OneWay}"
+                                     Command="{Binding ShowQueueCommand}">
+                            <TextBlock Text="To_Send" />
+                        </RadioButton>
+                        <RadioButton Grid.Column="1"
+                                     GroupName="MediaSource"
+                                     IsChecked="{Binding ShowArchive, Mode=OneWay}"
+                                     Command="{Binding ShowArchiveCommand}">
+                            <TextBlock Text="Already_Sent" />
+                        </RadioButton>
+                        <TextBlock Grid.Column="2"
+                                   VerticalAlignment="Center"
+                                   Margin="10,0"
+                                   Opacity="0.5"
+                                   Text="{Binding MediaCountText}" />
+                        <Button Grid.Column="3" Content="Refresh" Command="{Binding RefreshMediaCommand}" />
+                        <Button Grid.Column="4" Content="Open folder" Command="{Binding OpenQueueFolderCommand}" />
+                    </Grid>
+                </Border>
+
+                <ListBox Classes="grid"
+                         ItemsSource="{Binding MediaItems}"
+                         SelectedItem="{Binding SelectedMedia}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Padding="8">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:MediaItemViewModel">
+                            <StackPanel Width="150" Spacing="4" ToolTip.Tip="{Binding FileName}">
+                                <Border Width="150" Height="150"
+                                        Background="#101014"
+                                        CornerRadius="4"
+                                        ClipToBounds="True">
+                                    <Panel>
+                                        <Image Source="{Binding Thumbnail}"
+                                               Stretch="UniformToFill"
+                                               IsVisible="{Binding HasThumbnail}" />
+                                        <TextBlock Text="{Binding KindGlyph}"
+                                                   FontSize="26"
+                                                   Opacity="0.35"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   IsVisible="{Binding ShowGlyph}" />
+                                        <Border Background="#CC000000"
+                                                CornerRadius="3"
+                                                Padding="4,1"
+                                                Margin="4"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Top"
+                                                IsVisible="{Binding IsComic}">
+                                            <TextBlock Text="COMIC" FontSize="9" />
+                                        </Border>
+                                    </Panel>
+                                </Border>
+                                <TextBlock Text="{Binding FileName}"
+                                           FontSize="10"
+                                           MaxWidth="150"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="3" Background="#22222A" ResizeDirection="Columns" />
+
+            <!-- Preview and group settings -->
+            <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0">
+                <ScrollViewer Padding="16,12">
+                    <StackPanel Spacing="6">
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding DetailHeader}"
+                                       FontWeight="SemiBold"
+                                       FontSize="13" />
+                            <Button Grid.Column="1"
+                                    Content="Clear selection"
+                                    Padding="8,2"
+                                    FontSize="11"
+                                    IsVisible="{Binding HasSelection}"
+                                    Command="{Binding ClearSelectionCommand}" />
+                        </Grid>
+
+                        <Border Background="#101014"
+                                CornerRadius="6"
+                                MinHeight="200"
+                                Padding="6"
+                                IsVisible="{Binding HasDetail}">
+                            <Panel>
+                                <Image Source="{Binding PreviewImage}"
+                                       Stretch="Uniform"
+                                       MaxHeight="420"
+                                       IsVisible="{Binding HasPreviewImage}" />
+                                <StackPanel HorizontalAlignment="Center"
+                                            VerticalAlignment="Center"
+                                            Spacing="6"
+                                            IsVisible="{Binding !HasPreviewImage}">
+                                    <TextBlock Text="{Binding DetailItem.KindGlyph}"
+                                               FontSize="34"
+                                               Opacity="0.35"
+                                               HorizontalAlignment="Center" />
+                                    <TextBlock Text="No inline preview for this type"
+                                               Opacity="0.35"
+                                               FontSize="11" />
+                                </StackPanel>
+                            </Panel>
+                        </Border>
+
+                        <StackPanel Spacing="2" IsVisible="{Binding HasDetail}">
+                            <TextBlock Text="{Binding DetailItem.FileName}" TextWrapping="Wrap" FontSize="12" />
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <TextBlock Classes="label" Text="{Binding DetailItem.KindText}" />
+                                <TextBlock Classes="label" Text="{Binding DetailItem.SizeText}" />
+                                <TextBlock Classes="label" Text="{Binding DetailItem.ModifiedText}" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding DetailComicText}"
+                                       Opacity="0.6"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding HasDetailComicText}" />
+                        </StackPanel>
+
+                        <Border Background="#1F1F26"
+                                CornerRadius="6"
+                                Padding="10,8"
+                                IsVisible="{Binding HasNextUpMessage}">
+                            <TextBlock Text="{Binding NextUpMessage}"
+                                       TextWrapping="Wrap"
+                                       FontSize="11"
+                                       Opacity="0.75" />
+                        </Border>
+
+                        <ContentControl Content="{Binding SelectedGroup}">
+                            <ContentControl.ContentTemplate>
+                                <DataTemplate x:DataType="vm:GroupViewModel">
+                                    <StackPanel Spacing="0">
+
+                            <ItemsControl ItemsSource="{Binding Issues}" Margin="0,14,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="svc:GroupIssue">
+                                        <Border Background="#241E12"
+                                                BorderBrush="#4A3D1E"
+                                                BorderThickness="1"
+                                                CornerRadius="5"
+                                                Padding="9,7"
+                                                Margin="0,0,0,6">
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                <TextBlock Grid.Column="0"
+                                                           Text="⛔"
+                                                           Foreground="#FF8A8A"
+                                                           IsVisible="{Binding IsError}" />
+                                                <TextBlock Grid.Column="0"
+                                                           Text="⚠"
+                                                           Foreground="#E0B25E"
+                                                           IsVisible="{Binding !IsError}" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Message}"
+                                                           FontSize="11"
+                                                           TextWrapping="Wrap"
+                                                           Opacity="0.9" />
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Classes="section" Text="GROUP SETTINGS" />
+
+                            <TextBlock Classes="label" Text="Name" />
+                            <TextBox Text="{Binding Name}" />
+
+                            <TextBlock Classes="label" Text="Chat ID" Margin="0,8,0,0" />
+                            <TextBox Text="{Binding ChatId}" />
+
+                            <TextBlock Classes="label" Text="Folder (relative to the bot root)" Margin="0,8,0,0" />
+                            <TextBox Text="{Binding Folder}" />
+
+                            <CheckBox Content="Post on an interval instead of a daily time"
+                                      IsChecked="{Binding UseInterval}"
+                                      Margin="0,10,0,0" />
+
+                            <StackPanel IsVisible="{Binding UseInterval}">
+                                <TextBlock Classes="label" Text="Every N minutes" />
+                                <TextBox Text="{Binding IntervalMinutes}" Width="90" HorizontalAlignment="Left" />
+                            </StackPanel>
+
+                            <StackPanel IsVisible="{Binding !UseInterval}" Orientation="Horizontal" Spacing="10">
+                                <StackPanel>
+                                    <TextBlock Classes="label" Text="Hour" />
+                                    <TextBox Text="{Binding Hour}" Width="70" />
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Classes="label" Text="Minute" />
+                                    <TextBox Text="{Binding Minute}" Width="70" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,10,0,0">
+                                <StackPanel>
+                                    <TextBlock Classes="label" Text="Jitter ± min" />
+                                    <TextBox Text="{Binding JitterMinutes}" Width="90" />
+                                </StackPanel>
+                                <StackPanel>
+                                    <TextBlock Classes="label" Text="Files per post" />
+                                    <TextBox Text="{Binding FilesPerPost}" Width="90" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <TextBlock Classes="label" Text="Post order" Margin="0,10,0,0" />
+                            <ComboBox ItemsSource="{Binding PostOrderOptions}"
+                                      SelectedItem="{Binding PostOrder}"
+                                      HorizontalAlignment="Stretch" />
+
+                            <TextBlock Classes="label" Text="Comic page order" Margin="0,8,0,0" />
+                            <ComboBox ItemsSource="{Binding ComicOrderOptions}"
+                                      SelectedItem="{Binding ComicOrder}"
+                                      HorizontalAlignment="Stretch" />
+
+                            <TextBlock Text="{Binding ScheduleSummary}"
+                                       Classes="label"
+                                       Margin="0,10,0,0"
+                                       TextWrapping="Wrap" />
+
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ContentControl.ContentTemplate>
+                        </ContentControl>
+
+                        <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,12,0,20">
+                            <Button Content="Save config.json" Command="{Binding SaveGroupCommand}" />
+                            <Button Content="Revert" Command="{Binding RevertGroupCommand}" />
+                            <Button Content="Archive folder" Command="{Binding OpenArchiveFolderCommand}" />
+                        </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

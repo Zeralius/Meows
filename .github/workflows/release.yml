@@ -1,0 +1,121 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to build, without the leading v (e.g. 0.1.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Work out the version
+        id: version
+        shell: pwsh
+        run: |
+          $v = if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
+            '${{ inputs.version }}'
+          } else {
+            '${{ github.ref_name }}' -replace '^v', ''
+          }
+          if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Version '$v' is not major.minor.patch" }
+          "value=$v" >> $env:GITHUB_OUTPUT
+          "Building $v"
+
+      - name: Test before shipping anything
+        run: dotnet test --configuration Release
+
+      - name: Publish the shell
+        run: >
+          dotnet publish Mews/Mews.csproj
+          --configuration Release
+          --runtime win-x64
+          --self-contained true
+          -p:Version=${{ steps.version.outputs.value }}
+          --output artifacts/Mews-win-x64
+
+      # The shell does not reference plugin projects, which is what keeps them drop-in, so
+      # publishing alone produces an app with no plugins. Each one has to be staged.
+      - name: Build the plugins
+        run: |
+          dotnet build Mews.Plugins.TelegramPoster/Mews.Plugins.TelegramPoster.csproj --configuration Release
+          dotnet build Mews.Plugins.Purrge/Mews.Plugins.Purrge.csproj --configuration Release
+
+      - name: Stage the plugins into the package
+        shell: pwsh
+        run: |
+          foreach ($p in 'Mews.Plugins.TelegramPoster', 'Mews.Plugins.Purrge') {
+            $dest = "artifacts/Mews-win-x64/plugins/$p"
+            New-Item -ItemType Directory -Force $dest | Out-Null
+            Copy-Item "$p/bin/Release/$p.dll" $dest
+            Copy-Item "$p/bin/Release/$p.deps.json" $dest -ErrorAction SilentlyContinue
+          }
+          Get-ChildItem artifacts/Mews-win-x64/plugins -Directory | ForEach-Object { "staged $($_.Name)" }
+
+      - name: Drop third-party native symbols
+        shell: pwsh
+        run: |
+          # libSkiaSharp.pdb and libHarfBuzzSharp.pdb are about half the output and are no use
+          # here. Mews' own pdbs stay, so stack traces remain readable.
+          Get-ChildItem artifacts/Mews-win-x64 -Filter *.pdb |
+            Where-Object { $_.Name -notlike 'Mews*' } |
+            Remove-Item -Force
+          "{0:N0} MB" -f ((Get-ChildItem artifacts/Mews-win-x64 -Recurse -File |
+            Measure-Object Length -Sum).Sum / 1MB)
+
+      - name: Sanity check the package
+        shell: pwsh
+        run: |
+          $root = 'artifacts/Mews-win-x64'
+          foreach ($f in "$root/Mews.exe",
+                         "$root/plugins/Mews.Plugins.TelegramPoster/Mews.Plugins.TelegramPoster.dll",
+                         "$root/plugins/Mews.Plugins.Purrge/Mews.Plugins.Purrge.dll") {
+            if (-not (Test-Path $f)) { throw "Missing from the package: $f" }
+          }
+          "package looks complete"
+
+      - name: Zip it
+        shell: pwsh
+        run: |
+          Compress-Archive -Path artifacts/Mews-win-x64/* `
+            -DestinationPath "artifacts/Mews-${{ steps.version.outputs.value }}-win-x64.zip" `
+            -CompressionLevel Optimal
+
+      - name: Pack the plugin contract
+        run: >
+          dotnet pack Mews.Plugins.Abstractions/Mews.Plugins.Abstractions.csproj
+          --configuration Release --output artifacts/nuget
+
+      - name: Publish the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $v = '${{ steps.version.outputs.value }}'
+          $notes = @"
+          Self-contained Windows x64 build. No .NET runtime needed.
+
+          Download ``Mews-$v-win-x64.zip``, unzip it anywhere, and run ``Mews.exe``.
+          The Telegram Poster and Purrge plugins are included; activate them on the Plugins tab.
+
+          ``Mews.Plugins.Abstractions`` is attached for anyone building a plugin in their own
+          repository. See PLUGIN-GUIDE.md.
+          "@
+          gh release create "v$v" `
+            "artifacts/Mews-$v-win-x64.zip" `
+            (Get-ChildItem artifacts/nuget/*.nupkg | ForEach-Object { $_.FullName }) `
+            --title "Mews $v" --notes $notes

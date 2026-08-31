@@ -1,0 +1,212 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:Mews.ViewModels"
+        xmlns:svc="using:Mews.Services"
+        x:Class="Mews.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="Mews"
+        Width="1400" Height="880"
+        MinWidth="900" MinHeight="560">
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Bottom"
+                Background="#1B1B20"
+                BorderBrush="#2E2E36"
+                BorderThickness="0,1,0,0"
+                Padding="10,4">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                <TextBlock Grid.Column="0"
+                           Text="{Binding AppVersionText}"
+                           FontWeight="SemiBold"
+                           Opacity="0.55"
+                           VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1"
+                           Margin="12,0"
+                           Opacity="0.45"
+                           VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis"
+                           Text="{Binding PluginsDirectoryText}" />
+                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                    <ToggleButton Content="{Binding TaskBadge}"
+                                  Padding="10,2"
+                                  IsChecked="{Binding IsTasksOpen}" />
+                    <ToggleButton Content="{Binding NotificationBadge}"
+                                  Padding="10,2"
+                                  IsChecked="{Binding IsNotificationsOpen}" />
+                    <ToggleButton Content="Log"
+                                  Padding="10,2"
+                                  IsChecked="{Binding IsLogVisible}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom"
+                MaxHeight="300"
+                Background="#141418"
+                BorderBrush="#2E2E36"
+                BorderThickness="0,1,0,0"
+                IsVisible="{Binding IsNotificationsOpen}">
+            <DockPanel>
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="12,8,12,4">
+                    <TextBlock Grid.Column="0" Text="Notifications" FontWeight="SemiBold" Opacity="0.6" />
+                    <Button Grid.Column="1"
+                            Content="Clear dismissable"
+                            FontSize="11"
+                            Padding="8,2"
+                            Command="{Binding ClearNotificationsCommand}" />
+                </Grid>
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="12,4,12,10"
+                           Opacity="0.4"
+                           FontSize="11"
+                           IsVisible="{Binding !HasNotifications}"
+                           Text="Nothing to report. Standing conditions stay here until the plugin that raised them clears them." />
+                <ScrollViewer Padding="12,0,12,10">
+                    <ItemsControl ItemsSource="{Binding Notifications}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="svc:NotificationItem">
+                                <Border Background="#1C1C22"
+                                        BorderBrush="#2E2E36"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="10,8"
+                                        Margin="0,0,0,6">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                        <TextBlock Grid.Column="0"
+                                                   Text="{Binding Glyph}"
+                                                   Foreground="{Binding Accent}"
+                                                   VerticalAlignment="Top" />
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding Message}"
+                                                       Opacity="0.7"
+                                                       FontSize="11"
+                                                       TextWrapping="Wrap"
+                                                       IsVisible="{Binding HasMessage}" />
+                                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                                <TextBlock Text="{Binding Source}" Opacity="0.4" FontSize="10" />
+                                                <TextBlock Text="{Binding TimeText}" Opacity="0.4" FontSize="10" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                                            <Button Content="{Binding ActionLabel}"
+                                                    FontSize="11"
+                                                    Padding="8,2"
+                                                    IsVisible="{Binding HasAction}"
+                                                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).InvokeNotificationActionCommand}"
+                                                    CommandParameter="{Binding}" />
+                                            <Button Content="✕"
+                                                    FontSize="11"
+                                                    Padding="7,2"
+                                                    IsVisible="{Binding CanDismiss}"
+                                                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).DismissNotificationCommand}"
+                                                    CommandParameter="{Binding}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom"
+                MaxHeight="220"
+                Background="#141418"
+                BorderBrush="#2E2E36"
+                BorderThickness="0,1,0,0"
+                IsVisible="{Binding IsTasksOpen}">
+            <DockPanel>
+                <TextBlock DockPanel.Dock="Top"
+                           Text="Background tasks"
+                           FontWeight="SemiBold"
+                           Opacity="0.6"
+                           Margin="12,8,12,4" />
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="12,4,12,10"
+                           Opacity="0.4"
+                           FontSize="11"
+                           IsVisible="{Binding !HasRunningTasks}"
+                           Text="Nothing running. Plugins register watches, imports and scheduled scans here; they stop when the plugin is deactivated." />
+                <ScrollViewer Padding="12,0,12,10">
+                    <ItemsControl ItemsSource="{Binding RunningTasks}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="svc:BackgroundTaskItem">
+                                <Border Background="#1C1C22"
+                                        BorderBrush="#2E2E36"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="10,8"
+                                        Margin="0,0,0,6">
+                                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                                        <StackPanel Grid.Column="0" Spacing="2">
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding Status}" Opacity="0.65" FontSize="11" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding Source}" Opacity="0.4" FontSize="10" />
+                                        </StackPanel>
+                                        <ProgressBar Grid.Column="1"
+                                                     Width="140"
+                                                     VerticalAlignment="Center"
+                                                     Minimum="0" Maximum="100"
+                                                     Value="{Binding ProgressPercent}"
+                                                     IsIndeterminate="{Binding !HasProgress}" />
+                                        <Button Grid.Column="2"
+                                                Content="Cancel"
+                                                FontSize="11"
+                                                Padding="8,2"
+                                                VerticalAlignment="Center"
+                                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CancelTaskCommand}"
+                                                CommandParameter="{Binding}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom"
+                Height="190"
+                Background="#141418"
+                BorderBrush="#2E2E36"
+                BorderThickness="0,1,0,0"
+                IsVisible="{Binding IsLogVisible}">
+            <ScrollViewer Padding="10,6">
+                <ItemsControl ItemsSource="{Binding LogLines}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <TextBlock Text="{Binding}"
+                                       FontFamily="Cascadia Mono,Consolas,monospace"
+                                       FontSize="11"
+                                       Opacity="0.75"
+                                       TextWrapping="NoWrap" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </ScrollViewer>
+        </Border>
+
+        <TabControl ItemsSource="{Binding Tabs}"
+                    SelectedItem="{Binding SelectedTab}"
+                    Padding="0">
+            <TabControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:TabViewModel">
+                    <StackPanel Orientation="Horizontal" Spacing="7">
+                        <TextBlock Text="{Binding Icon}" VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding Header}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </DataTemplate>
+            </TabControl.ItemTemplate>
+            <TabControl.ContentTemplate>
+                <DataTemplate x:DataType="vm:TabViewModel">
+                    <ContentControl Content="{Binding Content}" />
+                </DataTemplate>
+            </TabControl.ContentTemplate>
+        </TabControl>
+
+    </DockPanel>
+
+</Window>

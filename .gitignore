@@ -1,0 +1,57 @@
+## Build output
+[Bb]in/
+[Oo]bj/
+[Dd]ebug/
+[Rr]elease/
+artifacts/
+*.dll
+*.pdb
+*.exe
+!app.manifest
+
+## Plugin drop-in folder
+# Plugins are built straight into here by their own csproj, so the whole folder is
+# build output. If a third-party plugin ever ships prebuilt, unignore that one folder.
+plugins/
+
+## NuGet
+*.nupkg
+*.snupkg
+project.lock.json
+project.fragment.lock.json
+.nuget/
+packages/
+!packages/build/
+
+## Rider / JetBrains
+.idea/
+*.sln.iml
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.userprefs
+*.VC.db
+*.VC.VC.opendb
+
+## Test and coverage output
+[Tt]est[Rr]esult*/
+[Bb]uild[Ll]og.*
+coverage*.json
+coverage*.xml
+*.coverage
+*.coveragexml
+
+## OS noise
+.DS_Store
+Thumbs.db
+desktop.ini
+
+## Local secrets and machine-specific config
+# Mews keeps its own settings under %APPDATA%\Mews, but keep this here so a future
+# plugin that wants a local .env does not leak one by accident.
+.env
+*.local.json
