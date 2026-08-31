@@ -15,6 +15,31 @@ public sealed class KibbleSettings
     public string? LastSourceFolder { get; set; }
 
     public IntakeStamp Stamp { get; set; } = IntakeStamp.KeepSource;
+
+    public GridSort Sort { get; set; } = GridSort.NameAscending;
+
+    public PageOrder PageOrder { get; set; } = PageOrder.ByName;
+}
+
+/// <summary>How the folder you opened is laid out in the middle column.</summary>
+public enum GridSort
+{
+    NameAscending,
+    NameDescending,
+    NewestFirst,
+    OldestFirst,
+}
+
+/// <summary>A sort with words on it, so the dropdown does not show an enum name.</summary>
+public sealed record SortOption(GridSort Value, string Label)
+{
+    public override string ToString() => Label;
+}
+
+/// <summary>A page order with words on it.</summary>
+public sealed record PageOrderOption(PageOrder Value, string Label)
+{
+    public override string ToString() => Label;
 }
 
 public sealed class KibbleViewModel : ObservableObject, IDisposable
@@ -175,8 +200,19 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     /// </summary>
     public void SetSelection(IEnumerable<IncomingFileViewModel> files)
     {
+        // Keep the order things were picked in. Whatever the list control reports, anything
+        // already picked holds its place and only genuinely new files go on the end, so the
+        // page numbers do not shuffle when you add one more.
+        var now = files.ToList();
+        var live = now.ToHashSet();
+        var ordered = _selection.Where(live.Contains).ToList();
+        foreach (var file in now)
+            if (!ordered.Contains(file))
+                ordered.Add(file);
+
         _selection.Clear();
-        _selection.AddRange(files);
+        _selection.AddRange(ordered);
+        NumberThePicked();
         BlockedReason = null;
         OnPropertyChanged(nameof(SelectionCount));
         OnPropertyChanged(nameof(IsBundle));
@@ -185,7 +221,72 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(SendVerb));
     }
 
+    public IReadOnlyList<SortOption> SortOptions { get; } =
+    [
+        new(GridSort.NameAscending, "Name, A to Z"),
+        new(GridSort.NameDescending, "Name, Z to A"),
+        new(GridSort.NewestFirst, "Newest first"),
+        new(GridSort.OldestFirst, "Oldest first"),
+    ];
+
+    public SortOption SelectedSort
+    {
+        get => SortOptions.First(o => o.Value == _settings.Sort);
+        set
+        {
+            if (value is null || _settings.Sort == value.Value)
+                return;
+            _settings.Sort = value.Value;
+            SaveSettings();
+            OnPropertyChanged();
+            ApplySort();
+        }
+    }
+
+    public IReadOnlyList<PageOrderOption> PageOrderOptions { get; } =
+    [
+        new(PageOrder.ByName, "Pages in file name order"),
+        new(PageOrder.AsPicked, "Pages in the order I picked them"),
+    ];
+
+    public PageOrderOption SelectedPageOrder
+    {
+        get => PageOrderOptions.First(o => o.Value == _settings.PageOrder);
+        set
+        {
+            if (value is null || _settings.PageOrder == value.Value)
+                return;
+            _settings.PageOrder = value.Value;
+            SaveSettings();
+            OnPropertyChanged();
+            NumberThePicked();
+        }
+    }
+
     public int SelectionCount => _selection.Count;
+
+    /// <summary>
+    /// Stamps 1, 2, 3 onto the picked tiles in the order they will appear in the comic, so the
+    /// page order is something you can see rather than something you find out afterwards.
+    /// </summary>
+    private void NumberThePicked()
+    {
+        foreach (var file in Incoming)
+            file.PageNumber = 0;
+
+        if (_selection.Count < Intake.MinBundle)
+            return;
+
+        var page = 1;
+        foreach (var file in PagesInOrder())
+            file.PageNumber = page++;
+    }
+
+    /// <summary>The pick in the order it would be written into the archive.</summary>
+    private IEnumerable<IncomingFileViewModel> PagesInOrder() =>
+        _settings.PageOrder == PageOrder.ByName
+            ? _selection.OrderBy(f => f.FileName, Comparer<string>.Create(MediaRules.CompareNatural))
+            : _selection;
 
     /// <summary>Two or more picked means the next send makes a comic out of them.</summary>
     public bool IsBundle => _selection.Count >= Intake.MinBundle;
@@ -275,11 +376,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         {
             // Everything, not just what the bot can post. A file it cannot use is exactly
             // what you want to see and deal with, rather than have quietly hidden.
-            var files = Directory.EnumerateFiles(folder)
-                .OrderBy(p => Path.GetFileName(p), Comparer<string>.Create(MediaRules.CompareNatural));
-
-            foreach (var file in files)
-                Incoming.Add(new IncomingFileViewModel(file));
+            foreach (var file in Sorted(Directory.EnumerateFiles(folder).Select(f => new IncomingFileViewModel(f))))
+                Incoming.Add(file);
         }
         catch (Exception ex)
         {
@@ -291,6 +389,36 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         StatusMessage = $"{Incoming.Count} file(s) in {Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar))}";
         RaiseGridState();
         _ = LoadThumbnailsAsync();
+    }
+
+    private IEnumerable<IncomingFileViewModel> Sorted(IEnumerable<IncomingFileViewModel> files) =>
+        _settings.Sort switch
+        {
+            GridSort.NameDescending => files.OrderByDescending(f => f.FileName, Comparer<string>.Create(MediaRules.CompareNatural)),
+            GridSort.NewestFirst => files.OrderByDescending(f => f.Modified),
+            GridSort.OldestFirst => files.OrderBy(f => f.Modified),
+            _ => files.OrderBy(f => f.FileName, Comparer<string>.Create(MediaRules.CompareNatural)),
+        };
+
+    /// <summary>
+    /// Reorders what is already loaded rather than rereading the folder, so thumbnails already
+    /// decoded stay decoded. The pick is dropped, because carrying a multi-file pick across a
+    /// reorder would leave the numbers meaning something you can no longer see.
+    /// </summary>
+    private void ApplySort()
+    {
+        if (Incoming.Count == 0)
+            return;
+
+        var keep = Selected;
+        var reordered = Sorted(Incoming.ToList()).ToList();
+
+        Incoming.Clear();
+        foreach (var file in reordered)
+            Incoming.Add(file);
+
+        SetSelection([]);
+        Selected = keep is not null && Incoming.Contains(keep) ? keep : Incoming.FirstOrDefault();
     }
 
     /// <summary>Sends the selection to a destination, by click or by number key.</summary>
@@ -343,12 +471,13 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     /// </summary>
     private void SendBundle(DestinationViewModel destination)
     {
-        var files = _selection
-            .OrderBy(f => f.FileName, Comparer<string>.Create(MediaRules.CompareNatural))
-            .ToList();
+        var files = PagesInOrder().ToList();
 
+        // Already in page order here, so the archive is written exactly as the numbered tiles
+        // promised rather than being sorted a second time behind your back.
         var result = Intake.SendAsComic(
-            files.Select(f => f.Path).ToList(), _workspace!, destination.Group, Stamp, ArchiveName);
+            files.Select(f => f.Path).ToList(), _workspace!, destination.Group, Stamp, ArchiveName,
+            PageOrder.AsPicked);
 
         if (!result.Moved)
         {

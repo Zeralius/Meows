@@ -9,6 +9,7 @@ public sealed class IncomingFileViewModel : ObservableObject, IDisposable
 {
     private Bitmap? _thumbnail;
     private bool _attempted;
+    private int _pageNumber;
 
     public IncomingFileViewModel(string path)
     {
@@ -59,6 +60,26 @@ public sealed class IncomingFileViewModel : ObservableObject, IDisposable
         MediaKind.Photo => "🖼",
         _ => "?",
     };
+
+    /// <summary>
+    /// Which page this file will be inside the comic, or 0 when it is not part of one. Shown on
+    /// the tile so the page order is visible before the archive exists rather than after.
+    /// </summary>
+    public int PageNumber
+    {
+        get => _pageNumber;
+        set
+        {
+            if (!SetField(ref _pageNumber, value))
+                return;
+            OnPropertyChanged(nameof(PageText));
+            OnPropertyChanged(nameof(HasPageNumber));
+        }
+    }
+
+    public string PageText => _pageNumber > 0 ? _pageNumber.ToString() : "";
+
+    public bool HasPageNumber => _pageNumber > 0;
 
     public Bitmap? Thumbnail
     {

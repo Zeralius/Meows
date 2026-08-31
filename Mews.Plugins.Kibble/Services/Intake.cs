@@ -22,6 +22,16 @@ public enum IntakeOutcome
     Failed,
 }
 
+/// <summary>How the pages inside a new comic are ordered.</summary>
+public enum PageOrder
+{
+    /// <summary>Sorted naturally by file name, so page2 lands before page10.</summary>
+    ByName,
+
+    /// <summary>Left in the order the caller handed them over, which is the order you picked them.</summary>
+    AsPicked,
+}
+
 /// <summary>A file that went into a comic, with the timestamp it had before it did.</summary>
 public sealed record BundledPage(string Path, DateTime Modified);
 
@@ -137,20 +147,21 @@ public static class Intake
         BotWorkspace workspace,
         GroupConfig group,
         IntakeStamp stamp,
-        string archiveName)
+        string archiveName,
+        PageOrder pageOrder = PageOrder.ByName)
     {
         var problem = InspectBundle(sources);
         if (problem is not null)
             return problem;
 
         // Page order has to survive whichever comic_order the destination group happens to
-        // use, and Kibble does not control that setting. So the archive is written to satisfy
-        // all three at once: pages go in natural name order, each entry gets an index prefix
-        // so "name" sorts them the same way, and entry times ascend so "date" agrees.
-        // "zip_order" is then simply the order they were written.
-        var ordered = sources
-            .OrderBy(x => Path.GetFileName(x) ?? x, Comparer<string>.Create(MediaRules.CompareNatural))
-            .ToList();
+        // use, and Kibble does not control that setting. So whatever order is chosen here, the
+        // archive is written to satisfy all three at once: each entry gets an index prefix so
+        // "name" sorts them that way, entry times ascend so "date" agrees, and "zip_order" is
+        // simply the order they were written.
+        var ordered = pageOrder == PageOrder.ByName
+            ? sources.OrderBy(x => Path.GetFileName(x) ?? x, Comparer<string>.Create(MediaRules.CompareNatural)).ToList()
+            : sources.ToList();
 
         var pages = new List<BundledPage>();
         var temp = Path.Combine(Path.GetTempPath(), $"kibble_{Guid.NewGuid():N}.cbz");

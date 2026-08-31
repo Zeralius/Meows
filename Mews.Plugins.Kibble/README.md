@@ -25,7 +25,7 @@ quietly starts re-posting the archive, and nobody notices for a while.
 | | |
 |---|---|
 | **Left** | Every group as a destination, driest first, each with a number key and its runway |
-| **Middle** | The folder you opened, as a thumbnail grid. Ctrl and shift pick several |
+| **Middle** | The folder you opened, as a thumbnail grid. Ctrl and shift pick several. Sort it with the dropdown |
 | **Right** | Full preview of the selected file, its size and date, and the queue order setting |
 
 ## Sorting a folder
@@ -50,12 +50,24 @@ as a run of unrelated images.
 Name the archive in the box on the right. It defaults to the folder you opened, since that is
 usually the set. Anything a file name cannot hold is dropped, and an empty box becomes `comic`.
 
-Page order is the thing worth explaining. The bot has a per group `comic_order` of `name`, `date`
-or `zip_order`, and Kibble does not control which one a group uses, so the archive is written to
-satisfy all three at once:
+**Every picked tile shows the page it will be**, as a number in its corner, so the order is
+something you can see before the archive exists rather than something you discover afterwards.
+Two dropdown choices decide those numbers:
 
-- pages go in sorted naturally, so `page2` lands before `page10`
-- each entry gets an index prefix, so sorting by `name` gives that same order
+| | |
+|---|---|
+| **Pages in file name order** | Natural order, so `page2` comes before `page10`. The default |
+| **Pages in the order I picked them** | Ctrl click the files one at a time and that is the page order |
+
+Pick order is the one to use when the file names carry no order at all, which is most of the time
+for anything downloaded. Adding another file to the pick never renumbers the ones already in it.
+
+Page order is the thing worth explaining. The bot has a per group `comic_order` of `name`, `date`
+or `zip_order`, and Kibble does not control which one a group uses, so whichever order you chose,
+the archive is written to satisfy all three at once:
+
+- pages go in in the order you chose
+- each entry gets an index prefix, `1_`, `2_`, `3_`, so sorting by `name` gives that same order
 - entry times ascend, so sorting by `date` gives it too
 - and `zip_order` is simply the order they were written
 
@@ -69,6 +81,16 @@ comic in batches of ten pages, so there is no page limit to worry about here.
 **Undo unpacks the comic** back into the files it was made from and deletes the archive. The
 bytes come out of the archive itself rather than a copy kept aside, so an undo cannot hand back
 something subtly different from what went in.
+
+## Sorting the folder
+
+The dropdown above the grid orders what is waiting: **name A to Z**, **name Z to A**, **newest
+first**, **oldest first**. Name order is natural, so `page2` comes before `page10` rather than
+after it. The choice is remembered.
+
+Sorting reorders what is already loaded instead of rereading the folder, so thumbnails that have
+already decoded stay decoded. It does drop a multi-file pick, because page numbers that refer to
+an order you can no longer see would be worse than losing the pick.
 
 ## What it refuses to do
 

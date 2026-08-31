@@ -643,3 +643,236 @@ public sealed class KibbleSelectionTests
         Assert.Equal($"{Path.GetFileName(folder)}.cbz", Path.GetFileName(queued[0]));
     }
 }
+
+/// <summary>How the folder you opened is laid out, and which page each picked file becomes.</summary>
+public sealed class KibbleSortAndPageOrderTests
+{
+    private static (KibbleViewModel Model, TempWorkspace Temp) Open(params (string Name, int DaysOld)[] files)
+    {
+        var temp = new TempWorkspace();
+        temp.WriteConfig(temp.AddGroup("Alpha"));
+
+        var folder = Path.Combine(temp.Root, "intake");
+        Directory.CreateDirectory(folder);
+        foreach (var (name, daysOld) in files)
+        {
+            var path = Path.Combine(folder, name);
+            File.WriteAllBytes(path, System.Text.Encoding.UTF8.GetBytes(name));
+            File.SetLastWriteTimeUtc(path, DateTime.UtcNow.AddDays(-daysOld));
+        }
+
+        var model = new KibbleViewModel(new FakeHost(Path.Combine(temp.Root, "hostdata")));
+        model.SetBotRoot(temp.Workspace.Root);
+        model.LoadFolder(folder);
+        return (model, temp);
+    }
+
+    private static string[] Names(KibbleViewModel m) => m.Incoming.Select(f => f.FileName).ToArray();
+
+    private static void Sort(KibbleViewModel m, GridSort sort) =>
+        m.SelectedSort = m.SortOptions.First(o => o.Value == sort);
+
+    [Fact]
+    public void Name_order_is_natural_so_page2_beats_page10()
+    {
+        var (m, temp) = Open(("page10.png", 1), ("page2.png", 2), ("page1.png", 3));
+        using var _t = temp;
+
+        Assert.Equal(new[] { "page1.png", "page2.png", "page10.png" }, Names(m));
+    }
+
+    [Fact]
+    public void Name_descending_turns_it_around()
+    {
+        var (m, temp) = Open(("page10.png", 1), ("page2.png", 2), ("page1.png", 3));
+        using var _t = temp;
+
+        Sort(m, GridSort.NameDescending);
+
+        Assert.Equal(new[] { "page10.png", "page2.png", "page1.png" }, Names(m));
+    }
+
+    [Fact]
+    public void Newest_and_oldest_use_the_modified_time_not_the_name()
+    {
+        var (m, temp) = Open(("a.png", 10), ("b.png", 1), ("c.png", 5));
+        using var _t = temp;
+
+        Sort(m, GridSort.NewestFirst);
+        Assert.Equal(new[] { "b.png", "c.png", "a.png" }, Names(m));
+
+        Sort(m, GridSort.OldestFirst);
+        Assert.Equal(new[] { "a.png", "c.png", "b.png" }, Names(m));
+    }
+
+    [Fact]
+    public void Sorting_reorders_what_is_loaded_rather_than_losing_it()
+    {
+        var (m, temp) = Open(("a.png", 3), ("b.png", 2), ("c.png", 1));
+        using var _t = temp;
+        var before = m.Incoming.ToList();
+
+        Sort(m, GridSort.NewestFirst);
+
+        // Same view model instances, so a decoded thumbnail survives a reorder.
+        Assert.Equal(3, m.Incoming.Count);
+        Assert.All(m.Incoming, f => Assert.Contains(f, before));
+    }
+
+    [Fact]
+    public void The_sort_is_remembered()
+    {
+        var (m, temp) = Open(("a.png", 1), ("b.png", 2));
+        using var _t = temp;
+
+        Sort(m, GridSort.OldestFirst);
+
+        Assert.Equal(GridSort.OldestFirst, m.SelectedSort.Value);
+    }
+
+    [Fact]
+    public void Picking_numbers_the_tiles_in_the_order_they_will_be_pages()
+    {
+        var (m, temp) = Open(("page10.png", 1), ("page2.png", 2), ("page1.png", 3));
+        using var _t = temp;
+
+        m.SetSelection([.. m.Incoming]);
+
+        // Grid is page1, page2, page10 and by name that is also the page order.
+        Assert.Equal(1, m.Incoming[0].PageNumber);
+        Assert.Equal(2, m.Incoming[1].PageNumber);
+        Assert.Equal(3, m.Incoming[2].PageNumber);
+    }
+
+    [Fact]
+    public void A_single_pick_carries_no_page_number()
+    {
+        var (m, temp) = Open(("a.png", 1), ("b.png", 2));
+        using var _t = temp;
+
+        m.SetSelection([m.Incoming[0]]);
+
+        Assert.All(m.Incoming, f => Assert.Equal(0, f.PageNumber));
+        Assert.False(m.Incoming[0].HasPageNumber);
+    }
+
+    [Fact]
+    public void In_pick_order_the_numbers_follow_the_clicks_not_the_names()
+    {
+        var (m, temp) = Open(("a.png", 1), ("b.png", 2), ("c.png", 3));
+        using var _t = temp;
+        m.SelectedPageOrder = m.PageOrderOptions.First(o => o.Value == PageOrder.AsPicked);
+
+        var a = m.Incoming.First(f => f.FileName == "a.png");
+        var b = m.Incoming.First(f => f.FileName == "b.png");
+        var c = m.Incoming.First(f => f.FileName == "c.png");
+        m.SetSelection([c, a, b]);
+
+        Assert.Equal(1, c.PageNumber);
+        Assert.Equal(2, a.PageNumber);
+        Assert.Equal(3, b.PageNumber);
+    }
+
+    [Fact]
+    public void Adding_one_more_does_not_renumber_what_was_already_picked()
+    {
+        var (m, temp) = Open(("a.png", 1), ("b.png", 2), ("c.png", 3));
+        using var _t = temp;
+        m.SelectedPageOrder = m.PageOrderOptions.First(o => o.Value == PageOrder.AsPicked);
+
+        var a = m.Incoming.First(f => f.FileName == "a.png");
+        var b = m.Incoming.First(f => f.FileName == "b.png");
+        var c = m.Incoming.First(f => f.FileName == "c.png");
+        m.SetSelection([c, a]);
+        // The list control hands the set back in its own order, which must not reshuffle pages.
+        m.SetSelection([a, b, c]);
+
+        Assert.Equal(1, c.PageNumber);
+        Assert.Equal(2, a.PageNumber);
+        Assert.Equal(3, b.PageNumber);
+    }
+
+    [Fact]
+    public void The_archive_is_written_in_the_order_the_numbers_promised()
+    {
+        var (m, temp) = Open(("a.png", 1), ("b.png", 2), ("c.png", 3));
+        using var _t = temp;
+        m.SelectedPageOrder = m.PageOrderOptions.First(o => o.Value == PageOrder.AsPicked);
+
+        var a = m.Incoming.First(f => f.FileName == "a.png");
+        var b = m.Incoming.First(f => f.FileName == "b.png");
+        var c = m.Incoming.First(f => f.FileName == "c.png");
+        m.SetSelection([c, a, b]);
+        m.SendToCommand.Execute(m.Destinations[0]);
+
+        var queued = temp.Workspace.Scan(temp.Workspace.ToSendFolder(m.Destinations[0].Group));
+        var pages = MediaRules.ComicPages(queued[0]).Select(n => n[(n.IndexOf('_') + 1)..]).ToArray();
+        Assert.Equal(new[] { "c.png", "a.png", "b.png" }, pages);
+    }
+
+    [Fact]
+    public void Sorting_clears_the_pick_so_stale_numbers_cannot_linger()
+    {
+        var (m, temp) = Open(("a.png", 1), ("b.png", 2), ("c.png", 3));
+        using var _t = temp;
+        m.SetSelection([.. m.Incoming]);
+        Assert.True(m.IsBundle);
+
+        Sort(m, GridSort.NewestFirst);
+
+        Assert.False(m.IsBundle);
+        Assert.All(m.Incoming, f => Assert.Equal(0, f.PageNumber));
+    }
+}
+
+public sealed class ComicPageOrderTests
+{
+    [Fact]
+    public void As_picked_leaves_the_order_alone()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var folder = Path.Combine(temp.Root, "in");
+        Directory.CreateDirectory(folder);
+        var paths = new List<string>();
+        foreach (var n in new[] { "zebra.png", "apple.png", "mango.png" })
+        {
+            var path = Path.Combine(folder, n);
+            File.WriteAllBytes(path, System.Text.Encoding.UTF8.GetBytes(n));
+            paths.Add(path);
+        }
+
+        var result = Intake.SendAsComic(paths, temp.Workspace, group, IntakeStamp.KeepSource, "set", PageOrder.AsPicked);
+
+        Assert.Equal(
+            new[] { "1_zebra.png", "2_apple.png", "3_mango.png" },
+            MediaRules.ComicPages(result.Destination!, "zip_order").ToArray());
+    }
+
+    [Fact]
+    public void As_picked_still_survives_every_comic_order_mode()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var folder = Path.Combine(temp.Root, "in");
+        Directory.CreateDirectory(folder);
+        var paths = new List<string>();
+        foreach (var n in new[] { "zebra.png", "apple.png", "mango.png" })
+        {
+            var path = Path.Combine(folder, n);
+            File.WriteAllBytes(path, System.Text.Encoding.UTF8.GetBytes(n));
+            paths.Add(path);
+        }
+
+        var result = Intake.SendAsComic(paths, temp.Workspace, group, IntakeStamp.KeepSource, "set", PageOrder.AsPicked);
+
+        var expected = new[] { "zebra.png", "apple.png", "mango.png" };
+        foreach (var mode in new[] { "name", "date", "zip_order" })
+        {
+            var actual = MediaRules.ComicPages(result.Destination!, mode)
+                .Select(n => n[(n.IndexOf('_') + 1)..])
+                .ToArray();
+            Assert.Equal(expected, actual);
+        }
+    }
+}
