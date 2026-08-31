@@ -106,15 +106,34 @@ comic in batches of ten pages, so there is no page limit to worry about here.
 bytes come out of the archive itself rather than a copy kept aside, so an undo cannot hand back
 something subtly different from what went in.
 
+## Big folders
+
+A folder of thousands is slow to open, because every file gets a tile and every tile gets a
+thumbnail decoded whether you ever scroll to it or not. The grid uses a wrapping layout, which
+does not virtualise, so nothing is free just because it is off screen.
+
+**In batches**, next to the sort dropdown, builds only a batch at a time. Pick 100, 200, 500 or
+1000. A **Load more** button under the grid pulls in the next batch and says how many are still
+waiting, and the header says how much of the folder is showing.
+
+The batch tops itself back up as you work: send ten files and ten more appear, so you keep a full
+screen without ever loading the whole folder. Counts and sorting always cover the **whole**
+folder, not just the batch, so "50 files left" means fifty and newest-first means newest of all
+of them.
+
+It is off by default, since it changes nothing for a folder of normal size. Turn it on for the
+big ones and it is remembered.
+
 ## Sorting the folder
 
 The dropdown above the grid orders what is waiting: **name A to Z**, **name Z to A**, **newest
 first**, **oldest first**. Name order is natural, so `page2` comes before `page10` rather than
 after it. The choice is remembered.
 
-Sorting reorders what is already loaded instead of rereading the folder, so thumbnails that have
-already decoded stay decoded. It does drop a multi-file pick, because page numbers that refer to
-an order you can no longer see would be worse than losing the pick.
+Sorting covers everything waiting, not only what is on screen, and it reuses the tiles that
+survive the reorder, so thumbnails that have already decoded stay decoded. It does drop a
+multi-file pick, because page numbers that refer to an order you can no longer see would be worse
+than losing the pick.
 
 ## What it refuses to do
 

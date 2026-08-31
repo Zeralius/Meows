@@ -30,6 +30,20 @@ public sealed class IncomingFileViewModel : ObservableObject, IDisposable
         }
     }
 
+    /// <summary>
+    /// For files the folder scan already measured. A directory walk hands back the size and
+    /// the timestamp with it, so asking the filesystem a second time per file is pure waste,
+    /// and on a few thousand files that waste is most of the wait.
+    /// </summary>
+    public IncomingFileViewModel(string path, long size, DateTime modified)
+    {
+        Path = path;
+        FileName = System.IO.Path.GetFileName(path);
+        Kind = MediaRules.KindOf(path);
+        SizeBytes = size;
+        Modified = modified;
+    }
+
     public string Path { get; }
 
     public string FileName { get; }

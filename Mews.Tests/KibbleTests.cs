@@ -1121,3 +1121,191 @@ public sealed class SendManyTests
         Assert.Equal(files, results.Select(r => r.SourcePath).ToArray());
     }
 }
+
+/// <summary>
+/// Loading a big folder a batch at a time. The point is that a folder of thousands should cost
+/// a list of small records, not thousands of tiles each with a decoded thumbnail.
+/// </summary>
+public sealed class KibbleLazyLoadTests
+{
+    private static (KibbleViewModel Model, TempWorkspace Temp) Open(int fileCount, int pageSize = 10, bool lazy = true)
+    {
+        var temp = new TempWorkspace();
+        temp.WriteConfig(temp.AddGroup("Alpha"));
+
+        var folder = Path.Combine(temp.Root, "intake");
+        Directory.CreateDirectory(folder);
+        for (var i = 1; i <= fileCount; i++)
+        {
+            var path = Path.Combine(folder, $"f{i:D4}.png");
+            File.WriteAllBytes(path, System.Text.Encoding.UTF8.GetBytes($"f{i}"));
+            File.SetLastWriteTimeUtc(path, new DateTime(2024, 1, 1, 0, 0, 0, DateTimeKind.Utc).AddMinutes(i));
+        }
+
+        var model = new KibbleViewModel(new FakeHost(Path.Combine(temp.Root, "hostdata")));
+        model.SetBotRoot(temp.Workspace.Root);
+        model.PageSize = pageSize;
+        model.LazyLoad = lazy;
+        model.LoadFolder(folder);
+        return (model, temp);
+    }
+
+    [Fact]
+    public void Only_one_batch_is_built_at_first()
+    {
+        var (m, temp) = Open(fileCount: 50, pageSize: 10);
+        using var _t = temp;
+
+        Assert.Equal(10, m.Incoming.Count);
+        Assert.True(m.HasMore);
+        // The count still tells the truth about the whole folder.
+        Assert.Equal("50 files left", m.RemainingText);
+    }
+
+    [Fact]
+    public void Off_by_default_it_builds_the_lot()
+    {
+        var (m, temp) = Open(fileCount: 50, lazy: false);
+        using var _t = temp;
+
+        Assert.Equal(50, m.Incoming.Count);
+        Assert.False(m.HasMore);
+    }
+
+    [Fact]
+    public void Load_more_adds_another_batch()
+    {
+        var (m, temp) = Open(fileCount: 50, pageSize: 10);
+        using var _t = temp;
+
+        m.LoadMoreCommand.Execute(null);
+        Assert.Equal(20, m.Incoming.Count);
+
+        m.LoadMoreCommand.Execute(null);
+        Assert.Equal(30, m.Incoming.Count);
+    }
+
+    [Fact]
+    public void Load_more_stops_at_the_end_and_the_button_goes_away()
+    {
+        var (m, temp) = Open(fileCount: 12, pageSize: 10);
+        using var _t = temp;
+
+        m.LoadMoreCommand.Execute(null);
+
+        Assert.Equal(12, m.Incoming.Count);
+        Assert.False(m.HasMore);
+        Assert.False(m.LoadMoreCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void Sending_tops_the_batch_back_up_from_what_is_waiting()
+    {
+        var (m, temp) = Open(fileCount: 50, pageSize: 10);
+        using var _t = temp;
+        var first = m.Incoming[0];
+
+        m.SetSelection([first]);
+        m.SendToCommand.Execute(m.Destinations[0]);
+
+        // Still a full batch on screen, one fewer waiting overall.
+        Assert.Equal(10, m.Incoming.Count);
+        Assert.Equal("49 files left", m.RemainingText);
+        Assert.DoesNotContain(m.Incoming, f => f.FileName == first.FileName);
+    }
+
+    [Fact]
+    public void A_comic_of_a_whole_batch_pulls_the_next_batch_in()
+    {
+        var (m, temp) = Open(fileCount: 50, pageSize: 10);
+        using var _t = temp;
+        var sent = m.Incoming.Select(f => f.FileName).ToList();
+
+        m.SetSelection([.. m.Incoming]);
+        m.SendToCommand.Execute(m.Destinations[0]);
+
+        Assert.Equal(10, m.Incoming.Count);
+        Assert.Equal("40 files left", m.RemainingText);
+        Assert.All(m.Incoming, f => Assert.DoesNotContain(f.FileName, sent));
+    }
+
+    [Fact]
+    public void Sorting_orders_the_whole_folder_not_just_the_batch()
+    {
+        var (m, temp) = Open(fileCount: 50, pageSize: 10);
+        using var _t = temp;
+        Assert.Equal("f0001.png", m.Incoming[0].FileName);
+
+        m.SelectedSort = m.SortOptions.First(o => o.Value == GridSort.NewestFirst);
+
+        // f0050 is the newest of all fifty, not merely of the ten that happened to be built.
+        Assert.Equal("f0050.png", m.Incoming[0].FileName);
+        Assert.Equal(10, m.Incoming.Count);
+    }
+
+    [Fact]
+    public void Turning_it_off_builds_everything_that_is_left()
+    {
+        var (m, temp) = Open(fileCount: 50, pageSize: 10);
+        using var _t = temp;
+        Assert.Equal(10, m.Incoming.Count);
+
+        m.LazyLoad = false;
+
+        Assert.Equal(50, m.Incoming.Count);
+        Assert.False(m.HasMore);
+    }
+
+    [Fact]
+    public void Changing_the_batch_size_takes_effect_at_once()
+    {
+        var (m, temp) = Open(fileCount: 50, pageSize: 10);
+        using var _t = temp;
+
+        m.PageSize = 25;
+
+        Assert.Equal(25, m.Incoming.Count);
+    }
+
+    [Fact]
+    public void Undo_brings_a_file_back_even_when_it_sorts_outside_the_batch()
+    {
+        var (m, temp) = Open(fileCount: 50, pageSize: 10);
+        using var _t = temp;
+
+        // Send the very first file, then put it back. It belongs at the top, so it should be
+        // on screen again rather than lost somewhere past the end of the batch.
+        var first = m.Incoming[0];
+        var name = first.FileName;
+        m.SetSelection([first]);
+        m.SendToCommand.Execute(m.Destinations[0]);
+        Assert.DoesNotContain(m.Incoming, f => f.FileName == name);
+
+        m.UndoCommand.Execute(null);
+
+        Assert.Contains(m.Incoming, f => f.FileName == name);
+        Assert.Equal("50 files left", m.RemainingText);
+    }
+
+    [Fact]
+    public void A_thumbnail_already_decoded_is_not_thrown_away_by_a_sort()
+    {
+        var (m, temp) = Open(fileCount: 50, pageSize: 10);
+        using var _t = temp;
+        var kept = m.Incoming.First(f => f.FileName == "f0001.png");
+
+        m.SelectedSort = m.SortOptions.First(o => o.Value == GridSort.OldestFirst);
+
+        // Oldest first still starts at f0001, and it should be the same tile, not a new one.
+        Assert.Same(kept, m.Incoming.First(f => f.FileName == "f0001.png"));
+    }
+
+    [Fact]
+    public void The_status_line_says_how_much_of_the_folder_is_showing()
+    {
+        var (m, temp) = Open(fileCount: 50, pageSize: 10);
+        using var _t = temp;
+
+        Assert.Contains("showing 10 of 50", m.StatusMessage);
+    }
+}
