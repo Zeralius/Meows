@@ -59,6 +59,13 @@ public sealed record MouserOptions
 public sealed record MouserProgress(int FoldersSeen, int Found, string Current);
 
 /// <summary>
+/// What a sweep turned up, and whether it got to the end. Stopping early is an ordinary outcome
+/// rather than a failure: what was found up to that point is still worth showing, so long as it
+/// is clear that the list is only as far as it got.
+/// </summary>
+public sealed record ScanResult(IReadOnlyList<Finding> Findings, bool WasStopped, int FoldersSeen);
+
+/// <summary>
 /// Finds what is simply pointless. Chonk answers what is big and Purrge answers what is
 /// duplicated; none of what turns up here is either, which is exactly why nothing else finds it
 /// and why a drive quietly ends up with thousands of them.
@@ -71,7 +78,7 @@ public static class MouserScan
 {
     private const int ReportEvery = 150;
 
-    public static IReadOnlyList<Finding> Run(
+    public static ScanResult Run(
         string root,
         MouserOptions options,
         IProgress<MouserProgress>? progress,
@@ -80,7 +87,7 @@ public static class MouserScan
         var findings = new List<Finding>();
 
         if (!Directory.Exists(root))
-            return findings;
+            return new ScanResult(findings, false, 0);
 
         // Discovery order, so a parent is always seen before its children and the emptiness
         // roll up is a walk backwards through the same list.
@@ -95,9 +102,15 @@ public static class MouserScan
 
         var seen = 0;
 
+        // Where the walk gave up, if it did. Stopping leaves this folder half read and everything
+        // still queued untouched, and none of those can be judged.
+        DirectoryInfo? gaveUpAt = null;
+
         while (stack.Count > 0)
         {
-            token.ThrowIfCancellationRequested();
+            if (token.IsCancellationRequested)
+                break;
+
             var current = stack.Pop();
             folders.Add(current);
             hasContent.TryAdd(current.FullName, false);
@@ -117,13 +130,21 @@ public static class MouserScan
 
             foreach (var file in files)
             {
-                token.ThrowIfCancellationRequested();
+                if (token.IsCancellationRequested)
+                {
+                    gaveUpAt = current;
+                    break;
+                }
+
                 hasContent[current.FullName] = true;
 
                 var finding = Inspect(file);
                 if (finding is not null)
                     findings.Add(finding);
             }
+
+            if (gaveUpAt is not null)
+                break;
 
             try
             {
@@ -150,6 +171,30 @@ public static class MouserScan
                 progress.Report(new MouserProgress(seen, findings.Count, current.FullName));
         }
 
+        // Anything still queued was never looked at, so nothing is known about what is in it, and
+        // that ignorance travels all the way up: a folder cannot be called empty while any part
+        // of what is below it went unread. Marking the ancestors is what stops a stopped sweep
+        // from offering to delete a folder that is actually full.
+        var unread = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        void MarkUnread(string path)
+        {
+            var at = path;
+            while (at is not null && unread.Add(at))
+            {
+                if (!parents.TryGetValue(at, out at))
+                    break;
+            }
+        }
+
+        foreach (var queued in stack)
+            MarkUnread(queued.FullName);
+
+        if (gaveUpAt is not null)
+            MarkUnread(gaveUpAt.FullName);
+
+        var stopped = unread.Count > 0;
+
         // Backwards, so a folder holding only empty folders counts as empty too.
         for (var i = folders.Count - 1; i >= 0; i--)
         {
@@ -162,7 +207,9 @@ public static class MouserScan
         }
 
         bool Offerable(string path) =>
-            !hasContent[path] && !path.Equals(start.FullName, StringComparison.OrdinalIgnoreCase);
+            hasContent.TryGetValue(path, out var occupied) && !occupied &&
+            !unread.Contains(path) &&
+            !path.Equals(start.FullName, StringComparison.OrdinalIgnoreCase);
 
         foreach (var folder in folders)
         {
@@ -182,7 +229,7 @@ public static class MouserScan
         }
 
         progress?.Report(new MouserProgress(seen, findings.Count, root));
-        return findings;
+        return new ScanResult(findings, stopped, seen);
     }
 
     /// <summary>What is wrong with this file, if anything.</summary>

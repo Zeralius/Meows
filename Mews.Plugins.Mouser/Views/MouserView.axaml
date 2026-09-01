@@ -82,6 +82,15 @@
             <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFB4B4" TextWrapping="Wrap" />
         </Border>
 
+        <Border DockPanel.Dock="Top"
+                Background="#32291A"
+                BorderBrush="#5A4826"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding WasStopped}">
+            <TextBlock Text="{Binding StoppedNote}" Foreground="#E8CE97" TextWrapping="Wrap" FontSize="12" />
+        </Border>
+
         <Panel>
         <Grid ColumnDefinitions="250,4,*">
 

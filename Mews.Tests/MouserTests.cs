@@ -149,7 +149,8 @@ public sealed class MouserScanTests : IDisposable
     }
 
     private IReadOnlyList<Finding> Run(bool skipSystemFolders = true) =>
-        MouserScan.Run(_root, new MouserOptions { SkipSystemFolders = skipSystemFolders }, null, CancellationToken.None);
+        MouserScan.Run(_root, new MouserOptions { SkipSystemFolders = skipSystemFolders }, null, CancellationToken.None)
+            .Findings;
 
     [Fact]
     public void An_empty_folder_is_found()
@@ -350,15 +351,100 @@ public sealed class MouserScanTests : IDisposable
         Assert.Empty(found);
     }
 
+    /// <summary>
+    /// Reports on the calling thread. The framework's Progress&lt;T&gt; hands the callback to the
+    /// thread pool when there is no synchronization context, which is fine for a UI but useless
+    /// for a test that has to cancel at an exact point in the walk.
+    /// </summary>
+    private sealed class Immediately(Action<MouserProgress> act) : IProgress<MouserProgress>
+    {
+        public void Report(MouserProgress value) => act(value);
+    }
+
+    /// <summary>
+    /// A folder whose visited part looks empty and whose unvisited part is not. The content lives
+    /// in the child that sorts first, so it is pushed first and therefore popped last, which puts
+    /// it still in the queue when the sweep is stopped partway through the empty ones.
+    /// </summary>
+    private string HalfReadFolder(int empties = 200)
+    {
+        File(Path.Combine("big", "a_has_content", "real.txt"), 40);
+        for (var i = 0; i < empties; i++)
+            Folder("big", $"e{i:D3}");
+        return Path.Combine(_root, "big");
+    }
+
     [Fact]
-    public void Cancelling_stops_the_walk()
+    public void Stopping_hands_back_what_was_found_rather_than_throwing_it_away()
+    {
+        HalfReadFolder();
+        using var source = new CancellationTokenSource();
+
+        var result = MouserScan.Run(_root, new MouserOptions(),
+            new Immediately(_ => source.Cancel()), source.Token);
+
+        Assert.True(result.WasStopped);
+        // The empty folders read before the stop are still perfectly good answers.
+        Assert.NotEmpty(result.Findings);
+        Assert.All(result.Findings, f => Assert.Equal(DeadKind.EmptyFolder, f.Kind));
+    }
+
+    [Fact]
+    public void Stopping_never_offers_a_folder_it_had_not_finished_reading()
+    {
+        // Every child read so far is empty, so by the evidence gathered the folder looks empty
+        // too. It is not: the one child still in the queue holds a real file. Offering it here
+        // would send a full folder to the Recycle Bin.
+        var half = HalfReadFolder();
+        using var source = new CancellationTokenSource();
+
+        var result = MouserScan.Run(_root, new MouserOptions(),
+            new Immediately(_ => source.Cancel()), source.Token);
+
+        Assert.True(result.WasStopped);
+        Assert.DoesNotContain(result.Findings, f => f.Path == half);
+        // Nor the root above it, which is just as unfinished.
+        Assert.DoesNotContain(result.Findings, f => f.Path == _root);
+    }
+
+    [Fact]
+    public void A_sweep_that_finished_does_not_claim_it_was_stopped()
+    {
+        Folder("nothing here");
+
+        var result = MouserScan.Run(_root, new MouserOptions(), null, CancellationToken.None);
+
+        Assert.False(result.WasStopped);
+        Assert.Single(result.Findings);
+    }
+
+    [Fact]
+    public void The_same_folder_read_all_the_way_through_is_correctly_left_alone()
+    {
+        // The other half of the pair above: given the chance to finish, it reaches the child that
+        // holds a file and says nothing about the folder at all.
+        var half = HalfReadFolder();
+
+        var result = MouserScan.Run(_root, new MouserOptions(), null, CancellationToken.None);
+
+        Assert.False(result.WasStopped);
+        Assert.DoesNotContain(result.Findings, f => f.Path == half);
+    }
+
+    [Fact]
+    public void Stopping_immediately_reports_nothing_at_all()
     {
         Folder("a", "b", "c");
+        File("hollow.png", 0);
+
         using var source = new CancellationTokenSource();
         source.Cancel();
 
-        Assert.Throws<OperationCanceledException>(() =>
-            MouserScan.Run(_root, new MouserOptions(), null, source.Token));
+        var result = MouserScan.Run(_root, new MouserOptions(), null, source.Token);
+
+        // Nothing was read, so there is nothing that can honestly be said.
+        Assert.True(result.WasStopped);
+        Assert.Empty(result.Findings);
     }
 
     [Fact]
@@ -366,7 +452,7 @@ public sealed class MouserScanTests : IDisposable
     {
         var missing = Path.Combine(_root, "not-here");
 
-        Assert.Empty(MouserScan.Run(missing, new MouserOptions(), null, CancellationToken.None));
+        Assert.Empty(MouserScan.Run(missing, new MouserOptions(), null, CancellationToken.None).Findings);
     }
 
     /// <summary>Writes a shortcut file by hand, so the test does not need the Windows shell.</summary>

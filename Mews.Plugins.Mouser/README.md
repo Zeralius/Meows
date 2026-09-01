@@ -46,6 +46,20 @@ On one real drive that rule took empty files from 12,219 down to 2,057, and what
 Empty files are still the one category worth reading before you tick it. The other three are
 answers; this one is a suggestion.
 
+## Stopping keeps what it found
+
+A sweep of a big folder takes a while, and **Stop** hands back what turned up before then rather
+than throwing it away. The list, the buckets and the counts all fill in as far as the walk got,
+and everything in them is safe to act on.
+
+With one exception, which is why stopping says so on the tab. A folder cannot be called empty
+until everything below it has been read, and a folder whose contents have not been reached yet
+looks exactly like an empty one. So any folder the sweep had not finished, and every folder above
+it, is held back rather than guessed at. Individual files are unaffected: each one is judged on
+its own and does not depend on the walk finishing.
+
+Run it again to see the rest.
+
 ## Only the topmost empty folder
 
 A chain of empty folders is offered as one entry, the outermost. Removing it takes the rest, so

@@ -67,6 +67,8 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
     private string? _errorMessage;
     private bool _isScanning;
     private int _pendingCount;
+    private bool _wasStopped;
+    private int _foldersSeen;
 
     public MouserViewModel(IMewsHost host)
     {
@@ -182,6 +184,19 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
         ? ""
         : _all.Count == 1 ? "1 thing worth removing" : $"{_all.Count} things worth removing";
 
+    public bool WasStopped => _wasStopped;
+
+    /// <summary>
+    /// Said out loud on the tab, because a half finished list looks exactly like a finished one.
+    /// The empty folder count is the part that suffers most from stopping: a folder cannot be
+    /// called empty until everything below it has been read, so the ones near where the sweep
+    /// gave up are held back rather than guessed at.
+    /// </summary>
+    public string StoppedNote =>
+        $"Stopped after {_foldersSeen} folders, so this is only what turned up before then. " +
+        "Everything listed is still safe to act on. Folders the sweep had not finished reading " +
+        "are held back rather than guessed at, so run it again to see the rest.";
+
     public FindingViewModel? SelectedOne => Selected.Count == 1 ? Selected[0] : null;
 
     public string SelectionText => Selected.Count switch
@@ -265,16 +280,21 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
             var progress = new Progress<MouserProgress>(p =>
                 Status = $"{p.FoldersSeen} folders, {p.Found} found");
 
-            var found = await Task.Run(() => MouserScan.Run(root, options, progress, context.Token), context.Token);
+            // No cancellation token on the Task.Run, deliberately. Stopping is an ordinary way for
+            // a sweep to end here, and the scan hands back what it got to rather than throwing it
+            // away, so letting the task fault would discard the very thing Stop is meant to keep.
+            var result = await Task.Run(() => MouserScan.Run(root, options, progress, context.Token));
 
-            await Dispatcher.UIThread.InvokeAsync(() => Show(found));
+            await Dispatcher.UIThread.InvokeAsync(() => Show(result));
         });
     }
 
     /// <summary>Puts a finished sweep on screen. Separate so it can be exercised on its own.</summary>
-    public void Show(IReadOnlyList<Finding> found)
+    public void Show(ScanResult result)
     {
-        _all = found;
+        _all = result.Findings;
+        _wasStopped = result.WasStopped;
+        _foldersSeen = result.FoldersSeen;
         IsScanning = false;
 
         Kinds.Clear();
@@ -286,8 +306,14 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
         }
 
         Rebuild();
-        Status = _all.Count == 0 ? "Nothing dead in here." : "";
-        _host.Log($"Mouser found {_all.Count} thing(s) in {Root}");
+
+        Status = _wasStopped
+            ? $"Stopped after {_foldersSeen} folders"
+            : _all.Count == 0 ? "Nothing dead in here." : "";
+
+        _host.Log(_wasStopped
+            ? $"Mouser stopped after {_foldersSeen} folder(s) in {Root}, keeping {_all.Count} finding(s)"
+            : $"Mouser found {_all.Count} thing(s) in {Root}");
     }
 
     private void ApplyFilter(DeadKind? kind)
@@ -310,6 +336,8 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
         SetSelection([]);
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(Summary));
+        OnPropertyChanged(nameof(WasStopped));
+        OnPropertyChanged(nameof(StoppedNote));
     }
 
     private void Ask()
