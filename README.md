@@ -29,6 +29,10 @@ Download `Mews-<version>-win-x64.zip` from the
 [releases page](https://github.com/Zeralius/Mews/releases), unzip it anywhere, and run
 `Mews.exe`. Nothing else is needed.
 
+**Extract the zip properly before running it.** Launching `Mews.exe` from inside the archive
+makes your unzip tool copy it to a temporary folder on its own, and some of the plugins lose
+files they need. Mews will start, but those plugins refuse to open and say so on their card.
+
 Every plugin starts switched off. Open the **Plugins** tab, turn on the ones you want, and each
 gets its own tab. Turning one off closes its tab again. Nothing runs until you ask for it.
 

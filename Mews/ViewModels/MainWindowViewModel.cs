@@ -246,10 +246,31 @@ public sealed class MainWindowViewModel : ObservableObject
         catch (Exception ex)
         {
             // Mark it failed and carry on. One bad plugin should not close the window.
-            entry.Error = ex.Message;
+            entry.Error = Explain(ex);
             entry.SetActivatedSilently(false);
             _log.Write("shell", $"'{entry.DisplayName}' failed to activate: {ex}");
         }
+    }
+
+    /// <summary>
+    /// Turns a load failure into something a person can act on.
+    ///
+    /// A plugin that cannot find one of its own libraries is nearly always a half unpacked
+    /// download: running the exe straight out of a zip makes the archive tool extract the exe
+    /// and miss files buried in the plugin folders. "FileNotFoundException: Mews.Disk" is true
+    /// and tells the reader nothing, so say what it actually means.
+    /// </summary>
+    private static string Explain(Exception ex)
+    {
+        if (ex is not FileNotFoundException missing)
+            return ex.Message;
+
+        var name = missing.FileName is { Length: > 0 } full
+            ? full.Split(',')[0]
+            : "a file";
+
+        return $"{name} is missing from this plugin's folder. If you ran Mews straight out of " +
+               "the zip, extract the whole thing to a folder first and run it from there.";
     }
 
     private void Deactivate(PluginEntryViewModel entry)
