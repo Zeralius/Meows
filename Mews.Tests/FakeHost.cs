@@ -28,8 +28,7 @@ public sealed class FakeHost : IMewsHost
 
     public IMewsNotifications Notifications => new FakeNotifications(this);
 
-    public IMewsBackgroundWork Background =>
-        throw new NotSupportedException("No test needs background work yet.");
+    public IMewsBackgroundWork Background { get; } = new FakeBackgroundWork();
 
     public void Log(string message) => Lines.Add(message);
 
@@ -38,6 +37,45 @@ public sealed class FakeHost : IMewsHost
 
     public void SaveSettings<T>(T settings) where T : class =>
         _settings = JsonSerializer.Serialize(settings);
+
+    /// <summary>
+    /// Accepts work and records it, without running it. A view model that kicks off a scan in
+    /// its constructor should not drag a real filesystem walk into every test that happens to
+    /// build one, and the tests that care about results call the view model's own results entry
+    /// point instead. What is worth asserting here is that the work was asked for.
+    /// </summary>
+    public sealed class FakeBackgroundWork : IMewsBackgroundWork
+    {
+        public List<string> Requested { get; } = [];
+
+        public IBackgroundTask Run(string title, Func<IBackgroundContext, Task> work)
+        {
+            Requested.Add(title);
+            return new DeadTask(title);
+        }
+
+        public IBackgroundTask Schedule(string title, TimeSpan interval, Func<IBackgroundContext, Task> work,
+            bool runImmediately = true)
+        {
+            Requested.Add(title);
+            return new DeadTask(title);
+        }
+
+        private sealed class DeadTask(string title) : IBackgroundTask
+        {
+            public string Title { get; } = title;
+
+            public bool IsRunning => false;
+
+            public void Cancel()
+            {
+            }
+
+            public void Dispose()
+            {
+            }
+        }
+    }
 
     private sealed class FakeNotifications(FakeHost host) : IMewsNotifications
     {

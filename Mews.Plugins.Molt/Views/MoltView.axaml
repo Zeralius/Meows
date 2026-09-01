@@ -1,0 +1,165 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Mews.Plugins.Molt.ViewModels"
+             x:Class="Mews.Plugins.Molt.Views.MoltView"
+             x:DataType="vm:MoltViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="#1C1C22"
+                BorderBrush="#2A2A32"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="What can be shed" FontWeight="SemiBold" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Classes="label" Text="{Binding TotalText}" />
+                        <TextBlock Classes="label" Text="{Binding PickedText}" />
+                        <TextBlock Classes="label" Text="{Binding Status}" />
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Name="PickBuildRootButton" Content="Projects folder…" FontSize="11" />
+                    <Button Content="Rescan" Command="{Binding ScanCommand}" IsVisible="{Binding !IsScanning}" />
+                    <Button Content="Stop" Command="{Binding CancelCommand}" IsVisible="{Binding IsScanning}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="#3A1F22"
+                BorderBrush="#5C2B30"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFB4B4" TextWrapping="Wrap" />
+        </Border>
+
+        <Border DockPanel.Dock="Bottom"
+                Background="#1C1C22"
+                BorderBrush="#2A2A32"
+                BorderThickness="0,1,0,0"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="4">
+                    <CheckBox Content="Delete outright instead of using the Recycle Bin"
+                              IsChecked="{Binding Permanent}"
+                              FontSize="11" />
+                    <TextBlock Text="{Binding ModeText}" Classes="label" TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button Content="Pick all" Command="{Binding PickAllCommand}" FontSize="11" />
+                    <Button Content="Pick none" Command="{Binding PickNoneCommand}" FontSize="11" />
+                    <Button Content="Shed the picked"
+                            Command="{Binding ShedCommand}"
+                            Background="#3A1F22"
+                            BorderBrush="#5C2B30" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Panel>
+            <ScrollViewer Padding="14,12">
+                <StackPanel Spacing="8">
+
+                    <TextBlock Classes="label"
+                               TextWrapping="Wrap"
+                               Text="Browser caches are left out on purpose: they are locked while the browser is running, so clearing them is unreliable. The JetBrains folder is left out too, because it holds settings and plugins as well as caches and telling them apart reliably is more than this should guess at." />
+
+                    <ItemsControl ItemsSource="{Binding Items}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SheddableViewModel">
+                                <Border Background="#17171C"
+                                        BorderBrush="#2A2A32"
+                                        BorderThickness="1"
+                                        CornerRadius="6"
+                                        Padding="12,10"
+                                        Margin="0,0,0,8">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                        <CheckBox Grid.Column="0"
+                                                  IsChecked="{Binding IsPicked}"
+                                                  VerticalAlignment="Top" />
+                                        <StackPanel Grid.Column="1" Spacing="3">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding What}" Classes="label" TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding Cost}"
+                                                       Foreground="#D8B26A"
+                                                       FontSize="11"
+                                                       TextWrapping="Wrap" />
+                                            <TextBlock Text="{Binding Where}"
+                                                       Opacity="0.35"
+                                                       FontSize="10"
+                                                       TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Top">
+                                            <TextBlock Text="{Binding SizeText}"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="15"
+                                                       HorizontalAlignment="Right" />
+                                            <TextBlock Text="{Binding CountText}"
+                                                       Classes="label"
+                                                       HorizontalAlignment="Right" />
+                                            <Button Content="Open"
+                                                    FontSize="10"
+                                                    Padding="6,2"
+                                                    HorizontalAlignment="Right"
+                                                    Command="{Binding $parent[UserControl].((vm:MoltViewModel)DataContext).ExploreCommand}"
+                                                    CommandParameter="{Binding}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock Classes="label"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding !HasBuildRoot}"
+                               Text="Pick a projects folder above and bin and obj folders under it will be measured too." />
+
+                </StackPanel>
+            </ScrollViewer>
+
+            <Border IsVisible="{Binding IsAsking}" Background="#C0000000">
+                <Border Background="#1C1C22"
+                        BorderBrush="#5C2B30"
+                        BorderThickness="1"
+                        CornerRadius="8"
+                        Padding="20,16"
+                        MaxWidth="460"
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="{Binding ConfirmPrompt}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding ConfirmDetail}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+                        <Grid ColumnDefinitions="*,8,*">
+                            <Button Grid.Column="0"
+                                    Content="Cancel"
+                                    Command="{Binding CancelShedCommand}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
+                            <Button Grid.Column="2"
+                                    Content="Go ahead"
+                                    Command="{Binding ConfirmCommand}"
+                                    Background="#3A1F22"
+                                    BorderBrush="#5C2B30"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
+                        </Grid>
+                    </StackPanel>
+                </Border>
+            </Border>
+        </Panel>
+
+    </DockPanel>
+
+</UserControl>

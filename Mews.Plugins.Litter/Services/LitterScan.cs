@@ -138,7 +138,7 @@ public static class LitterScan
                 if (!WalkRules.ShouldDescend(directory, skipSystemFolders: false))
                     continue;
 
-                items.Add(new LitterItem(directory.FullName, directory.Name, FolderSize(directory),
+                items.Add(new LitterItem(directory.FullName, directory.Name, FolderSize.Of(directory),
                     directory.LastWriteTime, LitterKind.Other, AgeOf(directory.LastWriteTime, now)));
             }
         }
@@ -161,48 +161,7 @@ public static class LitterScan
         }
     }
 
-    /// <summary>Everything under a folder, so its row says what removing it would actually free.</summary>
-    private static long FolderSize(DirectoryInfo folder)
-    {
-        var total = 0L;
-        var stack = new Stack<DirectoryInfo>();
-        stack.Push(folder);
-
-        while (stack.Count > 0)
-        {
-            var current = stack.Pop();
-
-            try
-            {
-                foreach (var file in current.EnumerateFiles())
-                    total += Length(file);
-            }
-            catch (Exception)
-            {
-                continue;
-            }
-
-            try
-            {
-                foreach (var child in current.EnumerateDirectories())
-                    if (WalkRules.ShouldDescend(child, skipSystemFolders: false))
-                        stack.Push(child);
-            }
-            catch (Exception)
-            {
-            }
-        }
-
-        return total;
-    }
-
-    public static string Humanise(long bytes) => bytes switch
-    {
-        >= 1024L * 1024 * 1024 => $"{bytes / 1024d / 1024 / 1024:0.##} GB",
-        >= 1024 * 1024 => $"{bytes / 1024d / 1024:0.#} MB",
-        >= 1024 => $"{bytes / 1024d:0} KB",
-        _ => $"{bytes} B",
-    };
+    public static string Humanise(long bytes) => FolderSize.Humanise(bytes);
 
     public static string Describe(LitterAge age) => age switch
     {
