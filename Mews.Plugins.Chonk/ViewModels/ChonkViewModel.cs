@@ -12,6 +12,9 @@ public sealed class ChonkSettings
     public string? LastRoot { get; set; }
 
     public bool SkipSystemFolders { get; set; } = true;
+
+    /// <summary>On by default. Removing a folder here takes everything inside it with it.</summary>
+    public bool ConfirmDeletes { get; set; } = true;
 }
 
 /// <summary>One row in the ranked list.</summary>
@@ -66,6 +69,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
 
     private DiskEntry? _current;
     private EntryViewModel? _selected;
+    private EntryViewModel? _pendingDelete;
     private string _status = "Pick a drive and scan it.";
     private string? _errorMessage;
     private bool _isScanning;
@@ -82,6 +86,8 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
         GoToCommand = new RelayCommand(p => Show((p as CrumbViewModel)?.Entry));
         DeleteCommand = new RelayCommand(DeleteSelected, () => Selected is { CanDelete: true } && !IsScanning);
         ExploreCommand = new RelayCommand(() => OpenInExplorer(Selected?.Path), () => Selected is not null);
+        ConfirmDeleteCommand = new RelayCommand(() => Remove(PendingDelete), () => PendingDelete is not null);
+        CancelDeleteCommand = new RelayCommand(() => PendingDelete = null, () => PendingDelete is not null);
 
         LoadDrives();
         SelectedRoot = _settings.LastRoot ?? Drives.FirstOrDefault()?.Path;
@@ -107,6 +113,10 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
 
     public RelayCommand ExploreCommand { get; }
 
+    public RelayCommand ConfirmDeleteCommand { get; }
+
+    public RelayCommand CancelDeleteCommand { get; }
+
     public string? SelectedRoot { get; set; }
 
     public bool SkipSystemFolders
@@ -119,6 +129,76 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
             _settings.SkipSystemFolders = value;
             SaveSettings();
             OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// Whether to ask first. On by default, because a folder here goes whole and a mis-click
+    /// costs everything inside it rather than the one file you were looking at.
+    /// </summary>
+    public bool ConfirmDeletes
+    {
+        get => _settings.ConfirmDeletes;
+        set
+        {
+            if (_settings.ConfirmDeletes == value)
+                return;
+            _settings.ConfirmDeletes = value;
+            SaveSettings();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(DoNotAskAgain));
+        }
+    }
+
+    /// <summary>The same setting worded the way a confirmation box has to word it.</summary>
+    public bool DoNotAskAgain
+    {
+        get => !ConfirmDeletes;
+        set => ConfirmDeletes = !value;
+    }
+
+    /// <summary>What we are waiting to be told to remove, or null when we are not asking.</summary>
+    public EntryViewModel? PendingDelete
+    {
+        get => _pendingDelete;
+        private set
+        {
+            if (!SetField(ref _pendingDelete, value))
+                return;
+            OnPropertyChanged(nameof(IsAsking));
+            OnPropertyChanged(nameof(ConfirmPrompt));
+            OnPropertyChanged(nameof(ConfirmDetail));
+            ConfirmDeleteCommand.RaiseCanExecuteChanged();
+            CancelDeleteCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool IsAsking => PendingDelete is not null;
+
+    public string ConfirmPrompt => PendingDelete is null
+        ? ""
+        : $"Send {PendingDelete.Name} to the Recycle Bin?";
+
+    /// <summary>
+    /// Says the size and, for a folder, how much is inside it. The count is the part worth
+    /// showing: the name alone does not tell you a folder holds four thousand files.
+    /// </summary>
+    public string ConfirmDetail
+    {
+        get
+        {
+            if (PendingDelete is not { } pending)
+                return "";
+
+            var inside = pending.Entry.IsFolder
+                ? pending.Entry.FileCount switch
+                {
+                    1 => ", with 1 file inside it",
+                    var n => $", with {n} files inside it",
+                }
+                : "";
+
+            return $"{pending.SizeText}{inside}. It can be brought back from the Recycle Bin.";
         }
     }
 
@@ -230,13 +310,19 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
             var tree = await Task.Run(
                 () => DiskScan.Run(root, options, progress, context.Token), context.Token);
 
-            await Dispatcher.UIThread.InvokeAsync(() =>
-            {
-                Show(tree);
-                Status = $"{DiskScan.Humanise(tree.Size)} across {tree.FileCount} files";
-                IsScanning = false;
-            });
+            await Dispatcher.UIThread.InvokeAsync(() => ShowScanned(tree));
         });
+    }
+
+    /// <summary>
+    /// Takes a finished measurement and puts it on screen. Separate from the scan itself so
+    /// what happens with a result does not need a background task and a dispatcher to exercise.
+    /// </summary>
+    public void ShowScanned(DiskEntry tree)
+    {
+        Show(tree);
+        Status = $"{DiskScan.Humanise(tree.Size)} across {tree.FileCount} files";
+        IsScanning = false;
     }
 
     /// <summary>Shows one folder's contents, biggest first.</summary>
@@ -275,9 +361,29 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
 
     private void GoUp() => Show(Current?.Parent);
 
+    /// <summary>
+    /// Asks first, unless you have said not to. Nothing is touched on this path: it only puts
+    /// the question, and <see cref="Remove"/> is the only thing that actually deletes.
+    /// </summary>
     private void DeleteSelected()
     {
         if (Selected is not { } row || !row.CanDelete)
+            return;
+
+        if (ConfirmDeletes)
+        {
+            PendingDelete = row;
+            return;
+        }
+
+        Remove(row);
+    }
+
+    private void Remove(EntryViewModel? row)
+    {
+        PendingDelete = null;
+
+        if (row is null || !row.CanDelete)
             return;
 
         var entry = row.Entry;

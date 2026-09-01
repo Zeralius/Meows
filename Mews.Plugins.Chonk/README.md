@@ -40,6 +40,14 @@ says how far it has got.
 
 ## Removing things
 
+**It asks first.** The confirmation says what is about to go, how big it is, and for a folder how
+many files are inside it, because the name alone does not tell you a folder holds four thousand
+things. Escape or Cancel backs out. Nothing is touched until you say yes.
+
+Tick **Do not ask again** in that box, or untick **Ask before deleting** in the header, and it
+stops asking. The two are the same setting, so turning it off in the box leaves the header
+unticked and you can turn it back on there without going near a settings file. It is remembered.
+
 **Everything goes to the Recycle Bin**, never `File.Delete`, and a folder goes whole with
 everything inside it. This is the same code Purrge deletes through, which is why it lives in
 `Mews.Disk/` rather than in either plugin: two copies of a destructive operation is how one of

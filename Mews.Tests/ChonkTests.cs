@@ -1,5 +1,6 @@
 using Mews.Disk;
 using Mews.Plugins.Chonk.Services;
+using Mews.Plugins.Chonk.ViewModels;
 
 namespace Mews.Tests;
 
@@ -277,6 +278,137 @@ public sealed class WalkRulesTests : IDisposable
 
         // Pointing at its own parent, which is exactly the shape that loops a walk forever.
         Assert.False(WalkRules.ShouldDescend(new DirectoryInfo(link)));
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            Directory.Delete(_root, recursive: true);
+        }
+        catch (Exception)
+        {
+        }
+    }
+}
+
+/// <summary>
+/// The safeguard on deleting. Nothing here actually removes anything: these pin down that the
+/// question gets asked, and that the only path which deletes is the one you answered yes on.
+/// </summary>
+public sealed class ChonkSafeguardTests : IDisposable
+{
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "guard-" + Guid.NewGuid().ToString("N")[..10]);
+
+    public ChonkSafeguardTests()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "fat"));
+        File.WriteAllBytes(Path.Combine(_root, "fat", "big.bin"), new byte[4096]);
+    }
+
+    private ChonkViewModel Open()
+    {
+        var model = new ChonkViewModel(new FakeHost(Path.Combine(_root, "hostdata")));
+        model.ShowScanned(DiskScan.Run(_root, new ScanOptions(), null, CancellationToken.None));
+        return model;
+    }
+
+    [Fact]
+    public void Asking_is_on_to_begin_with()
+    {
+        var model = Open();
+
+        // A folder goes whole here, so the safe default is the only defensible one.
+        Assert.True(model.ConfirmDeletes);
+        Assert.False(model.DoNotAskAgain);
+    }
+
+    [Fact]
+    public void Pressing_delete_only_puts_the_question()
+    {
+        var model = Open();
+        model.Selected = model.Entries.First(e => e.Name == "fat");
+
+        model.DeleteCommand.Execute(null);
+
+        Assert.True(model.IsAsking);
+        Assert.Contains("fat", model.ConfirmPrompt);
+        // Still very much there.
+        Assert.True(Directory.Exists(Path.Combine(_root, "fat")));
+    }
+
+    [Fact]
+    public void The_question_says_the_size_and_what_is_inside()
+    {
+        var model = Open();
+        model.Selected = model.Entries.First(e => e.Name == "fat");
+
+        model.DeleteCommand.Execute(null);
+
+        Assert.Contains("4 KB", model.ConfirmDetail);
+        Assert.Contains("1 file inside it", model.ConfirmDetail);
+        Assert.Contains("brought back", model.ConfirmDetail);
+    }
+
+    [Fact]
+    public void Cancelling_leaves_everything_alone()
+    {
+        var model = Open();
+        model.Selected = model.Entries.First(e => e.Name == "fat");
+        model.DeleteCommand.Execute(null);
+
+        model.CancelDeleteCommand.Execute(null);
+
+        Assert.False(model.IsAsking);
+        Assert.Null(model.PendingDelete);
+        Assert.True(Directory.Exists(Path.Combine(_root, "fat")));
+    }
+
+    [Fact]
+    public void Turning_the_safeguard_off_stops_it_asking()
+    {
+        var model = Open();
+        model.ConfirmDeletes = false;
+
+        Assert.True(model.DoNotAskAgain);
+    }
+
+    [Fact]
+    public void Do_not_ask_again_is_the_same_switch_worded_for_a_dialog()
+    {
+        var model = Open();
+
+        model.DoNotAskAgain = true;
+        Assert.False(model.ConfirmDeletes);
+
+        model.DoNotAskAgain = false;
+        Assert.True(model.ConfirmDeletes);
+    }
+
+    [Fact]
+    public void The_choice_is_remembered()
+    {
+        var host = new FakeHost(Path.Combine(_root, "hostdata"));
+        var first = new ChonkViewModel(host);
+        first.ConfirmDeletes = false;
+
+        var second = new ChonkViewModel(host);
+
+        Assert.False(second.ConfirmDeletes);
+    }
+
+    [Fact]
+    public void The_rolled_up_row_never_even_gets_asked_about()
+    {
+        var model = Open();
+        var rolled = model.Entries.FirstOrDefault(e => !e.CanDelete);
+        if (rolled is null)
+            return; // No small files at this level, so nothing to assert.
+
+        model.Selected = rolled;
+        model.DeleteCommand.Execute(null);
+
+        Assert.False(model.IsAsking);
     }
 
     public void Dispose()
