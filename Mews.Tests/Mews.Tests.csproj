@@ -28,6 +28,7 @@
       <ProjectReference Include="..\Mews.Plugins.Chonk\Mews.Plugins.Chonk.csproj" />
       <ProjectReference Include="..\Mews.Plugins.Litter\Mews.Plugins.Litter.csproj" />
       <ProjectReference Include="..\Mews.Plugins.Molt\Mews.Plugins.Molt.csproj" />
+      <ProjectReference Include="..\Mews.Plugins.Saucer\Mews.Plugins.Saucer.csproj" />
     <ProjectReference Include="..\Mews.Plugins.Kibble\Mews.Plugins.Kibble.csproj" />
   </ItemGroup>
 

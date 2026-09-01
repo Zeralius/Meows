@@ -11,7 +11,7 @@ Built with Avalonia 12.1.1 on .NET 10, targeting Windows.
 |---|---|
 | **Shell** | `Mews/` (window, tab host, plugin loader). [README](Mews/README.md) |
 | **Contract** | `Mews.Plugins.Abstractions/`, the interfaces a plugin implements |
-| **Plugins** | `Mews.Plugins.TelegramPoster/` [README](Mews.Plugins.TelegramPoster/README.md)<br>`Mews.Plugins.Purrge/` [README](Mews.Plugins.Purrge/README.md)<br>`Mews.Plugins.Kibble/` [README](Mews.Plugins.Kibble/README.md)<br>`Mews.Plugins.Chonk/` [README](Mews.Plugins.Chonk/README.md)<br>`Mews.Plugins.Litter/` [README](Mews.Plugins.Litter/README.md)<br>`Mews.Plugins.Molt/` [README](Mews.Plugins.Molt/README.md) |
+| **Plugins** | `Mews.Plugins.TelegramPoster/` [README](Mews.Plugins.TelegramPoster/README.md)<br>`Mews.Plugins.Purrge/` [README](Mews.Plugins.Purrge/README.md)<br>`Mews.Plugins.Kibble/` [README](Mews.Plugins.Kibble/README.md)<br>`Mews.Plugins.Chonk/` [README](Mews.Plugins.Chonk/README.md)<br>`Mews.Plugins.Litter/` [README](Mews.Plugins.Litter/README.md)<br>`Mews.Plugins.Molt/` [README](Mews.Plugins.Molt/README.md)<br>`Mews.Plugins.Saucer/` [README](Mews.Plugins.Saucer/README.md) |
 | **Shared** | `Mews.Bot.Core/`, the bot's config and media rules, used by Telegram Poster and Kibble<br>`Mews.Disk/`, Recycle Bin deletion and the folder walk rules, used by Purrge, Chonk, Litter and Molt |
 | **Writing one** | [PLUGIN-GUIDE.md](PLUGIN-GUIDE.md), the full contract |
 | **Tests** | `Mews.Tests/`, run with `dotnet test` |

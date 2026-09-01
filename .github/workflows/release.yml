@@ -58,6 +58,7 @@ jobs:
           dotnet build Mews.Plugins.Chonk/Mews.Plugins.Chonk.csproj --configuration Release
           dotnet build Mews.Plugins.Litter/Mews.Plugins.Litter.csproj --configuration Release
           dotnet build Mews.Plugins.Molt/Mews.Plugins.Molt.csproj --configuration Release
+          dotnet build Mews.Plugins.Saucer/Mews.Plugins.Saucer.csproj --configuration Release
 
       - name: Stage the plugins into the package
         shell: pwsh
@@ -68,7 +69,7 @@ jobs:
           # which is loaded from the plugin's own folder. Avalonia and the contract are not
           # here to be copied: the csproj files keep them out so the shell stays the one
           # source of both.
-          foreach ($p in 'Mews.Plugins.TelegramPoster', 'Mews.Plugins.Purrge', 'Mews.Plugins.Kibble', 'Mews.Plugins.Chonk', 'Mews.Plugins.Litter', 'Mews.Plugins.Molt') {
+          foreach ($p in 'Mews.Plugins.TelegramPoster', 'Mews.Plugins.Purrge', 'Mews.Plugins.Kibble', 'Mews.Plugins.Chonk', 'Mews.Plugins.Litter', 'Mews.Plugins.Molt', 'Mews.Plugins.Saucer') {
             $dest = "artifacts/Mews-win-x64/plugins/$p"
             New-Item -ItemType Directory -Force $dest | Out-Null
             Copy-Item "$p/bin/Release/*.dll" $dest
@@ -108,7 +109,8 @@ jobs:
                          "$root/plugins/Mews.Plugins.Litter/Mews.Plugins.Litter.dll",
                          "$root/plugins/Mews.Plugins.Litter/Mews.Disk.dll",
                          "$root/plugins/Mews.Plugins.Molt/Mews.Plugins.Molt.dll",
-                         "$root/plugins/Mews.Plugins.Molt/Mews.Disk.dll") {
+                         "$root/plugins/Mews.Plugins.Molt/Mews.Disk.dll",
+                         "$root/plugins/Mews.Plugins.Saucer/Mews.Plugins.Saucer.dll") {
             if (-not (Test-Path $f)) { throw "Missing from the package: $f" }
           }
           "package looks complete"
@@ -135,7 +137,8 @@ jobs:
           Self-contained Windows x64 build. No .NET runtime needed.
 
           Download ``Mews-$v-win-x64.zip``, unzip it anywhere, and run ``Mews.exe``.
-          Telegram Poster, Purrge, Kibble, Chonk, Litter and Molt are included; activate them on the Plugins tab.
+          Telegram Poster, Purrge, Kibble, Chonk, Litter, Molt and Saucer are included; activate them
+          on the Plugins tab.
 
           ``Mews.Plugins.Abstractions`` is attached for anyone building a plugin in their own
           repository. See PLUGIN-GUIDE.md.

@@ -1,0 +1,191 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Mews.Plugins.Saucer.ViewModels"
+             x:Class="Mews.Plugins.Saucer.Views.SaucerView"
+             x:DataType="vm:SaucerViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="#17171C" />
+            <Setter Property="BorderBrush" Value="#2A2A32" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="8,6" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="#24384A" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="#1C1C22"
+                BorderBrush="#2A2A32"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding IntakeFolder}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Status}" Classes="label" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <CheckBox Content="Watch the clipboard"
+                              IsChecked="{Binding WatchClipboard}"
+                              FontSize="11"
+                              VerticalAlignment="Center" />
+                    <CheckBox Content="Save images automatically"
+                              IsChecked="{Binding AutoSaveImages}"
+                              FontSize="11"
+                              VerticalAlignment="Center" />
+                    <Button Name="PickIntakeButton" Content="Intake folder…" />
+                    <Button Content="Open" Command="{Binding OpenIntakeCommand}" />
+                    <Button Content="Clear" Command="{Binding ClearCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="#3A1F22"
+                BorderBrush="#5C2B30"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFB4B4" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="*,4,420">
+
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,12,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsEmpty}"
+                           Text="Nothing copied yet. Copy an image in a browser with right click and Copy Image, and it turns up here." />
+
+                <ListBox Name="ClipList"
+                         ItemsSource="{Binding Clips}"
+                         SelectedItem="{Binding Selected}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ClipViewModel">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
+                                <Border Grid.Column="0"
+                                        Width="52" Height="40"
+                                        Background="#101014"
+                                        CornerRadius="4"
+                                        ClipToBounds="True">
+                                    <Panel>
+                                        <Image Source="{Binding Thumbnail}"
+                                               Stretch="UniformToFill"
+                                               IsVisible="{Binding HasThumbnail}" />
+                                        <TextBlock Text="T"
+                                                   Opacity="0.35"
+                                                   HorizontalAlignment="Center"
+                                                   VerticalAlignment="Center"
+                                                   IsVisible="{Binding !IsImage}" />
+                                    </Panel>
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding Summary}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding TimeText}" Classes="label" />
+                                </StackPanel>
+                                <Border Grid.Column="2"
+                                        Background="#24384A"
+                                        CornerRadius="3"
+                                        Padding="5,1"
+                                        VerticalAlignment="Center"
+                                        IsVisible="{Binding IsSaved}">
+                                    <TextBlock Text="SAVED" FontSize="9" />
+                                </Border>
+                                <TextBlock Grid.Column="3"
+                                           Text="PINNED"
+                                           FontSize="9"
+                                           Opacity="0.6"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding IsPinned}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Background="#22222A" ResizeDirection="Columns" />
+
+            <Border Grid.Column="2" Classes="panel" BorderThickness="1,0,0,0">
+                <Grid RowDefinitions="Auto,*,Auto" Margin="16,12">
+                    <TextBlock Grid.Row="0"
+                               Text="The one you picked"
+                               FontWeight="SemiBold"
+                               FontSize="13"
+                               Margin="0,0,0,8" />
+
+                    <Border Grid.Row="1"
+                            Background="#101014"
+                            CornerRadius="6"
+                            MinHeight="160"
+                            Padding="6"
+                            IsVisible="{Binding HasSelection}">
+                        <Panel>
+                            <Image Source="{Binding Selected.Thumbnail}"
+                                   Stretch="Uniform"
+                                   IsVisible="{Binding Selected.HasThumbnail}" />
+                            <ScrollViewer IsVisible="{Binding !Selected.IsImage}">
+                                <TextBlock Text="{Binding Selected.Clipping.Text}"
+                                           TextWrapping="Wrap"
+                                           FontSize="12"
+                                           Margin="6" />
+                            </ScrollViewer>
+                        </Panel>
+                    </Border>
+
+                    <StackPanel Grid.Row="2" Spacing="8" Margin="0,10,0,0" IsVisible="{Binding HasSelection}">
+                        <TextBlock Text="{Binding Selected.Summary}" Classes="label" TextWrapping="Wrap" />
+
+                        <Button Content="Save into the intake folder"
+                                Command="{Binding SaveCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+
+                        <Button Content="Copy again"
+                                Command="{Binding CopyAgainCommand}"
+                                CommandParameter="{Binding Selected}"
+                                IsVisible="{Binding !Selected.IsImage}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+
+                        <Grid ColumnDefinitions="*,8,*">
+                            <Button Grid.Column="0"
+                                    Content="Pin"
+                                    Command="{Binding PinCommand}"
+                                    CommandParameter="{Binding Selected}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
+                            <Button Grid.Column="2"
+                                    Content="Forget"
+                                    Command="{Binding ForgetCommand}"
+                                    CommandParameter="{Binding Selected}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
+                        </Grid>
+
+                        <TextBlock Classes="label"
+                                   TextWrapping="Wrap"
+                                   Text="History is kept in memory only and never written to disk, because a clipboard ends up holding passwords sooner or later. Saving an image is the one thing here that writes anything." />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>
