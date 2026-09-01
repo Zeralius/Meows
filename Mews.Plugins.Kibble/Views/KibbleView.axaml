@@ -284,29 +284,40 @@
 
             <!-- Preview -->
             <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0">
-                <ScrollViewer Padding="16,12">
+                <!-- Rows rather than a stack in a scroller. The picture gets the leftover
+                     row, so widening this column or growing the window makes it bigger,
+                     instead of it sitting at a fixed size with space around it. -->
+                <Grid RowDefinitions="Auto,*,Auto" Margin="16,12">
+
+                    <TextBlock Grid.Row="0"
+                               Text="Preview"
+                               FontWeight="SemiBold"
+                               FontSize="13"
+                               Margin="0,0,0,8" />
+
+                    <Border Grid.Row="1"
+                            Background="#101014"
+                            CornerRadius="6"
+                            MinHeight="160"
+                            Padding="6"
+                            IsVisible="{Binding HasSelection}">
+                        <Panel>
+                            <Image Source="{Binding PreviewImage}"
+                                   Stretch="Uniform"
+                                   IsVisible="{Binding HasPreviewImage}" />
+                            <TextBlock Text="No inline preview for this file type"
+                                       Opacity="0.35"
+                                       FontSize="11"
+                                       HorizontalAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       IsVisible="{Binding !HasPreviewImage}" />
+                        </Panel>
+                    </Border>
+
+                    <!-- Capped so a tall comic box cannot crowd the picture out entirely on a
+                         short window. Past that it scrolls rather than squeezing the preview. -->
+                    <ScrollViewer Grid.Row="2" MaxHeight="420" Margin="0,8,0,0">
                     <StackPanel Spacing="8">
-
-                        <TextBlock Text="Preview" FontWeight="SemiBold" FontSize="13" />
-
-                        <Border Background="#101014"
-                                CornerRadius="6"
-                                MinHeight="220"
-                                Padding="6"
-                                IsVisible="{Binding HasSelection}">
-                            <Panel>
-                                <Image Source="{Binding PreviewImage}"
-                                       Stretch="Uniform"
-                                       MaxHeight="430"
-                                       IsVisible="{Binding HasPreviewImage}" />
-                                <TextBlock Text="No inline preview for this file type"
-                                           Opacity="0.35"
-                                           FontSize="11"
-                                           HorizontalAlignment="Center"
-                                           VerticalAlignment="Center"
-                                           IsVisible="{Binding !HasPreviewImage}" />
-                            </Panel>
-                        </Border>
 
                         <StackPanel Spacing="2" IsVisible="{Binding HasSelection}">
                             <TextBlock Text="{Binding Selected.FileName}" TextWrapping="Wrap" />
@@ -381,7 +392,8 @@
                         <TextBlock Text="{Binding BotRootText}" Classes="label" TextWrapping="Wrap" />
 
                     </StackPanel>
-                </ScrollViewer>
+                    </ScrollViewer>
+                </Grid>
             </Border>
 
         </Grid>

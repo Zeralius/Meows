@@ -26,7 +26,7 @@ quietly starts re-posting the archive, and nobody notices for a while.
 |---|---|
 | **Left** | Every group as a destination, driest first, each with a number key and its runway. Underneath, what a multi-file pick goes in as |
 | **Middle** | The folder you opened, as a thumbnail grid. Ctrl and shift pick several. Sort it with the dropdown |
-| **Right** | Full preview of the selected file, its size and date, and the queue order setting |
+| **Right** | Full preview of the selected file, its size and date, and the queue order setting. Drag the divider and the picture grows with it |
 
 ## Sorting a folder
 
