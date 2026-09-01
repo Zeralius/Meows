@@ -16,6 +16,7 @@ to install.
 | **[Chonk](Mews.Plugins.Chonk/README.md)** | Measures where the room on a drive went, biggest first, and clears out what you no longer want |
 | **[Purrge](Mews.Plugins.Purrge/README.md)** | Finds files with identical content anywhere on the machine, groups them, and removes the copies you do not want |
 | **[Molt](Mews.Plugins.Molt/README.md)** | Sheds caches and build output that can be rebuilt, and tells you what losing each one costs first |
+| **[Mouser](Mews.Plugins.Mouser/README.md)** | Hunts down dead weight: empty folders, empty files, shortcuts pointing at things that are gone |
 | **[Litter](Mews.Plugins.Litter/README.md)** | Sorts out the downloads folder by age and kind, and calls out the downloads that never finished |
 | **[Saucer](Mews.Plugins.Saucer/README.md)** | Keeps what you copy, images included, and drops images into a folder for sorting |
 | **[Kibble](Mews.Plugins.Kibble/README.md)** | Sorts a folder of new material into queues, one key press at a time, and can bundle a pick into a comic |
@@ -59,8 +60,8 @@ dotnet test
 
 The suite covers the filesystem and logic layers: duplicate scanning, disk measuring, queue
 maths, file intake and its refusals, comic page ordering, clipboard conversion, cache
-cataloguing, and the plugin contract rules. Anything needing a render backend is out of scope, so
-it stays headless and runs on CI.
+cataloguing, shortcut parsing, and the plugin contract rules. Anything needing a render backend is
+out of scope, so it stays headless and runs on CI.
 
 ## Writing a plugin
 

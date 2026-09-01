@@ -1,0 +1,238 @@
+using Mews.Disk;
+
+namespace Mews.Plugins.Mouser.Services;
+
+/// <summary>The kinds of dead weight worth finding.</summary>
+public enum DeadKind
+{
+    EmptyFolder,
+    EmptyFile,
+    BrokenShortcut,
+    Leftover,
+}
+
+public sealed record Finding(string Path, string Name, DeadKind Kind, string Detail, long Size);
+
+public sealed record MouserOptions
+{
+    public bool SkipSystemFolders { get; init; } = true;
+
+    /// <summary>Files Windows and macOS leave behind that nothing wants.</summary>
+    public static readonly string[] LeftoverNames = ["Thumbs.db", "ehthumbs.db", ".DS_Store"];
+
+    /// <summary>
+    /// Files whose whole job is to be empty. Being zero bytes is what they are for, so size says
+    /// nothing at all about whether they are wanted. An empty __init__.py is what makes a Python
+    /// package a package, and a .gitkeep exists only so git will carry the folder around it.
+    /// </summary>
+    public static readonly string[] MeantToBeEmptyNames =
+    [
+        "__init__.py", "__init__.pyi", "py.typed", ".gitkeep", ".keep", ".placeholder",
+        ".nojekyll", ".metadata_never_index", ".localized", ".empty",
+    ];
+
+    /// <summary>
+    /// Extensions used purely as markers, where the file existing is the entire message. Unity
+    /// writes thousands of these into a project and every one of them is doing its job.
+    /// </summary>
+    public static readonly string[] MeantToBeEmptyExtensions =
+    [
+        ".mvfrm", ".modulecompilationtrigger", ".lock", ".stamp",
+    ];
+
+    /// <summary>Whether a zero byte file is that way on purpose.</summary>
+    public static bool IsMeantToBeEmpty(string name)
+    {
+        if (MeantToBeEmptyNames.Contains(name, StringComparer.OrdinalIgnoreCase))
+            return true;
+
+        var extension = Path.GetExtension(name).ToLowerInvariant();
+
+        // No extension at all and no contents either, so there is nothing here that was ever
+        // opened by anything: names like REQUESTED, WEBGL_SUPPORTED or CodeSignature are programs
+        // leaving themselves a note. Passing over them costs nothing, because a zero byte file
+        // takes up no room worth reclaiming, and offering one risks breaking whatever wrote it.
+        return extension.Length == 0 || MeantToBeEmptyExtensions.Contains(extension);
+    }
+}
+
+public sealed record MouserProgress(int FoldersSeen, int Found, string Current);
+
+/// <summary>
+/// Finds what is simply pointless. Chonk answers what is big and Purrge answers what is
+/// duplicated; none of what turns up here is either, which is exactly why nothing else finds it
+/// and why a drive quietly ends up with thousands of them.
+///
+/// Everything reported has to be defensible on its own, so each finding carries the reason it
+/// was picked. Where that reason cannot be established, nothing is reported: a tool that removes
+/// dead things has to be far more afraid of a false positive than of missing one.
+/// </summary>
+public static class MouserScan
+{
+    private const int ReportEvery = 150;
+
+    public static IReadOnlyList<Finding> Run(
+        string root,
+        MouserOptions options,
+        IProgress<MouserProgress>? progress,
+        CancellationToken token)
+    {
+        var findings = new List<Finding>();
+
+        if (!Directory.Exists(root))
+            return findings;
+
+        // Discovery order, so a parent is always seen before its children and the emptiness
+        // roll up is a walk backwards through the same list.
+        var folders = new List<DirectoryInfo>();
+        var hasContent = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
+        var parents = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+
+        var stack = new Stack<DirectoryInfo>();
+        var start = new DirectoryInfo(root);
+        stack.Push(start);
+        parents[start.FullName] = null;
+
+        var seen = 0;
+
+        while (stack.Count > 0)
+        {
+            token.ThrowIfCancellationRequested();
+            var current = stack.Pop();
+            folders.Add(current);
+            hasContent.TryAdd(current.FullName, false);
+            seen++;
+
+            FileInfo[] files;
+            try
+            {
+                files = current.GetFiles();
+            }
+            catch (Exception)
+            {
+                // Unreadable. Say nothing about it rather than guess it is empty.
+                hasContent[current.FullName] = true;
+                continue;
+            }
+
+            foreach (var file in files)
+            {
+                token.ThrowIfCancellationRequested();
+                hasContent[current.FullName] = true;
+
+                var finding = Inspect(file);
+                if (finding is not null)
+                    findings.Add(finding);
+            }
+
+            try
+            {
+                foreach (var child in current.GetDirectories())
+                {
+                    if (!WalkRules.ShouldDescend(child, options.SkipSystemFolders))
+                    {
+                        // Not walked, so nothing can be said about what is inside it. Treat the
+                        // parent as occupied rather than call it empty on no evidence.
+                        hasContent[current.FullName] = true;
+                        continue;
+                    }
+
+                    parents[child.FullName] = current.FullName;
+                    stack.Push(child);
+                }
+            }
+            catch (Exception)
+            {
+                hasContent[current.FullName] = true;
+            }
+
+            if (progress is not null && seen % ReportEvery == 0)
+                progress.Report(new MouserProgress(seen, findings.Count, current.FullName));
+        }
+
+        // Backwards, so a folder holding only empty folders counts as empty too.
+        for (var i = folders.Count - 1; i >= 0; i--)
+        {
+            var folder = folders[i];
+            if (!hasContent[folder.FullName])
+                continue;
+
+            if (parents.TryGetValue(folder.FullName, out var parent) && parent is not null)
+                hasContent[parent] = true;
+        }
+
+        bool Offerable(string path) =>
+            !hasContent[path] && !path.Equals(start.FullName, StringComparison.OrdinalIgnoreCase);
+
+        foreach (var folder in folders)
+        {
+            // The folder handed in is never offered: nobody asked to delete what they pointed at.
+            if (!Offerable(folder.FullName))
+                continue;
+
+            // Only the topmost one of a run of nested empties, since removing that takes the rest
+            // with it. Listing all of them is noise, and every delete after the first would be of
+            // something already gone. The parent has to be offerable itself for this to apply:
+            // when the root is the empty one, its children are the topmost thing on offer.
+            if (parents.TryGetValue(folder.FullName, out var above) && above is not null && Offerable(above))
+                continue;
+
+            findings.Add(new Finding(folder.FullName, folder.Name, DeadKind.EmptyFolder,
+                "Nothing inside it, at any depth.", 0));
+        }
+
+        progress?.Report(new MouserProgress(seen, findings.Count, root));
+        return findings;
+    }
+
+    /// <summary>What is wrong with this file, if anything.</summary>
+    private static Finding? Inspect(FileInfo file)
+    {
+        if (MouserOptions.LeftoverNames.Contains(file.Name, StringComparer.OrdinalIgnoreCase))
+        {
+            return new Finding(file.FullName, file.Name, DeadKind.Leftover,
+                "Left behind by a file browser. Rebuilt whenever it is wanted again.", SafeLength(file));
+        }
+
+        if (file.Extension.Equals(".lnk", StringComparison.OrdinalIgnoreCase))
+        {
+            var target = ShellLink.TargetOf(file.FullName);
+
+            // A shortcut whose target cannot be read is left alone. Not knowing is not the same
+            // as knowing it is dead.
+            if (target is null || File.Exists(target) || Directory.Exists(target))
+                return null;
+
+            return new Finding(file.FullName, file.Name, DeadKind.BrokenShortcut,
+                $"Points at {target}, which is not there.", SafeLength(file));
+        }
+
+        if (SafeLength(file) == 0 && !MouserOptions.IsMeantToBeEmpty(file.Name))
+        {
+            return new Finding(file.FullName, file.Name, DeadKind.EmptyFile,
+                "No contents at all.", 0);
+        }
+
+        return null;
+    }
+
+    private static long SafeLength(FileInfo file)
+    {
+        try
+        {
+            return file.Length;
+        }
+        catch (Exception)
+        {
+            return 0;
+        }
+    }
+
+    public static string Describe(DeadKind kind) => kind switch
+    {
+        DeadKind.EmptyFolder => "Empty folders",
+        DeadKind.EmptyFile => "Empty files",
+        DeadKind.BrokenShortcut => "Broken shortcuts",
+        _ => "Leftovers",
+    };
+}

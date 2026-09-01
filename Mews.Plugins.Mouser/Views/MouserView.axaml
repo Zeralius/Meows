@@ -1,0 +1,200 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Mews.Plugins.Mouser.ViewModels"
+             x:Class="Mews.Plugins.Mouser.Views.MouserView"
+             x:DataType="vm:MouserViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="14,12,14,6" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="#17171C" />
+            <Setter Property="BorderBrush" Value="#2A2A32" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="#24384A" />
+        </Style>
+        <Style Selector="Button.bucket">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Background" Value="#1C1C22" />
+            <Setter Property="BorderBrush" Value="#2E2E36" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Margin" Value="0,0,0,5" />
+        </Style>
+        <Style Selector="Button.bucket.on">
+            <Setter Property="Background" Value="#24384A" />
+            <Setter Property="BorderBrush" Value="#3E6C90" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="#1C1C22"
+                BorderBrush="#2A2A32"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Root}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Classes="label" Text="{Binding Summary}" />
+                        <TextBlock Classes="label" Text="{Binding Status}" />
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <CheckBox Content="Skip system folders"
+                              IsChecked="{Binding SkipSystemFolders}"
+                              FontSize="11"
+                              VerticalAlignment="Center" />
+                    <CheckBox Content="Ask before deleting"
+                              IsChecked="{Binding ConfirmDeletes}"
+                              FontSize="11"
+                              VerticalAlignment="Center" />
+                    <Button Name="PickFolderButton" Content="Folder…" />
+                    <Button Content="Look again" Command="{Binding ScanCommand}" />
+                    <Button Content="Stop" Command="{Binding CancelCommand}" IsVisible="{Binding IsScanning}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="#3A1F22"
+                BorderBrush="#5C2B30"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFB4B4" TextWrapping="Wrap" />
+        </Border>
+
+        <Panel>
+        <Grid ColumnDefinitions="250,4,*">
+
+            <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="SHOW ONLY" />
+                    <Button DockPanel.Dock="Bottom"
+                            Content="Show everything"
+                            Command="{Binding ClearFilterCommand}"
+                            Margin="8,6,8,12"
+                            FontSize="11"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center" />
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding Kinds}" Margin="8,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:KindViewModel">
+                                    <Button Classes="bucket"
+                                            Classes.on="{Binding IsOn}"
+                                            Command="{Binding $parent[UserControl].((vm:MouserViewModel)DataContext).FilterCommand}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding Detail}" Classes="label" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Background="#22222A" ResizeDirection="Columns" />
+
+            <DockPanel Grid.Column="2">
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="14,10,14,6" ColumnSpacing="10">
+                    <TextBlock Grid.Column="0" Classes="label" Text="{Binding SelectionText}" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <Button Content="Show in Explorer" Command="{Binding ExploreCommand}" FontSize="11" />
+                        <Button Content="Send to Recycle Bin"
+                                Command="{Binding DeleteCommand}"
+                                Background="#3A1F22"
+                                BorderBrush="#5C2B30"
+                                FontSize="11" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,4,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsEmpty}"
+                           Text="Nothing to show. Either there is no dead weight in here, or a filter on the left is hiding it." />
+
+                <ListBox Name="FindingList"
+                         ItemsSource="{Binding Findings}"
+                         SelectionMode="Multiple"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8,0,8,8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:FindingViewModel">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding Glyph}"
+                                           FontSize="13"
+                                           VerticalAlignment="Top" />
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Folder}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Detail}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+        </Grid>
+
+        <Border IsVisible="{Binding IsAsking}" Background="#C0000000">
+            <Border Background="#1C1C22"
+                    BorderBrush="#5C2B30"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="20,16"
+                    MaxWidth="440"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="{Binding ConfirmPrompt}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding ConfirmDetail}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+                    <CheckBox Content="Do not ask again" IsChecked="{Binding DoNotAskAgain}" FontSize="11" Margin="0,4,0,0" />
+                    <Grid ColumnDefinitions="*,8,*">
+                        <Button Grid.Column="0"
+                                Content="Cancel"
+                                Command="{Binding CancelDeleteCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="2"
+                                Content="Send to Recycle Bin"
+                                Command="{Binding ConfirmDeleteCommand}"
+                                Background="#3A1F22"
+                                BorderBrush="#5C2B30"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+        </Panel>
+
+    </DockPanel>
+
+</UserControl>

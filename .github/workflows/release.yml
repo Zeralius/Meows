@@ -59,6 +59,7 @@ jobs:
           dotnet build Mews.Plugins.Litter/Mews.Plugins.Litter.csproj --configuration Release
           dotnet build Mews.Plugins.Molt/Mews.Plugins.Molt.csproj --configuration Release
           dotnet build Mews.Plugins.Saucer/Mews.Plugins.Saucer.csproj --configuration Release
+          dotnet build Mews.Plugins.Mouser/Mews.Plugins.Mouser.csproj --configuration Release
 
       - name: Stage the plugins into the package
         shell: pwsh
@@ -69,7 +70,7 @@ jobs:
           # which is loaded from the plugin's own folder. Avalonia and the contract are not
           # here to be copied: the csproj files keep them out so the shell stays the one
           # source of both.
-          foreach ($p in 'Mews.Plugins.TelegramPoster', 'Mews.Plugins.Purrge', 'Mews.Plugins.Kibble', 'Mews.Plugins.Chonk', 'Mews.Plugins.Litter', 'Mews.Plugins.Molt', 'Mews.Plugins.Saucer') {
+          foreach ($p in 'Mews.Plugins.TelegramPoster', 'Mews.Plugins.Purrge', 'Mews.Plugins.Kibble', 'Mews.Plugins.Chonk', 'Mews.Plugins.Litter', 'Mews.Plugins.Molt', 'Mews.Plugins.Saucer', 'Mews.Plugins.Mouser') {
             $dest = "artifacts/Mews-win-x64/plugins/$p"
             New-Item -ItemType Directory -Force $dest | Out-Null
             Copy-Item "$p/bin/Release/*.dll" $dest
@@ -110,7 +111,9 @@ jobs:
                          "$root/plugins/Mews.Plugins.Litter/Mews.Disk.dll",
                          "$root/plugins/Mews.Plugins.Molt/Mews.Plugins.Molt.dll",
                          "$root/plugins/Mews.Plugins.Molt/Mews.Disk.dll",
-                         "$root/plugins/Mews.Plugins.Saucer/Mews.Plugins.Saucer.dll") {
+                         "$root/plugins/Mews.Plugins.Saucer/Mews.Plugins.Saucer.dll",
+                         "$root/plugins/Mews.Plugins.Mouser/Mews.Plugins.Mouser.dll",
+                         "$root/plugins/Mews.Plugins.Mouser/Mews.Disk.dll") {
             if (-not (Test-Path $f)) { throw "Missing from the package: $f" }
           }
           "package looks complete"
