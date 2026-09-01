@@ -11,8 +11,8 @@ Built with Avalonia 12.1.1 on .NET 10, targeting Windows.
 |---|---|
 | **Shell** | `Mews/` (window, tab host, plugin loader). [README](Mews/README.md) |
 | **Contract** | `Mews.Plugins.Abstractions/`, the interfaces a plugin implements |
-| **Plugins** | `Mews.Plugins.TelegramPoster/` [README](Mews.Plugins.TelegramPoster/README.md)<br>`Mews.Plugins.Purrge/` [README](Mews.Plugins.Purrge/README.md)<br>`Mews.Plugins.Kibble/` [README](Mews.Plugins.Kibble/README.md) |
-| **Shared** | `Mews.Bot.Core/`, the bot's config and media rules, used by Telegram Poster and Kibble |
+| **Plugins** | `Mews.Plugins.TelegramPoster/` [README](Mews.Plugins.TelegramPoster/README.md)<br>`Mews.Plugins.Purrge/` [README](Mews.Plugins.Purrge/README.md)<br>`Mews.Plugins.Kibble/` [README](Mews.Plugins.Kibble/README.md)<br>`Mews.Plugins.Chonk/` [README](Mews.Plugins.Chonk/README.md) |
+| **Shared** | `Mews.Bot.Core/`, the bot's config and media rules, used by Telegram Poster and Kibble<br>`Mews.Disk/`, Recycle Bin deletion and the folder walk rules, used by Purrge and Chonk |
 | **Writing one** | [PLUGIN-GUIDE.md](PLUGIN-GUIDE.md), the full contract |
 | **Tests** | `Mews.Tests/`, run with `dotnet test` |
 
@@ -133,7 +133,7 @@ contract version the shell provides.
 ## CI and releases
 
 Two workflows, both on `windows-latest`. That is a requirement rather than a preference: the app
-is a WinExe and Purrge deletes through the Windows shell.
+is a WinExe, and Purrge and Chonk delete through the Windows shell.
 
 **[ci.yml](.github/workflows/ci.yml)** runs on every push to `main` and every pull request. It
 restores, builds in Release, runs the test suite, and checks that the plugin contract still
@@ -171,7 +171,8 @@ dotnet test
 
 `Mews.Tests/` covers the pure and filesystem logic: group validation, config round-tripping and
 next-up resolution, the staged duplicate scan, queue runway maths, file intake and its refusals,
-comic bundling and its page order, contract version rules, and token writing.
+comic bundling and its page order, disk measuring and its skip rules, contract version rules,
+and token writing.
 Anything needing an Avalonia render backend or a running dispatcher is deliberately out of
 scope, so the suite stays headless and works on a runner.
 

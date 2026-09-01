@@ -1,0 +1,350 @@
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using Avalonia.Threading;
+using Mews.Disk;
+using Mews.Plugins.Abstractions;
+using Mews.Plugins.Chonk.Services;
+
+namespace Mews.Plugins.Chonk.ViewModels;
+
+public sealed class ChonkSettings
+{
+    public string? LastRoot { get; set; }
+
+    public bool SkipSystemFolders { get; set; } = true;
+}
+
+/// <summary>One row in the ranked list.</summary>
+public sealed class EntryViewModel(DiskEntry entry, long parentSize) : ObservableObject
+{
+    public DiskEntry Entry { get; } = entry;
+
+    public string Name => Entry.Name;
+
+    public string Path => Entry.Path;
+
+    public string SizeText => DiskScan.Humanise(Entry.Size);
+
+    public bool CanDrillInto => Entry.CanDrillInto;
+
+    public bool CanDelete => Entry.CanDelete;
+
+    /// <summary>Share of the folder it sits in, as a bar the eye can compare down a column.</summary>
+    public double Fraction => parentSize <= 0 ? 0 : (double)Entry.Size / parentSize;
+
+    public string PercentText => parentSize <= 0 ? "" : $"{Fraction * 100:0.#}%";
+
+    public string Detail => Entry.Kind switch
+    {
+        DiskEntryKind.Folder => Entry.FileCount == 1 ? "1 file inside" : $"{Entry.FileCount} files inside",
+        DiskEntryKind.SmallFiles => "not listed separately",
+        _ => "",
+    };
+
+    public string Glyph => Entry.Kind switch
+    {
+        DiskEntryKind.Folder => "📁",
+        DiskEntryKind.SmallFiles => "···",
+        _ => "📄",
+    };
+}
+
+public sealed class CrumbViewModel(DiskEntry entry, bool isLast) : ObservableObject
+{
+    public DiskEntry Entry { get; } = entry;
+
+    public string Name { get; } = entry.Name;
+
+    public bool IsLast { get; } = isLast;
+}
+
+public sealed class ChonkViewModel : ObservableObject, IDisposable
+{
+    private readonly IMewsHost _host;
+    private ChonkSettings _settings;
+    private IBackgroundTask? _scan;
+
+    private DiskEntry? _current;
+    private EntryViewModel? _selected;
+    private string _status = "Pick a drive and scan it.";
+    private string? _errorMessage;
+    private bool _isScanning;
+
+    public ChonkViewModel(IMewsHost host)
+    {
+        _host = host;
+        _settings = host.LoadSettings<ChonkSettings>() ?? new ChonkSettings();
+
+        ScanCommand = new RelayCommand(p => StartScan(p as string ?? SelectedRoot), _ => !IsScanning);
+        CancelCommand = new RelayCommand(() => _scan?.Cancel(), () => IsScanning);
+        OpenCommand = new RelayCommand(p => Drill((p as EntryViewModel)?.Entry));
+        UpCommand = new RelayCommand(GoUp, () => Current?.Parent is not null);
+        GoToCommand = new RelayCommand(p => Show((p as CrumbViewModel)?.Entry));
+        DeleteCommand = new RelayCommand(DeleteSelected, () => Selected is { CanDelete: true } && !IsScanning);
+        ExploreCommand = new RelayCommand(() => OpenInExplorer(Selected?.Path), () => Selected is not null);
+
+        LoadDrives();
+        SelectedRoot = _settings.LastRoot ?? Drives.FirstOrDefault()?.Path;
+    }
+
+    public ObservableCollection<DriveViewModel> Drives { get; } = new();
+
+    public ObservableCollection<EntryViewModel> Entries { get; } = new();
+
+    public ObservableCollection<CrumbViewModel> Crumbs { get; } = new();
+
+    public RelayCommand ScanCommand { get; }
+
+    public RelayCommand CancelCommand { get; }
+
+    public RelayCommand OpenCommand { get; }
+
+    public RelayCommand UpCommand { get; }
+
+    public RelayCommand GoToCommand { get; }
+
+    public RelayCommand DeleteCommand { get; }
+
+    public RelayCommand ExploreCommand { get; }
+
+    public string? SelectedRoot { get; set; }
+
+    public bool SkipSystemFolders
+    {
+        get => _settings.SkipSystemFolders;
+        set
+        {
+            if (_settings.SkipSystemFolders == value)
+                return;
+            _settings.SkipSystemFolders = value;
+            SaveSettings();
+            OnPropertyChanged();
+        }
+    }
+
+    public bool IsScanning
+    {
+        get => _isScanning;
+        private set
+        {
+            if (!SetField(ref _isScanning, value))
+                return;
+            ScanCommand.RaiseCanExecuteChanged();
+            CancelCommand.RaiseCanExecuteChanged();
+            DeleteCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public DiskEntry? Current
+    {
+        get => _current;
+        private set
+        {
+            if (!SetField(ref _current, value))
+                return;
+            OnPropertyChanged(nameof(CurrentPath));
+            OnPropertyChanged(nameof(CurrentSizeText));
+            OnPropertyChanged(nameof(HasResults));
+            UpCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public string CurrentPath => Current?.Path ?? "";
+
+    public string CurrentSizeText => Current is null ? "" : $"{DiskScan.Humanise(Current.Size)} in here";
+
+    public bool HasResults => Current is not null;
+
+    public EntryViewModel? Selected
+    {
+        get => _selected;
+        set
+        {
+            if (!SetField(ref _selected, value))
+                return;
+            DeleteCommand.RaiseCanExecuteChanged();
+            ExploreCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public string Status
+    {
+        get => _status;
+        private set => SetField(ref _status, value);
+    }
+
+    public string? ErrorMessage
+    {
+        get => _errorMessage;
+        private set
+        {
+            if (SetField(ref _errorMessage, value))
+                OnPropertyChanged(nameof(HasError));
+        }
+    }
+
+    public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
+
+    private void LoadDrives()
+    {
+        Drives.Clear();
+        try
+        {
+            foreach (var drive in DriveInfo.GetDrives().Where(d => d.IsReady && d.DriveType != DriveType.CDRom))
+                Drives.Add(new DriveViewModel(drive));
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not list drives: {ex.Message}";
+        }
+    }
+
+    public void StartScan(string? root)
+    {
+        if (IsScanning || string.IsNullOrWhiteSpace(root))
+            return;
+
+        if (!Directory.Exists(root))
+        {
+            ErrorMessage = $"{root} does not exist.";
+            return;
+        }
+
+        SelectedRoot = root;
+        _settings.LastRoot = root;
+        SaveSettings();
+
+        ErrorMessage = null;
+        IsScanning = true;
+        Status = $"Measuring {root}";
+
+        var options = new ScanOptions { SkipSystemFolders = SkipSystemFolders };
+
+        // Background work, so switching tabs does not abandon a drive scan half way through
+        // and the Tasks panel can say what it is doing.
+        _scan = _host.Background.Run($"Measuring {root}", async context =>
+        {
+            var progress = new Progress<ScanProgress>(p =>
+                Status = $"{p.FoldersSeen} folders, {DiskScan.Humanise(p.BytesSeen)} so far");
+
+            var tree = await Task.Run(
+                () => DiskScan.Run(root, options, progress, context.Token), context.Token);
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                Show(tree);
+                Status = $"{DiskScan.Humanise(tree.Size)} across {tree.FileCount} files";
+                IsScanning = false;
+            });
+        });
+    }
+
+    /// <summary>Shows one folder's contents, biggest first.</summary>
+    private void Show(DiskEntry? folder)
+    {
+        if (folder is null)
+            return;
+
+        Current = folder;
+        Selected = null;
+
+        Entries.Clear();
+        foreach (var child in folder.Children.OrderByDescending(c => c.Size))
+            Entries.Add(new EntryViewModel(child, folder.Size));
+
+        Crumbs.Clear();
+        var chain = new List<DiskEntry>();
+        for (var node = folder; node is not null; node = node.Parent)
+            chain.Insert(0, node);
+        for (var i = 0; i < chain.Count; i++)
+            Crumbs.Add(new CrumbViewModel(chain[i], i == chain.Count - 1));
+
+        // Raised unconditionally. Re-showing the folder you are already in is exactly what
+        // happens after a delete, and the size setter would otherwise short circuit on the
+        // reference being unchanged and leave a stale total in the header.
+        OnPropertyChanged(nameof(CurrentSizeText));
+        OnPropertyChanged(nameof(CurrentPath));
+        OnPropertyChanged(nameof(HasResults));
+    }
+
+    private void Drill(DiskEntry? entry)
+    {
+        if (entry is { CanDrillInto: true })
+            Show(entry);
+    }
+
+    private void GoUp() => Show(Current?.Parent);
+
+    private void DeleteSelected()
+    {
+        if (Selected is not { } row || !row.CanDelete)
+            return;
+
+        var entry = row.Entry;
+        var what = entry.IsFolder ? "folder" : "file";
+        var outcome = RecycleBin.Send([entry.Path]);
+
+        if (!outcome.Succeeded)
+        {
+            ErrorMessage = outcome.FailureReason ?? $"Could not remove that {what}.";
+            _host.Log($"Chonk could not remove {entry.Path}: {ErrorMessage}");
+            return;
+        }
+
+        var freed = entry.Size;
+        DiskScan.Forget(entry);
+
+        // Rebuild this level rather than the whole tree: the numbers above have already been
+        // adjusted, so a rescan would only tell us what we know.
+        Show(Current);
+
+        Status = $"Sent {entry.Name} to the Recycle Bin, {DiskScan.Humanise(freed)} freed";
+        _host.Log($"Chonk sent {what} {entry.Path} to the Recycle Bin, {DiskScan.Humanise(freed)} freed");
+        _host.Notifications.Post(NotificationSeverity.Info, "Sent to the Recycle Bin",
+            $"{entry.Name}, {DiskScan.Humanise(freed)} freed. It is still recoverable.");
+    }
+
+    private void OpenInExplorer(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        try
+        {
+            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not open {path}: {ex.Message}";
+        }
+    }
+
+    private void SaveSettings()
+    {
+        try
+        {
+            _host.SaveSettings(_settings);
+        }
+        catch (Exception ex)
+        {
+            _host.Log($"Could not save Chonk settings: {ex.Message}");
+        }
+    }
+
+    public void Dispose() => _scan?.Cancel();
+}
+
+public sealed class DriveViewModel(DriveInfo drive) : ObservableObject
+{
+    public string Path { get; } = drive.RootDirectory.FullName;
+
+    public string Name { get; } = string.IsNullOrWhiteSpace(drive.VolumeLabel)
+        ? drive.Name
+        : $"{drive.Name} {drive.VolumeLabel}";
+
+    public string UsageText { get; } =
+        $"{DiskScan.Humanise(drive.TotalSize - drive.TotalFreeSpace)} of {DiskScan.Humanise(drive.TotalSize)} used";
+
+    public double Fraction { get; } =
+        drive.TotalSize <= 0 ? 0 : (double)(drive.TotalSize - drive.TotalFreeSpace) / drive.TotalSize;
+}

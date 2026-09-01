@@ -1,6 +1,6 @@
 using System.Runtime.InteropServices;
 
-namespace Mews.Plugins.Purrge.Services;
+namespace Mews.Disk;
 
 public sealed record DeleteOutcome(int Deleted, int Failed, string? FailureReason)
 {
@@ -8,8 +8,9 @@ public sealed record DeleteOutcome(int Deleted, int Failed, string? FailureReaso
 }
 
 /// <summary>
-/// Recycle Bin, not File.Delete. We delete in bulk based on what a hash told us, so every
-/// removal has to be undoable. No exceptions to this.
+/// Recycle Bin, not File.Delete. Things are removed here in bulk on the strength of an
+/// automated judgement, a hash or a size, so every removal has to stay undoable. No exceptions
+/// to this, and no path through either plugin that calls anything else.
 /// </summary>
 public static class RecycleBin
 {
@@ -35,9 +36,17 @@ public static class RecycleBin
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern int SHFileOperationW(ref SHFILEOPSTRUCT fileOp);
 
+    /// <summary>Whether this path is something the shell could send to the bin.</summary>
+    private static bool Exists(string path) => File.Exists(path) || Directory.Exists(path);
+
+    /// <summary>
+    /// Sends files and folders to the Recycle Bin. Folders go whole, with everything inside
+    /// them, which is the entire point for a tool that finds one fat directory rather than a
+    /// list of fat files.
+    /// </summary>
     public static DeleteOutcome Send(IReadOnlyList<string> paths)
     {
-        var existing = paths.Where(File.Exists).Select(Path.GetFullPath).Distinct().ToList();
+        var existing = paths.Where(Exists).Select(Path.GetFullPath).Distinct().ToList();
         if (existing.Count == 0)
             return new DeleteOutcome(0, 0, null);
 
@@ -74,8 +83,8 @@ public static class RecycleBin
             return new DeleteOutcome(0, existing.Count, "The delete was aborted.");
 
         // Check the disk rather than trusting the return code.
-        var stillThere = existing.Count(File.Exists);
+        var stillThere = existing.Count(Exists);
         return new DeleteOutcome(existing.Count - stillThere, stillThere,
-            stillThere == 0 ? null : $"{stillThere} file(s) could not be removed.");
+            stillThere == 0 ? null : $"{stillThere} item(s) could not be removed.");
     }
 }

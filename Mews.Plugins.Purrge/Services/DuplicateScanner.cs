@@ -1,3 +1,4 @@
+using Mews.Disk;
 using System.Security.Cryptography;
 
 namespace Mews.Plugins.Purrge.Services;
@@ -33,12 +34,6 @@ public sealed record DuplicateSet(long Size, IReadOnlyList<DuplicateFile> Files)
 public sealed class DuplicateScanner
 {
     private const int PartialBytes = 64 * 1024;
-
-    private static readonly string[] SkippedFolderNames =
-    [
-        "$Recycle.Bin", "System Volume Information", "Windows", "Program Files",
-        "Program Files (x86)", "ProgramData", "node_modules", ".git", "obj", "bin",
-    ];
 
     public async Task<IReadOnlyList<DuplicateSet>> ScanAsync(
         string root,
@@ -224,16 +219,13 @@ public sealed class DuplicateScanner
                 try
                 {
                     info = new DirectoryInfo(directory);
-                    if (info.Attributes.HasFlag(FileAttributes.ReparsePoint))
-                        continue;
                 }
                 catch (Exception)
                 {
                     continue;
                 }
 
-                if (options.SkipSystemFolders &&
-                    SkippedFolderNames.Contains(info.Name, StringComparer.OrdinalIgnoreCase))
+                if (!WalkRules.ShouldDescend(info, options.SkipSystemFolders))
                     continue;
 
                 stack.Push(directory);
