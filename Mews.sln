@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mews.Disk", "Mews.Disk\Mews
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mews.Plugins.Chonk", "Mews.Plugins.Chonk\Mews.Plugins.Chonk.csproj", "{B9F53733-F59B-4CE6-92B1-CAC39614F262}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Mews.Plugins.Litter", "Mews.Plugins.Litter\Mews.Plugins.Litter.csproj", "{F188D626-D611-4A27-A826-08EBB7492142}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -136,6 +138,18 @@ Global
 		{B9F53733-F59B-4CE6-92B1-CAC39614F262}.Release|x64.Build.0 = Release|Any CPU
 		{B9F53733-F59B-4CE6-92B1-CAC39614F262}.Release|x86.ActiveCfg = Release|Any CPU
 		{B9F53733-F59B-4CE6-92B1-CAC39614F262}.Release|x86.Build.0 = Release|Any CPU
+		{F188D626-D611-4A27-A826-08EBB7492142}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{F188D626-D611-4A27-A826-08EBB7492142}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{F188D626-D611-4A27-A826-08EBB7492142}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{F188D626-D611-4A27-A826-08EBB7492142}.Debug|x64.Build.0 = Debug|Any CPU
+		{F188D626-D611-4A27-A826-08EBB7492142}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{F188D626-D611-4A27-A826-08EBB7492142}.Debug|x86.Build.0 = Debug|Any CPU
+		{F188D626-D611-4A27-A826-08EBB7492142}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{F188D626-D611-4A27-A826-08EBB7492142}.Release|Any CPU.Build.0 = Release|Any CPU
+		{F188D626-D611-4A27-A826-08EBB7492142}.Release|x64.ActiveCfg = Release|Any CPU
+		{F188D626-D611-4A27-A826-08EBB7492142}.Release|x64.Build.0 = Release|Any CPU
+		{F188D626-D611-4A27-A826-08EBB7492142}.Release|x86.ActiveCfg = Release|Any CPU
+		{F188D626-D611-4A27-A826-08EBB7492142}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
