@@ -74,6 +74,10 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
     private string? _errorMessage;
     private bool _isScanning;
 
+    private FolderIdentity? _identity;
+    private bool _isIdentifying;
+    private CancellationTokenSource? _identifying;
+
     public ChonkViewModel(IMewsHost host)
     {
         _host = host;
@@ -198,7 +202,17 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
                 }
                 : "";
 
-            return $"{pending.SizeText}{inside}. It can be brought back from the Recycle Bin.";
+            // What it is belongs here more than anywhere else on the tab. This is the last moment
+            // anyone gets to notice that the folder is a Steam game or that a program has it open.
+            var warning = Identity switch
+            {
+                { Verdict: FolderVerdict.Game } => " This is a Steam game, and deleting the folder " +
+                    "leaves Steam still believing it is installed. Uninstall it through Steam instead.",
+                { InUse: true } => " Something has a file in here open right now.",
+                _ => "",
+            };
+
+            return $"{pending.SizeText}{inside}. It can be brought back from the Recycle Bin.{warning}";
         }
     }
 
@@ -244,6 +258,103 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
                 return;
             DeleteCommand.RaiseCanExecuteChanged();
             ExploreCommand.RaiseCanExecuteChanged();
+            Identify(value);
+        }
+    }
+
+    /// <summary>
+    /// What the selected folder actually is. Null until it has been worked out, and null for
+    /// anything that is not a folder.
+    /// </summary>
+    public FolderIdentity? Identity
+    {
+        get => _identity;
+        private set
+        {
+            if (!SetField(ref _identity, value))
+                return;
+
+            OnPropertyChanged(nameof(HasIdentity));
+            OnPropertyChanged(nameof(IdentityHeadline));
+            OnPropertyChanged(nameof(IdentityAdvice));
+            OnPropertyChanged(nameof(IdentityInUse));
+            OnPropertyChanged(nameof(IdentityIsWarning));
+            OnPropertyChanged(nameof(ConfirmDetail));
+
+            Evidence.Clear();
+            foreach (var line in value?.Evidence ?? [])
+                Evidence.Add(line);
+        }
+    }
+
+    /// <summary>Why it thinks so, which is the part that makes the answer worth anything.</summary>
+    public ObservableCollection<string> Evidence { get; } = new();
+
+    public bool HasIdentity => Identity is not null;
+
+    public string IdentityHeadline => Identity?.Headline ?? "";
+
+    public string IdentityAdvice => Identity?.Advice ?? "";
+
+    public bool IdentityInUse => Identity?.InUse ?? false;
+
+    /// <summary>
+    /// Whether to say this in a colour that stops the eye. A game has to go through its launcher
+    /// and anything held open by a running program should not be deleted underneath it, so both
+    /// are worth more than a grey line of text.
+    /// </summary>
+    public bool IdentityIsWarning =>
+        Identity is { Verdict: FolderVerdict.Game } || IdentityInUse;
+
+    public bool IsIdentifying
+    {
+        get => _isIdentifying;
+        private set => SetField(ref _isIdentifying, value);
+    }
+
+    /// <summary>
+    /// Works out what the selection is, off the UI thread. Selection changes as fast as the arrow
+    /// keys repeat, so each one cancels the last rather than queueing a walk per keystroke.
+    /// </summary>
+    private async void Identify(EntryViewModel? entry)
+    {
+        _identifying?.Cancel();
+        _identifying = null;
+        Identity = null;
+
+        if (entry is not { Entry.IsFolder: true })
+        {
+            IsIdentifying = false;
+            return;
+        }
+
+        using var source = new CancellationTokenSource();
+        _identifying = source;
+        IsIdentifying = true;
+
+        try
+        {
+            var path = entry.Path;
+            var found = await Task.Run(() => FolderInspector.Of(path, source.Token), source.Token);
+
+            // A newer selection may have started while this ran, and its answer wins.
+            if (ReferenceEquals(_identifying, source))
+                Identity = found;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            _host.Log($"Could not work out what {entry.Path} is: {ex.Message}");
+        }
+        finally
+        {
+            if (ReferenceEquals(_identifying, source))
+            {
+                _identifying = null;
+                IsIdentifying = false;
+            }
         }
     }
 

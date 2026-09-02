@@ -13,7 +13,7 @@ to install.
 
 | Plugin | What it does |
 |---|---|
-| **[Chonk](Mews.Plugins.Chonk/README.md)** | Measures where the room on a drive went, biggest first, and clears out what you no longer want |
+| **[Chonk](Mews.Plugins.Chonk/README.md)** | Measures where the room on a drive went, biggest first, says what each folder actually is, and clears out what you no longer want |
 | **[Purrge](Mews.Plugins.Purrge/README.md)** | Finds files with identical content anywhere on the machine, groups them, and removes the copies you do not want |
 | **[Molt](Mews.Plugins.Molt/README.md)** | Sheds caches and build output that can be rebuilt, and tells you what losing each one costs first |
 | **[Mouser](Mews.Plugins.Mouser/README.md)** | Hunts down dead weight: empty folders, empty files, shortcuts pointing at things that are gone |

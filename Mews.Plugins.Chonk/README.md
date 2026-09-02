@@ -38,6 +38,36 @@ than aborting the whole thing.
 The scan runs as background work, so switching tabs does not abandon it and the **Tasks** panel
 says how far it has got.
 
+## What that folder actually is
+
+Finding a 40 GB folder called `Library`, `blob_storage` or `shader_cache` is only half an answer.
+The other half is what put it there, whether anything is still using it, and what breaks if it
+goes. Selecting anything works that out and says so in the right hand panel, along with the
+reasons, so you can disagree with it.
+
+| It says | Meaning |
+|---|---|
+| **Rebuildable** | Build output or a cache. Removing it costs time while something rebuilds it, and nothing else |
+| **Application data** | A program's own settings and state. It will not usually break, but it will forget what was in here |
+| **Game** | Installed through Steam. Its launcher has to remove it, not you |
+| **Yours** | One of your own folders, or contents that read like documents and media |
+| **Not sure** | Nothing could be established. Said plainly rather than guessed at |
+
+The answer comes from evidence rather than a table of known folder names: what is inside it, which
+application's folder it sits in, how recently anything wrote to it, and whether a running program
+is holding a file open. A table would need updating forever and would still be wrong about
+anything it had not heard of.
+
+Steam is the exception, because there the disk is not the best witness. A game folder has a
+manifest beside it holding the real name, the size and when it was last launched, so the panel can
+say *"Call of Duty®, installed through Steam, last played 4 days ago"* rather than *"a large
+folder of game data"*. That one is worth calling out because deleting a game folder by hand leaves
+Steam still believing the game is installed, and the confirmation says so before you do it.
+
+Anything held open by a running program, and anything belonging to a launcher, is marked as worth
+a second look. Where nothing can be established it says so: a confident wrong answer here gets
+something deleted.
+
 ## Removing things
 
 **It asks first.** The confirmation says what is about to go, how big it is, and for a folder how

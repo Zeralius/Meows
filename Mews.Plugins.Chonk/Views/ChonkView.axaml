@@ -216,6 +216,56 @@
                                        Classes="label"
                                        TextWrapping="Wrap" />
 
+                            <TextBlock Text="Working out what this is…"
+                                       Classes="label"
+                                       Margin="0,6,0,0"
+                                       IsVisible="{Binding IsIdentifying}" />
+
+                            <!-- What it is, and why it thinks so. The reasons matter as much as
+                                 the answer, because this is the panel someone reads before
+                                 deleting 40 GB they cannot identify. -->
+                            <Border IsVisible="{Binding HasIdentity}"
+                                    Background="#1C1C22"
+                                    BorderBrush="#2E2E36"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="10,8"
+                                    Margin="0,6,0,0">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="{Binding IdentityHeadline}"
+                                               FontWeight="SemiBold"
+                                               TextWrapping="Wrap" />
+
+                                    <TextBlock Text="{Binding IdentityAdvice}"
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
+                                               Opacity="0.75" />
+
+                                    <Border Background="#32291A"
+                                            BorderBrush="#5A4826"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            Padding="7,4"
+                                            IsVisible="{Binding IdentityIsWarning}">
+                                        <TextBlock Text="Worth a second look before removing this."
+                                                   Foreground="#E8CE97"
+                                                   FontSize="11"
+                                                   TextWrapping="Wrap" />
+                                    </Border>
+
+                                    <ItemsControl ItemsSource="{Binding Evidence}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <TextBlock Text="{Binding}"
+                                                           Classes="label"
+                                                           TextWrapping="Wrap"
+                                                           Margin="0,2,0,0" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
                             <Button Content="Open in Explorer"
                                     Command="{Binding ExploreCommand}"
                                     HorizontalAlignment="Stretch"

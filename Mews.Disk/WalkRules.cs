@@ -37,4 +37,63 @@ public static class WalkRules
         return !skipSystemFolders ||
                !SkippedFolderNames.Contains(directory.Name, StringComparer.OrdinalIgnoreCase);
     }
+
+    /// <summary>
+    /// Whether stepping into this child actually goes anywhere new.
+    ///
+    /// Windows quietly strips a trailing space or dot from a path, so a folder genuinely named
+    /// " " resolves back to its own parent. Enumerate the parent, take the child, ask the system
+    /// where it is, and you are handed the parent again. Nothing about the folder looks wrong on
+    /// the way past, and a walk goes round the pair forever.
+    ///
+    /// One of these exists inside a Steam game called TOK 2, and it took a Chonk scan to 45 TB
+    /// across five million folders on a machine holding eighteen.
+    /// </summary>
+    public static bool LeadsSomewhereNew(DirectoryInfo child, DirectoryInfo parent)
+    {
+        try
+        {
+            var from = parent.FullName.TrimEnd(Path.DirectorySeparatorChar);
+            var to = child.FullName.TrimEnd(Path.DirectorySeparatorChar);
+
+            return !to.Equals(from, StringComparison.OrdinalIgnoreCase);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Whether a path still names the same thing after Windows has normalised it.
+    ///
+    /// It does not when the name ends in a space or a dot: "data." normalises to "data", and if
+    /// both exist side by side then an operation aimed at the first lands on the second. That is
+    /// not theoretical. Deleting "data." really does take "data" and everything in it, and report
+    /// success for having done so.
+    ///
+    /// Only the last segment is compared, so an ordinary relative path is not refused for the
+    /// unrelated crime of being relative.
+    /// </summary>
+    public static bool SurvivesNormalising(string path)
+    {
+        try
+        {
+            var trimmed = path.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var before = Path.GetFileName(trimmed);
+
+            // A drive or share root has no last segment to lose.
+            if (before.Length == 0)
+                return true;
+
+            var full = Path.GetFullPath(trimmed)
+                .TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            return Path.GetFileName(full).Equals(before, StringComparison.Ordinal);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
 }

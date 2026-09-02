@@ -59,6 +59,9 @@ public sealed class LitterScanTests : IDisposable
         Assert.Equal(LitterKind.Installer, old.Kind);
         Assert.Equal(LitterAge.Older, old.Age);
         Assert.Equal(90, old.Days);
+        // Measured against the injected clock rather than the real one. This assertion used to
+        // read DateTime.Now through the item and so passed only on the day it was written.
+        Assert.Equal(91, LitterScan.DaysOf(Now.AddDays(-90), Now.AddDays(1)));
     }
 
     [Fact]

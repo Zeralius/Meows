@@ -30,10 +30,8 @@ public sealed record LitterItem(
     long Size,
     DateTime Modified,
     LitterKind Kind,
-    LitterAge Age)
-{
-    public int Days => Math.Max(0, (int)(DateTime.Now - Modified).TotalDays);
-}
+    LitterAge Age,
+    int Days);
 
 /// <summary>
 /// Reads a downloads folder and says what is in it. No judgement is applied here beyond naming
@@ -88,6 +86,14 @@ public static class LitterScan
     public static LitterKind KindOf(string path) =>
         ByExtension.TryGetValue(System.IO.Path.GetExtension(path), out var kind) ? kind : LitterKind.Other;
 
+    /// <summary>
+    /// Measured against the same clock the age bucket uses. Reading DateTime.Now here instead
+    /// made the item disagree with its own age bucket, and made a test that pinned an exact day
+    /// count start failing the morning after it was written.
+    /// </summary>
+    public static int DaysOf(DateTime modified, DateTime now) =>
+        Math.Max(0, (int)(now - modified).TotalDays);
+
     public static LitterAge AgeOf(DateTime modified, DateTime now) => (now - modified).TotalDays switch
     {
         < 1 => LitterAge.Today,
@@ -123,7 +129,7 @@ public static class LitterScan
             {
                 var kind = KindOf(file.FullName);
                 items.Add(new LitterItem(file.FullName, file.Name, Length(file), file.LastWriteTime,
-                    kind, AgeOf(file.LastWriteTime, now)));
+                    kind, AgeOf(file.LastWriteTime, now), DaysOf(file.LastWriteTime, now)));
             }
         }
         catch (Exception)
@@ -139,7 +145,8 @@ public static class LitterScan
                     continue;
 
                 items.Add(new LitterItem(directory.FullName, directory.Name, FolderSize.Of(directory),
-                    directory.LastWriteTime, LitterKind.Other, AgeOf(directory.LastWriteTime, now)));
+                    directory.LastWriteTime, LitterKind.Other, AgeOf(directory.LastWriteTime, now),
+                    DaysOf(directory.LastWriteTime, now)));
             }
         }
         catch (Exception)

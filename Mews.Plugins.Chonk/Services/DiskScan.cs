@@ -79,8 +79,14 @@ public static class DiskScan
         // up is then just a walk backwards through this list, with no recursion to overflow
         // on a pathologically deep tree.
         var discovered = new List<DiskEntry> { top };
-        var stack = new Stack<DiskEntry>();
-        stack.Push(top);
+
+        // The DirectoryInfo is carried rather than rebuilt from the path at each step. Windows
+        // strips a trailing space from a path string, so a folder genuinely named " " turns back
+        // into its own parent the moment it round trips through a string, and the walk goes round
+        // that pair forever. One really does exist, inside a game called TOK 2, and it took a
+        // scan to 45 TB across five million folders on an eighteen terabyte machine.
+        var stack = new Stack<(DiskEntry Entry, DirectoryInfo Directory)>();
+        stack.Push((top, new DirectoryInfo(full)));
 
         var foldersSeen = 0;
         var bytesSeen = 0L;
@@ -88,16 +94,16 @@ public static class DiskScan
         while (stack.Count > 0)
         {
             token.ThrowIfCancellationRequested();
-            var current = stack.Pop();
+            var (current, directory) = stack.Pop();
             foldersSeen++;
 
-            bytesSeen += MeasureFiles(current, options);
+            bytesSeen += MeasureFiles(current, directory, options);
 
-            foreach (var child in SubFolders(current, options))
+            foreach (var (child, childDirectory) in SubFolders(current, directory, options))
             {
                 current.Children.Add(child);
                 discovered.Add(child);
-                stack.Push(child);
+                stack.Push((child, childDirectory));
             }
 
             if (progress is not null && foldersSeen % ReportEvery == 0)
@@ -124,12 +130,12 @@ public static class DiskScan
     /// the answer to "what can I remove"; the rest are rolled into one row so a folder of ten
     /// thousand thumbnails costs one entry rather than ten thousand.
     /// </summary>
-    private static long MeasureFiles(DiskEntry folder, ScanOptions options)
+    private static long MeasureFiles(DiskEntry folder, DirectoryInfo directory, ScanOptions options)
     {
         FileInfo[] files;
         try
         {
-            files = new DirectoryInfo(folder.Path).GetFiles();
+            files = directory.GetFiles();
         }
         catch (Exception)
         {
@@ -185,26 +191,30 @@ public static class DiskScan
         return total;
     }
 
-    private static List<DiskEntry> SubFolders(DiskEntry folder, ScanOptions options)
+    private static List<(DiskEntry Entry, DirectoryInfo Directory)> SubFolders(
+        DiskEntry folder, DirectoryInfo directory, ScanOptions options)
     {
-        var found = new List<DiskEntry>();
+        var found = new List<(DiskEntry, DirectoryInfo)>();
 
         DirectoryInfo[] directories;
         try
         {
-            directories = new DirectoryInfo(folder.Path).GetDirectories();
+            directories = directory.GetDirectories();
         }
         catch (Exception)
         {
             return found;
         }
 
-        foreach (var directory in directories)
+        foreach (var child in directories)
         {
-            if (!WalkRules.ShouldDescend(directory, options.SkipSystemFolders))
+            if (!WalkRules.ShouldDescend(child, options.SkipSystemFolders))
                 continue;
 
-            found.Add(new DiskEntry(directory.FullName, directory.Name, DiskEntryKind.Folder, folder));
+            if (!WalkRules.LeadsSomewhereNew(child, directory))
+                continue;
+
+            found.Add((new DiskEntry(child.FullName, child.Name, DiskEntryKind.Folder, folder), child));
         }
 
         return found;

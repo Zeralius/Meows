@@ -46,9 +46,28 @@ public static class RecycleBin
     /// </summary>
     public static DeleteOutcome Send(IReadOnlyList<string> paths)
     {
-        var existing = paths.Where(Exists).Select(Path.GetFullPath).Distinct().ToList();
+        // A name ending in a space or a dot does not survive being normalised, and GetFullPath
+        // below is exactly what normalises it. "data." becomes "data", so a delete aimed at one
+        // lands on the other and cheerfully reports success for having destroyed the wrong
+        // folder. Refuse those outright: there is no way to name them safely here, and quietly
+        // deleting something the user did not pick is the worst thing this code could do.
+        // Checked before Exists, not after. Exists normalises too, so it answers about the
+        // neighbour rather than about the thing asked for: it says false when nothing sits next
+        // door, which would drop the path silently, and true when something does, which is
+        // precisely the case that must not go through.
+        var unsafePaths = paths.Where(p => !WalkRules.SurvivesNormalising(p)).ToList();
+        var existing = paths.Where(WalkRules.SurvivesNormalising)
+            .Where(Exists)
+            .Select(Path.GetFullPath)
+            .Distinct()
+            .ToList();
+
         if (existing.Count == 0)
-            return new DeleteOutcome(0, 0, null);
+        {
+            return unsafePaths.Count == 0
+                ? new DeleteOutcome(0, 0, null)
+                : new DeleteOutcome(0, unsafePaths.Count, Refusal(unsafePaths.Count));
+        }
 
         if (!OperatingSystem.IsWindows())
             return new DeleteOutcome(0, existing.Count, "Recycle Bin deletion is only implemented for Windows.");
@@ -83,8 +102,27 @@ public static class RecycleBin
             return new DeleteOutcome(0, existing.Count, "The delete was aborted.");
 
         // Check the disk rather than trusting the return code.
-        var stillThere = existing.Count(Exists);
-        return new DeleteOutcome(existing.Count - stillThere, stillThere,
-            stillThere == 0 ? null : $"{stillThere} item(s) could not be removed.");
+        var stillThere = existing.Count(Exists) + unsafePaths.Count;
+        var deleted = existing.Count - existing.Count(Exists);
+
+        if (stillThere == 0)
+            return new DeleteOutcome(deleted, 0, null);
+
+        var reason = unsafePaths.Count > 0 && existing.Count(Exists) == 0
+            ? Refusal(unsafePaths.Count)
+            : $"{stillThere} item(s) could not be removed." +
+              (unsafePaths.Count > 0 ? " " + Refusal(unsafePaths.Count) : "");
+
+        return new DeleteOutcome(deleted, stillThere, reason);
     }
+
+    /// <summary>Says what was refused and why, in terms of the thing on disk.</summary>
+    private static string Refusal(int count) =>
+        count == 1
+            ? "One of these has a name ending in a space or a dot, which Windows cannot address " +
+              "safely. Removing it would delete whatever sits next to it instead, so it was left alone. " +
+              "Rename it first."
+            : $"{count} of these have names ending in a space or a dot, which Windows cannot " +
+              "address safely. Removing them would delete whatever sits next to them instead, so " +
+              "they were left alone. Rename them first.";
 }
