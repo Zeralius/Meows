@@ -132,16 +132,8 @@ public static class DiskScan
     /// </summary>
     private static long MeasureFiles(DiskEntry folder, DirectoryInfo directory, ScanOptions options)
     {
-        FileInfo[] files;
-        try
-        {
-            files = directory.GetFiles();
-        }
-        catch (Exception)
-        {
-            // Unreadable is not fatal. The rest of the drive is still worth measuring.
-            return 0;
-        }
+        // Unreadable is not fatal. The rest of the drive is still worth measuring.
+        var files = FolderWalk.Files(directory);
 
         var smallBytes = 0L;
         var smallCount = 0;
@@ -196,26 +188,8 @@ public static class DiskScan
     {
         var found = new List<(DiskEntry, DirectoryInfo)>();
 
-        DirectoryInfo[] directories;
-        try
-        {
-            directories = directory.GetDirectories();
-        }
-        catch (Exception)
-        {
-            return found;
-        }
-
-        foreach (var child in directories)
-        {
-            if (!WalkRules.ShouldDescend(child, options.SkipSystemFolders))
-                continue;
-
-            if (!WalkRules.LeadsSomewhereNew(child, directory))
-                continue;
-
+        foreach (var child in FolderWalk.Into(directory, options.SkipSystemFolders))
             found.Add((new DiskEntry(child.FullName, child.Name, DiskEntryKind.Folder, folder), child));
-        }
 
         return found;
     }

@@ -318,15 +318,7 @@ public static class FolderInspector
         {
             var current = stack.Pop();
 
-            FileInfo[] files;
-            try
-            {
-                files = current.GetFiles();
-            }
-            catch (Exception)
-            {
-                continue;
-            }
+            var files = FolderWalk.Files(current);
 
             foreach (var file in files)
             {
@@ -354,15 +346,8 @@ public static class FolderInspector
                 }
             }
 
-            try
-            {
-                foreach (var child in current.GetDirectories())
-                    if (WalkRules.ShouldDescend(child, skipSystemFolders: false))
-                        stack.Push(child);
-            }
-            catch (Exception)
-            {
-            }
+            foreach (var child in FolderWalk.Into(current, skipSystemFolders: false))
+                stack.Push(child);
         }
 
         var top = kinds.OrderByDescending(k => k.Value).FirstOrDefault();

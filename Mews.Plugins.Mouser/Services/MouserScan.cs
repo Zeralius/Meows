@@ -116,17 +116,14 @@ public static class MouserScan
             hasContent.TryAdd(current.FullName, false);
             seen++;
 
-            FileInfo[] files;
-            try
-            {
-                files = current.GetFiles();
-            }
-            catch (Exception)
+            if (!FolderWalk.CanRead(current))
             {
                 // Unreadable. Say nothing about it rather than guess it is empty.
                 hasContent[current.FullName] = true;
                 continue;
             }
+
+            var files = FolderWalk.Files(current);
 
             foreach (var file in files)
             {
@@ -146,25 +143,17 @@ public static class MouserScan
             if (gaveUpAt is not null)
                 break;
 
-            try
-            {
-                foreach (var child in current.GetDirectories())
-                {
-                    if (!WalkRules.ShouldDescend(child, options.SkipSystemFolders))
-                    {
-                        // Not walked, so nothing can be said about what is inside it. Treat the
-                        // parent as occupied rather than call it empty on no evidence.
-                        hasContent[current.FullName] = true;
-                        continue;
-                    }
+            var children = FolderWalk.Into(current, options.SkipSystemFolders);
 
-                    parents[child.FullName] = current.FullName;
-                    stack.Push(child);
-                }
-            }
-            catch (Exception)
-            {
+            // Anything the walk will not step into leaves this folder's contents partly unknown,
+            // so it counts as occupied rather than being called empty on no evidence.
+            if (children.Count != CountOfChildren(current))
                 hasContent[current.FullName] = true;
+
+            foreach (var child in children)
+            {
+                parents[child.FullName] = current.FullName;
+                stack.Push(child);
             }
 
             if (progress is not null && seen % ReportEvery == 0)
@@ -230,6 +219,22 @@ public static class MouserScan
 
         progress?.Report(new MouserProgress(seen, findings.Count, root));
         return new ScanResult(findings, stopped, seen);
+    }
+
+    /// <summary>
+    /// How many subfolders are actually there, against how many the walk agreed to enter. The
+    /// difference is what was skipped, and a folder holding only skipped things is not empty.
+    /// </summary>
+    private static int CountOfChildren(DirectoryInfo directory)
+    {
+        try
+        {
+            return directory.GetDirectories().Length;
+        }
+        catch (Exception)
+        {
+            return int.MaxValue;
+        }
     }
 
     /// <summary>What is wrong with this file, if anything.</summary>

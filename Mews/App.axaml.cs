@@ -18,6 +18,7 @@ public partial class App : Application
         {
             var settings = new ShellSettings();
             var log = new ShellLog(Path.Combine(settings.Root, "mews.log"));
+            settings.Report = message => log.Write("settings", message);
             var notifications = new NotificationCenter();
             var background = new BackgroundTaskService(notifications, log);
             var catalog = new PluginCatalog(log);

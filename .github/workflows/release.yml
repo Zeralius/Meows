@@ -51,15 +51,22 @@ jobs:
       # The shell does not reference plugin projects, which is what keeps them drop-in, so
       # publishing alone produces an app with no plugins. Each one has to be staged.
       - name: Build the plugins
+        shell: pwsh
         run: |
-          dotnet build Mews.Plugins.TelegramPoster/Mews.Plugins.TelegramPoster.csproj --configuration Release
-          dotnet build Mews.Plugins.Purrge/Mews.Plugins.Purrge.csproj --configuration Release
-          dotnet build Mews.Plugins.Kibble/Mews.Plugins.Kibble.csproj --configuration Release
-          dotnet build Mews.Plugins.Chonk/Mews.Plugins.Chonk.csproj --configuration Release
-          dotnet build Mews.Plugins.Litter/Mews.Plugins.Litter.csproj --configuration Release
-          dotnet build Mews.Plugins.Molt/Mews.Plugins.Molt.csproj --configuration Release
-          dotnet build Mews.Plugins.Saucer/Mews.Plugins.Saucer.csproj --configuration Release
-          dotnet build Mews.Plugins.Mouser/Mews.Plugins.Mouser.csproj --configuration Release
+          # Found on disk rather than listed here. A list has to be edited for every new plugin,
+          # and forgetting to is not caught by anything until the package ships without it.
+          $projects = Get-ChildItem Mews.Plugins.* -Directory |
+            Where-Object { $_.Name -ne 'Mews.Plugins.Abstractions' } |
+            ForEach-Object { Join-Path $_.FullName "$($_.Name).csproj" } |
+            Where-Object { Test-Path $_ }
+
+          if ($projects.Count -eq 0) { throw "No plugin projects found" }
+
+          foreach ($project in $projects) {
+            dotnet build $project --configuration Release
+            if ($LASTEXITCODE -ne 0) { throw "Failed to build $project" }
+          }
+          "built $($projects.Count) plugin(s)"
 
       - name: Stage the plugins into the package
         shell: pwsh
@@ -70,7 +77,11 @@ jobs:
           # which is loaded from the plugin's own folder. Avalonia and the contract are not
           # here to be copied: the csproj files keep them out so the shell stays the one
           # source of both.
-          foreach ($p in 'Mews.Plugins.TelegramPoster', 'Mews.Plugins.Purrge', 'Mews.Plugins.Kibble', 'Mews.Plugins.Chonk', 'Mews.Plugins.Litter', 'Mews.Plugins.Molt', 'Mews.Plugins.Saucer', 'Mews.Plugins.Mouser') {
+          $plugins = Get-ChildItem Mews.Plugins.* -Directory |
+            Where-Object { $_.Name -ne 'Mews.Plugins.Abstractions' } |
+            ForEach-Object { $_.Name }
+
+          foreach ($p in $plugins) {
             $dest = "artifacts/Mews-win-x64/plugins/$p"
             New-Item -ItemType Directory -Force $dest | Out-Null
             Copy-Item "$p/bin/Release/*.dll" $dest
@@ -92,31 +103,41 @@ jobs:
           "{0:N0} MB" -f ((Get-ChildItem artifacts/Mews-win-x64 -Recurse -File |
             Measure-Object Length -Sum).Sum / 1MB)
 
-      - name: Sanity check the package
+      - name: Check the package can actually load what is in it
         shell: pwsh
         run: |
-          # A plugin whose dependency is missing fails at activation, long after this job has
-          # gone green, so the shared library is checked here by name.
-          $root = 'artifacts/Mews-win-x64'
-          foreach ($f in "$root/Mews.exe",
-                         "$root/plugins/Mews.Plugins.TelegramPoster/Mews.Plugins.TelegramPoster.dll",
-                         "$root/plugins/Mews.Plugins.TelegramPoster/Mews.Bot.Core.dll",
-                         "$root/plugins/Mews.Plugins.Purrge/Mews.Plugins.Purrge.dll",
-                         "$root/plugins/Mews.Plugins.Purrge/Mews.Disk.dll",
-                         "$root/plugins/Mews.Plugins.Kibble/Mews.Plugins.Kibble.dll",
-                         "$root/plugins/Mews.Plugins.Kibble/Mews.Bot.Core.dll",
-                         "$root/plugins/Mews.Plugins.Chonk/Mews.Plugins.Chonk.dll",
-                         "$root/plugins/Mews.Plugins.Chonk/Mews.Disk.dll",
-                         "$root/plugins/Mews.Plugins.Litter/Mews.Plugins.Litter.dll",
-                         "$root/plugins/Mews.Plugins.Litter/Mews.Disk.dll",
-                         "$root/plugins/Mews.Plugins.Molt/Mews.Plugins.Molt.dll",
-                         "$root/plugins/Mews.Plugins.Molt/Mews.Disk.dll",
-                         "$root/plugins/Mews.Plugins.Saucer/Mews.Plugins.Saucer.dll",
-                         "$root/plugins/Mews.Plugins.Mouser/Mews.Plugins.Mouser.dll",
-                         "$root/plugins/Mews.Plugins.Mouser/Mews.Disk.dll") {
-            if (-not (Test-Path $f)) { throw "Missing from the package: $f" }
+          # The old version of this step was a list of expected file paths, typed by hand and
+          # edited for every new plugin. It could only ever check what somebody remembered to
+          # add, which is the same weakness as the problem it existed to catch.
+          #
+          # This asks the packaged app instead. --list-plugins runs discovery and the dependency
+          # check without opening a window, and returns non zero if anything was refused or is
+          # missing a private library. A plugin whose shared library did not get staged loads
+          # perfectly and then fails the moment it is switched on, so being present is not the
+          # same as being usable, and only one of those can be checked by looking at file names.
+          $exe = 'artifacts/Mews-win-x64/Mews.exe'
+          if (-not (Test-Path $exe)) { throw "No Mews.exe in the package" }
+
+          # Started rather than called. Mews is a WinExe, and PowerShell does not wait for a
+          # windowed process: the call operator returns immediately and never sets an exit code,
+          # so a check written the obvious way would pass no matter what the package contained.
+          $log = Join-Path ([System.IO.Path]::GetTempPath()) 'mews-plugins.txt'
+          $run = Start-Process -FilePath (Resolve-Path $exe) -ArgumentList '--list-plugins' `
+            -Wait -PassThru -NoNewWindow -RedirectStandardOutput $log
+
+          $output = Get-Content $log
+          $output | ForEach-Object { "  $_" }
+          if ($run.ExitCode -ne 0) { throw "The packaged app could not load its own plugins" }
+
+          # And it has to find every plugin in the repository, not merely load the ones it found.
+          $expected = (Get-ChildItem Mews.Plugins.* -Directory |
+            Where-Object { $_.Name -ne 'Mews.Plugins.Abstractions' }).Count
+          $loaded = ([regex]::Matches(($output -join "`n"), '(?m)^ok\s')).Count
+
+          if ($loaded -ne $expected) {
+            throw "Packaged $loaded plugin(s), but the repository has $expected"
           }
-          "package looks complete"
+          "all $expected plugin(s) present and loadable"
 
       - name: Zip it
         shell: pwsh

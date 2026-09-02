@@ -42,7 +42,18 @@ built around the posting bot are together. **Open plugins folder** on that tab t
 they are read from.
 
 Settings and logs live in `%APPDATA%\Mews`, never inside the folder you unzipped, so deleting
-that folder resets Mews completely.
+that folder resets Mews completely. `mews.log` there is also where a crash gets written, stack
+trace and all, which is worth attaching to a bug report.
+
+To check an install without opening the window:
+
+```bash
+Mews.exe --list-plugins
+```
+
+It lists what the shell can find, flags anything refused on contract grounds or missing a private
+library, and exits non zero if either happened. This is what the release build runs against the
+package it just made.
 
 ## Building it yourself
 
@@ -151,14 +162,18 @@ builds in Release, runs the tests, and checks that the plugin contract still pac
 
 **[release.yml](.github/workflows/release.yml)** runs when a `v*` tag is pushed, or manually with
 a version typed in. It runs the tests first, publishes the shell self contained for win-x64,
-stages every plugin into `plugins/`, drops the third party native symbols, checks that nothing is
-missing from the package, then zips it and attaches it to a GitHub release along with the
-contract `.nupkg`.
+stages every plugin into `plugins/`, drops the third party native symbols, checks the package,
+then zips it and attaches it to a GitHub release along with the contract `.nupkg`.
 
 Staging the plugins is a separate step because the shell does not reference the plugin projects,
-which is what keeps them drop in. A plain `dotnet publish` would produce an app with no plugins
-at all, so the workflow verifies every plugin DLL and its dependencies are present before
-publishing.
+which is what keeps them drop in. A plain `dotnet publish` would produce an app with no plugins at
+all. Which plugins to build and stage is worked out from the folders on disk rather than from a
+list in the workflow, so adding one needs no edit here.
+
+The check at the end runs `Mews.exe --list-plugins` against the package and fails the build if
+anything was refused or is missing a private library. Asking the app is not the same as checking
+file names: a plugin whose shared library did not get staged loads perfectly and then fails the
+moment it is switched on, which is exactly how three plugins once shipped broken.
 
 To cut a release:
 

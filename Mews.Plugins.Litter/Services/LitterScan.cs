@@ -139,10 +139,8 @@ public static class LitterScan
 
         try
         {
-            foreach (var directory in root.EnumerateDirectories())
+            foreach (var directory in FolderWalk.Into(root, skipSystemFolders: false))
             {
-                if (!WalkRules.ShouldDescend(directory, skipSystemFolders: false))
-                    continue;
 
                 items.Add(new LitterItem(directory.FullName, directory.Name, FolderSize.Of(directory),
                     directory.LastWriteTime, LitterKind.Other, AgeOf(directory.LastWriteTime, now),

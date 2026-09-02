@@ -48,15 +48,8 @@ public static class FolderSize
                 continue;
             }
 
-            try
-            {
-                foreach (var child in current.EnumerateDirectories())
-                    if (WalkRules.ShouldDescend(child, skipSystemFolders))
-                        stack.Push(child);
-            }
-            catch (Exception)
-            {
-            }
+            foreach (var child in FolderWalk.Into(current, skipSystemFolders))
+                stack.Push(child);
         }
 
         return total;

@@ -144,10 +144,10 @@ public static class MoltCatalog
                 }
             }
 
-            foreach (var folder in root.EnumerateDirectories())
+            foreach (var folder in FolderWalk.Into(root, skipSystemFolders: false))
             {
                 token.ThrowIfCancellationRequested();
-                if (folder.LastWriteTime >= cutoff || !WalkRules.ShouldDescend(folder, skipSystemFolders: false))
+                if (folder.LastWriteTime >= cutoff)
                     continue;
 
                 entry.Paths.Add(folder.FullName);
@@ -230,6 +230,8 @@ public static class MoltCatalog
             token.ThrowIfCancellationRequested();
             var (current, depth) = stack.Pop();
 
+            // Every child, for working out what kind of project this is, and separately the ones
+            // actually worth stepping into.
             DirectoryInfo[] children;
             try
             {
@@ -240,6 +242,8 @@ public static class MoltCatalog
                 continue;
             }
 
+            var walkable = FolderWalk.Into(current, skipSystemFolders: false);
+
             if (++seen % 200 == 0)
                 progress?.Report($"{seen} folders searched");
 
@@ -248,11 +252,8 @@ public static class MoltCatalog
                 children.Any(c => c.Name.Equals("Assets", StringComparison.OrdinalIgnoreCase)) &&
                 children.Any(c => c.Name.Equals("ProjectSettings", StringComparison.OrdinalIgnoreCase));
 
-            foreach (var child in children)
+            foreach (var child in walkable)
             {
-                if (!WalkRules.ShouldDescend(child, skipSystemFolders: false))
-                    continue;
-
                 if (child.Name is "bin" or "obj")
                 {
                     build.Paths.Add(child.FullName);

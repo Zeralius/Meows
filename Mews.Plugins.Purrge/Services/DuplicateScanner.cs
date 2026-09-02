@@ -182,54 +182,21 @@ public sealed class DuplicateScanner
     /// </summary>
     private static IEnumerable<string> EnumerateFiles(string root, ScanOptions options, CancellationToken token)
     {
-        var stack = new Stack<string>();
-        stack.Push(root);
+        // DirectoryInfo objects rather than path strings, because a string has to be turned back
+        // into one to walk it and that round trip is where Windows quietly drops a trailing space.
+        var stack = new Stack<DirectoryInfo>();
+        stack.Push(new DirectoryInfo(root));
 
         while (stack.Count > 0)
         {
             token.ThrowIfCancellationRequested();
             var current = stack.Pop();
 
-            string[] files;
-            try
-            {
-                files = Directory.GetFiles(current);
-            }
-            catch (Exception)
-            {
-                continue;
-            }
+            foreach (var file in FolderWalk.Files(current))
+                yield return file.FullName;
 
-            foreach (var file in files)
-                yield return file;
-
-            string[] directories;
-            try
-            {
-                directories = Directory.GetDirectories(current);
-            }
-            catch (Exception)
-            {
-                continue;
-            }
-
-            foreach (var directory in directories)
-            {
-                DirectoryInfo info;
-                try
-                {
-                    info = new DirectoryInfo(directory);
-                }
-                catch (Exception)
-                {
-                    continue;
-                }
-
-                if (!WalkRules.ShouldDescend(info, options.SkipSystemFolders))
-                    continue;
-
-                stack.Push(directory);
-            }
+            foreach (var child in FolderWalk.Into(current, options.SkipSystemFolders))
+                stack.Push(child);
         }
     }
 }
