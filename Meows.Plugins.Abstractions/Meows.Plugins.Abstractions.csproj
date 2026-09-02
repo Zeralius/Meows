@@ -11,7 +11,22 @@
          it must be loaded by a shell carrying the same major version. -->
     <PropertyGroup>
         <PackageId>Meows.Plugins.Abstractions</PackageId>
-        <Version>0.2.1</Version>
+
+        <!-- The contract's own version, stated once and pinned into every form of it.
+             Publishing the shell passes -p:Version for the app, and a command line property
+             beats anything set in a csproj, so it reached in here and stamped this assembly with
+             the app's version. The shell then read its own contract version off this assembly and
+             announced a number the contract never had, and every plugin, built separately without
+             that override, was refused for disagreeing with it.
+             It went unnoticed while the app was on 0.x, because a shell claiming 0.12.0 and a
+             plugin built against 0.2.0 still share a major. Going to 1.0.0 is what made it show.
+             AssemblyVersion and FileVersion are set explicitly here, which a command line Version
+             does not override. -->
+        <ContractVersion>0.2.1</ContractVersion>
+        <Version>$(ContractVersion)</Version>
+        <PackageVersion>$(ContractVersion)</PackageVersion>
+        <AssemblyVersion>$(ContractVersion)</AssemblyVersion>
+        <FileVersion>$(ContractVersion)</FileVersion>
         <Description>The contract a Meows plugin implements: IMeowsPlugin, IMeowsHost, notifications, background work.</Description>
         <Authors>Dennis</Authors>
         <PackageTags>meows;plugin;avalonia;desktop</PackageTags>
