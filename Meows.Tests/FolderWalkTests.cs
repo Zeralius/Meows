@@ -6,9 +6,9 @@ using Meows.Plugins.Mouser.Services;
 namespace Meows.Tests;
 
 /// <summary>
-/// Every scanner now steps through <see cref="FolderWalk"/>, so a rule learned once holds
-/// everywhere. These pin that, using the shape of folder that sent one of them round forever
-/// while the others walked past it for reasons nobody had chosen.
+/// Every scanner goes through <see cref="FolderWalk"/> now, so a fix applies everywhere. These
+/// check that, using the folder shape that sent one scanner into an infinite loop while the
+/// others happened to walk past it.
 /// </summary>
 public sealed class FolderWalkTests : IDisposable
 {

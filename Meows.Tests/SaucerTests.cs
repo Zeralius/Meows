@@ -6,9 +6,9 @@ namespace Meows.Tests;
 public sealed class ClipboardConversionTests
 {
     /// <summary>
-    /// A bare DIB, the shape the clipboard hands over for a bitmap. The palette and the
-    /// bitfield masks are part of the data, which is exactly what the conversion has to
-    /// account for when working out where the pixels start.
+    /// A bare DIB, which is what the clipboard hands over for a bitmap. The palette and the
+    /// bitfield masks are part of the data, so the conversion has to account for them when
+    /// working out where the pixels start.
     /// </summary>
     private static byte[] Dib(int width, int height, int bitCount = 32, int compression = 0, int coloursUsed = 0)
     {

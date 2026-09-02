@@ -29,10 +29,10 @@ public enum IntakeOutcome
 /// <summary>What to do with a file the group already has.</summary>
 public enum DuplicateHandling
 {
-    /// <summary>Refuse it and leave it where it is, for you to look at.</summary>
+    /// <summary>Leave it in the grid and say why.</summary>
     Refuse,
 
-    /// <summary>Move it into the group's Duplicates folder and carry on.</summary>
+    /// <summary>Move it to the group's Duplicates folder.</summary>
     MoveAside,
 }
 
@@ -57,14 +57,14 @@ public sealed record IntakeResult(
     IReadOnlyList<BundledPage>? Bundled = null)
 {
     /// <summary>
-    /// Whether the file left where it was. True for a duplicate set aside as well as a send,
-    /// because both empty the tile out of the grid and both are undoable.
+    /// True if the file left the source folder, so a send or a duplicate set aside. Both clear
+    /// the tile from the grid and both can be undone.
     /// </summary>
     public bool Moved => Outcome is IntakeOutcome.Sent or IntakeOutcome.MovedToDuplicates;
 
     /// <summary>
-    /// Whether it actually joined the queue. A duplicate moved aside did not, so it takes no
-    /// place in the posting order and gets no queue timestamp.
+    /// True only if it went into the queue. Duplicates do not, so they get no queue timestamp
+    /// and take no slot in the posting order.
     /// </summary>
     public bool Queued => Outcome == IntakeOutcome.Sent;
 
@@ -73,15 +73,15 @@ public sealed record IntakeResult(
 }
 
 /// <summary>
-/// Moving a file into a group's queue, with the checks that are only useful at the moment you
-/// click. Everything here happens before the file lands, so a rejected file stays where it was
-/// and the grid still shows it.
+/// Moves a file into a group's queue, with the checks that only make sense at the moment you
+/// click. Everything runs before the file moves, so a rejected file stays put and the grid keeps
+/// showing it.
 /// </summary>
 public static class Intake
 {
     /// <summary>
-    /// Checks a file against a destination without moving anything, so the UI can grey out or
-    /// warn before the click. Null means it is fine to send.
+    /// Checks a file against a destination without moving it, so the UI can warn first. Null
+    /// means it is fine to send.
     /// </summary>
     public static IntakeResult? Inspect(string source, BotWorkspace workspace, GroupConfig group)
     {
@@ -151,11 +151,8 @@ public static class Intake
     }
 
     /// <summary>
-    /// Moves a file the group already has into its Duplicates folder.
-    ///
-    /// Moved rather than deleted, and never over the top of anything. The whole point of finding
-    /// a duplicate is that a copy already exists somewhere, which is a poor reason to be careless
-    /// with this one.
+    /// Moves a file the group already has into its Duplicates folder. Moves rather than deletes,
+    /// and will not overwrite something already in there.
     /// </summary>
     private static IntakeResult SetAside(
         string source,
@@ -173,8 +170,8 @@ public static class Intake
 
             File.Move(source, target);
 
-            // Its own date, kept. Nothing reads these in order, and the date is the only clue
-            // left about where the file came from.
+            // Keep the original date. Nothing sorts this folder, and the date is the only
+            // hint left about where the file came from.
             File.SetLastWriteTimeUtc(target, sourceWritten);
 
             return new IntakeResult(IntakeOutcome.MovedToDuplicates, source, target,
@@ -208,8 +205,8 @@ public static class Intake
     }
 
     /// <summary>
-    /// Bundles several files into one .cbz in the group's queue, so they post as a single
-    /// comic instead of as separate items.
+    /// Bundles several files into one .cbz in the group's queue, so they post as a single comic
+    /// rather than separate items.
     /// </summary>
     public static IntakeResult SendAsComic(
         IReadOnlyList<string> sources,
@@ -304,9 +301,9 @@ public static class Intake
     }
 
     /// <summary>
-    /// Moves several files into the queue one by one, in the order they were given. Every file
-    /// is checked on its own, so one refusal does not stop the rest: the results come back in
-    /// the same order and say individually what happened to each.
+    /// Moves several files into the queue one at a time, in the order given. Each is checked
+    /// separately so one refusal does not stop the rest, and the results come back in the same
+    /// order saying what happened to each.
     /// </summary>
     public static IReadOnlyList<IntakeResult> SendMany(
         IReadOnlyList<string> sources,
@@ -328,8 +325,8 @@ public static class Intake
             var result = Send(source, workspace, group, stamp, duplicates);
             results.Add(result);
 
-            // Queued, not merely moved. A duplicate set aside is not in the queue, so it takes
-            // no place in the posting order and none of the timestamps below apply to it.
+            // Queued, not Moved: a duplicate went to Duplicates rather than the queue, so the
+            // timestamps below do not apply to it.
             if (!result.Queued)
                 continue;
 
@@ -375,9 +372,9 @@ public static class Intake
     }
 
     /// <summary>
-    /// Unpacks a comic back into the files it was made from, then removes the archive. The
-    /// bytes come out of the archive itself rather than a copy kept aside, so an undo cannot
-    /// restore something subtly different from what went in.
+    /// Unpacks a comic back into the files it was built from, then deletes the archive. The
+    /// bytes come from the archive itself rather than a copy kept elsewhere, so undo cannot
+    /// restore something subtly different.
     /// </summary>
     private static bool UndoComic(string archive, IReadOnlyList<BundledPage> pages)
     {
@@ -429,8 +426,8 @@ public static class Intake
     }
 
     /// <summary>
-    /// Never overwrite. A name clash between two different files is entirely possible when
-    /// pulling from several sources, and losing one silently would be the worst outcome here.
+    /// Never overwrites. Two different files can easily share a name when they come from
+    /// different folders, and silently losing one would be the worst thing this could do.
     /// </summary>
     private static string UniquePath(string folder, string fileName)
     {

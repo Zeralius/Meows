@@ -6,9 +6,9 @@ namespace Meows.Tests;
 public sealed class ShellLinkTests
 {
     /// <summary>
-    /// A shortcut with nothing in it but a LinkInfo block, which is the part that carries the
-    /// path. Built by hand so the reader is tested against the format rather than against
-    /// whatever happens to be installed on the machine running the tests.
+    /// A shortcut containing only a LinkInfo block, which is the part holding the path. Built
+    /// by hand so the parser is tested against the format rather than against whatever shortcuts
+    /// happen to exist on the test machine.
     /// </summary>
     private static byte[] Link(string basePath, string suffix = "", bool unicode = false)
     {
@@ -352,9 +352,9 @@ public sealed class MouserScanTests : IDisposable
     }
 
     /// <summary>
-    /// Reports on the calling thread. The framework's Progress&lt;T&gt; hands the callback to the
-    /// thread pool when there is no synchronization context, which is fine for a UI but useless
-    /// for a test that has to cancel at an exact point in the walk.
+    /// Reports on the calling thread. Progress&lt;T&gt; posts to the thread pool when there is no
+    /// synchronization context, which is fine for a UI but no good for a test that needs to
+    /// cancel at an exact point.
     /// </summary>
     private sealed class Immediately(Action<MouserProgress> act) : IProgress<MouserProgress>
     {
@@ -362,9 +362,9 @@ public sealed class MouserScanTests : IDisposable
     }
 
     /// <summary>
-    /// A folder whose visited part looks empty and whose unvisited part is not. The content lives
-    /// in the child that sorts first, so it is pushed first and therefore popped last, which puts
-    /// it still in the queue when the sweep is stopped partway through the empty ones.
+    /// A folder whose visited part looks empty but whose unvisited part is not. The content is
+    /// in the child that sorts first, so it is pushed first and popped last, leaving it still
+    /// queued when the sweep stops partway through the empty ones.
     /// </summary>
     private string HalfReadFolder(int empties = 200)
     {

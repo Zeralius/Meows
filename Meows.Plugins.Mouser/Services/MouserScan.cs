@@ -2,7 +2,7 @@ using Meows.Disk;
 
 namespace Meows.Plugins.Mouser.Services;
 
-/// <summary>The kinds of dead weight worth finding.</summary>
+/// <summary>The kinds of dead weight Mouser looks for.</summary>
 public enum DeadKind
 {
     EmptyFolder,
@@ -17,13 +17,13 @@ public sealed record MouserOptions
 {
     public bool SkipSystemFolders { get; init; } = true;
 
-    /// <summary>Files Windows and macOS leave behind that nothing wants.</summary>
+    /// <summary>Files Windows and macOS leave behind and nothing needs.</summary>
     public static readonly string[] LeftoverNames = ["Thumbs.db", "ehthumbs.db", ".DS_Store"];
 
     /// <summary>
-    /// Files whose whole job is to be empty. Being zero bytes is what they are for, so size says
-    /// nothing at all about whether they are wanted. An empty __init__.py is what makes a Python
-    /// package a package, and a .gitkeep exists only so git will carry the folder around it.
+    /// Files that are meant to be empty, where size tells you nothing about whether they are
+    /// wanted. An empty __init__.py is what makes a Python package a package, and .gitkeep only
+    /// exists so git keeps the folder around it.
     /// </summary>
     public static readonly string[] MeantToBeEmptyNames =
     [
@@ -32,15 +32,15 @@ public sealed record MouserOptions
     ];
 
     /// <summary>
-    /// Extensions used purely as markers, where the file existing is the entire message. Unity
-    /// writes thousands of these into a project and every one of them is doing its job.
+    /// Extensions used as markers, where the file existing is the whole point. Unity writes
+    /// thousands of these into a project and they are all doing their job.
     /// </summary>
     public static readonly string[] MeantToBeEmptyExtensions =
     [
         ".mvfrm", ".modulecompilationtrigger", ".lock", ".stamp",
     ];
 
-    /// <summary>Whether a zero byte file is that way on purpose.</summary>
+    /// <summary>Whether a zero byte file is empty on purpose.</summary>
     public static bool IsMeantToBeEmpty(string name)
     {
         if (MeantToBeEmptyNames.Contains(name, StringComparer.OrdinalIgnoreCase))
@@ -48,10 +48,9 @@ public sealed record MouserOptions
 
         var extension = Path.GetExtension(name).ToLowerInvariant();
 
-        // No extension at all and no contents either, so there is nothing here that was ever
-        // opened by anything: names like REQUESTED, WEBGL_SUPPORTED or CodeSignature are programs
-        // leaving themselves a note. Passing over them costs nothing, because a zero byte file
-        // takes up no room worth reclaiming, and offering one risks breaking whatever wrote it.
+        // No extension and no contents: names like REQUESTED, WEBGL_SUPPORTED or CodeSignature
+        // are programs leaving themselves a marker. Skipping them costs nothing, since a zero
+        // byte file frees no space, and deleting one could break whatever wrote it.
         return extension.Length == 0 || MeantToBeEmptyExtensions.Contains(extension);
     }
 }
@@ -59,20 +58,18 @@ public sealed record MouserOptions
 public sealed record MouserProgress(int FoldersSeen, int Found, string Current);
 
 /// <summary>
-/// What a sweep turned up, and whether it got to the end. Stopping early is an ordinary outcome
-/// rather than a failure: what was found up to that point is still worth showing, so long as it
-/// is clear that the list is only as far as it got.
+/// What a sweep found, and whether it finished. Stopping early is a normal outcome rather than
+/// a failure, so the results are still worth showing as long as the UI says they are partial.
 /// </summary>
 public sealed record ScanResult(IReadOnlyList<Finding> Findings, bool WasStopped, int FoldersSeen);
 
 /// <summary>
-/// Finds what is simply pointless. Chonk answers what is big and Purrge answers what is
-/// duplicated; none of what turns up here is either, which is exactly why nothing else finds it
-/// and why a drive quietly ends up with thousands of them.
+/// Finds files and folders that serve no purpose. Chonk finds what is big and Purrge finds what
+/// is duplicated; none of this is either, which is why nothing else catches it and why a drive
+/// accumulates thousands.
 ///
-/// Everything reported has to be defensible on its own, so each finding carries the reason it
-/// was picked. Where that reason cannot be established, nothing is reported: a tool that removes
-/// dead things has to be far more afraid of a false positive than of missing one.
+/// Every finding carries the reason it was picked, and anything we cannot justify is not
+/// reported at all. For a tool that deletes, a false positive is much worse than a miss.
 /// </summary>
 public static class MouserScan
 {
@@ -89,8 +86,8 @@ public static class MouserScan
         if (!Directory.Exists(root))
             return new ScanResult(findings, false, 0);
 
-        // Discovery order, so a parent is always seen before its children and the emptiness
-        // roll up is a walk backwards through the same list.
+        // Discovery order, so parents come before children and the emptiness roll up is just a
+        // backwards pass over this list.
         var folders = new List<DirectoryInfo>();
         var hasContent = new Dictionary<string, bool>(StringComparer.OrdinalIgnoreCase);
         var parents = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
@@ -102,8 +99,8 @@ public static class MouserScan
 
         var seen = 0;
 
-        // Where the walk gave up, if it did. Stopping leaves this folder half read and everything
-        // still queued untouched, and none of those can be judged.
+        // Where the walk stopped, if it did. That folder is half read and everything still
+        // queued is unread, so none of them can be judged.
         DirectoryInfo? gaveUpAt = null;
 
         while (stack.Count > 0)
@@ -118,7 +115,7 @@ public static class MouserScan
 
             if (!FolderWalk.CanRead(current))
             {
-                // Unreadable. Say nothing about it rather than guess it is empty.
+                // Unreadable, so say nothing rather than guess it is empty.
                 hasContent[current.FullName] = true;
                 continue;
             }
@@ -145,8 +142,8 @@ public static class MouserScan
 
             var children = FolderWalk.Into(current, options.SkipSystemFolders);
 
-            // Anything the walk will not step into leaves this folder's contents partly unknown,
-            // so it counts as occupied rather than being called empty on no evidence.
+            // Anything we did not step into leaves the contents partly unknown, so treat the
+            // folder as occupied rather than calling it empty without evidence.
             if (children.Count != CountOfChildren(current))
                 hasContent[current.FullName] = true;
 
@@ -160,10 +157,9 @@ public static class MouserScan
                 progress.Report(new MouserProgress(seen, findings.Count, current.FullName));
         }
 
-        // Anything still queued was never looked at, so nothing is known about what is in it, and
-        // that ignorance travels all the way up: a folder cannot be called empty while any part
-        // of what is below it went unread. Marking the ancestors is what stops a stopped sweep
-        // from offering to delete a folder that is actually full.
+        // Anything still queued was never looked at, and that propagates upwards: a folder is
+        // not empty if any part of it went unread. Marking the ancestors is what stops a
+        // cancelled sweep offering to delete a folder that is actually full.
         var unread = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
         void MarkUnread(string path)
@@ -184,7 +180,7 @@ public static class MouserScan
 
         var stopped = unread.Count > 0;
 
-        // Backwards, so a folder holding only empty folders counts as empty too.
+        // Backwards, so a folder containing only empty folders counts as empty too.
         for (var i = folders.Count - 1; i >= 0; i--)
         {
             var folder = folders[i];
@@ -202,14 +198,14 @@ public static class MouserScan
 
         foreach (var folder in folders)
         {
-            // The folder handed in is never offered: nobody asked to delete what they pointed at.
+            // Never offer the folder that was passed in. Nobody asked to delete that.
             if (!Offerable(folder.FullName))
                 continue;
 
-            // Only the topmost one of a run of nested empties, since removing that takes the rest
-            // with it. Listing all of them is noise, and every delete after the first would be of
-            // something already gone. The parent has to be offerable itself for this to apply:
-            // when the root is the empty one, its children are the topmost thing on offer.
+            // Only the outermost of a run of nested empty folders, since deleting it takes the
+            // rest. Listing them all is noise and every delete after the first would target
+            // something already gone. The parent has to be offerable itself, or the children of
+            // an empty root would be skipped as well.
             if (parents.TryGetValue(folder.FullName, out var above) && above is not null && Offerable(above))
                 continue;
 
@@ -222,8 +218,8 @@ public static class MouserScan
     }
 
     /// <summary>
-    /// How many subfolders are actually there, against how many the walk agreed to enter. The
-    /// difference is what was skipped, and a folder holding only skipped things is not empty.
+    /// How many subfolders exist, against how many the walk would enter. The difference is what
+    /// was skipped, and a folder containing only skipped things is not empty.
     /// </summary>
     private static int CountOfChildren(DirectoryInfo directory)
     {
@@ -237,7 +233,7 @@ public static class MouserScan
         }
     }
 
-    /// <summary>What is wrong with this file, if anything.</summary>
+    /// <summary>What is wrong with this file, if anything. Null means nothing is.</summary>
     private static Finding? Inspect(FileInfo file)
     {
         if (MouserOptions.LeftoverNames.Contains(file.Name, StringComparer.OrdinalIgnoreCase))
@@ -250,8 +246,8 @@ public static class MouserScan
         {
             var target = ShellLink.TargetOf(file.FullName);
 
-            // A shortcut whose target cannot be read is left alone. Not knowing is not the same
-            // as knowing it is dead.
+            // Leave a shortcut alone if we cannot read its target. Not knowing where it points
+            // is not the same as knowing it points nowhere.
             if (target is null || File.Exists(target) || Directory.Exists(target))
                 return null;
 

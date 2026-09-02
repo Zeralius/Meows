@@ -4,8 +4,8 @@ using Meows.Plugins.Chonk.Services;
 namespace Meows.Tests;
 
 /// <summary>
-/// Windows strips a trailing space or dot from a path. Both bugs pinned here were found the same
-/// afternoon, from one real folder named " " inside a Steam game called TOK 2.
+/// Windows strips a trailing space or dot from a path. Both bugs covered here came from one
+/// real folder named " " inside a Steam game called TOK 2.
 /// </summary>
 public sealed class AwkwardNameTests : IDisposable
 {
@@ -14,8 +14,8 @@ public sealed class AwkwardNameTests : IDisposable
     public AwkwardNameTests() => Directory.CreateDirectory(_root);
 
     /// <summary>
-    /// A name ending in a space or a dot cannot be created through the ordinary path APIs at all,
-    /// which is half of why nothing ever meets one until it does.
+    /// Names ending in a space or a dot cannot be created through the normal path APIs, which
+    /// is part of why they are so rarely encountered.
     /// </summary>
     private string Awkward(string parent, string name)
     {

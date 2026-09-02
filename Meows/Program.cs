@@ -12,20 +12,18 @@ internal static class Program
     private static extern bool AttachConsole(int processId);
 
     /// <summary>
-    /// Borrows the console of whatever launched us.
+    /// Attaches to the console of whatever launched us.
     ///
-    /// This is a WinExe, so it has no console of its own and anything written to standard output
-    /// goes nowhere when it is started from a terminal. That matters only for the listing mode,
-    /// which exists to be read.
+    /// This is a WinExe, so it has no console of its own and standard output goes nowhere when
+    /// run from a terminal. Only matters for --list-plugins, which exists to be read.
     /// </summary>
     private static void UseParentConsole()
     {
         try
         {
-            // Not when somebody is already capturing the output. Replacing Console.Out after
-            // attaching sends everything to the borrowed console instead of down the pipe, and
-            // the caller reads an empty file having asked for exactly this listing. A build
-            // checking the package that way saw no plugins at all and failed a good package.
+            // Skip this if the output is already redirected. Replacing Console.Out after
+            // attaching would send everything to the console instead of down the pipe, and the
+            // caller gets an empty file. That failed a perfectly good package in CI.
             if (Console.IsOutputRedirected)
                 return;
 
@@ -37,26 +35,24 @@ internal static class Program
         }
         catch (Exception)
         {
-            // No console to borrow. Output still goes wherever it was already going.
+            // No console to attach to. Output goes wherever it was already going.
         }
     }
 
     [STAThread]
     public static void Main(string[] args)
     {
-        // Before anything else, so a failure while starting up is recorded too. The log lives
-        // beside the settings rather than next to the exe, because the folder the app was
-        // unzipped into is not reliably writable.
+        // First thing, so startup failures get recorded too. The log lives with the settings
+        // rather than next to the exe, since the unzipped folder may not be writable.
         var log = Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
             "Meows", "meows.log");
 
         CrashLog.Watch(log);
 
-        // Discovery without a window, so a build can check that the package it just made can
-        // actually load what is in it. Checking the files are present is not the same thing: a
-        // plugin missing a dependency is present and still fails, which is how three plugins
-        // once shipped broken in a package that passed every file check.
+        // Discovery without a window, so the release build can check the package it just made
+        // actually loads. Checking the files exist is not the same: a plugin missing a
+        // dependency is present and still fails, which is how three once shipped broken.
         if (args.Contains("--list-plugins", StringComparer.OrdinalIgnoreCase))
         {
             UseParentConsole();
@@ -70,8 +66,7 @@ internal static class Program
         }
         catch (Exception ex)
         {
-            // Rethrown after recording, so the exit code still says it failed and nothing
-            // pretends the run was fine.
+            // Rethrow after logging so the exit code still reports the failure.
             CrashLog.Write("fatal", ex);
             throw;
         }
@@ -79,8 +74,8 @@ internal static class Program
 
     /// <summary>
     /// Prints what the shell can find and load, one per line, and returns non zero if anything
-    /// was refused. Loading a plugin means constructing it, which is where a missing dependency
-    /// actually shows up; no view is ever created, so no display is needed.
+    /// was refused. Loading constructs the plugin but never creates its view, so no display is
+    /// needed.
     /// </summary>
     private static int ListPlugins()
     {
@@ -121,15 +116,13 @@ internal static class Program
     }
 
     /// <summary>
-    /// The private libraries a plugin references that are not beside it.
+    /// Private libraries a plugin references that are not sitting beside it.
     ///
-    /// Constructing a plugin is not enough to find these. The class itself usually references
-    /// nothing unusual; it is the view model built later that needs the shared library, so a
-    /// plugin whose dependency is missing loads perfectly and then fails the moment somebody
-    /// switches it on. That is precisely how three plugins once shipped broken.
+    /// Constructing the plugin does not catch these: the plugin class rarely touches the shared
+    /// library, but the view model built later does. So a plugin with a missing dependency loads
+    /// fine and fails the moment it is switched on, which is how three shipped broken.
     ///
-    /// Anything the shell shares is skipped, since those resolve from the shell rather than from
-    /// the plugin folder.
+    /// Assemblies the shell shares are skipped, since those resolve from the shell.
     /// </summary>
     private static IEnumerable<string> MissingDependencies(string assemblyPath)
     {
@@ -153,7 +146,7 @@ internal static class Program
             if (name is null || !name.StartsWith("Meows.", StringComparison.OrdinalIgnoreCase))
                 continue;
 
-            // Shared with the shell on purpose, so its absence from the plugin folder is correct.
+            // Shared with the shell on purpose, so it should not be in the plugin folder.
             if (name.Equals("Meows.Plugins.Abstractions", StringComparison.OrdinalIgnoreCase))
                 continue;
 

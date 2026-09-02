@@ -17,11 +17,10 @@ public enum ClippingKind
 }
 
 /// <summary>
-/// The Windows clipboard, read directly.
+/// Reads the Windows clipboard directly.
 ///
-/// Done with the Win32 calls rather than through the toolkit because image support in a
-/// cross platform clipboard abstraction is the first thing to be patchy, and an image is the
-/// entire point here. Reading is also the only thing wanted: nothing writes through this.
+/// Uses the Win32 calls rather than the toolkit, because image support is the patchiest part of
+/// any cross platform clipboard abstraction and images are the point here.
 /// </summary>
 public static class WindowsClipboard
 {
@@ -75,8 +74,8 @@ public static class WindowsClipboard
     private const uint GMEM_MOVEABLE = 0x0002;
 
     /// <summary>
-    /// Changes every time anything is put on the clipboard, and costs nothing to ask for. Far
-    /// better than reading the clipboard on a timer to see whether it looks different.
+    /// Changes whenever anything is put on the clipboard and costs nothing to read. Much better
+    /// than polling the clipboard itself to see if it looks different.
     /// </summary>
     public static uint SequenceNumber() => OperatingSystem.IsWindows() ? GetClipboardSequenceNumber() : 0;
 
@@ -182,9 +181,8 @@ public static class WindowsClipboard
     }
 
     /// <summary>
-    /// A clipboard bitmap is a bare DIB: the file header that would make it a .bmp is exactly
-    /// what the clipboard leaves off. Putting one back on the front is the whole conversion,
-    /// and anything that reads a .bmp can then read it.
+    /// A clipboard bitmap is a bare DIB. The clipboard leaves off the file header that would
+    /// make it a .bmp, so putting one back on the front is the entire conversion.
     /// </summary>
     public static byte[]? BmpFromDib(byte[]? dib)
     {
@@ -223,9 +221,8 @@ public static class WindowsClipboard
     }
 
     /// <summary>
-    /// Puts text back on the clipboard. Done here rather than through the toolkit for the same
-    /// reason as reading: this file already owns the clipboard, and one owner is easier to
-    /// reason about than two.
+    /// Puts text back on the clipboard. Here rather than in the toolkit for the same reason as
+    /// reading: one place owning the clipboard is easier to follow than two.
     /// </summary>
     public static bool SetText(string text)
     {

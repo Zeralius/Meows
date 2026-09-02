@@ -8,8 +8,8 @@ namespace Meows.Tests;
 public sealed class PluginGroupingTests
 {
     /// <summary>
-    /// A plugin that says nothing about a group. Written against the contract as it was before
-    /// Category existed, which is the case that has to keep working.
+    /// A plugin that declares no group, as written against the contract before Category
+    /// existed. This is the case that has to keep working.
     /// </summary>
     private sealed class Plain(string name) : IMeowsPlugin
     {

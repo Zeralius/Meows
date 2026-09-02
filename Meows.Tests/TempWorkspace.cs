@@ -5,8 +5,8 @@ using Meows.Bot;
 namespace Meows.Tests;
 
 /// <summary>
-/// A throwaway bot checkout on disk. Several of these tests are about how the plugin reads
-/// real folders, so faking the filesystem would test the fake instead.
+/// A throwaway bot checkout on disk. These tests are about how the plugin reads real folders,
+/// so faking the filesystem would only test the fake.
 /// </summary>
 public sealed class TempWorkspace : IDisposable
 {
@@ -38,8 +38,8 @@ public sealed class TempWorkspace : IDisposable
     }
 
     /// <summary>
-    /// Puts the groups into config.json. AddGroup only hands back an object and makes the
-    /// folders, which is all the service level tests need, but anything driving a view model
+    /// Writes the groups into config.json. AddGroup only returns an object and creates the
+    /// folders, which is enough for the service level tests, but anything driving a view model
     /// reads the config from disk the way the plugin does.
     /// </summary>
     public void WriteConfig(params GroupConfig[] groups)

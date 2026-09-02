@@ -3,12 +3,12 @@ using System.Text;
 namespace Meows.Plugins.Mouser.Services;
 
 /// <summary>
-/// Just enough of the Windows shortcut format to answer one question: what does this point at?
+/// Enough of the Windows shortcut format to answer one question: what does this point at?
 ///
-/// Read from the bytes rather than through the shell, because asking the shell to resolve a
-/// shortcut makes it go looking: it will hunt for a moved target, hit the network, and can sit
-/// there for seconds on a dead drive. A scan that touches thousands of shortcuts cannot afford
-/// that, and a shortcut that needs hunting for is precisely the one being asked about.
+/// Parsed from the bytes rather than resolved through the shell. The shell hunts for a moved
+/// target, which can hit the network and block for seconds on a dead drive. A scan touching
+/// thousands of shortcuts cannot afford that, and the ones that need hunting for are exactly the
+/// ones we are asking about.
 /// </summary>
 public static class ShellLink
 {

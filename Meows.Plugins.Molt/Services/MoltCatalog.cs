@@ -3,9 +3,8 @@ using Meows.Disk;
 namespace Meows.Plugins.Molt.Services;
 
 /// <summary>
-/// One thing that can be shed, with what it is and what losing it actually costs. The cost line
-/// is not decoration: "safe to delete" is a claim, and a tool making that claim about someone
-/// else's disk owes them the reasoning.
+/// One thing that can be shed, with what it is and what losing it costs. The cost line matters:
+/// "safe to delete" is a claim, and we should show the reasoning behind it.
 /// </summary>
 public sealed class Sheddable
 {
@@ -39,9 +38,9 @@ public sealed record MoltOptions
     public string? BuildRoot { get; init; }
 
     /// <summary>
-    /// Where the caches live. Overridable so the catalogue is a function of what it is given
-    /// rather than of whatever happens to be on this machine, which makes it both testable and
-    /// quick to test: measuring a real NuGet package folder takes long enough to notice.
+    /// Where the caches live. Overridable so the catalogue depends on what it is given rather
+    /// than on this machine, which makes it testable and fast: measuring a real NuGet package
+    /// folder takes long enough to be annoying in a test.
     /// </summary>
     public string? LocalAppData { get; init; }
 
@@ -51,17 +50,16 @@ public sealed record MoltOptions
 }
 
 /// <summary>
-/// Works out what can be shed and how much it is worth. Nothing here removes anything: it
-/// produces a list of candidates with the reasoning attached, and removing them is a separate,
-/// deliberate step.
+/// Works out what can be shed and how much it would free. Nothing here deletes: it returns
+/// candidates with the reasoning attached, and removing them is a separate step.
 /// </summary>
 public static class MoltCatalog
 {
     /// <summary>
-    /// Folders never worth walking into when hunting for build output. Unity's Library and Temp
-    /// are on here for a reason worth knowing: a single Unity project can hold tens of thousands
-    /// of folders under them, and walking those was the difference between this taking a second
-    /// and taking minutes. They are not ignored, they are collected whole further down.
+    /// Folders not worth walking into when hunting for build output. Unity's Library and Temp
+    /// are here because one Unity project can hold tens of thousands of folders under them, which
+    /// was the difference between this taking a second and taking minutes. They are not ignored,
+    /// just collected whole further down.
     /// </summary>
     private static readonly string[] SkipWhileHunting =
     [
@@ -105,9 +103,9 @@ public static class MoltCatalog
     }
 
     /// <summary>
-    /// Temp, but only the parts old enough to be certainly abandoned. Anything touched recently
-    /// may belong to something still running, and taking it is how a tool like this earns a
-    /// reputation for breaking things.
+    /// Temp, but only the parts old enough to be safely abandoned. Anything touched recently
+    /// may belong to a running program, and deleting that is how this kind of tool breaks
+    /// things.
     /// </summary>
     private static Sheddable Temp(MoltOptions options, CancellationToken token)
     {
@@ -194,9 +192,9 @@ public static class MoltCatalog
     }
 
     /// <summary>
-    /// One walk of the projects folder, producing both the compiler output and the Unity caches.
-    /// A found folder is taken whole and never descended into: the entire thing goes, so counting
-    /// what is inside it twice would only make the hunt slower.
+    /// One walk of the projects folder, collecting both compiler output and Unity caches. A
+    /// match is taken whole and never descended into, since the whole thing goes anyway and
+    /// walking inside it would only slow the hunt down.
     /// </summary>
     private static List<Sheddable> Hunt(MoltOptions options, IProgress<string>? progress, CancellationToken token)
     {

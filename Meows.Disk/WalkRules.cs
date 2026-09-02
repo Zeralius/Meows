@@ -1,15 +1,14 @@
 namespace Meows.Disk;
 
 /// <summary>
-/// Which folders a scan has any business walking into. Shared because Purrge and Chonk are
-/// asking different questions about the same disk, and two copies of this list would quietly
-/// disagree the first time one of them learned about a new folder worth skipping.
+/// Which folders a scan should walk into. Shared rather than copied per plugin, so adding a new
+/// folder to skip does not have to be remembered in five places.
 /// </summary>
 public static class WalkRules
 {
     /// <summary>
-    /// Folders whose contents are either not yours, not interesting, or supposed to be
-    /// duplicated. Skipping them is what keeps a whole drive scan usable.
+    /// Folders that are either not the user's, not interesting, or duplicated on purpose.
+    /// Skipping them is what makes a whole drive scan finish in reasonable time.
     /// </summary>
     public static readonly string[] SkippedFolderNames =
     [
@@ -18,8 +17,8 @@ public static class WalkRules
     ];
 
     /// <summary>
-    /// Whether to descend into this directory. Reparse points are refused because a junction
-    /// pointing at one of its own parents sends the walk round in circles forever.
+    /// Whether to descend into this directory. Reparse points are skipped: a junction pointing
+    /// at one of its own parents would loop forever.
     /// </summary>
     public static bool ShouldDescend(DirectoryInfo directory, bool skipSystemFolders = true)
     {
@@ -30,7 +29,7 @@ public static class WalkRules
         }
         catch (Exception)
         {
-            // Cannot even read the attributes, so there is nothing safe to do but leave it.
+            // Cannot even read the attributes, so leave it alone.
             return false;
         }
 
@@ -39,15 +38,11 @@ public static class WalkRules
     }
 
     /// <summary>
-    /// Whether stepping into this child actually goes anywhere new.
+    /// Whether stepping into this child goes anywhere new.
     ///
-    /// Windows quietly strips a trailing space or dot from a path, so a folder genuinely named
-    /// " " resolves back to its own parent. Enumerate the parent, take the child, ask the system
-    /// where it is, and you are handed the parent again. Nothing about the folder looks wrong on
-    /// the way past, and a walk goes round the pair forever.
-    ///
-    /// One of these exists inside a Steam game called TOK 2, and it took a Chonk scan to 45 TB
-    /// across five million folders on a machine holding eighteen.
+    /// Windows strips a trailing space or dot from a path, so a folder named " " resolves back to
+    /// its own parent and the walk loops between the two. There is a real one inside a Steam game
+    /// called TOK 2; it took a Chonk scan past five million folders before anyone noticed.
     /// </summary>
     public static bool LeadsSomewhereNew(DirectoryInfo child, DirectoryInfo parent)
     {
@@ -65,15 +60,13 @@ public static class WalkRules
     }
 
     /// <summary>
-    /// Whether a path still names the same thing after Windows has normalised it.
+    /// Whether a path still names the same thing after Windows normalises it.
     ///
-    /// It does not when the name ends in a space or a dot: "data." normalises to "data", and if
-    /// both exist side by side then an operation aimed at the first lands on the second. That is
-    /// not theoretical. Deleting "data." really does take "data" and everything in it, and report
-    /// success for having done so.
+    /// Names ending in a space or a dot do not: "data." becomes "data", so with both on disk an
+    /// operation aimed at one hits the other. Deleting "data." really does remove "data" and
+    /// everything in it, and report success.
     ///
-    /// Only the last segment is compared, so an ordinary relative path is not refused for the
-    /// unrelated crime of being relative.
+    /// Only the last segment is compared, so relative paths are not refused for being relative.
     /// </summary>
     public static bool SurvivesNormalising(string path)
     {

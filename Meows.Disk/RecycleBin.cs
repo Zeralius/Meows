@@ -8,9 +8,9 @@ public sealed record DeleteOutcome(int Deleted, int Failed, string? FailureReaso
 }
 
 /// <summary>
-/// Recycle Bin, not File.Delete. Things are removed here in bulk on the strength of an
-/// automated judgement, a hash or a size, so every removal has to stay undoable. No exceptions
-/// to this, and no path through either plugin that calls anything else.
+/// Recycle Bin, never File.Delete. Files get removed here in bulk based on an automated
+/// judgement like a hash or a size, so every removal has to stay recoverable. Nothing in the
+/// plugins should delete by any other route.
 /// </summary>
 public static class RecycleBin
 {
@@ -36,25 +36,22 @@ public static class RecycleBin
     [DllImport("shell32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
     private static extern int SHFileOperationW(ref SHFILEOPSTRUCT fileOp);
 
-    /// <summary>Whether this path is something the shell could send to the bin.</summary>
+    /// <summary>Whether the shell could send this path to the bin.</summary>
     private static bool Exists(string path) => File.Exists(path) || Directory.Exists(path);
 
     /// <summary>
-    /// Sends files and folders to the Recycle Bin. Folders go whole, with everything inside
-    /// them, which is the entire point for a tool that finds one fat directory rather than a
-    /// list of fat files.
+    /// Sends files and folders to the Recycle Bin. Folders go whole, contents included, which
+    /// is what a tool that reports one large directory needs.
     /// </summary>
     public static DeleteOutcome Send(IReadOnlyList<string> paths)
     {
-        // A name ending in a space or a dot does not survive being normalised, and GetFullPath
-        // below is exactly what normalises it. "data." becomes "data", so a delete aimed at one
-        // lands on the other and cheerfully reports success for having destroyed the wrong
-        // folder. Refuse those outright: there is no way to name them safely here, and quietly
-        // deleting something the user did not pick is the worst thing this code could do.
-        // Checked before Exists, not after. Exists normalises too, so it answers about the
-        // neighbour rather than about the thing asked for: it says false when nothing sits next
-        // door, which would drop the path silently, and true when something does, which is
-        // precisely the case that must not go through.
+        // Names ending in a space or a dot do not survive normalising, and GetFullPath below
+        // is what normalises them: "data." becomes "data", so a delete aimed at one hits the
+        // other and reports success. There is no safe way to pass those to the shell, so refuse.
+        //
+        // Checked before Exists rather than after, because Exists normalises too and so answers
+        // about the neighbour: false when nothing is next door (silently dropping the path), true
+        // when something is, which is the dangerous case.
         var unsafePaths = paths.Where(p => !WalkRules.SurvivesNormalising(p)).ToList();
         var existing = paths.Where(WalkRules.SurvivesNormalising)
             .Where(Exists)
@@ -72,8 +69,8 @@ public static class RecycleBin
         if (!OperatingSystem.IsWindows())
             return new DeleteOutcome(0, existing.Count, "Recycle Bin deletion is only implemented for Windows.");
 
-        // SHFileOperation wants a double-null-terminated list. The embedded nulls survive
-        // the LPWStr marshaller because it copies the whole managed string by Length.
+        // SHFileOperation wants a double-null-terminated list. The embedded nulls survive the
+        // LPWStr marshaller because it copies the managed string by Length.
         var buffer = string.Join('\0', existing) + "\0\0";
 
         var operation = new SHFILEOPSTRUCT
@@ -116,7 +113,7 @@ public static class RecycleBin
         return new DeleteOutcome(deleted, stillThere, reason);
     }
 
-    /// <summary>Says what was refused and why, in terms of the thing on disk.</summary>
+    /// <summary>Explains what was refused and why.</summary>
     private static string Refusal(int count) =>
         count == 1
             ? "One of these has a name ending in a space or a dot, which Windows cannot address " +

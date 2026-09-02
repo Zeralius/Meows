@@ -46,8 +46,8 @@ public sealed class BotWorkspace
     }
 
     /// <summary>
-    /// Where is the bot? A saved path if we have one, otherwise look for a
-    /// telegram-posting-bot folder above the exe or the working directory.
+    /// Finds the bot: the saved path if there is one, otherwise a telegram-posting-bot folder
+    /// above the exe or the working directory.
     /// </summary>
     public static string? Probe(string? saved)
     {
@@ -85,8 +85,8 @@ public sealed class BotWorkspace
     }
 
     /// <summary>
-    /// config.json uses forward slashes. Normalising keeps the display tidy and makes
-    /// "groups/x" and "groups\x" compare equal, which the clash check relies on.
+    /// config.json uses forward slashes. Normalising tidies the display and makes "groups/x"
+    /// and "groups\x" compare equal, which the clash check depends on.
     /// </summary>
     public string GroupFolder(GroupConfig group)
     {
@@ -107,12 +107,11 @@ public sealed class BotWorkspace
     public string AlreadySentFolder(GroupConfig group) => Path.Combine(GroupFolder(group), "Already_Sent");
 
     /// <summary>
-    /// Where a file goes when it turns out to be one this group already has.
+    /// Where Kibble puts a file this group already has.
     ///
-    /// Beside the two the bot reads rather than inside them. The bot lists a queue with
-    /// iterdir(), so a folder within it would be passed over today, but "today" is doing a lot of
-    /// work in that sentence: one change to a recursive walk and everything set aside here would
-    /// be posted. Kept where nothing is looking, the question never arises.
+    /// A sibling of To_Send, not a subfolder of it. The bot uses iterdir() so it would not see a
+    /// subfolder either, but that is one line away from being a recursive walk, and then we would
+    /// be posting the duplicates we just set aside.
     /// </summary>
     public string DuplicatesFolder(GroupConfig group) => Path.Combine(GroupFolder(group), "Duplicates");
 
@@ -136,10 +135,10 @@ public sealed class BotWorkspace
     }
 
     /// <summary>
-    /// Our version of bot.py's get_next_media. Queue ordered by mtime per post_order, and
-    /// when it is empty, a random pick from Already_Sent that stays put.
+    /// Our copy of bot.py's get_next_media: the queue ordered by mtime according to post_order,
+    /// and when it is empty a random pick from Already_Sent that is left in place.
     ///
-    /// If this ever disagrees with the bot, this is the thing that is wrong.
+    /// If this ever disagrees with the bot, this is what is wrong.
     /// </summary>
     public NextUp ResolveNextUp(GroupConfig group)
     {

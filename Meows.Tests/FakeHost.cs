@@ -5,8 +5,8 @@ namespace Meows.Tests;
 
 /// <summary>
 /// Enough of the shell to construct a plugin view model in a test. Settings round-trip through
-/// JSON rather than being handed back as the same object, so a view model that mutates what it
-/// was given cannot pass by accident.
+/// JSON rather than coming back as the same instance, so a view model that mutates what it was
+/// given cannot pass by accident.
 /// </summary>
 public sealed class FakeHost : IMeowsHost
 {
@@ -39,10 +39,10 @@ public sealed class FakeHost : IMeowsHost
         _settings = JsonSerializer.Serialize(settings);
 
     /// <summary>
-    /// Accepts work and records it, without running it. A view model that kicks off a scan in
-    /// its constructor should not drag a real filesystem walk into every test that happens to
-    /// build one, and the tests that care about results call the view model's own results entry
-    /// point instead. What is worth asserting here is that the work was asked for.
+    /// Records work without running it. A view model that starts a scan in its constructor
+    /// should not pull a real filesystem walk into every test that builds one; tests that care
+    /// about results call the view model's own results method. This only records that work was
+    /// requested.
     /// </summary>
     public sealed class FakeBackgroundWork : IMeowsBackgroundWork
     {

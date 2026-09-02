@@ -1,9 +1,9 @@
 namespace Meows.Disk;
 
-/// <summary>What removing a folder would actually cost.</summary>
+/// <summary>What removing a folder would cost.</summary>
 public enum FolderVerdict
 {
-    /// <summary>Nothing could be established. The honest default.</summary>
+    /// <summary>Could not work it out. The default, and a valid answer.</summary>
     Unknown,
 
     /// <summary>Build output or a cache. Whatever wrote it will write it again.</summary>
@@ -12,10 +12,10 @@ public enum FolderVerdict
     /// <summary>An application's own state. Removing it loses settings rather than disk space.</summary>
     ApplicationData,
 
-    /// <summary>An installed game. Its launcher has to remove it, not you.</summary>
+    /// <summary>An installed game. Uninstall through its launcher, not by deleting.</summary>
     Game,
 
-    /// <summary>Looks like your own material rather than something a program made.</summary>
+    /// <summary>Looks like the user's own files rather than something a program made.</summary>
     Yours,
 }
 
@@ -35,26 +35,25 @@ public sealed record FolderIdentity(
 }
 
 /// <summary>
-/// Answers the question every size scanner leaves the user holding: what put this here, is
-/// anything still using it, and what breaks if it goes.
+/// Works out what a folder is: what put it there, whether anything still uses it, and what
+/// breaks if it goes.
 ///
-/// The answer is built from evidence on the disk rather than from a table of known folder names.
-/// A table would need updating forever and would still be wrong for anything it had not heard of,
-/// whereas what is inside a folder, who sits above it and whether a program has it open are true
-/// of folders nobody has ever catalogued. A small set of conventions is consulted as well, but
-/// only ones that have meant the same thing for a decade.
+/// Driven by what is on disk rather than a lookup table of folder names. A table needs constant
+/// updating and is still wrong for anything it has not heard of, whereas the contents, the parent
+/// application and whether a file is open work for folders nobody has catalogued. There is a
+/// small name list too, but only for conventions that have not changed in years.
 /// </summary>
 public static class FolderInspector
 {
-    /// <summary>Enough files to characterise a folder without walking a games library.</summary>
+    /// <summary>Enough files to judge a folder by, without walking an entire games library.</summary>
     private const int SampleLimit = 400;
 
-    /// <summary>How many files to actually try opening. Locks are the expensive evidence.</summary>
+    /// <summary>How many files to try opening. This is the expensive check, so keep it small.</summary>
     private const int LockProbes = 12;
 
     /// <summary>
-    /// Names that have meant the same thing for a decade and are not worth pretending to deduce.
-    /// Deliberately short: this is a supplement to the evidence, not the mechanism.
+    /// Folder names with a settled meaning, where deducing it from contents would be silly.
+    /// Kept short on purpose: this supplements the evidence, it is not the main mechanism.
     /// </summary>
     private static readonly Dictionary<string, string> KnownRebuildable = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -87,8 +86,8 @@ public static class FolderInspector
             return FolderIdentity.Nothing;
         }
 
-        // Steam first, because it is the one case where the disk is not the best witness. The
-        // manifest knows the real name and whether it has ever been launched.
+        // Steam first. Its manifest knows the real name and the last played time, which beats
+        // anything we could infer from the files.
         if (SteamLibrary.GameAt(directory.FullName) is { } game)
             return ForGame(game);
 
@@ -122,9 +121,9 @@ public static class FolderInspector
     }
 
     /// <summary>
-    /// One of the user's own folders, according to Windows rather than to a guess about its name.
-    /// Asking the system means it is still right when the folder has been moved to another drive
-    /// or renamed in another language.
+    /// One of the user's own folders, according to Windows rather than a guess from the name.
+    /// Asking the system keeps this right when the folder has been moved to another drive or is
+    /// named in another language.
     /// </summary>
     private static string? UserFolder(DirectoryInfo directory)
     {
@@ -176,8 +175,8 @@ public static class FolderInspector
         string? known,
         List<string> evidence)
     {
-        // Your own folder outranks everything else. Documents sitting inside a profile does not
-        // make it the profile's data, and nothing here should ever suggest removing it.
+        // Beats everything else. Documents living inside the user profile does not make it
+        // profile data, and we should never suggest deleting it.
         if (mine is not null)
         {
             return new FolderIdentity(
@@ -229,15 +228,14 @@ public static class FolderInspector
     }
 
     /// <summary>
-    /// The application a folder belongs to, worked out from where it sits rather than what it is
-    /// called. A folder under Roaming, Local or LocalLow is named by the program that made it, and
-    /// that is true of programs nobody has ever heard of.
+    /// Which application a folder belongs to, from where it sits rather than what it is called.
+    /// Anything under Roaming, Local or LocalLow is named after the program that created it,
+    /// including programs we have never heard of.
     /// </summary>
     private static string? OwningApplication(DirectoryInfo directory)
     {
-        // Temp lives under Local, so without this every scratch folder is confidently reported as
-        // belonging to an application called Temp. Asked of the system rather than matched by
-        // name, because TEMP can be pointed anywhere.
+        // Temp lives under Local, so without this every scratch folder gets reported as
+        // belonging to an app called Temp. Asked of the system because TEMP can point anywhere.
         if (IsUnder(Path.GetTempPath(), directory.FullName))
             return null;
 
@@ -255,8 +253,8 @@ public static class FolderInspector
             if (string.IsNullOrEmpty(root))
                 continue;
 
-            // The application's own folder counts as much as anything under it. Roaming\Thunderbird
-            // is precisely Thunderbird's data, and saying otherwise was an early mistake here.
+            // The app's own folder counts too, not just things under it: Roaming\Thunderbird
+            // is Thunderbird's data. Excluding it was a bug here at first.
             if (FirstSegmentUnder(root, directory.FullName) is { } name)
                 return name;
         }
@@ -291,8 +289,8 @@ public static class FolderInspector
     private sealed record Facts(int FileCount, DateTime? NewestWrite, string TopKind, int TopCount, bool InUse, bool Truncated)
     {
         /// <summary>
-        /// Documents and media rather than the many small files a program writes for itself. Not a
-        /// certainty, which is why it only ever leads to "looks like".
+        /// Documents and media rather than the small files a program writes for itself. A guess,
+        /// which is why the verdict it leads to only ever says "looks like".
         /// </summary>
         public bool LooksPersonal => PersonalKinds.Contains(TopKind);
 
@@ -355,9 +353,8 @@ public static class FolderInspector
     }
 
     /// <summary>
-    /// Whether a program has this file open. Asking for exclusive read is the cheapest honest
-    /// test: a sharing violation means something else is holding it, and anything else means the
-    /// question could not be answered, which is not the same as no.
+    /// Whether a program has this file open. Opening it with FileShare.None is the cheap test:
+    /// a sharing violation is a yes, anything else means we could not tell, which is not a no.
     /// </summary>
     private static bool IsLocked(FileInfo file)
     {
@@ -372,7 +369,7 @@ public static class FolderInspector
         }
         catch (Exception)
         {
-            // No permission, or it vanished. Neither says anything about it being in use.
+            // No permission, or it vanished. Neither tells us whether it is in use.
             return false;
         }
     }
@@ -388,13 +385,12 @@ public static class FolderInspector
     }
 
     /// <summary>
-    /// Reads as a complaint about neglect or a warning about activity depending on which it is,
-    /// because "nothing has been written here since today" is nonsense.
+    /// Wording for how recently the folder was written to. Two cases, because "nothing has been
+    /// written here since today" is nonsense.
     ///
-    /// The wording also has to survive the sample being cut short. Finding the newest write among
-    /// 400 files out of thousands says something was written then, but says nothing whatever about
-    /// nothing having been written since, and claiming otherwise here would put a sentence on
-    /// screen that is simply untrue.
+    /// Also has to account for the sample stopping early. The newest write among 400 files out of
+    /// thousands says something was written then; it says nothing about what happened since, so
+    /// do not claim it did.
     /// </summary>
     private static string Recency(DateTime newest, bool truncated)
     {

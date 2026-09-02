@@ -5,9 +5,8 @@ using Meows.Plugins.Chonk.ViewModels;
 namespace Meows.Tests;
 
 /// <summary>
-/// Measuring a tree. These use real folders on disk rather than a fake filesystem, because the
-/// things that go wrong here are things real filesystems do: unreadable folders, reparse points,
-/// and folders that are supposed to be skipped.
+/// Measuring a tree. Uses real folders rather than a fake filesystem, because what goes wrong
+/// here is what real filesystems do: unreadable folders, reparse points, folders to skip.
 /// </summary>
 public sealed class DiskScanTests : IDisposable
 {
@@ -293,8 +292,8 @@ public sealed class WalkRulesTests : IDisposable
 }
 
 /// <summary>
-/// The safeguard on deleting. Nothing here actually removes anything: these pin down that the
-/// question gets asked, and that the only path which deletes is the one you answered yes on.
+/// The delete safeguard. Nothing here deletes anything: these check that the question gets
+/// asked, and that only the confirm path removes files.
 /// </summary>
 public sealed class ChonkSafeguardTests : IDisposable
 {

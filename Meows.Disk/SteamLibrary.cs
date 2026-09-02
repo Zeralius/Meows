@@ -2,12 +2,12 @@ using System.Text.RegularExpressions;
 
 namespace Meows.Disk;
 
-/// <summary>What Steam already knows about a game sitting on disk.</summary>
+/// <summary>What Steam records about an installed game.</summary>
 public sealed record SteamGame(string Name, long SizeOnDisk, DateTime? LastPlayed, string ManifestPath)
 {
     /// <summary>
-    /// Steam writes 0 when a game has never been launched, and leaves the key out entirely for
-    /// some entries. Those are different answers and only one of them means "never played".
+    /// Steam writes 0 for a game that has never been launched, and omits the key entirely for
+    /// some entries. Only the first of those means "never played".
     /// </summary>
     public bool NeverPlayed => LastPlayed == DateTime.UnixEpoch;
 
@@ -15,10 +15,9 @@ public sealed record SteamGame(string Name, long SizeOnDisk, DateTime? LastPlaye
 }
 
 /// <summary>
-/// Reads Steam's own bookkeeping rather than guessing from the filesystem. Every installed game
-/// has an appmanifest beside its folder holding the real name, the size and when it was last
-/// launched, which is a far better answer than anything that can be worked out by looking at the
-/// files. No API and no network: these are plain text files already on the disk.
+/// Reads Steam's own records instead of guessing from the filesystem. Every installed game has an
+/// appmanifest holding its real name, size and last played time, which is better than anything we
+/// could infer. No API and no network needed: they are plain text files already on disk.
 /// </summary>
 public static class SteamLibrary
 {

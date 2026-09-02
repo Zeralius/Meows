@@ -34,9 +34,8 @@ public sealed record LitterItem(
     int Days);
 
 /// <summary>
-/// Reads a downloads folder and says what is in it. No judgement is applied here beyond naming
-/// what a thing is and how old it is: what to do about it is the person's call, and a tool that
-/// guesses tends to guess confidently and wrongly.
+/// Reads a downloads folder and reports what is in it. No judgement beyond naming what each
+/// thing is and how old it is. What to do about it is the user's call.
 /// </summary>
 public static class LitterScan
 {
@@ -87,9 +86,9 @@ public static class LitterScan
         ByExtension.TryGetValue(System.IO.Path.GetExtension(path), out var kind) ? kind : LitterKind.Other;
 
     /// <summary>
-    /// Measured against the same clock the age bucket uses. Reading DateTime.Now here instead
-    /// made the item disagree with its own age bucket, and made a test that pinned an exact day
-    /// count start failing the morning after it was written.
+    /// Measured against the same clock as the age bucket. Reading DateTime.Now here instead
+    /// made an item disagree with its own bucket, and made a test asserting an exact day count
+    /// start failing the next morning.
     /// </summary>
     public static int DaysOf(DateTime modified, DateTime now) =>
         Math.Max(0, (int)(now - modified).TotalDays);
@@ -103,9 +102,9 @@ public static class LitterScan
     };
 
     /// <summary>
-    /// Everything one level down, plus folders as single entries. Downloads folders collect
-    /// extracted folders as well as files, and a folder of a thousand files should count as one
-    /// thing to deal with rather than a thousand.
+    /// Everything one level down, with folders as single entries. Downloads folders collect
+    /// extracted folders as well as files, and a folder of a thousand files is one thing to deal
+    /// with, not a thousand.
     /// </summary>
     public static IReadOnlyList<LitterItem> Read(string folder, DateTime now)
     {

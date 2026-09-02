@@ -628,9 +628,9 @@ public sealed class ComicBundleTests
 }
 
 /// <summary>
-/// The wiring between picking files in the grid and what actually gets queued. The grid itself
-/// is a ListBox, so ctrl and shift ranges are the control's job, but everything downstream of
-/// "here is what the user picked" is ours and is worth pinning down.
+/// The wiring between picking files in the grid and what gets queued. The grid is a ListBox so
+/// ctrl and shift ranges are the control's job, but everything after "here is the selection" is
+/// ours.
 /// </summary>
 public sealed class KibbleSelectionTests
 {
@@ -1253,8 +1253,8 @@ public sealed class SendManyTests
 }
 
 /// <summary>
-/// Loading a big folder a batch at a time. The point is that a folder of thousands should cost
-/// a list of small records, not thousands of tiles each with a decoded thumbnail.
+/// Loading a big folder in batches. A folder of thousands should cost a list of small records,
+/// not thousands of tiles each with a decoded thumbnail.
 /// </summary>
 public sealed class KibbleLazyLoadTests
 {
@@ -1441,8 +1441,8 @@ public sealed class KibbleLazyLoadTests
 }
 
 /// <summary>
-/// Thumbnails. A tile with nothing on it is indistinguishable from one whose file genuinely has
-/// no preview, so what these pin down is that every visible tile was at least asked.
+/// Thumbnails. A blank tile looks the same whether decoding failed or the file has no preview,
+/// so these check that every visible tile was at least asked to decode.
 /// </summary>
 public sealed class KibbleThumbnailTests
 {

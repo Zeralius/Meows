@@ -58,8 +58,8 @@ public sealed record ScanOptions
 public sealed record ScanProgress(int FoldersSeen, long BytesSeen, string Current);
 
 /// <summary>
-/// Measures where the room went. Sizes only: no file is ever opened, which is what makes this
-/// far cheaper than a Purrge scan over the same tree, and the reason a whole drive is tolerable.
+/// Measures where the space went. Sizes only, never opening a file, which is what makes this
+/// much cheaper than a Purrge scan over the same tree and a whole drive practical.
 /// </summary>
 public static class DiskScan
 {
@@ -126,9 +126,9 @@ public static class DiskScan
     }
 
     /// <summary>
-    /// Adds this folder's own files to it. Big ones are listed individually because they are
-    /// the answer to "what can I remove"; the rest are rolled into one row so a folder of ten
-    /// thousand thumbnails costs one entry rather than ten thousand.
+    /// Adds a folder's own files to it. Large ones are listed individually since they are the
+    /// answer to "what can I remove"; the rest collapse into one row, so a folder of ten thousand
+    /// thumbnails costs one entry instead of ten thousand.
     /// </summary>
     private static long MeasureFiles(DiskEntry folder, DirectoryInfo directory, ScanOptions options)
     {
@@ -204,9 +204,8 @@ public static class DiskScan
     }
 
     /// <summary>
-    /// Takes an entry out of the tree after it has been removed from the disk, and gives every
-    /// ancestor its size back. Cheaper and less surprising than rescanning the whole drive to
-    /// find out about one deletion.
+    /// Removes an entry from the tree after it has been deleted from disk, subtracting its size
+    /// from every ancestor. Cheaper and less jarring than rescanning the drive for one deletion.
     /// </summary>
     public static void Forget(DiskEntry entry)
     {

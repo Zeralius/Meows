@@ -1,9 +1,9 @@
 namespace Meows.Disk;
 
 /// <summary>
-/// How much room a folder is really costing, everything underneath included. Shared because
-/// three plugins now ask the same question, and the awkward parts, unreadable folders and
-/// reparse points, are the same awkward parts every time.
+/// How much space a folder actually uses, including everything below it. Shared because three
+/// plugins ask this, and the awkward cases (unreadable folders, reparse points) are the same
+/// every time.
 /// </summary>
 public static class FolderSize
 {
@@ -39,7 +39,7 @@ public static class FolderSize
                     }
                     catch (Exception)
                     {
-                        // Vanished between the listing and the question. Not worth stopping for.
+                        // Gone between the listing and the query. Not worth stopping for.
                     }
                 }
             }

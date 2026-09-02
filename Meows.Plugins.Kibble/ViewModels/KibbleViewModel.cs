@@ -29,17 +29,16 @@ public sealed class KibbleSettings
     public ComicNaming Naming { get; set; } = ComicNaming.Folder;
 
     /// <summary>
-    /// On by default. Kibble already refused a file the group had, and leaving it in the grid
-    /// meant deciding what to do with it by hand every time; setting it aside is what that
-    /// decision almost always was.
+    /// On by default. These files were being refused anyway, so this only decides where one ends
+    /// up, never whether it gets queued.
     /// </summary>
     public bool DuplicatesToFolder { get; set; } = true;
 }
 
 /// <summary>
-/// A file the folder scan found, with what that scan already told us about it. Kept instead of
-/// a view model so a folder of thousands costs a list of small records rather than thousands of
-/// tiles, thumbnails and bindings.
+/// A file the folder scan found, plus what the scan already knows about it. A plain record
+/// rather than a view model, so a folder of thousands costs a list of small structs instead of
+/// thousands of tiles, thumbnails and bindings.
 /// </summary>
 public sealed record PendingFile(string Path, string Name, long Size, DateTime Modified);
 
@@ -174,8 +173,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     private IntakeStamp Stamp => _settings.Stamp;
 
     /// <summary>
-    /// Spelled out because it decides posting order, and getting it wrong is invisible until
-    /// the queue behaves oddly weeks later.
+    /// Spelled out because it decides posting order, and getting it wrong does not show up
+    /// until the queue behaves oddly weeks later.
     /// </summary>
     public string StampHint => Stamp == IntakeStamp.KeepSource
         ? "Files keep their original date, so genuinely older art posts first."
@@ -249,8 +248,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     public bool HasSelection => _selected is not null;
 
     /// <summary>
-    /// Told to us by the grid, because ctrl and shift ranges are the list control's job and
-    /// reimplementing them by hand would only get them subtly wrong.
+    /// Comes from the grid. Ctrl and shift ranges are the list control's job, and
+    /// reimplementing them here would only get them subtly wrong.
     /// </summary>
     public void SetSelection(IEnumerable<IncomingFileViewModel> files)
     {
@@ -300,8 +299,9 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Off, the whole folder is built at once, which is what makes a folder of thousands crawl:
-    /// every file gets a tile and a decoded thumbnail whether you ever look at it or not.
+    /// With this off the whole folder is built at once, which is what makes a folder of
+    /// thousands crawl: every file gets a tile and a decoded thumbnail whether it is looked at
+    /// or not.
     /// </summary>
     public bool LazyLoad
     {
@@ -355,8 +355,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     private int Batch => LazyLoad ? Math.Max(1, _settings.PageSize) : int.MaxValue;
 
     /// <summary>
-    /// How many tiles we should be showing. With batching off that is simply all of them, and
-    /// saying so in one place stops every caller having to remember it.
+    /// How many tiles to show. With batching off that is all of them; keeping the rule here
+    /// saves every caller remembering it.
     /// </summary>
     private int ClampTarget(long desired)
     {
@@ -399,8 +399,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Comic or separate files. Only matters with several picked, but it is remembered, so it
-    /// is worth being able to set it before you start picking.
+    /// Comic or separate files. Only applies with several picked, but it is remembered, so it
+    /// can be set before picking starts.
     /// </summary>
     public BundleMode BundleMode
     {
@@ -434,8 +434,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     public int SelectionCount => _selection.Count;
 
     /// <summary>
-    /// Stamps 1, 2, 3 onto the picked tiles in the order they will appear in the comic, so the
-    /// page order is something you can see rather than something you find out afterwards.
+    /// Numbers the picked tiles 1, 2, 3 in the order they will appear in the comic, so the page
+    /// order is visible before it is committed.
     /// </summary>
     private void NumberThePicked()
     {
@@ -459,8 +459,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
             : _selection;
 
     /// <summary>
-    /// The pick in the order the grid is showing it, which is what the sort dropdown decides.
-    /// This is the order separate files are queued in, so what you see is what the bot gets.
+    /// The pick in the order the grid is showing it, which the sort dropdown decides. Separate
+    /// files are queued in this order, so what you see is what the bot gets.
     /// </summary>
     private IEnumerable<IncomingFileViewModel> GridOrder() =>
         Incoming.Where(_selection.Contains);
@@ -506,10 +506,10 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Fills the name box from whichever rule is chosen. Weighted follows the pick, so it is
-    /// recomputed every time the pick changes. A random tag deliberately does not: it is settled
-    /// when the pick first becomes a comic and then holds still, because a name that reshuffles
-    /// under you while you are adding files is not a name you can trust.
+    /// Fills the name box from whichever rule is chosen. Weighted follows the pick and is
+    /// recomputed whenever it changes. A random tag deliberately does not: it is fixed when the
+    /// pick first becomes a comic, because a name that reshuffles while you add files is
+    /// useless.
     /// </summary>
     private void SuggestName()
     {
@@ -643,9 +643,9 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Builds tiles for the first <see cref="_loadedTarget"/> waiting files. Tiles that are
-    /// still wanted are carried over rather than rebuilt, so a thumbnail decoded once is not
-    /// decoded again after a sort or another batch.
+    /// Builds tiles for the first <see cref="_loadedTarget"/> waiting files. Existing tiles are
+    /// reused rather than rebuilt, so a thumbnail decoded once is not decoded again after a sort
+    /// or another batch.
     /// </summary>
     private void Rebuild()
     {
@@ -726,9 +726,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Sorts everything waiting, not just what is on screen, then rebuilds the window. Tiles
-    /// are carried over where they survive, so thumbnails already decoded stay decoded. The
-    /// pick is dropped, because carrying a multi-file pick across a reorder would leave the
-    /// numbers meaning something you can no longer see.
+    /// are reused where possible so decoded thumbnails survive. The pick is cleared: carrying a
+    /// numbered multi-file pick across a reorder would leave the numbers pointing at nothing.
     /// </summary>
     private void ApplySort()
     {
@@ -783,8 +782,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
         if (result.Outcome == IntakeOutcome.MovedToDuplicates)
         {
-            // Said plainly rather than reported as a send. The queue has not changed, and
-            // somebody watching the count would otherwise wonder why.
+            // Not worded as a send. The queue count has not moved, and saying "sent" when it
+            // has not is just confusing.
             StatusMessage = $"Already in {destination.Name}, so it went to Duplicates";
             _host.Log($"Set aside {Path.GetFileName(result.Destination!)}: {result.Detail}");
         }
@@ -798,8 +797,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
     /// <summary>
     /// Zips the picked files into one comic in the group's queue. The bot posts a .cbz as a
-    /// single comic, in batches of ten pages, so this turns a page set into one post rather
-    /// than a run of unrelated ones.
+    /// single comic in batches of ten pages, so this makes a page set one post instead of
+    /// several unrelated ones.
     /// </summary>
     private void SendBundle(DestinationViewModel destination)
     {
@@ -836,9 +835,9 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Moves the pick into the queue as separate files, in the order the grid is showing them.
-    /// A file the group refuses is left behind with the others gone, which is the honest
-    /// outcome: the rest of the batch is fine and that one still needs a decision.
+    /// Moves the pick into the queue as separate files, in the order the grid shows them. A
+    /// refused file stays behind while the rest go, which is the right outcome: the others were
+    /// fine and that one still needs a decision.
     /// </summary>
     private void SendSeparately(DestinationViewModel destination)
     {
@@ -920,9 +919,9 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Files have left for good. They go from the waiting list as well as the grid, and the
-    /// window is topped back up from what is still waiting, so a batch of a hundred stays a
-    /// hundred as you work through a folder of thousands.
+    /// Files that have gone for good. Removed from the waiting list as well as the grid, and
+    /// the window is topped up from what is left, so a batch of a hundred stays a hundred while
+    /// working through a folder of thousands.
     /// </summary>
     private void Take(IReadOnlyList<IncomingFileViewModel> files)
     {
@@ -1049,8 +1048,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// A dry group is not an error anyone sees from outside, since the bot quietly starts
-    /// re-posting the archive. Worth saying out loud.
+    /// A dry group is invisible from outside, because the bot quietly starts re-posting the
+    /// archive instead. Worth saying out loud.
     /// </summary>
     private void NotifyIfStarving()
     {

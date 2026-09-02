@@ -9,8 +9,8 @@ public sealed class SteamLibraryTests : IDisposable
     public SteamLibraryTests() => Directory.CreateDirectory(_root);
 
     /// <summary>
-    /// Builds the layout Steam actually uses: the game under steamapps\common, and the manifest
-    /// naming it two levels up in steamapps. Finding the pair is the whole trick.
+    /// Builds the layout Steam uses: the game under steamapps\common with the manifest naming
+    /// it two levels up. Matching that pair is what the code has to do.
     /// </summary>
     private string Install(string installDir, string name, long size, long? lastPlayed)
     {

@@ -137,8 +137,8 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Whether to ask first. On by default, because a folder here goes whole and a mis-click
-    /// costs everything inside it rather than the one file you were looking at.
+    /// Whether to ask first. On by default: folders go whole here, so a mis-click costs
+    /// everything inside rather than the one file you were looking at.
     /// </summary>
     public bool ConfirmDeletes
     {
@@ -184,8 +184,8 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
         : $"Send {PendingDelete.Name} to the Recycle Bin?";
 
     /// <summary>
-    /// Says the size and, for a folder, how much is inside it. The count is the part worth
-    /// showing: the name alone does not tell you a folder holds four thousand files.
+    /// The size, plus the file count for a folder. The count is the useful part: the name
+    /// alone does not tell you it holds four thousand files.
     /// </summary>
     public string ConfirmDetail
     {
@@ -263,8 +263,8 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// What the selected folder actually is. Null until it has been worked out, and null for
-    /// anything that is not a folder.
+    /// What the selected folder is. Null until it has been worked out, and for anything that
+    /// is not a folder.
     /// </summary>
     public FolderIdentity? Identity
     {
@@ -299,9 +299,9 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
     public bool IdentityInUse => Identity?.InUse ?? false;
 
     /// <summary>
-    /// Whether to say this in a colour that stops the eye. A game has to go through its launcher
-    /// and anything held open by a running program should not be deleted underneath it, so both
-    /// are worth more than a grey line of text.
+    /// Whether to highlight this rather than show it as another grey line. Games have to be
+    /// uninstalled through their launcher, and anything a running program has open should not be
+    /// deleted underneath it.
     /// </summary>
     public bool IdentityIsWarning =>
         Identity is { Verdict: FolderVerdict.Game } || IdentityInUse;
@@ -313,8 +313,8 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Works out what the selection is, off the UI thread. Selection changes as fast as the arrow
-    /// keys repeat, so each one cancels the last rather than queueing a walk per keystroke.
+    /// Works out what the selection is, off the UI thread. Selection changes as fast as the
+    /// arrow key repeats, so each one cancels the last rather than queueing a walk per keypress.
     /// </summary>
     private async void Identify(EntryViewModel? entry)
     {
@@ -426,8 +426,8 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// Takes a finished measurement and puts it on screen. Separate from the scan itself so
-    /// what happens with a result does not need a background task and a dispatcher to exercise.
+    /// Puts a finished measurement on screen. Separate from the scan so this can be tested
+    /// without a background task and a dispatcher.
     /// </summary>
     public void ShowScanned(DiskEntry tree)
     {
@@ -473,8 +473,8 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
     private void GoUp() => Show(Current?.Parent);
 
     /// <summary>
-    /// Asks first, unless you have said not to. Nothing is touched on this path: it only puts
-    /// the question, and <see cref="Remove"/> is the only thing that actually deletes.
+    /// Asks first, unless that has been turned off. Nothing is touched here; <see cref="Remove"/>
+    /// is the only thing that deletes.
     /// </summary>
     private void DeleteSelected()
     {

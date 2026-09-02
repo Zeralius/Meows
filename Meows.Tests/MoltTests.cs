@@ -20,8 +20,8 @@ public sealed class MoltCatalogTests : IDisposable
         System.IO.File.WriteAllBytes(Path.Combine(folder, name), new byte[bytes]);
 
     /// <summary>
-    /// Everything pointed at the throwaway tree, so these never measure the real machine. That
-    /// keeps them quick and, more importantly, keeps them saying the same thing on any machine.
+    /// Everything points at the throwaway tree, so these never measure the real machine. Keeps
+    /// them fast and gives the same result anywhere.
     /// </summary>
     private MoltOptions Options(string? buildRoot) => new()
     {
@@ -222,8 +222,8 @@ public sealed class ShedderTests : IDisposable
 }
 
 /// <summary>
-/// Picking. The rows carry their own tick, so the thing worth pinning down is that the view
-/// model hears about it: without that the button stays dead however many boxes you tick.
+/// Selection. The rows own their own checkbox, so what matters is that the view model hears
+/// about it: without that the button stays disabled however many are ticked.
 /// </summary>
 public sealed class MoltPickingTests
 {

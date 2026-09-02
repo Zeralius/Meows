@@ -4,24 +4,24 @@ using Meows.Plugins.Abstractions;
 namespace Meows.Plugins;
 
 /// <summary>
-/// Can this shell run this plugin, going by the contract version it was built against?
+/// Whether this shell can run a plugin, based on the contract version it was built against.
 ///
-/// The runtime will not tell you. Since the contract is shared with the shell rather than
-/// loaded from the plugin folder, .NET binds a plugin built against 0.2.0 to our 0.1.0
-/// happily, then throws <see cref="MissingMethodException"/> somewhere useless later. Better
-/// to say no up front and put the reason on the plugin's card.
+/// The runtime will not warn us. The contract is shared with the shell rather than loaded per
+/// plugin, so .NET happily binds a plugin built against 0.2.0 to our 0.1.0 and then throws
+/// <see cref="MissingMethodException"/> somewhere unhelpful later. Better to refuse up front and
+/// show the reason on the plugin's card.
 /// </summary>
 public static class ContractCompatibility
 {
     public const string ContractAssemblyName = "Meows.Plugins.Abstractions";
 
-    /// <summary>What we ship.</summary>
+    /// <summary>The contract version this shell provides.</summary>
     public static Version ShellVersion { get; } =
         typeof(IMeowsPlugin).Assembly.GetName().Version ?? new Version(0, 0, 0);
 
     public static string ShellVersionText => Format(ShellVersion);
 
-    /// <summary>Drops the fourth number MSBuild tacks on, so 0.1.0.0 reads as 0.1.0.</summary>
+    /// <summary>Drops the fourth number MSBuild adds, so 0.1.0.0 reads as 0.1.0.</summary>
     public static string Format(Version version) =>
         $"{version.Major}.{version.Minor}.{Math.Max(version.Build, 0)}";
 
@@ -41,12 +41,12 @@ public static class ContractCompatibility
     }
 
     /// <summary>
-    /// Avalonia is shared with the shell for the same reason the contract is: a plugin hands back
+    /// Avalonia is shared with the shell for the same reason the contract is: a plugin returns
     /// a <c>Control</c>, and two copies of Avalonia mean two unrelated types with that name. So
-    /// the version it was built against matters exactly as much, and until now nothing looked.
+    /// its version matters as much as the contract's, and nothing was checking it.
     ///
-    /// Nobody has met this yet because every plugin here is built in this solution against the
-    /// same reference. A plugin written elsewhere is precisely where it starts happening.
+    /// It has never bitten us because every plugin in this solution builds against the same
+    /// reference. Plugins written elsewhere are where it would start.
     /// </summary>
     public static Version ShellUiVersion { get; } =
         typeof(Avalonia.AvaloniaObject).Assembly.GetName().Version ?? new Version(0, 0, 0);
@@ -54,8 +54,8 @@ public static class ContractCompatibility
     public static string ShellUiVersionText => Format(ShellUiVersion);
 
     /// <summary>
-    /// The Avalonia this assembly was built against, or null if it uses none. Avalonia ships its
-    /// assemblies on one version, so the highest of whatever is referenced is the answer.
+    /// Which Avalonia this assembly was built against, or null if it uses none. Avalonia
+    /// versions all its assemblies together, so the highest referenced one is the answer.
     /// </summary>
     public static Version? ReferencedUiVersion(Assembly assembly)
     {

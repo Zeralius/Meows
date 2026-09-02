@@ -187,10 +187,10 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
     public bool WasStopped => _wasStopped;
 
     /// <summary>
-    /// Said out loud on the tab, because a half finished list looks exactly like a finished one.
-    /// The empty folder count is the part that suffers most from stopping: a folder cannot be
-    /// called empty until everything below it has been read, so the ones near where the sweep
-    /// gave up are held back rather than guessed at.
+    /// Shown on the tab, because a partial list looks exactly like a complete one. Empty
+    /// folders suffer most from stopping early: a folder is not empty until everything below it
+    /// has been read, so the ones near where the sweep stopped are held back rather than
+    /// guessed at.
     /// </summary>
     public string StoppedNote =>
         $"Stopped after {_foldersSeen} folders, so this is only what turned up before then. " +

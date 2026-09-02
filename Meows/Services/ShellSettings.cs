@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace Meows.Services;
 
-/// <summary>Everything we persist, all under %APPDATA%\Meows. Nothing goes in the repo.</summary>
+/// <summary>Everything we persist, under %APPDATA%\Meows. Nothing is written into the repo.</summary>
 public sealed class ShellSettings
 {
     private static readonly JsonSerializerOptions Json = new()
@@ -12,23 +12,21 @@ public sealed class ShellSettings
     };
 
     /// <summary>
-    /// The root is injectable so the tests can work somewhere disposable. Left alone it is the
-    /// real one, which is the only thing the app ever passes.
+    /// The root is injectable so tests can use a throwaway directory. The app always uses the
+    /// default.
     /// </summary>
     public ShellSettings(string? root = null, string? previousRoot = null)
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         Root = root ?? Path.Combine(appData, "Meows");
 
-        // The real previous folder only when this is the real run. A test that points Root
-        // somewhere disposable must say where its own previous folder is, or it would reach into
-        // the actual settings on the machine running it.
+        // Only look at the real old folder on a real run. A test with its own Root has to pass
+        // its own previous folder too, or it would read the actual settings on this machine.
         var previous = previousRoot ?? (root is null ? Path.Combine(appData, "Mews") : null);
 
-        // Whether anything is settled here, not whether the folder exists. The crash log is armed
-        // before any of this and creates the folder to write into, so an empty folder is the
-        // normal state on a first run and treating it as "already set up" skipped the move
-        // entirely.
+        // Whether there are settings here, not whether the folder exists. CrashLog runs first
+        // and creates the folder to write into, so an empty folder is normal on a first run.
+        // Treating that as "already set up" skipped the migration entirely.
         if (previous is not null && !AlreadySettled(Root))
             CarryOverFromMews(previous, Root);
 
@@ -38,9 +36,8 @@ public sealed class ShellSettings
     public string Root { get; }
 
     /// <summary>
-    /// The list of switched on plugins is written in terms of their ids, and the ids carry the
-    /// app's name. Copying the file across without this leaves every plugin switched off and
-    /// looking like the move lost them.
+    /// The activation list is stored as plugin ids, and the ids contain the app name. Copying
+    /// the file across unchanged would leave every plugin switched off.
     /// </summary>
     private static void RenameIdsIn(string file)
     {
@@ -57,28 +54,27 @@ public sealed class ShellSettings
         }
         catch (Exception)
         {
-            // Worst case they re-tick the plugins they had on. Not worth failing the move over.
+            // Worst case they re-tick their plugins. Not worth failing the migration over.
         }
     }
 
-    /// <summary>Whether this folder already holds settings, as opposed to merely existing.</summary>
+    /// <summary>Whether this folder holds settings, as opposed to just existing.</summary>
     private static bool AlreadySettled(string root) =>
         File.Exists(Path.Combine(root, "activated-plugins.json")) ||
         Directory.Exists(Path.Combine(root, "plugins"));
 
     /// <summary>
-    /// What happened during the move from the old name, if anything. Set during construction and
-    /// read once the log exists, since that is built after this.
+    /// What happened during the migration, if anything. Set in the constructor and read once
+    /// the log exists, which is later.
     /// </summary>
     public string? StartupNote { get; private set; }
 
     /// <summary>
-    /// The app was called Mews until 1.0.0, and its settings lived under that name. Rather than
-    /// silently starting empty and looking like everything was forgotten, the old folder is
-    /// brought across the first time.
+    /// The app was called Mews until 1.0.0 and its settings lived under that name. Brings the
+    /// old folder across on first run, rather than starting empty and looking like everything
+    /// was lost.
     ///
-    /// Copied rather than moved. If any of this goes wrong the original is still sitting there to
-    /// go back to, which matters more than tidiness for something that runs once.
+    /// Copies rather than moves, so the original is still there if this goes wrong.
     /// </summary>
     private void CarryOverFromMews(string old, string wanted)
     {
@@ -87,9 +83,8 @@ public sealed class ShellSettings
             if (!Directory.Exists(old))
                 return;
 
-            // Before anything is copied into it. An old folder holding files but no subfolders
-            // creates nothing in the loop below, and every copy then fails for want of somewhere
-            // to land.
+            // Created up front: an old folder with files but no subfolders makes nothing in the
+            // loop below, and every copy then fails for want of a destination.
             Directory.CreateDirectory(wanted);
 
             foreach (var directory in Directory.GetDirectories(old, "*", SearchOption.AllDirectories))
@@ -97,15 +92,15 @@ public sealed class ShellSettings
 
             foreach (var file in Directory.GetFiles(old, "*", SearchOption.AllDirectories))
             {
-                // The old log is history under the old name, not settings. Carrying it across
-                // would leave two logs side by side and neither of them the whole story.
+                // The old log belongs to the old name and is not settings. Copying it would
+                // leave two logs, neither of them complete.
                 if (Path.GetExtension(file).Equals(".log", StringComparison.OrdinalIgnoreCase))
                     continue;
 
                 File.Copy(file, file.Replace(old, wanted), overwrite: false);
             }
 
-            // The plugin ids moved with the name, and each one's folder is named after its id.
+            // Plugin ids changed with the app name, and each folder is named after its id.
             var plugins = Path.Combine(wanted, "plugins");
             if (Directory.Exists(plugins))
             {
@@ -130,8 +125,8 @@ public sealed class ShellSettings
     }
 
     /// <summary>
-    /// Where to say that something on disk could not be read. Wired to the shell log once it
-    /// exists, which is after this, so it is a property rather than a constructor argument.
+    /// Where to report a file that could not be read. Wired up to the shell log after this is
+    /// constructed, hence a property rather than a constructor argument.
     /// </summary>
     public Action<string>? Report { get; set; }
 
@@ -169,8 +164,7 @@ public sealed class ShellSettings
         }
         catch (Exception ex)
         {
-            // Worst case they re-tick a plugin. Not worth an error dialog, but not worth
-            // saying nothing about either.
+            // Worst case they re-tick a plugin. Not worth a dialog, but worth logging.
             Report?.Invoke($"Could not save which plugins are active: {ex.Message}");
         }
     }
@@ -198,12 +192,11 @@ public sealed class ShellSettings
     }
 
     /// <summary>
-    /// Moves a file that could not be read out of the way, and says so.
+    /// Renames a file we could not read, and logs it.
     ///
-    /// Returning null on a parse failure meant the plugin started on defaults and the next
-    /// setting anyone changed wrote those defaults straight over the file. One unreadable byte
-    /// therefore lost the lot, silently. Renaming it first means the original is still there to
-    /// look at, and the log says where it went.
+    /// Returning null on a parse failure meant the plugin started on defaults, and the next
+    /// setting anyone changed wrote those defaults over the file. One bad byte lost everything,
+    /// silently. Renaming first keeps the original around to look at.
     /// </summary>
     private void SetAside(string file, Exception ex)
     {
@@ -217,17 +210,17 @@ public sealed class ShellSettings
         }
         catch (Exception moveFailed)
         {
-            // Could not even rename it. Say so and leave it exactly where it is: overwriting
-            // something unreadable is what this whole method exists to prevent.
+            // Could not even rename it, so leave it alone. Overwriting an unreadable file is
+            // what this method exists to prevent.
             Report?.Invoke($"{Path.GetFileName(file)} could not be read ({ex.Message}) " +
                            $"and could not be set aside ({moveFailed.Message}).");
         }
     }
 
     /// <summary>
-    /// Writes through a temporary file so the real one is either the old contents or the new
-    /// ones, never half of each. A settings file truncated by a crash mid write is precisely how
-    /// you end up with the unreadable file above.
+    /// Writes via a temporary file so the real one holds either the old contents or the new
+    /// ones, never half of each. A write interrupted by a crash is how you get the unreadable
+    /// file the method above has to deal with.
     /// </summary>
     private static void WriteWholly(string file, string contents)
     {
