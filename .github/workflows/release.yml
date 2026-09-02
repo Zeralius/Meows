@@ -190,17 +190,33 @@ jobs:
         if: steps.nuget.outputs.publish == 'true'
         shell: pwsh
         run: |
-          # --skip-duplicate because NuGet refuses a version it already has, and re-running a
-          # release should not turn that refusal into a failed build. Nothing is ever
-          # overwritten: a published version is permanent, which is why the contract version
-          # only moves when the contract does.
-          dotnet nuget push artifacts/nuget/*.nupkg `
-            --source https://api.nuget.org/v3/index.json `
-            --api-key ${{ steps.login.outputs.NUGET_API_KEY }} `
-            --skip-duplicate
+          # Listed here rather than handed to dotnet as a wildcard. PowerShell passes
+          # artifacts/nuget/*.nupkg through untouched and dotnet nuget push does not expand it,
+          # so the whole step failed with "file does not exist" while pointing at a folder that
+          # plainly had the packages in it.
+          #
+          # Only .nupkg: the matching .snupkg goes up with its package automatically, and
+          # pushing one on its own is an error.
+          $packages = Get-ChildItem artifacts/nuget -File |
+            Where-Object { $_.Extension -eq '.nupkg' }
 
-          if ($LASTEXITCODE -ne 0) { throw "Pushing to NuGet failed" }
-          "pushed"
+          if ($packages.Count -eq 0) { throw "Nothing to push: artifacts/nuget has no .nupkg" }
+          "pushing: $(($packages | ForEach-Object Name) -join ', ')"
+
+          foreach ($package in $packages) {
+            # --skip-duplicate because NuGet refuses a version it already has, and re-running a
+            # release should not turn that refusal into a failed build. Nothing is ever
+            # overwritten: a published version is permanent, which is why the contract version
+            # only moves when the contract does.
+            dotnet nuget push $package.FullName `
+              --source https://api.nuget.org/v3/index.json `
+              --api-key ${{ steps.login.outputs.NUGET_API_KEY }} `
+              --skip-duplicate
+
+            if ($LASTEXITCODE -ne 0) { throw "Pushing $($package.Name) to NuGet failed" }
+          }
+
+          "pushed $($packages.Count) package(s)"
 
       - name: Publish the release
         shell: pwsh
