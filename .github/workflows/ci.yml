@@ -39,20 +39,34 @@ jobs:
           # version of this one renamed IMewsPlugin to IWeatherWatch, because the token it
           # substitutes was a substring of the interface name. That built fine as a template and
           # produced a project that could not compile.
+          $ErrorActionPreference = 'Continue'
+
+          $template = Join-Path $env:GITHUB_WORKSPACE 'template'
           $work = Join-Path $env:RUNNER_TEMP 'template-check'
           Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
           New-Item -ItemType Directory -Force $work | Out-Null
 
-          dotnet new install ./template
+          "sdk $(dotnet --version), template at $template"
+
+          # Absolute paths throughout. dotnet new records what it installed by full path, so a
+          # relative one is not reliably the same handle when uninstalling later.
+          dotnet new install $template
           if ($LASTEXITCODE -ne 0) { throw "The template would not install" }
 
           Push-Location $work
-          dotnet new mews-plugin -n WeatherWatch --Category "Everyday"
+          # No --Category: it has a default, and passing a symbol by name is the sort of thing
+          # that varies between SDK versions. What matters here is that the output compiles.
+          dotnet new mews-plugin -n WeatherWatch
           if ($LASTEXITCODE -ne 0) { throw "The template would not generate" }
+
+          "generated:"
+          Get-ChildItem WeatherWatch -Recurse -File | ForEach-Object { "  $($_.FullName.Substring($work.Length))" }
 
           # A local feed, because the contract version being tested is the one just built rather
           # than whatever is on NuGet.
-          $feed = (Resolve-Path "$env:GITHUB_WORKSPACE/artifacts/nuget").Path
+          $feed = (Resolve-Path (Join-Path $env:GITHUB_WORKSPACE 'artifacts/nuget')).Path
+          "feed $feed holds: $((Get-ChildItem $feed | ForEach-Object Name) -join ', ')"
+
           # Built as an array of lines rather than a here-string: PowerShell wants the closing
           # marker of one at column zero, which YAML indentation makes impossible.
           $config = @(
@@ -67,9 +81,15 @@ jobs:
 
           Push-Location WeatherWatch
           dotnet build --configuration Release
-          if ($LASTEXITCODE -ne 0) { throw "The generated plugin does not compile" }
+          $built = $LASTEXITCODE
           Pop-Location
           Pop-Location
 
-          dotnet new uninstall ./template
+          # Cleanup, and never the reason this step fails. GitHub ends a pwsh step with the last
+          # exit code it saw, so an uninstall that grumbles would fail a build in which the thing
+          # being tested worked perfectly.
+          dotnet new uninstall $template | Out-Null
+
+          if ($built -ne 0) { throw "The generated plugin does not compile" }
           "the template generates a plugin that builds"
+          exit 0
