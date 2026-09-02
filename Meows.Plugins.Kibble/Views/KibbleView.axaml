@@ -387,6 +387,12 @@
                                   HorizontalAlignment="Stretch" />
                         <TextBlock Text="{Binding StampHint}" Classes="label" TextWrapping="Wrap" />
 
+                        <CheckBox Content="Set duplicates aside"
+                                  IsChecked="{Binding DuplicatesToFolder}"
+                                  Margin="0,10,0,0" />
+                        <TextBlock Classes="label" TextWrapping="Wrap"
+                                   Text="A file this group already has, queued or posted, goes to its Duplicates folder instead of being refused. The bot never looks in there." />
+
                         <TextBlock Classes="label" Margin="0,10,0,0" TextWrapping="Wrap"
                                    Text="Files move rather than copy. Undo puts the last one back where it came from." />
                         <TextBlock Text="{Binding BotRootText}" Classes="label" TextWrapping="Wrap" />

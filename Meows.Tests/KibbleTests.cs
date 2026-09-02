@@ -156,6 +156,136 @@ public sealed class IntakeTests
     }
 
     [Fact]
+    public void A_duplicate_can_be_set_aside_instead_of_refused()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var payload = new byte[] { 9, 8, 7, 6, 5, 4, 3, 2 };
+        temp.Queue(group, "already.png", DateTime.UtcNow, payload);
+        var source = WriteFile(Path.Combine(temp.Root, "incoming"), "same-bytes.png", payload);
+
+        var result = Intake.Send(source, temp.Workspace, group, IntakeStamp.KeepSource,
+            DuplicateHandling.MoveAside);
+
+        Assert.Equal(IntakeOutcome.MovedToDuplicates, result.Outcome);
+        Assert.False(File.Exists(source));
+        Assert.Equal(temp.Workspace.DuplicatesFolder(group), Path.GetDirectoryName(result.Destination));
+        Assert.True(File.Exists(result.Destination));
+    }
+
+    [Fact]
+    public void Something_already_posted_is_set_aside_too()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var payload = new byte[] { 4, 4, 4, 4, 4, 4, 4, 4 };
+        File.WriteAllBytes(Path.Combine(temp.Workspace.AlreadySentFolder(group), "sent.png"), payload);
+        var source = WriteFile(Path.Combine(temp.Root, "incoming"), "again.png", payload);
+
+        var result = Intake.Send(source, temp.Workspace, group, IntakeStamp.KeepSource,
+            DuplicateHandling.MoveAside);
+
+        Assert.Equal(IntakeOutcome.MovedToDuplicates, result.Outcome);
+        Assert.Contains("already posted", result.Detail!);
+    }
+
+    [Fact]
+    public void A_duplicate_set_aside_never_reaches_the_queue()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var payload = new byte[] { 1, 1, 2, 3, 5, 8, 13, 21 };
+        temp.Queue(group, "already.png", DateTime.UtcNow, payload);
+        var source = WriteFile(Path.Combine(temp.Root, "incoming"), "copy.png", payload);
+
+        Intake.Send(source, temp.Workspace, group, IntakeStamp.KeepSource, DuplicateHandling.MoveAside);
+
+        // The bot posts what is in To_Send. Setting a duplicate aside must not add to it, or the
+        // feature would be posting the very thing it exists to hold back.
+        var queue = Directory.GetFiles(temp.Workspace.ToSendFolder(group));
+        Assert.Single(queue);
+        Assert.EndsWith("already.png", queue[0]);
+    }
+
+    [Fact]
+    public void Setting_aside_never_writes_over_a_duplicate_already_there()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var payload = new byte[] { 7, 7, 7, 7, 7, 7, 7, 7 };
+        temp.Queue(group, "already.png", DateTime.UtcNow, payload);
+
+        var first = WriteFile(Path.Combine(temp.Root, "in1"), "copy.png", payload);
+        var second = WriteFile(Path.Combine(temp.Root, "in2"), "copy.png", payload);
+
+        var a = Intake.Send(first, temp.Workspace, group, IntakeStamp.KeepSource, DuplicateHandling.MoveAside);
+        var b = Intake.Send(second, temp.Workspace, group, IntakeStamp.KeepSource, DuplicateHandling.MoveAside);
+
+        // Two files of the same name from different folders. Finding a duplicate is a poor
+        // reason to be careless with this copy of it.
+        Assert.NotEqual(a.Destination, b.Destination);
+        Assert.Equal(2, Directory.GetFiles(temp.Workspace.DuplicatesFolder(group)).Length);
+    }
+
+    [Fact]
+    public void A_duplicate_set_aside_can_be_undone()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var payload = new byte[] { 3, 1, 4, 1, 5, 9, 2, 6 };
+        temp.Queue(group, "already.png", DateTime.UtcNow, payload);
+        var source = WriteFile(Path.Combine(temp.Root, "incoming"), "copy.png", payload);
+
+        var result = Intake.Send(source, temp.Workspace, group, IntakeStamp.KeepSource,
+            DuplicateHandling.MoveAside);
+
+        Assert.True(Intake.Undo(result));
+        Assert.True(File.Exists(source));
+        Assert.False(File.Exists(result.Destination));
+    }
+
+    [Fact]
+    public void Refusing_is_still_what_happens_when_it_is_not_asked_for()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var payload = new byte[] { 2, 2, 2, 2, 2, 2, 2, 2 };
+        temp.Queue(group, "already.png", DateTime.UtcNow, payload);
+        var source = WriteFile(Path.Combine(temp.Root, "incoming"), "copy.png", payload);
+
+        var result = Intake.Send(source, temp.Workspace, group, IntakeStamp.KeepSource);
+
+        Assert.Equal(IntakeOutcome.AlreadyInGroup, result.Outcome);
+        Assert.True(File.Exists(source));
+        Assert.False(Directory.Exists(temp.Workspace.DuplicatesFolder(group)));
+    }
+
+    [Fact]
+    public void A_batch_keeps_its_order_when_a_duplicate_is_pulled_out_of_it()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        var payload = new byte[] { 6, 6, 6, 6, 6, 6, 6, 6 };
+        temp.Queue(group, "already.png", DateTime.UtcNow, payload);
+
+        var incoming = Path.Combine(temp.Root, "incoming");
+        var first = WriteFile(incoming, "a.png", [1, 1, 1, 1, 1, 1, 1, 1]);
+        var duplicate = WriteFile(incoming, "b.png", payload);
+        var last = WriteFile(incoming, "c.png", [3, 3, 3, 3, 3, 3, 3, 3]);
+
+        var results = Intake.SendMany([first, duplicate, last], temp.Workspace, group,
+            IntakeStamp.QueuedNow, DuplicateHandling.MoveAside);
+
+        Assert.Equal(IntakeOutcome.MovedToDuplicates, results[1].Outcome);
+
+        // The duplicate took no place in the posting order, so the two that were queued are
+        // still a second apart rather than sharing a moment with the file that never joined them.
+        var a = File.GetLastWriteTimeUtc(results[0].Destination!);
+        var c = File.GetLastWriteTimeUtc(results[2].Destination!);
+        Assert.Equal(1, Math.Round((c - a).TotalSeconds));
+    }
+
+    [Fact]
     public void The_same_image_may_go_to_a_second_group()
     {
         using var temp = new TempWorkspace();

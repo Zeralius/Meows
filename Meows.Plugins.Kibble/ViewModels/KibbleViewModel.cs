@@ -27,6 +27,13 @@ public sealed class KibbleSettings
     public int PageSize { get; set; } = 200;
 
     public ComicNaming Naming { get; set; } = ComicNaming.Folder;
+
+    /// <summary>
+    /// On by default. Kibble already refused a file the group had, and leaving it in the grid
+    /// meant deciding what to do with it by hand every time; setting it aside is what that
+    /// decision almost always was.
+    /// </summary>
+    public bool DuplicatesToFolder { get; set; } = true;
 }
 
 /// <summary>
@@ -309,6 +316,23 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
             ReloadWindow();
         }
     }
+
+    /// <summary>Whether a file the group already has is set aside instead of refused.</summary>
+    public bool DuplicatesToFolder
+    {
+        get => _settings.DuplicatesToFolder;
+        set
+        {
+            if (_settings.DuplicatesToFolder == value)
+                return;
+            _settings.DuplicatesToFolder = value;
+            SaveSettings();
+            OnPropertyChanged();
+        }
+    }
+
+    private DuplicateHandling Duplicates =>
+        DuplicatesToFolder ? DuplicateHandling.MoveAside : DuplicateHandling.Refuse;
 
     public IReadOnlyList<int> PageSizes { get; } = [100, 200, 500, 1000];
 
@@ -737,7 +761,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         }
 
         var file = Selected;
-        var result = Intake.Send(file.Path, _workspace, destination.Group, Stamp);
+        var result = Intake.Send(file.Path, _workspace, destination.Group, Stamp, Duplicates);
 
         if (!result.Moved)
         {
@@ -756,8 +780,19 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         Selected = next;
 
         destination.Refresh();
-        StatusMessage = $"Sent to {destination.Name}, {destination.RunwayText}";
-        _host.Log($"Queued {Path.GetFileName(result.Destination!)} into {destination.Name}");
+
+        if (result.Outcome == IntakeOutcome.MovedToDuplicates)
+        {
+            // Said plainly rather than reported as a send. The queue has not changed, and
+            // somebody watching the count would otherwise wonder why.
+            StatusMessage = $"Already in {destination.Name}, so it went to Duplicates";
+            _host.Log($"Set aside {Path.GetFileName(result.Destination!)}: {result.Detail}");
+        }
+        else
+        {
+            StatusMessage = $"Sent to {destination.Name}, {destination.RunwayText}";
+            _host.Log($"Queued {Path.GetFileName(result.Destination!)} into {destination.Name}");
+        }
         RaiseGridState();
     }
 
@@ -809,7 +844,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     {
         var files = GridOrder().ToList();
         var results = Intake.SendMany(
-            files.Select(f => f.Path).ToList(), _workspace!, destination.Group, Stamp);
+            files.Select(f => f.Path).ToList(), _workspace!, destination.Group, Stamp, Duplicates);
 
         var sent = new List<IncomingFileViewModel>();
         var refused = new List<string>();

@@ -17,9 +17,23 @@ public enum IntakeOutcome
 {
     Sent,
     AlreadyInGroup,
+
+    /// <summary>A duplicate, set aside in the group's Duplicates folder rather than refused.</summary>
+    MovedToDuplicates,
+
     NotPostable,
     EmptyComic,
     Failed,
+}
+
+/// <summary>What to do with a file the group already has.</summary>
+public enum DuplicateHandling
+{
+    /// <summary>Refuse it and leave it where it is, for you to look at.</summary>
+    Refuse,
+
+    /// <summary>Move it into the group's Duplicates folder and carry on.</summary>
+    MoveAside,
 }
 
 /// <summary>How the pages inside a new comic are ordered.</summary>
@@ -42,7 +56,17 @@ public sealed record IntakeResult(
     string? Detail,
     IReadOnlyList<BundledPage>? Bundled = null)
 {
-    public bool Moved => Outcome == IntakeOutcome.Sent;
+    /// <summary>
+    /// Whether the file left where it was. True for a duplicate set aside as well as a send,
+    /// because both empty the tile out of the grid and both are undoable.
+    /// </summary>
+    public bool Moved => Outcome is IntakeOutcome.Sent or IntakeOutcome.MovedToDuplicates;
+
+    /// <summary>
+    /// Whether it actually joined the queue. A duplicate moved aside did not, so it takes no
+    /// place in the posting order and gets no queue timestamp.
+    /// </summary>
+    public bool Queued => Outcome == IntakeOutcome.Sent;
 
     /// <summary>True when this send bundled several files into one archive.</summary>
     public bool IsBundle => Bundled is { Count: > 0 };
@@ -89,9 +113,18 @@ public static class Intake
     }
 
     /// <summary>Moves the file into the group's To_Send, having checked it first.</summary>
-    public static IntakeResult Send(string source, BotWorkspace workspace, GroupConfig group, IntakeStamp stamp)
+    public static IntakeResult Send(
+        string source,
+        BotWorkspace workspace,
+        GroupConfig group,
+        IntakeStamp stamp,
+        DuplicateHandling duplicates = DuplicateHandling.Refuse)
     {
         var problem = Inspect(source, workspace, group);
+
+        if (problem is { Outcome: IntakeOutcome.AlreadyInGroup } && duplicates == DuplicateHandling.MoveAside)
+            return SetAside(source, workspace, group, problem.Detail);
+
         if (problem is not null)
             return problem;
 
@@ -110,6 +143,42 @@ public static class Intake
             File.SetLastWriteTimeUtc(target, stamp == IntakeStamp.KeepSource ? sourceWritten : DateTime.UtcNow);
 
             return new IntakeResult(IntakeOutcome.Sent, source, target, null);
+        }
+        catch (Exception ex)
+        {
+            return new IntakeResult(IntakeOutcome.Failed, source, null, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Moves a file the group already has into its Duplicates folder.
+    ///
+    /// Moved rather than deleted, and never over the top of anything. The whole point of finding
+    /// a duplicate is that a copy already exists somewhere, which is a poor reason to be careless
+    /// with this one.
+    /// </summary>
+    private static IntakeResult SetAside(
+        string source,
+        BotWorkspace workspace,
+        GroupConfig group,
+        string? why)
+    {
+        try
+        {
+            var folder = workspace.DuplicatesFolder(group);
+            Directory.CreateDirectory(folder);
+
+            var target = UniquePath(folder, Path.GetFileName(source));
+            var sourceWritten = File.GetLastWriteTimeUtc(source);
+
+            File.Move(source, target);
+
+            // Its own date, kept. Nothing reads these in order, and the date is the only clue
+            // left about where the file came from.
+            File.SetLastWriteTimeUtc(target, sourceWritten);
+
+            return new IntakeResult(IntakeOutcome.MovedToDuplicates, source, target,
+                why ?? "already in this group.");
         }
         catch (Exception ex)
         {
@@ -243,7 +312,8 @@ public static class Intake
         IReadOnlyList<string> sources,
         BotWorkspace workspace,
         GroupConfig group,
-        IntakeStamp stamp)
+        IntakeStamp stamp,
+        DuplicateHandling duplicates = DuplicateHandling.Refuse)
     {
         var results = new List<IntakeResult>();
 
@@ -255,10 +325,12 @@ public static class Intake
 
         foreach (var source in sources)
         {
-            var result = Send(source, workspace, group, stamp);
+            var result = Send(source, workspace, group, stamp, duplicates);
             results.Add(result);
 
-            if (!result.Moved)
+            // Queued, not merely moved. A duplicate set aside is not in the queue, so it takes
+            // no place in the posting order and none of the timestamps below apply to it.
+            if (!result.Queued)
                 continue;
 
             if (stamp == IntakeStamp.QueuedNow)

@@ -179,6 +179,27 @@ the same file being queued elsewhere is not a reason to refuse it here.
 
 A name clash never overwrites what is already queued. The incoming file gets a suffix.
 
+## Duplicates get their own folder
+
+**Set duplicates aside**, on by default, changes what happens to the second of those. Instead of
+staying in the grid for you to deal with, the file moves to a `Duplicates` folder beside the
+group's `To_Send` and `Already_Sent`, and sorting carries on.
+
+Nothing else about the check changes: still by content rather than name, still against the queue
+and the archive both. Only the outcome differs, and the status line says which group already had
+it and under what name.
+
+`Duplicates` sits beside the two folders the bot reads rather than inside either. The bot lists a
+queue without recursing, so a folder within `To_Send` would be passed over today, but one change
+to a recursive walk and everything set aside would be posted. Kept where nothing is looking, the
+question never arises.
+
+Undo puts it back where it came from, exactly as it does for a send. The files are moved rather
+than copied, and never over the top of one already there: finding a duplicate is a poor reason to
+be careless with this copy of it.
+
+Turn the option off and Kibble refuses as it always did, leaving the file in the grid.
+
 ## Queue order
 
 The bot posts oldest modified time first, which makes the timestamp a scheduling decision rather

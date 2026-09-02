@@ -106,6 +106,16 @@ public sealed class BotWorkspace
 
     public string AlreadySentFolder(GroupConfig group) => Path.Combine(GroupFolder(group), "Already_Sent");
 
+    /// <summary>
+    /// Where a file goes when it turns out to be one this group already has.
+    ///
+    /// Beside the two the bot reads rather than inside them. The bot lists a queue with
+    /// iterdir(), so a folder within it would be passed over today, but "today" is doing a lot of
+    /// work in that sentence: one change to a recursive walk and everything set aside here would
+    /// be posted. Kept where nothing is looking, the question never arises.
+    /// </summary>
+    public string DuplicatesFolder(GroupConfig group) => Path.Combine(GroupFolder(group), "Duplicates");
+
     public IReadOnlyList<string> Scan(string folder, bool recursive = false)
     {
         if (!Directory.Exists(folder))
