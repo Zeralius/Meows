@@ -44,12 +44,12 @@ jobs:
 
       - name: Publish the shell
         run: >
-          dotnet publish Mews/Mews.csproj
+          dotnet publish Meows/Meows.csproj
           --configuration Release
           --runtime win-x64
           --self-contained true
           -p:Version=${{ steps.version.outputs.value }}
-          --output artifacts/Mews-win-x64
+          --output artifacts/Meows-win-x64
 
       # The shell does not reference plugin projects, which is what keeps them drop-in, so
       # publishing alone produces an app with no plugins. Each one has to be staged.
@@ -58,8 +58,8 @@ jobs:
         run: |
           # Found on disk rather than listed here. A list has to be edited for every new plugin,
           # and forgetting to is not caught by anything until the package ships without it.
-          $projects = Get-ChildItem Mews.Plugins.* -Directory |
-            Where-Object { $_.Name -ne 'Mews.Plugins.Abstractions' } |
+          $projects = Get-ChildItem Meows.Plugins.* -Directory |
+            Where-Object { $_.Name -ne 'Meows.Plugins.Abstractions' } |
             ForEach-Object { Join-Path $_.FullName "$($_.Name).csproj" } |
             Where-Object { Test-Path $_ }
 
@@ -75,22 +75,22 @@ jobs:
         shell: pwsh
         run: |
           # Copy the whole build output rather than just the plugin dll. A plugin may bring
-          # libraries of its own: Telegram Poster and Kibble need Mews.Bot.Core.dll, and
-          # Purrge and Chonk need Mews.Disk.dll,
+          # libraries of its own: Telegram Poster and Kibble need Meows.Bot.Core.dll, and
+          # Purrge and Chonk need Meows.Disk.dll,
           # which is loaded from the plugin's own folder. Avalonia and the contract are not
           # here to be copied: the csproj files keep them out so the shell stays the one
           # source of both.
-          $plugins = Get-ChildItem Mews.Plugins.* -Directory |
-            Where-Object { $_.Name -ne 'Mews.Plugins.Abstractions' } |
+          $plugins = Get-ChildItem Meows.Plugins.* -Directory |
+            Where-Object { $_.Name -ne 'Meows.Plugins.Abstractions' } |
             ForEach-Object { $_.Name }
 
           foreach ($p in $plugins) {
-            $dest = "artifacts/Mews-win-x64/plugins/$p"
+            $dest = "artifacts/Meows-win-x64/plugins/$p"
             New-Item -ItemType Directory -Force $dest | Out-Null
             Copy-Item "$p/bin/Release/*.dll" $dest
             Copy-Item "$p/bin/Release/*.deps.json" $dest -ErrorAction SilentlyContinue
           }
-          Get-ChildItem artifacts/Mews-win-x64/plugins -Directory | ForEach-Object {
+          Get-ChildItem artifacts/Meows-win-x64/plugins -Directory | ForEach-Object {
             $files = (Get-ChildItem $_.FullName -File | ForEach-Object Name) -join ', '
             "staged $($_.Name): $files"
           }
@@ -99,11 +99,11 @@ jobs:
         shell: pwsh
         run: |
           # libSkiaSharp.pdb and libHarfBuzzSharp.pdb are about half the output and are no use
-          # here. Mews' own pdbs stay, so stack traces remain readable.
-          Get-ChildItem artifacts/Mews-win-x64 -Filter *.pdb |
-            Where-Object { $_.Name -notlike 'Mews*' } |
+          # here. Meows' own pdbs stay, so stack traces remain readable.
+          Get-ChildItem artifacts/Meows-win-x64 -Filter *.pdb |
+            Where-Object { $_.Name -notlike 'Meows*' } |
             Remove-Item -Force
-          "{0:N0} MB" -f ((Get-ChildItem artifacts/Mews-win-x64 -Recurse -File |
+          "{0:N0} MB" -f ((Get-ChildItem artifacts/Meows-win-x64 -Recurse -File |
             Measure-Object Length -Sum).Sum / 1MB)
 
       - name: Check the package can actually load what is in it
@@ -118,13 +118,13 @@ jobs:
           # missing a private library. A plugin whose shared library did not get staged loads
           # perfectly and then fails the moment it is switched on, so being present is not the
           # same as being usable, and only one of those can be checked by looking at file names.
-          $exe = 'artifacts/Mews-win-x64/Mews.exe'
-          if (-not (Test-Path $exe)) { throw "No Mews.exe in the package" }
+          $exe = 'artifacts/Meows-win-x64/Meows.exe'
+          if (-not (Test-Path $exe)) { throw "No Meows.exe in the package" }
 
-          # Started rather than called. Mews is a WinExe, and PowerShell does not wait for a
+          # Started rather than called. Meows is a WinExe, and PowerShell does not wait for a
           # windowed process: the call operator returns immediately and never sets an exit code,
           # so a check written the obvious way would pass no matter what the package contained.
-          $log = Join-Path ([System.IO.Path]::GetTempPath()) 'mews-plugins.txt'
+          $log = Join-Path ([System.IO.Path]::GetTempPath()) 'meows-plugins.txt'
           $run = Start-Process -FilePath (Resolve-Path $exe) -ArgumentList '--list-plugins' `
             -Wait -PassThru -NoNewWindow -RedirectStandardOutput $log
 
@@ -133,8 +133,8 @@ jobs:
           if ($run.ExitCode -ne 0) { throw "The packaged app could not load its own plugins" }
 
           # And it has to find every plugin in the repository, not merely load the ones it found.
-          $expected = (Get-ChildItem Mews.Plugins.* -Directory |
-            Where-Object { $_.Name -ne 'Mews.Plugins.Abstractions' }).Count
+          $expected = (Get-ChildItem Meows.Plugins.* -Directory |
+            Where-Object { $_.Name -ne 'Meows.Plugins.Abstractions' }).Count
           $loaded = ([regex]::Matches(($output -join "`n"), '(?m)^ok\s')).Count
 
           if ($loaded -ne $expected) {
@@ -145,14 +145,14 @@ jobs:
       - name: Zip it
         shell: pwsh
         run: |
-          Compress-Archive -Path artifacts/Mews-win-x64/* `
-            -DestinationPath "artifacts/Mews-${{ steps.version.outputs.value }}-win-x64.zip" `
+          Compress-Archive -Path artifacts/Meows-win-x64/* `
+            -DestinationPath "artifacts/Meows-${{ steps.version.outputs.value }}-win-x64.zip" `
             -CompressionLevel Optimal
 
       - name: Pack the plugin contract and the template
         run: |
-          dotnet pack Mews.Plugins.Abstractions/Mews.Plugins.Abstractions.csproj --configuration Release --output artifacts/nuget
-          dotnet pack template/Mews.Plugins.Template.csproj --configuration Release --output artifacts/nuget
+          dotnet pack Meows.Plugins.Abstractions/Meows.Plugins.Abstractions.csproj --configuration Release --output artifacts/nuget
+          dotnet pack template/Meows.Plugins.Template.csproj --configuration Release --output artifacts/nuget
 
       # Is there anything to publish with? Asked separately so the two steps below can be
       # skipped cleanly: a fork with no nuget.org account should still get a working release,
@@ -251,17 +251,17 @@ jobs:
           $notes = @"
           Self-contained Windows x64 build. No .NET runtime needed.
 
-          Download ``Mews-$v-win-x64.zip``, unzip it anywhere, and run ``Mews.exe``. Extract the
+          Download ``Meows-$v-win-x64.zip``, unzip it anywhere, and run ``Meows.exe``. Extract the
           zip before running it: launching straight out of the archive leaves some plugins
           without files they need.
 
           Every plugin starts switched off. Turn on the ones you want on the Plugins tab.
 
-          Writing your own: ``dotnet new install Mews.Plugins.Template`` then
-          ``dotnet new mews-plugin -n YourPlugin``. Both packages are on NuGet and attached here.
+          Writing your own: ``dotnet new install Meows.Plugins.Template`` then
+          ``dotnet new meows-plugin -n YourPlugin``. Both packages are on NuGet and attached here.
           See PLUGIN-GUIDE.md.
           "@
-          $assets = @("artifacts/Mews-$v-win-x64.zip") +
+          $assets = @("artifacts/Meows-$v-win-x64.zip") +
                     (Get-ChildItem artifacts/nuget/*.nupkg | ForEach-Object { $_.FullName })
 
           # Re-pushing a tag is normal, whether from a history rewrite or a rebuilt asset, so
@@ -280,9 +280,9 @@ jobs:
             Write-Host "Release v$v already exists, updating it."
             # --draft=false matters: deleting a tag demotes its release to a draft, and
             # editing one does not publish it again on its own.
-            gh release edit "v$v" --title "Mews $v" --notes $notes --draft=false
+            gh release edit "v$v" --title "Meows $v" --notes $notes --draft=false
             gh release upload "v$v" @assets --clobber
           } else {
             Write-Host "Creating release v$v."
-            gh release create "v$v" @assets --title "Mews $v" --notes $notes
+            gh release create "v$v" @assets --title "Meows $v" --notes $notes
           }

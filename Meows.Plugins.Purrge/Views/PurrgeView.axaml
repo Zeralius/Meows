@@ -1,0 +1,246 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Purrge.ViewModels"
+             x:Class="Meows.Plugins.Purrge.Views.PurrgeView"
+             x:DataType="vm:PurrgeViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="14,12,14,6" />
+        </Style>
+        <Style Selector="Button.row">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.row:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="#23232B" />
+        </Style>
+        <Style Selector="Button.row.selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="#24384A" />
+            <Setter Property="BorderBrush" Value="#3E6C90" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="#17171C" />
+            <Setter Property="BorderBrush" Value="#2A2A32" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <!-- Scan controls -->
+        <Border DockPanel.Dock="Top"
+                Background="#1C1C22"
+                BorderBrush="#2A2A32"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding ScanRoot}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="label" Text="{Binding StatusMessage}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{Binding ResultSummary}" VerticalAlignment="Center" Opacity="0.65" />
+                    <Button Content="Scan" Command="{Binding ScanCommand}" />
+                    <Button Content="Cancel" Command="{Binding CancelScanCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="#3A1F22"
+                BorderBrush="#5C2B30"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFB4B4" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="300,4,*,4,400">
+
+            <!-- Folder tree -->
+            <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="FOLDER TO SCAN" />
+                    <TreeView ItemsSource="{Binding Roots}"
+                              SelectedItem="{Binding SelectedFolder}"
+                              Background="Transparent"
+                              BorderThickness="0">
+                        <TreeView.ItemTemplate>
+                            <TreeDataTemplate x:DataType="vm:FolderNodeViewModel" ItemsSource="{Binding Children}">
+                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                            </TreeDataTemplate>
+                        </TreeView.ItemTemplate>
+                        <TreeView.Styles>
+                            <!-- Two-way, so expanding a node kicks off its child load. The
+                                 style needs its own DataType because it binds against the
+                                 item, not the root view model. -->
+                            <Style Selector="TreeViewItem" x:DataType="vm:FolderNodeViewModel">
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                            </Style>
+                        </TreeView.Styles>
+                    </TreeView>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Background="#22222A" ResizeDirection="Columns" />
+
+            <!-- Duplicate sets -->
+            <DockPanel Grid.Column="2">
+                <TextBlock DockPanel.Dock="Top" Classes="section" Text="IDENTICAL CONTENT, GROUPED" />
+
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,0,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding !HasResults}"
+                           Text="Pick a folder on the left and press Scan. Files are grouped by size first, then by content hash, so only real matches are read in full." />
+
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding Sets}" Margin="10,0,10,10">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DuplicateSetViewModel">
+                                <Border Background="#1C1C22"
+                                        BorderBrush="#2E2E36"
+                                        BorderThickness="1"
+                                        CornerRadius="7"
+                                        Padding="12,10"
+                                        Margin="0,0,0,10">
+                                    <StackPanel Spacing="8">
+                                        <StackPanel Orientation="Horizontal" Spacing="10">
+                                            <TextBlock Text="{Binding Header}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding SubHeader}" Opacity="0.5" />
+                                        </StackPanel>
+
+                                        <ItemsControl ItemsSource="{Binding Files}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:DuplicateFileViewModel">
+                                                    <Button Classes="row"
+                                                            Classes.selected="{Binding IsSelected}"
+                                                            HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Left"
+                                                            BorderThickness="1"
+                                                            CornerRadius="4"
+                                                            Padding="6,4"
+                                                            Margin="0,0,0,2"
+                                                            Command="{Binding $parent[UserControl].((vm:PurrgeViewModel)DataContext).SelectFileCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
+                                                            <Border Grid.Column="0"
+                                                                    Width="48" Height="48"
+                                                                    Background="#101014"
+                                                                    CornerRadius="3"
+                                                                    ClipToBounds="True">
+                                                                <Image Source="{Binding Thumbnail}"
+                                                                       Stretch="UniformToFill"
+                                                                       IsVisible="{Binding HasThumbnail}" />
+                                                            </Border>
+                                                            <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Text="{Binding Folder}"
+                                                                           Classes="label"
+                                                                           TextTrimming="CharacterEllipsis" />
+                                                            </StackPanel>
+                                                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                                <TextBlock Classes="label" Text="modified" />
+                                                                <TextBlock Text="{Binding ModifiedText}" FontSize="11" />
+                                                            </StackPanel>
+                                                            <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                                                                <TextBlock Classes="label" Text="created" />
+                                                                <TextBlock Text="{Binding CreatedText}" FontSize="11" />
+                                                            </StackPanel>
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="3" Background="#22222A" ResizeDirection="Columns" />
+
+            <!-- Preview and actions -->
+            <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0">
+                <ScrollViewer Padding="16,12">
+                    <StackPanel Spacing="8">
+
+                        <TextBlock Text="Preview" FontWeight="SemiBold" FontSize="13" />
+
+                        <Border Background="#101014"
+                                CornerRadius="6"
+                                MinHeight="220"
+                                Padding="6"
+                                IsVisible="{Binding HasSelectedFile}">
+                            <Panel>
+                                <Image Source="{Binding PreviewImage}"
+                                       Stretch="Uniform"
+                                       MaxHeight="430"
+                                       IsVisible="{Binding HasPreviewImage}" />
+                                <TextBlock Text="No inline preview for this file type"
+                                           Opacity="0.35"
+                                           FontSize="11"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding !HasPreviewImage}" />
+                            </Panel>
+                        </Border>
+
+                        <StackPanel Spacing="2" IsVisible="{Binding HasSelectedFile}">
+                            <TextBlock Text="{Binding SelectedFile.FileName}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding SelectedFile.Folder}" Classes="label" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <Border Background="#1F1F26" CornerRadius="6" Padding="10,8">
+                            <TextBlock Text="Matches are byte-identical, so the preview is a sanity check rather than proof. Every removal goes to the Recycle Bin."
+                                       TextWrapping="Wrap"
+                                       FontSize="11"
+                                       Opacity="0.7" />
+                        </Border>
+
+                        <TextBlock Classes="label" Text="Compare ages by" Margin="0,6,0,0" />
+                        <ComboBox ItemsSource="{Binding AgeBasisOptions}"
+                                  SelectedItem="{Binding AgeBasis}"
+                                  HorizontalAlignment="Stretch" />
+                        <TextBlock Text="{Binding AgeBasisHint}" Classes="label" TextWrapping="Wrap" />
+
+                        <TextBlock Text="{Binding PendingActionText}"
+                                   Classes="label"
+                                   TextWrapping="Wrap"
+                                   Margin="0,8,0,0" />
+
+                        <Button Content="{Binding KeepOldestLabel}"
+                                Command="{Binding KeepOldestCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                        <Button Content="{Binding KeepNewestLabel}"
+                                Command="{Binding KeepNewestCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                        <Button Content="Delete selected file"
+                                Command="{Binding DeleteSelectedCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                        <Button Content="Show in Explorer"
+                                Command="{Binding RevealCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

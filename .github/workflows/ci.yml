@@ -29,14 +29,14 @@ jobs:
         run: dotnet test --no-build --configuration Release --verbosity normal
 
       - name: Check the plugin contract still packs
-        run: dotnet pack Mews.Plugins.Abstractions/Mews.Plugins.Abstractions.csproj --no-build --configuration Release --output artifacts/nuget
+        run: dotnet pack Meows.Plugins.Abstractions/Meows.Plugins.Abstractions.csproj --no-build --configuration Release --output artifacts/nuget
 
       - name: Check the plugin template still produces something that builds
         shell: pwsh
         run: |
           # Generated and built for real, against the contract packed a moment ago. A template is
           # not compiled by anything, so nothing else here would notice it breaking: the first
-          # version of this one renamed IMewsPlugin to IWeatherWatch, because the token it
+          # version of this one renamed IMeowsPlugin to IWeatherWatch, because the token it
           # substitutes was a substring of the interface name. That built fine as a template and
           # produced a project that could not compile.
           $ErrorActionPreference = 'Continue'
@@ -56,7 +56,7 @@ jobs:
           Push-Location $work
           # No --Category: it has a default, and passing a symbol by name is the sort of thing
           # that varies between SDK versions. What matters here is that the output compiles.
-          dotnet new mews-plugin -n WeatherWatch
+          dotnet new meows-plugin -n WeatherWatch
           if ($LASTEXITCODE -ne 0) { throw "The template would not generate" }
 
           "generated:"
@@ -79,7 +79,7 @@ jobs:
           # instead of adding to them, and passing nuget.org's URL that way had it normalised
           # into a relative path relative to the project folder. Adding a source in a config
           # leaves the inherited ones alone, which is what is wanted.
-          $xml = '<?xml version="1.0" encoding="utf-8"?><configuration><packageSources><add key="mews-local" value="FEED-PATH" /></packageSources></configuration>'
+          $xml = '<?xml version="1.0" encoding="utf-8"?><configuration><packageSources><add key="meows-local" value="FEED-PATH" /></packageSources></configuration>'
           Set-Content nuget.config -Value $xml.Replace('FEED-PATH', $feed) -Encoding utf8
           "nuget.config written as:"
           Get-Content nuget.config | ForEach-Object { "  $_" }

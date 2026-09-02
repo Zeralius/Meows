@@ -1,12 +1,12 @@
-# Writing a Mews plugin
+# Writing a Meows plugin
 
-Everything useful in Mews lives in a plugin. The shell finds them, lets you activate them, and
+Everything useful in Meows lives in a plugin. The shell finds them, lets you activate them, and
 gives each one a tab. That is nearly all it does.
 
 This guide covers the whole contract. For the shape of a finished plugin, read
-[Telegram Poster](Mews.Plugins.TelegramPoster/README.md),
-[Purrge](Mews.Plugins.Purrge/README.md), [Kibble](Mews.Plugins.Kibble/README.md) or
-[Chonk](Mews.Plugins.Chonk/README.md) alongside it.
+[Telegram Poster](Meows.Plugins.TelegramPoster/README.md),
+[Purrge](Meows.Plugins.Purrge/README.md), [Kibble](Meows.Plugins.Kibble/README.md) or
+[Chonk](Meows.Plugins.Chonk/README.md) alongside it.
 
 ---
 
@@ -32,7 +32,7 @@ Copy an existing plugin's `.csproj`. Three things are load-bearing:
     <!-- The shell supplies both at runtime. Copying them here would invite a second,
          incompatible copy. -->
     <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <ProjectReference Include="..\Mews.Plugins.Abstractions\Mews.Plugins.Abstractions.csproj"
+    <ProjectReference Include="..\Meows.Plugins.Abstractions\Meows.Plugins.Abstractions.csproj"
                       Private="false" ExcludeAssets="runtime" />
 </ItemGroup>
 ```
@@ -54,7 +54,7 @@ dotnet build
 ```
 
 ```bash
-dotnet run --project Mews/Mews.csproj
+dotnet run --project Meows/Meows.csproj
 ```
 
 A Debug build drops each plugin straight into the repo's `plugins/` folder, which is exactly
@@ -65,20 +65,20 @@ Rebuilding just your own plugin is faster and enough, since the shell loads your
 rather than referencing your project:
 
 ```bash
-dotnet build Mews.Plugins.Purrge/Mews.Plugins.Purrge.csproj
+dotnet build Meows.Plugins.Purrge/Meows.Plugins.Purrge.csproj
 ```
 
 ### In Rider
 
-Open `Mews.sln`, set **Mews** as the startup project, and run it.
+Open `Meows.sln`, set **Meows** as the startup project, and run it.
 
 **One trap will cost you an hour if nobody warns you.** A run configuration builds the startup
 project and *its dependencies*. The shell deliberately does not reference plugin projects, which
 is the whole basis of the drop-in design, so pressing Run **does not rebuild your plugin**. You
 debug a stale DLL, your change appears to do nothing, and there is no error anywhere.
 
-It is easy to confirm: edit a plugin source file, build only `Mews/Mews.csproj`, and the DLL in
-`plugins/` keeps its old timestamp. Only `Mews.Plugins.Abstractions` and `Mews` are built.
+It is easy to confirm: edit a plugin source file, build only `Meows/Meows.csproj`, and the DLL in
+`plugins/` keeps its old timestamp. Only `Meows.Plugins.Abstractions` and `Meows` are built.
 
 Two ways round it, either is fine:
 
@@ -94,7 +94,7 @@ Other things worth knowing:
 - **Breakpoints in plugin code work normally.** A Debug build copies the `.pdb` next to the
   plugin DLL, and although the assembly is loaded by reflection into its own
   `AssemblyLoadContext`, the debugger still resolves symbols from beside the DLL. *Attach to
-  Process* works too if you started Mews outside the IDE.
+  Process* works too if you started Meows outside the IDE.
 - **Stop the app before building.** It holds its own exe and every plugin DLL, so a build
   fails with `MSB3027`. This bites more often in an IDE, where the app is easy to leave running.
 - **`plugins/` and `artifacts/` are gitignored**, so the Solution view may hide them. Switch to
@@ -123,13 +123,13 @@ suppression into `.editorconfig` itself, which beats guessing the inspection id 
 
 ### Developing a plugin in its own repository
 
-You do not have to work inside the Mews solution at all. A plugin needs exactly two things from
-Mews: the **contract**, and a way for the shell to **find** it. Both are available from outside.
+You do not have to work inside the Meows solution at all. A plugin needs exactly two things from
+Meows: the **contract**, and a way for the shell to **find** it. Both are available from outside.
 
-**1. Get the contract as a package.** From the Mews repo, once per contract version:
+**1. Get the contract as a package.** From the Meows repo, once per contract version:
 
 ```bash
-dotnet pack Mews.Plugins.Abstractions/Mews.Plugins.Abstractions.csproj -c Release -o artifacts/nuget
+dotnet pack Meows.Plugins.Abstractions/Meows.Plugins.Abstractions.csproj -c Release -o artifacts/nuget
 ```
 
 **2. Point your own repo at that folder** with a `nuget.config` beside your `.csproj`:
@@ -138,17 +138,17 @@ dotnet pack Mews.Plugins.Abstractions/Mews.Plugins.Abstractions.csproj -c Releas
 <?xml version="1.0" encoding="utf-8"?>
 <configuration>
   <packageSources>
-    <add key="mews-local" value="F:\path\to\Mews\artifacts\nuget" />
+    <add key="meows-local" value="F:\path\to\Meows\artifacts\nuget" />
   </packageSources>
 </configuration>
 ```
 
-**3. Your `.csproj` references packages only.** No `ProjectReference`, no Mews sources:
+**3. Your `.csproj` references packages only.** No `ProjectReference`, no Meows sources:
 
 ```xml
 <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Mews.Plugins.Abstractions" Version="0.2.1" ExcludeAssets="runtime" />
+    <PackageReference Include="Meows.Plugins.Abstractions" Version="0.2.1" ExcludeAssets="runtime" />
 </ItemGroup>
 ```
 
@@ -156,29 +156,29 @@ dotnet pack Mews.Plugins.Abstractions/Mews.Plugins.Abstractions.csproj -c Releas
 at runtime, and a second copy of Avalonia in your output would make your `Control` a different
 type from the one the shell can host.
 
-**4. Tell the shell where your build lands.** `MEWS_PLUGINS_DIR` takes a `;`-separated list and
+**4. Tell the shell where your build lands.** `MEOWS_PLUGINS_DIR` takes a `;`-separated list and
 is **additive**, so your plugin loads *alongside* the built-in ones rather than instead of them:
 
 ```bash
-MEWS_PLUGINS_DIR="C:\dev\HelloMews\mews-plugins"
+MEOWS_PLUGINS_DIR="C:\dev\HelloMeows\meows-plugins"
 ```
 
 It still needs one subfolder per plugin, so copy your DLL to
-`...\mews-plugins\HelloMews\HelloMews.dll`. The log then shows both roots being scanned:
+`...\meows-plugins\HelloMeows\HelloMeows.dll`. The log then shows both roots being scanned:
 
 ```
-[plugins] Scanning C:\dev\HelloMews\mews-plugins
+[plugins] Scanning C:\dev\HelloMeows\meows-plugins
 [plugins] Found 'Hello' (external.hello).
-[plugins] Scanning F:\...\Mews\plugins
-[plugins] Found 'Purrge' (mews.purrge).
+[plugins] Scanning F:\...\Meows\plugins
+[plugins] Found 'Purrge' (meows.purrge).
 ```
 
-Everything else behaves identically: your own `%APPDATA%\Mews\plugins\<your-id>\` data
+Everything else behaves identically: your own `%APPDATA%\Meows\plugins\<your-id>\` data
 directory, notifications, background work.
 
 #### Version compatibility
 
-`Mews.Plugins.Abstractions` is deliberately **shared** with the shell rather than loaded from
+`Meows.Plugins.Abstractions` is deliberately **shared** with the shell rather than loaded from
 your folder, and that is what makes type identity work across the load context boundary. The
 consequence: at runtime your plugin uses the shell's copy, not the one you compiled against.
 
@@ -186,7 +186,7 @@ The shell checks this for you. At discovery it reads the contract version your a
 compiled against and refuses anything it cannot honour, **before constructing your plugin**, so
 none of your code runs. The reason appears on your plugin's card in place of its toggle:
 
-> Built for Mews contract 0.3.0, which is newer than this shell's 0.2.1. Update Mews, or rebuild
+> Built for Meows contract 0.3.0, which is newer than this shell's 0.2.1. Update Meows, or rebuild
 > the plugin against 0.2.1.
 
 A mismatched **major** is refused either way, since a major bump means members may have been
@@ -205,35 +205,35 @@ The shell does not reference plugin projects, which is what makes them drop-in, 
 separate step, and the easiest one to forget.
 
 ```bash
-dotnet publish Mews/Mews.csproj -c Release -r win-x64 --self-contained true -o artifacts/Mews-win-x64
+dotnet publish Meows/Meows.csproj -c Release -r win-x64 --self-contained true -o artifacts/Meows-win-x64
 ```
 
 Then build each plugin in Release. Release output goes to `bin/`, deliberately *not* to the dev
 `plugins/` folder, so this cannot disturb a Debug shell you have running:
 
 ```bash
-for p in Mews.Plugins.TelegramPoster Mews.Plugins.Purrge Mews.Plugins.Kibble Mews.Plugins.Chonk; do dotnet build "$p/$p.csproj" -c Release; done
+for p in Meows.Plugins.TelegramPoster Meows.Plugins.Purrge Meows.Plugins.Kibble Meows.Plugins.Chonk; do dotnet build "$p/$p.csproj" -c Release; done
 ```
 
 Stage each one into the folder the deployed shell scans. Copy the **whole** build output rather
 than just the plugin DLL. A plugin's own libraries are loaded from its folder, so a plugin with
 any dependency fails at activation if you cherry-pick, and it fails long after the build looked
-fine. Telegram Poster and Kibble need `Mews.Bot.Core.dll` this way, and Purrge and Chonk
-need `Mews.Disk.dll`:
+fine. Telegram Poster and Kibble need `Meows.Bot.Core.dll` this way, and Purrge and Chonk
+need `Meows.Disk.dll`:
 
 ```bash
-for p in Mews.Plugins.TelegramPoster Mews.Plugins.Purrge Mews.Plugins.Kibble Mews.Plugins.Chonk; do mkdir -p "artifacts/Mews-win-x64/plugins/$p" && cp "$p"/bin/Release/*.dll "$p"/bin/Release/*.deps.json "artifacts/Mews-win-x64/plugins/$p/"; done
+for p in Meows.Plugins.TelegramPoster Meows.Plugins.Purrge Meows.Plugins.Kibble Meows.Plugins.Chonk; do mkdir -p "artifacts/Meows-win-x64/plugins/$p" && cp "$p"/bin/Release/*.dll "$p"/bin/Release/*.deps.json "artifacts/Meows-win-x64/plugins/$p/"; done
 ```
 
-Avalonia and `Mews.Plugins.Abstractions` are not in that output to be copied, because the csproj
+Avalonia and `Meows.Plugins.Abstractions` are not in that output to be copied, because the csproj
 files keep them out. That is on purpose: the shell has to be the only source of both.
 
 Finally drop the third-party native symbols. This matters more than it sounds. `libSkiaSharp.pdb`
-and `libHarfBuzzSharp.pdb` are about 100 MB of a 206 MB output. Mews' own PDBs stay, so stack
+and `libHarfBuzzSharp.pdb` are about 100 MB of a 206 MB output. Meows' own PDBs stay, so stack
 traces remain readable:
 
 ```bash
-find artifacts/Mews-win-x64 -maxdepth 1 -name "*.pdb" ! -name "Mews*.pdb" -delete
+find artifacts/Meows-win-x64 -maxdepth 1 -name "*.pdb" ! -name "Meows*.pdb" -delete
 ```
 
 That leaves roughly 106 MB, or 45 MB zipped.
@@ -248,10 +248,10 @@ Run a published build from **outside** the repository. In place, the ancestor pr
 repo's own `plugins/` folder and a completely broken deployment still looks fine:
 
 ```bash
-cp -r artifacts/Mews-win-x64 "$TEMP/mews-test" && "$TEMP/mews-test/Mews.exe"
+cp -r artifacts/Meows-win-x64 "$TEMP/meows-test" && "$TEMP/meows-test/Meows.exe"
 ```
 
-`%APPDATA%\Mews\mews.log` should name the deployed folder, not the repo one. Watch the working
+`%APPDATA%\Meows\meows.log` should name the deployed folder, not the repo one. Watch the working
 directory too: launching from the repo lets a plugin's own probing find repo paths it would
 never see on a real machine.
 
@@ -259,18 +259,18 @@ never see on a real machine.
 
 | Symptom | Cause |
 |---|---|
-| `MSB3027 ... locked by "Mews"` | The app is running. Close it, since it holds its own exe and every plugin DLL |
+| `MSB3027 ... locked by "Meows"` | The app is running. Close it, since it holds its own exe and every plugin DLL |
 | Your plugin never appears | Not in the solution, so a solution build silently skips it. `dotnet sln add` it |
 | Changes have no effect | You built Release, which goes to `bin/` rather than the dev `plugins/` folder |
-| Plugin loads but the tab is empty | Check `mews.log`; an exception in `CreateView` is caught and marked *Failed* |
+| Plugin loads but the tab is empty | Check `meows.log`; an exception in `CreateView` is caught and marked *Failed* |
 
 ---
 
 ## Starting from the template
 
 ```bash
-dotnet new install Mews.Plugins.Template
-dotnet new mews-plugin -n WeatherWatch --Category "Everyday"
+dotnet new install Meows.Plugins.Template
+dotnet new meows-plugin -n WeatherWatch --Category "Everyday"
 ```
 
 That writes the project, the plugin class, a view and a view model, already wired together. The id
@@ -283,15 +283,15 @@ never write it by hand.
 ## 3. The entry point
 
 ```csharp
-public sealed class MyPlugin : IMewsPlugin
+public sealed class MyPlugin : IMeowsPlugin
 {
-    public string Id => "mews.my-plugin";   // stable forever: it is the settings key
+    public string Id => "meows.my-plugin";   // stable forever: it is the settings key
     public string DisplayName => "My Plugin";
     public string Description => "One sentence, shown on the Plugins tab.";
     public string? Icon => "🎲";            // shown on the tab header
     public string? Category => "Everyday";  // heading on the Plugins tab, optional
 
-    public Control CreateView(IMewsHost host) =>
+    public Control CreateView(IMeowsHost host) =>
         new MyView { DataContext = new MyViewModel(host) };
 }
 ```
@@ -309,31 +309,31 @@ ignoring case. Pick an existing one to join it, or invent your own.
 
 ---
 
-## 4. `IMewsHost`
+## 4. `IMeowsHost`
 
 Your whole view of the shell. One instance per plugin, scoped to you.
 
 ```csharp
-public interface IMewsHost
+public interface IMeowsHost
 {
     string PluginId { get; }
     string DataDirectory { get; }
     void Log(string message);
     T? LoadSettings<T>() where T : class;
     void SaveSettings<T>(T settings) where T : class;
-    IMewsNotifications Notifications { get; }
-    IMewsBackgroundWork Background { get; }
+    IMeowsNotifications Notifications { get; }
+    IMeowsBackgroundWork Background { get; }
 }
 ```
 
 ### `DataDirectory`
 
-A writable folder at `%APPDATA%\Mews\plugins\<your-id>\`, created before you see it. Put caches
+A writable folder at `%APPDATA%\Meows\plugins\<your-id>\`, created before you see it. Put caches
 and databases here. Never write inside the repository or next to the executable.
 
 ### `Log`
 
-Goes to the shared log pane and `%APPDATA%\Mews\mews.log`. Safe from any thread. Use it for a
+Goes to the shared log pane and `%APPDATA%\Meows\meows.log`. Safe from any thread. Use it for a
 trail you would want when something misbehaves, not for anything the user must act on. That is
 what notifications are for.
 
@@ -368,7 +368,7 @@ Use these when the user needs to know something. The point is that the shell own
 so a problem raised by a tab in the background is still seen.
 
 ```csharp
-public interface IMewsNotifications
+public interface IMeowsNotifications
 {
     void Post(NotificationSeverity severity, string title, string message = "",
         NotificationAction? action = null);
@@ -427,7 +427,7 @@ For anything that should keep running while the user is on another tab: a folder
 import, a periodic scan.
 
 ```csharp
-public interface IMewsBackgroundWork
+public interface IMeowsBackgroundWork
 {
     IBackgroundTask Run(string title, Func<IBackgroundContext, Task> work);
 
@@ -519,7 +519,7 @@ public void Dispose()
 ```
 
 Anything you started that the shell does not know about is yours to stop. Background tasks
-registered through `IMewsBackgroundWork` are already handled.
+registered through `IMeowsBackgroundWork` are already handled.
 
 ---
 
@@ -527,21 +527,21 @@ registered through `IMewsBackgroundWork` are already handled.
 
 One subfolder per plugin inside a `plugins` directory, resolved in this order:
 
-1. `MEWS_PLUGINS_DIR`, which is `;` separated and additive, see
+1. `MEOWS_PLUGINS_DIR`, which is `;` separated and additive, see
    [Developing a plugin in its own repository](#developing-a-plugin-in-its-own-repository)
 2. `plugins` next to the executable, the deployed layout
 3. `plugins` in any ancestor directory, **provided it holds a subfolder containing a `.dll`**
 
 That last condition exists because Windows path matching is case-insensitive: without it, an
 ancestor *source* folder named `Plugins` wins. It is why the shell's own loader lives in
-`Mews/PluginSystem/` and not `Mews/Plugins/`.
+`Meows/PluginSystem/` and not `Meows/Plugins/`.
 
 Inside your folder the shell prefers `<foldername>.dll` and otherwise scans every `.dll`.
 
 ### Assembly isolation
 
 Each plugin loads in its own `AssemblyLoadContext`, so two plugins can depend on different
-versions of the same library. Anything starting with `Mews.Plugins.Abstractions`, `Avalonia`,
+versions of the same library. Anything starting with `Meows.Plugins.Abstractions`, `Avalonia`,
 `System.`, or `Microsoft.` is deliberately **shared** with the shell.
 
 That sharing is not an optimisation. A plugin that loaded its own Avalonia would return a
@@ -568,15 +568,15 @@ Private dependencies are fine. Ship them in your folder and the resolver finds t
 
 ## 11. Debugging
 
-`%APPDATA%\Mews\mews.log` is truncated per run and shows discovery:
+`%APPDATA%\Meows\meows.log` is truncated per run and shows discovery:
 
 ```
-[plugins] Scanning F:\...\Mews\plugins
-[plugins] Found 'Purrge' (mews.purrge).
+[plugins] Scanning F:\...\Meows\plugins
+[plugins] Found 'Purrge' (meows.purrge).
 [plugins] Discovered 2 plugin(s).
 ```
 
 Not appearing at all usually means the wrong `plugins` folder, or a build that never ran because
-the project is not in the solution. "implements IMewsPlugin but has no parameterless
-constructor" means exactly that. Delete `%APPDATA%\Mews` for a clean reset, since nothing is written
+the project is not in the solution. "implements IMeowsPlugin but has no parameterless
+constructor" means exactly that. Delete `%APPDATA%\Meows` for a clean reset, since nothing is written
 inside the repository.

@@ -51,7 +51,7 @@ Thumbs.db
 desktop.ini
 
 ## Local secrets and machine-specific config
-# Mews keeps its own settings under %APPDATA%\Mews, but keep this here so a future
+# Meows keeps its own settings under %APPDATA%\Meows, but keep this here so a future
 # plugin that wants a local .env does not leak one by accident.
 .env
 *.local.json

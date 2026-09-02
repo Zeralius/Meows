@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+        <OutputPath Condition="'$(Configuration)' == 'Debug'">$(MSBuildThisFileDirectory)..\plugins\Meows.Plugins.Kibble\</OutputPath>
+        <OutputPath Condition="'$(Configuration)' != 'Debug'">$(MSBuildThisFileDirectory)bin\$(Configuration)\</OutputPath>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
+      <ProjectReference Include="..\Meows.Bot.Core\Meows.Bot.Core.csproj" />
+      <ProjectReference Include="..\Meows.Plugins.Abstractions\Meows.Plugins.Abstractions.csproj"
+                        Private="false"
+                        ExcludeAssets="runtime" />
+    </ItemGroup>
+
+</Project>

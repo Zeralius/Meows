@@ -6,7 +6,7 @@
         <Nullable>enable</Nullable>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
 
-        <!-- The folder Mews looks in must be named after the dll, so keep the framework out of
+        <!-- The folder Meows looks in must be named after the dll, so keep the framework out of
              the output path or you end up with plugins/MyPlugin/net10.0/MyPlugin.dll. -->
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     </PropertyGroup>
@@ -16,7 +16,7 @@
              contract at run time, and there has to be exactly one copy of each: a plugin that
              brings its own Avalonia hands back a Control of a type the shell cannot host. -->
         <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-        <PackageReference Include="Mews.Plugins.Abstractions" Version="0.2.1" ExcludeAssets="runtime" PrivateAssets="all" />
+        <PackageReference Include="Meows.Plugins.Abstractions" Version="0.2.1" ExcludeAssets="runtime" PrivateAssets="all" />
     </ItemGroup>
 
 </Project>

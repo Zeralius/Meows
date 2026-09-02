@@ -1,0 +1,36 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="coverlet.collector" Version="6.0.4" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Using Include="Xunit" />
+  </ItemGroup>
+
+  <!-- Covers pure and filesystem logic. Anything needing an Avalonia render backend or a
+       running dispatcher is deliberately out of scope, so this suite stays headless. -->
+  <ItemGroup>
+    <ProjectReference Include="..\Meows.Bot.Core\Meows.Bot.Core.csproj" />
+    <ProjectReference Include="..\Meows\Meows.csproj" />
+    <ProjectReference Include="..\Meows.Plugins.TelegramPoster\Meows.Plugins.TelegramPoster.csproj" />
+    <ProjectReference Include="..\Meows.Plugins.Purrge\Meows.Plugins.Purrge.csproj" />
+      <ProjectReference Include="..\Meows.Plugins.Chonk\Meows.Plugins.Chonk.csproj" />
+      <ProjectReference Include="..\Meows.Plugins.Litter\Meows.Plugins.Litter.csproj" />
+      <ProjectReference Include="..\Meows.Plugins.Molt\Meows.Plugins.Molt.csproj" />
+      <ProjectReference Include="..\Meows.Plugins.Saucer\Meows.Plugins.Saucer.csproj" />
+      <ProjectReference Include="..\Meows.Plugins.Mouser\Meows.Plugins.Mouser.csproj" />
+    <ProjectReference Include="..\Meows.Plugins.Kibble\Meows.Plugins.Kibble.csproj" />
+  </ItemGroup>
+
+</Project>

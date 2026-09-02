@@ -1,13 +1,13 @@
-using Mews.Plugins.Abstractions;
+using Meows.Plugins.Abstractions;
 
 namespace MyPlugin;
 
 public sealed class MyPluginViewModel : ObservableObject
 {
-    private readonly IMewsHost _host;
+    private readonly IMeowsHost _host;
     private string _status;
 
-    public MyPluginViewModel(IMewsHost host)
+    public MyPluginViewModel(IMeowsHost host)
     {
         _host = host;
         _status = $"Settings and anything else you save live in {host.DataDirectory}";

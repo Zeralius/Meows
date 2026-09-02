@@ -1,9 +1,9 @@
 using Avalonia.Controls;
-using Mews.Plugins.Abstractions;
+using Meows.Plugins.Abstractions;
 
 namespace MyPlugin;
 
-public sealed class MyPluginPlugin : IMewsPlugin
+public sealed class MyPluginPlugin : IMeowsPlugin
 {
     /// <summary>Stable forever. It is the settings key and the activation record.</summary>
     public string Id => "PLUGIN-ID";
@@ -17,7 +17,7 @@ public sealed class MyPluginPlugin : IMewsPlugin
     /// <summary>Heading on the Plugins tab. Null puts it with everything else.</summary>
     public string? Category => "PLUGIN-CATEGORY";
 
-    public Control CreateView(IMewsHost host) => new MyPluginView
+    public Control CreateView(IMeowsHost host) => new MyPluginView
     {
         DataContext = new MyPluginViewModel(host),
     };

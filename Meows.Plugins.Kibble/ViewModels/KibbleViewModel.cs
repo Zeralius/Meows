@@ -1,0 +1,1170 @@
+using System.Collections.ObjectModel;
+using System.Diagnostics;
+using Avalonia.Media.Imaging;
+using Avalonia.Threading;
+using Meows.Bot;
+using Meows.Plugins.Abstractions;
+using Meows.Plugins.Kibble.Services;
+
+namespace Meows.Plugins.Kibble.ViewModels;
+
+public sealed class KibbleSettings
+{
+    public string? BotRoot { get; set; }
+
+    public string? LastSourceFolder { get; set; }
+
+    public IntakeStamp Stamp { get; set; } = IntakeStamp.KeepSource;
+
+    public GridSort Sort { get; set; } = GridSort.NameAscending;
+
+    public PageOrder PageOrder { get; set; } = PageOrder.ByName;
+
+    public BundleMode BundleMode { get; set; } = BundleMode.AsComic;
+
+    public bool LazyLoad { get; set; }
+
+    public int PageSize { get; set; } = 200;
+
+    public ComicNaming Naming { get; set; } = ComicNaming.Folder;
+}
+
+/// <summary>
+/// A file the folder scan found, with what that scan already told us about it. Kept instead of
+/// a view model so a folder of thousands costs a list of small records rather than thousands of
+/// tiles, thumbnails and bindings.
+/// </summary>
+public sealed record PendingFile(string Path, string Name, long Size, DateTime Modified);
+
+/// <summary>What a send does when several files are picked.</summary>
+public enum BundleMode
+{
+    /// <summary>Zip them into one .cbz, so they post as a single comic.</summary>
+    AsComic,
+
+    /// <summary>Move them in as they are, so each one posts on its own.</summary>
+    AsFiles,
+}
+
+/// <summary>How the folder you opened is laid out in the middle column.</summary>
+public enum GridSort
+{
+    NameAscending,
+    NameDescending,
+    NewestFirst,
+    OldestFirst,
+}
+
+/// <summary>A sort with words on it, so the dropdown does not show an enum name.</summary>
+public sealed record SortOption(GridSort Value, string Label)
+{
+    public override string ToString() => Label;
+}
+
+/// <summary>A naming rule with words on it.</summary>
+public sealed record NamingOption(ComicNaming Value, string Label)
+{
+    public override string ToString() => Label;
+}
+
+/// <summary>A page order with words on it.</summary>
+public sealed record PageOrderOption(PageOrder Value, string Label)
+{
+    public override string ToString() => Label;
+}
+
+public sealed class KibbleViewModel : ObservableObject, IDisposable
+{
+    private const int ThumbnailWidth = 150;
+    private const int PreviewWidth = 720;
+
+    private readonly IMeowsHost _host;
+    private KibbleSettings _settings;
+    private BotWorkspace? _workspace;
+    private CancellationTokenSource? _thumbnailCts;
+    private Task _thumbnailPass = Task.CompletedTask;
+
+    private IncomingFileViewModel? _selected;
+    private Bitmap? _previewImage;
+    private string _archiveName = "";
+
+    /// <summary>Everything highlighted in the grid. One entry is a plain send, more is a comic.</summary>
+    private readonly List<IncomingFileViewModel> _selection = [];
+
+    /// <summary>Every file still waiting, sorted. Incoming shows a prefix of this.</summary>
+    private readonly List<PendingFile> _pending = [];
+
+    /// <summary>How many of them we have actually built tiles for.</summary>
+    private int _loadedTarget;
+
+    /// <summary>The folder's own name, which every naming rule falls back to.</summary>
+    private string _folderName = "";
+
+    /// <summary>Whether the last selection was already a comic, so a random tag holds still.</summary>
+    private bool _wasBundle;
+    private string _sourceFolder = "";
+    private string _statusMessage = "Open a folder to start.";
+    private string? _errorMessage;
+    private string? _blockedReason;
+
+    /// <summary>Everything the last send moved, so it can be put back.</summary>
+    private readonly List<IntakeResult> _lastBatch = [];
+
+    public KibbleViewModel(IMeowsHost host)
+    {
+        _host = host;
+        _settings = host.LoadSettings<KibbleSettings>() ?? new KibbleSettings();
+        _sourceFolder = _settings.LastSourceFolder ?? "";
+
+        SendToCommand = new RelayCommand(SendTo, CanSend);
+        LoadMoreCommand = new RelayCommand(LoadMore, () => HasMore);
+        ChooseComicCommand = new RelayCommand(() => BundleMode = BundleMode.AsComic);
+        ChooseFilesCommand = new RelayCommand(() => BundleMode = BundleMode.AsFiles);
+        SkipCommand = new RelayCommand(SkipSelected, () => Selected is not null);
+        RefreshCommand = new RelayCommand(() => LoadFolder(SourceFolder), () => SourceFolder.Length > 0);
+        UndoCommand = new RelayCommand(UndoLastBatch, () => _lastBatch.Count > 0);
+        OpenSourceCommand = new RelayCommand(() => OpenInExplorer(SourceFolder), () => SourceFolder.Length > 0);
+
+        Reload();
+        if (_sourceFolder.Length > 0 && Directory.Exists(_sourceFolder))
+            LoadFolder(_sourceFolder);
+    }
+
+    public ObservableCollection<DestinationViewModel> Destinations { get; } = new();
+
+    public ObservableCollection<IncomingFileViewModel> Incoming { get; } = new();
+
+    public RelayCommand SendToCommand { get; }
+
+    public RelayCommand SkipCommand { get; }
+
+    public RelayCommand RefreshCommand { get; }
+
+    public RelayCommand UndoCommand { get; }
+
+    public RelayCommand OpenSourceCommand { get; }
+
+    public IReadOnlyList<StampOption> StampOptions { get; } =
+    [
+        new(IntakeStamp.KeepSource, "Keep each file's own date"),
+        new(IntakeStamp.QueuedNow, "Date them as they are queued"),
+    ];
+
+    public StampOption SelectedStamp
+    {
+        get => StampOptions.First(o => o.Value == _settings.Stamp);
+        set
+        {
+            if (value is null || _settings.Stamp == value.Value)
+                return;
+            _settings.Stamp = value.Value;
+            SaveSettings();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(StampHint));
+        }
+    }
+
+    private IntakeStamp Stamp => _settings.Stamp;
+
+    /// <summary>
+    /// Spelled out because it decides posting order, and getting it wrong is invisible until
+    /// the queue behaves oddly weeks later.
+    /// </summary>
+    public string StampHint => Stamp == IntakeStamp.KeepSource
+        ? "Files keep their original date, so genuinely older art posts first."
+        : "Files are stamped as they are queued, so it is first in, first out.";
+
+    public bool HasWorkspace => _workspace?.LooksValid == true;
+
+    public string BotRootText => _workspace?.Root ?? "No bot folder found";
+
+    public string SourceFolder
+    {
+        get => _sourceFolder;
+        private set
+        {
+            if (!SetField(ref _sourceFolder, value))
+                return;
+            OnPropertyChanged(nameof(HasSource));
+            RefreshCommand.RaiseCanExecuteChanged();
+            OpenSourceCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool HasSource => SourceFolder.Length > 0;
+
+    public string StatusMessage
+    {
+        get => _statusMessage;
+        private set => SetField(ref _statusMessage, value);
+    }
+
+    public string? ErrorMessage
+    {
+        get => _errorMessage;
+        private set
+        {
+            if (SetField(ref _errorMessage, value))
+                OnPropertyChanged(nameof(HasError));
+        }
+    }
+
+    public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
+
+    /// <summary>Why the selected file cannot go to the highlighted group, if it cannot.</summary>
+    public string? BlockedReason
+    {
+        get => _blockedReason;
+        private set
+        {
+            if (SetField(ref _blockedReason, value))
+                OnPropertyChanged(nameof(IsBlocked));
+        }
+    }
+
+    public bool IsBlocked => !string.IsNullOrEmpty(BlockedReason);
+
+    public IncomingFileViewModel? Selected
+    {
+        get => _selected;
+        set
+        {
+            if (!SetField(ref _selected, value))
+                return;
+            OnPropertyChanged(nameof(HasSelection));
+            BlockedReason = null;
+            SendToCommand.RaiseCanExecuteChanged();
+            SkipCommand.RaiseCanExecuteChanged();
+            _ = LoadPreviewAsync(value);
+        }
+    }
+
+    public bool HasSelection => _selected is not null;
+
+    /// <summary>
+    /// Told to us by the grid, because ctrl and shift ranges are the list control's job and
+    /// reimplementing them by hand would only get them subtly wrong.
+    /// </summary>
+    public void SetSelection(IEnumerable<IncomingFileViewModel> files)
+    {
+        // Keep the order things were picked in. Whatever the list control reports, anything
+        // already picked holds its place and only genuinely new files go on the end, so the
+        // page numbers do not shuffle when you add one more.
+        var now = files.ToList();
+        var live = now.ToHashSet();
+        var ordered = _selection.Where(live.Contains).ToList();
+        foreach (var file in now)
+            if (!ordered.Contains(file))
+                ordered.Add(file);
+
+        _selection.Clear();
+        _selection.AddRange(ordered);
+        NumberThePicked();
+        SuggestName();
+        _wasBundle = IsBundle;
+        BlockedReason = null;
+        OnPropertyChanged(nameof(SelectionCount));
+        OnPropertyChanged(nameof(IsBundle));
+        OnPropertyChanged(nameof(BundleText));
+        OnPropertyChanged(nameof(SelectionText));
+        OnPropertyChanged(nameof(SendVerb));
+    }
+
+    public IReadOnlyList<SortOption> SortOptions { get; } =
+    [
+        new(GridSort.NameAscending, "Name, A to Z"),
+        new(GridSort.NameDescending, "Name, Z to A"),
+        new(GridSort.NewestFirst, "Newest first"),
+        new(GridSort.OldestFirst, "Oldest first"),
+    ];
+
+    public SortOption SelectedSort
+    {
+        get => SortOptions.First(o => o.Value == _settings.Sort);
+        set
+        {
+            if (value is null || _settings.Sort == value.Value)
+                return;
+            _settings.Sort = value.Value;
+            SaveSettings();
+            OnPropertyChanged();
+            ApplySort();
+        }
+    }
+
+    /// <summary>
+    /// Off, the whole folder is built at once, which is what makes a folder of thousands crawl:
+    /// every file gets a tile and a decoded thumbnail whether you ever look at it or not.
+    /// </summary>
+    public bool LazyLoad
+    {
+        get => _settings.LazyLoad;
+        set
+        {
+            if (_settings.LazyLoad == value)
+                return;
+            _settings.LazyLoad = value;
+            SaveSettings();
+            OnPropertyChanged();
+            ReloadWindow();
+        }
+    }
+
+    public IReadOnlyList<int> PageSizes { get; } = [100, 200, 500, 1000];
+
+    public int PageSize
+    {
+        get => _settings.PageSize;
+        set
+        {
+            if (_settings.PageSize == value || value <= 0)
+                return;
+            _settings.PageSize = value;
+            SaveSettings();
+            OnPropertyChanged();
+            if (LazyLoad)
+                ReloadWindow();
+        }
+    }
+
+    /// <summary>How many tiles a load builds at a time. Everything, when lazy load is off.</summary>
+    private int Batch => LazyLoad ? Math.Max(1, _settings.PageSize) : int.MaxValue;
+
+    /// <summary>
+    /// How many tiles we should be showing. With batching off that is simply all of them, and
+    /// saying so in one place stops every caller having to remember it.
+    /// </summary>
+    private int ClampTarget(long desired)
+    {
+        if (!LazyLoad)
+            return _pending.Count;
+
+        var floor = Math.Min(Batch, _pending.Count);
+        return (int)Math.Clamp(desired, floor, _pending.Count);
+    }
+
+    public bool HasMore => Incoming.Count < _pending.Count;
+
+    public string LoadMoreText
+    {
+        get
+        {
+            var rest = _pending.Count - Incoming.Count;
+            return rest <= 0 ? "" : $"Load {Math.Min(Batch, rest)} more, {rest} still waiting";
+        }
+    }
+
+    public IReadOnlyList<PageOrderOption> PageOrderOptions { get; } =
+    [
+        new(PageOrder.ByName, "Pages in file name order"),
+        new(PageOrder.AsPicked, "Pages in the order I picked them"),
+    ];
+
+    public PageOrderOption SelectedPageOrder
+    {
+        get => PageOrderOptions.First(o => o.Value == _settings.PageOrder);
+        set
+        {
+            if (value is null || _settings.PageOrder == value.Value)
+                return;
+            _settings.PageOrder = value.Value;
+            SaveSettings();
+            OnPropertyChanged();
+            NumberThePicked();
+        }
+    }
+
+    /// <summary>
+    /// Comic or separate files. Only matters with several picked, but it is remembered, so it
+    /// is worth being able to set it before you start picking.
+    /// </summary>
+    public BundleMode BundleMode
+    {
+        get => _settings.BundleMode;
+        set
+        {
+            if (_settings.BundleMode == value)
+                return;
+            _settings.BundleMode = value;
+            SaveSettings();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsComicMode));
+            OnPropertyChanged(nameof(IsFileMode));
+            OnPropertyChanged(nameof(SendVerb));
+            OnPropertyChanged(nameof(BundleText));
+            BlockedReason = null;
+            NumberThePicked();
+        }
+    }
+
+    public bool IsComicMode => BundleMode == BundleMode.AsComic;
+
+    public bool IsFileMode => BundleMode == BundleMode.AsFiles;
+
+    public RelayCommand LoadMoreCommand { get; }
+
+    public RelayCommand ChooseComicCommand { get; }
+
+    public RelayCommand ChooseFilesCommand { get; }
+
+    public int SelectionCount => _selection.Count;
+
+    /// <summary>
+    /// Stamps 1, 2, 3 onto the picked tiles in the order they will appear in the comic, so the
+    /// page order is something you can see rather than something you find out afterwards.
+    /// </summary>
+    private void NumberThePicked()
+    {
+        foreach (var file in Incoming)
+            file.PageNumber = 0;
+
+        // Only a comic has pages. Sending files in as themselves has an order, but it is just
+        // the order the grid is already showing, so a number on each tile would say nothing.
+        if (_selection.Count < Intake.MinBundle || IsFileMode)
+            return;
+
+        var page = 1;
+        foreach (var file in PagesInOrder())
+            file.PageNumber = page++;
+    }
+
+    /// <summary>The pick in the order it would be written into the archive.</summary>
+    private IEnumerable<IncomingFileViewModel> PagesInOrder() =>
+        _settings.PageOrder == PageOrder.ByName
+            ? _selection.OrderBy(f => f.FileName, Comparer<string>.Create(MediaRules.CompareNatural))
+            : _selection;
+
+    /// <summary>
+    /// The pick in the order the grid is showing it, which is what the sort dropdown decides.
+    /// This is the order separate files are queued in, so what you see is what the bot gets.
+    /// </summary>
+    private IEnumerable<IncomingFileViewModel> GridOrder() =>
+        Incoming.Where(_selection.Contains);
+
+    /// <summary>Two or more picked means the next send makes a comic out of them.</summary>
+    public bool IsBundle => _selection.Count >= Intake.MinBundle;
+
+    public string SelectionText => _selection.Count > 1 ? $"{_selection.Count} picked" : "";
+
+    /// <summary>What the destination buttons are about to do, so the left column stays honest.</summary>
+    public string SendVerb => IsBundle
+        ? (IsComicMode ? "SEND AS ONE COMIC" : $"SEND {_selection.Count} FILES")
+        : "SEND TO";
+
+    public string BundleText => IsBundle
+        ? (IsComicMode
+            ? $"{_selection.Count} files will be zipped into one comic and queued as a single post."
+            : $"{_selection.Count} files will be queued as they are, in the order shown, each posting on its own.")
+        : "";
+
+    public IReadOnlyList<NamingOption> NamingOptions { get; } =
+    [
+        new(ComicNaming.Folder, "The folder name"),
+        new(ComicNaming.Weighted, "Words the files share"),
+        new(ComicNaming.RandomTag, "Folder name plus a random tag"),
+    ];
+
+    public NamingOption SelectedNaming
+    {
+        get => NamingOptions.First(o => o.Value == _settings.Naming);
+        set
+        {
+            if (value is null || _settings.Naming == value.Value)
+                return;
+            _settings.Naming = value.Value;
+            SaveSettings();
+            OnPropertyChanged();
+
+            // Show what the rule gives straight away, rather than at the next click.
+            _wasBundle = false;
+            SuggestName();
+        }
+    }
+
+    /// <summary>
+    /// Fills the name box from whichever rule is chosen. Weighted follows the pick, so it is
+    /// recomputed every time the pick changes. A random tag deliberately does not: it is settled
+    /// when the pick first becomes a comic and then holds still, because a name that reshuffles
+    /// under you while you are adding files is not a name you can trust.
+    /// </summary>
+    private void SuggestName()
+    {
+        if (_settings.Naming == ComicNaming.Folder)
+        {
+            if (!_wasBundle)
+                ArchiveName = _folderName;
+            return;
+        }
+
+        if (!IsBundle)
+        {
+            ArchiveName = _folderName;
+            return;
+        }
+
+        if (_settings.Naming == ComicNaming.Weighted)
+            ArchiveName = ComicName.Weighted(_selection.Select(f => f.FileName), _folderName);
+        else if (!_wasBundle)
+            ArchiveName = ComicName.WithRandomTag(_folderName);
+    }
+
+    /// <summary>Name for the archive. Defaults to the folder you opened, since that is usually the set.</summary>
+    public string ArchiveName
+    {
+        get => _archiveName;
+        set => SetField(ref _archiveName, value);
+    }
+
+    public Bitmap? PreviewImage
+    {
+        get => _previewImage;
+        private set
+        {
+            var old = _previewImage;
+            if (!SetField(ref _previewImage, value))
+                return;
+            OnPropertyChanged(nameof(HasPreviewImage));
+            old?.Dispose();
+        }
+    }
+
+    public bool HasPreviewImage => _previewImage is not null;
+
+    public string RemainingText => _pending.Count switch
+    {
+        0 => "Nothing left",
+        1 => "1 file left",
+        _ => $"{_pending.Count} files left",
+    };
+
+    public bool IsEmpty => _pending.Count == 0;
+
+    public string SummaryText
+    {
+        get
+        {
+            if (Destinations.Count == 0)
+                return "";
+            var dry = Destinations.Count(d => d.IsDry);
+            var low = Destinations.Count(d => d.IsLow);
+            if (dry == 0 && low == 0)
+                return $"{Destinations.Count} group(s), all stocked";
+            var parts = new List<string>();
+            if (dry > 0) parts.Add($"{dry} dry");
+            if (low > 0) parts.Add($"{low} running low");
+            return string.Join(", ", parts);
+        }
+    }
+
+    public void SetBotRoot(string path)
+    {
+        _settings.BotRoot = path;
+        SaveSettings();
+        Reload();
+    }
+
+    public void LoadFolder(string folder)
+    {
+        ErrorMessage = null;
+        CancelThumbnails();
+        ClearIncoming();
+
+        if (!Directory.Exists(folder))
+        {
+            ErrorMessage = $"{folder} does not exist.";
+            return;
+        }
+
+        SourceFolder = folder;
+        _settings.LastSourceFolder = folder;
+        SaveSettings();
+        _folderName = Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        _wasBundle = false;
+        ArchiveName = _folderName;
+
+        try
+        {
+            // Everything, not just what the bot can post. A file it cannot use is exactly
+            // what you want to see and deal with, rather than have quietly hidden.
+            //
+            // EnumerateFiles off a DirectoryInfo hands back the size and timestamp that the
+            // directory walk already read, so nothing here asks the filesystem twice. On a
+            // couple of thousand files that alone is the difference between 17ms and 284ms.
+            _pending.Clear();
+            foreach (var info in new DirectoryInfo(folder).EnumerateFiles())
+                _pending.Add(new PendingFile(info.FullName, info.Name, info.Length, info.LastWriteTime));
+
+            SortPending();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not read {folder}: {ex.Message}";
+            return;
+        }
+
+        _loadedTarget = ClampTarget(Batch);
+        Rebuild();
+
+        Selected = Incoming.FirstOrDefault();
+        StatusMessage = Describe(folder);
+        RaiseGridState();
+    }
+
+    private string Describe(string folder)
+    {
+        var where = Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar));
+        return HasMore
+            ? $"showing {Incoming.Count} of {_pending.Count} in {where}"
+            : $"{_pending.Count} file(s) in {where}";
+    }
+
+    /// <summary>
+    /// Builds tiles for the first <see cref="_loadedTarget"/> waiting files. Tiles that are
+    /// still wanted are carried over rather than rebuilt, so a thumbnail decoded once is not
+    /// decoded again after a sort or another batch.
+    /// </summary>
+    private void Rebuild()
+    {
+        var want = _pending.Take(Math.Min(_loadedTarget, _pending.Count)).ToList();
+        var existing = Incoming.ToDictionary(f => f.Path);
+
+        Incoming.Clear();
+        foreach (var file in want)
+        {
+            if (existing.Remove(file.Path, out var already))
+                Incoming.Add(already);
+            else
+                Incoming.Add(new IncomingFileViewModel(file.Path, file.Size, file.Modified));
+        }
+
+        foreach (var dropped in existing.Values)
+            dropped.Dispose();
+
+        if (Selected is null || !Incoming.Contains(Selected))
+            Selected = Incoming.FirstOrDefault();
+
+        RaiseWindowState();
+        _thumbnailPass = LoadThumbnailsAsync();
+    }
+
+    /// <summary>Tops the window back up after files leave it, without disturbing the rest.</summary>
+    private void TopUp()
+    {
+        var target = Math.Min(_loadedTarget, _pending.Count);
+        while (Incoming.Count < target)
+        {
+            var next = _pending[Incoming.Count];
+            Incoming.Add(new IncomingFileViewModel(next.Path, next.Size, next.Modified));
+        }
+
+        RaiseWindowState();
+
+        // Tiles that slide in to replace sent ones are brand new and have nothing decoded yet.
+        // Both places that add tiles start the decode, so no caller can forget to.
+        _thumbnailPass = LoadThumbnailsAsync();
+    }
+
+    private void LoadMore()
+    {
+        _loadedTarget = ClampTarget((long)_loadedTarget + Batch);
+        TopUp();
+    }
+
+    /// <summary>Lazy load switched on or off, or the batch size changed.</summary>
+    private void ReloadWindow()
+    {
+        _loadedTarget = ClampTarget(Batch);
+        SetSelection([]);
+        Rebuild();
+    }
+
+    private void SortPending()
+    {
+        var sorted = _settings.Sort switch
+        {
+            GridSort.NameDescending => _pending.OrderByDescending(f => f.Name, Comparer<string>.Create(MediaRules.CompareNatural)),
+            GridSort.NewestFirst => _pending.OrderByDescending(f => f.Modified),
+            GridSort.OldestFirst => _pending.OrderBy(f => f.Modified),
+            _ => _pending.OrderBy(f => f.Name, Comparer<string>.Create(MediaRules.CompareNatural)),
+        };
+
+        var ordered = sorted.ToList();
+        _pending.Clear();
+        _pending.AddRange(ordered);
+    }
+
+    private void RaiseWindowState()
+    {
+        OnPropertyChanged(nameof(HasMore));
+        OnPropertyChanged(nameof(LoadMoreText));
+        LoadMoreCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// Sorts everything waiting, not just what is on screen, then rebuilds the window. Tiles
+    /// are carried over where they survive, so thumbnails already decoded stay decoded. The
+    /// pick is dropped, because carrying a multi-file pick across a reorder would leave the
+    /// numbers meaning something you can no longer see.
+    /// </summary>
+    private void ApplySort()
+    {
+        if (_pending.Count == 0)
+            return;
+
+        SortPending();
+        SetSelection([]);
+        Rebuild();
+    }
+
+    /// <summary>Sends the selection to a destination, by click or by number key.</summary>
+    private void SendTo(object? parameter)
+    {
+        if (_workspace is null || Selected is null)
+            return;
+
+        var destination = parameter as DestinationViewModel
+                          ?? (parameter is int i ? Destinations.ElementAtOrDefault(i - 1) : null);
+        if (destination is null)
+            return;
+
+        if (IsBundle)
+        {
+            if (IsComicMode)
+                SendBundle(destination);
+            else
+                SendSeparately(destination);
+            return;
+        }
+
+        var file = Selected;
+        var result = Intake.Send(file.Path, _workspace, destination.Group, Stamp);
+
+        if (!result.Moved)
+        {
+            // Leave it in the grid. It is still yours to deal with.
+            BlockedReason = result.Detail;
+            _host.Log($"Not sent: {file.FileName} to {destination.Name}: {result.Detail}");
+            return;
+        }
+
+        _lastBatch.Clear();
+        _lastBatch.Add(result);
+        UndoCommand.RaiseCanExecuteChanged();
+
+        var next = NextAfter(file);
+        Take([file]);
+        Selected = next;
+
+        destination.Refresh();
+        StatusMessage = $"Sent to {destination.Name}, {destination.RunwayText}";
+        _host.Log($"Queued {Path.GetFileName(result.Destination!)} into {destination.Name}");
+        RaiseGridState();
+    }
+
+    /// <summary>
+    /// Zips the picked files into one comic in the group's queue. The bot posts a .cbz as a
+    /// single comic, in batches of ten pages, so this turns a page set into one post rather
+    /// than a run of unrelated ones.
+    /// </summary>
+    private void SendBundle(DestinationViewModel destination)
+    {
+        var files = PagesInOrder().ToList();
+
+        // Already in page order here, so the archive is written exactly as the numbered tiles
+        // promised rather than being sorted a second time behind your back.
+        var result = Intake.SendAsComic(
+            files.Select(f => f.Path).ToList(), _workspace!, destination.Group, Stamp, ArchiveName,
+            PageOrder.AsPicked);
+
+        if (!result.Moved)
+        {
+            // Same as a refused single file. Everything stays picked and in the grid.
+            BlockedReason = result.Detail;
+            _host.Log($"Not sent: comic to {destination.Name}: {result.Detail}");
+            return;
+        }
+
+        _lastBatch.Clear();
+        _lastBatch.Add(result);
+        UndoCommand.RaiseCanExecuteChanged();
+
+        var next = NextAfterAll(files);
+        Take(files);
+
+        SetSelection([]);
+        Selected = next;
+
+        destination.Refresh();
+        StatusMessage = $"Sent {files.Count} pages as {Path.GetFileName(result.Destination!)}, {destination.RunwayText}";
+        _host.Log($"Queued comic {Path.GetFileName(result.Destination!)} ({files.Count} pages) into {destination.Name}");
+        RaiseGridState();
+    }
+
+    /// <summary>
+    /// Moves the pick into the queue as separate files, in the order the grid is showing them.
+    /// A file the group refuses is left behind with the others gone, which is the honest
+    /// outcome: the rest of the batch is fine and that one still needs a decision.
+    /// </summary>
+    private void SendSeparately(DestinationViewModel destination)
+    {
+        var files = GridOrder().ToList();
+        var results = Intake.SendMany(
+            files.Select(f => f.Path).ToList(), _workspace!, destination.Group, Stamp);
+
+        var sent = new List<IncomingFileViewModel>();
+        var refused = new List<string>();
+
+        for (var i = 0; i < files.Count; i++)
+        {
+            if (results[i].Moved)
+                sent.Add(files[i]);
+            else
+                refused.Add($"{files[i].FileName}: {results[i].Detail}");
+        }
+
+        if (sent.Count == 0)
+        {
+            BlockedReason = string.Join("\n", refused);
+            _host.Log($"Nothing sent to {destination.Name}: {refused.Count} refused");
+            return;
+        }
+
+        _lastBatch.Clear();
+        _lastBatch.AddRange(results.Where(r => r.Moved));
+        UndoCommand.RaiseCanExecuteChanged();
+
+        var next = NextAfterAll(sent);
+        Take(sent);
+
+        SetSelection([]);
+        Selected = next;
+
+        destination.Refresh();
+        BlockedReason = refused.Count > 0 ? string.Join("\n", refused) : null;
+        StatusMessage = refused.Count == 0
+            ? $"Sent {sent.Count} files to {destination.Name}, {destination.RunwayText}"
+            : $"Sent {sent.Count} to {destination.Name}, {refused.Count} refused";
+        _host.Log($"Queued {sent.Count} file(s) into {destination.Name}" +
+                  (refused.Count > 0 ? $", {refused.Count} refused" : ""));
+        RaiseGridState();
+    }
+
+    private bool CanSend(object? parameter) => _workspace is not null && Selected is not null;
+
+    private void SkipSelected()
+    {
+        if (Selected is null)
+            return;
+        Selected = NextAfter(Selected);
+    }
+
+    /// <summary>Keeps you moving forwards through the grid rather than jumping to the top.</summary>
+    private IncomingFileViewModel? NextAfter(IncomingFileViewModel current)
+    {
+        var index = Incoming.IndexOf(current);
+        if (index < 0)
+            return Incoming.FirstOrDefault();
+        return Incoming.ElementAtOrDefault(index + 1) ?? Incoming.ElementAtOrDefault(index - 1);
+    }
+
+    /// <summary>Where to land after a bundle leaves, following the last page rather than the first.</summary>
+    private IncomingFileViewModel? NextAfterAll(IReadOnlyList<IncomingFileViewModel> removed)
+    {
+        var taken = removed.ToHashSet();
+        var last = removed.Select(f => Incoming.IndexOf(f)).Where(i => i >= 0).DefaultIfEmpty(-1).Max();
+
+        for (var i = last + 1; i < Incoming.Count; i++)
+            if (!taken.Contains(Incoming[i]))
+                return Incoming[i];
+
+        for (var i = Math.Min(last, Incoming.Count - 1); i >= 0; i--)
+            if (!taken.Contains(Incoming[i]))
+                return Incoming[i];
+
+        return null;
+    }
+
+    /// <summary>
+    /// Files have left for good. They go from the waiting list as well as the grid, and the
+    /// window is topped back up from what is still waiting, so a batch of a hundred stays a
+    /// hundred as you work through a folder of thousands.
+    /// </summary>
+    private void Take(IReadOnlyList<IncomingFileViewModel> files)
+    {
+        var gone = files.Select(f => f.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _pending.RemoveAll(f => gone.Contains(f.Path));
+
+        foreach (var file in files)
+        {
+            Incoming.Remove(file);
+            file.Dispose();
+        }
+
+        _loadedTarget = ClampTarget(_loadedTarget - files.Count);
+        TopUp();
+    }
+
+    /// <summary>Puts undone files back among the waiting, in their sorted place.</summary>
+    private void Restore(IReadOnlyList<string> paths)
+    {
+        foreach (var path in paths)
+        {
+            if (_pending.Any(f => string.Equals(f.Path, path, StringComparison.OrdinalIgnoreCase)))
+                continue;
+
+            try
+            {
+                var info = new FileInfo(path);
+                _pending.Add(new PendingFile(info.FullName, info.Name, info.Length, info.LastWriteTime));
+            }
+            catch (Exception)
+            {
+                // Gone from under us. Nothing to put back.
+            }
+        }
+
+        SortPending();
+
+        // Make sure what came back is actually on screen. Undoing and seeing nothing return
+        // would look exactly like the undo having failed.
+        var deepest = paths
+            .Select(path => _pending.FindIndex(f => string.Equals(f.Path, path, StringComparison.OrdinalIgnoreCase)))
+            .DefaultIfEmpty(-1)
+            .Max();
+
+        _loadedTarget = ClampTarget(Math.Max(_loadedTarget, deepest + 1));
+        Rebuild();
+    }
+
+    private void UndoLastBatch()
+    {
+        var restored = 0;
+        foreach (var result in _lastBatch)
+        {
+            if (!Intake.Undo(result))
+                continue;
+
+            // A bundle went in as many files and came back as many, so put all of them back
+            // in the grid rather than just the one the result is named after.
+            var paths = result.Bundled is { Count: > 0 } bundled
+                ? bundled.Select(b => b.Path).ToList()
+                : [result.SourcePath];
+
+            Restore(paths);
+            restored += paths.Count;
+        }
+
+        _lastBatch.Clear();
+        UndoCommand.RaiseCanExecuteChanged();
+
+        foreach (var destination in Destinations)
+            destination.Refresh();
+
+        StatusMessage = restored > 0 ? $"Put {restored} file(s) back" : "Nothing to undo";
+        RaiseGridState();
+    }
+
+    private void Reload()
+    {
+        ErrorMessage = null;
+        foreach (var d in Destinations)
+            d.Refresh();
+        Destinations.Clear();
+
+        var root = BotWorkspace.Probe(_settings.BotRoot);
+        if (root is null)
+        {
+            _workspace = null;
+            ErrorMessage = "Could not find the posting bot. Pick its folder.";
+            RaiseWorkspaceState();
+            return;
+        }
+
+        _workspace = new BotWorkspace(root);
+        if (!_workspace.LooksValid)
+        {
+            ErrorMessage = $"{root} has no bot.py / config.json.";
+            RaiseWorkspaceState();
+            return;
+        }
+
+        try
+        {
+            var config = _workspace.LoadConfig();
+            var index = 1;
+            foreach (var group in config.Groups)
+                Destinations.Add(new DestinationViewModel(group, _workspace, index++));
+
+            // Driest first, so the group that needs feeding is the one under your thumb.
+            var ordered = Destinations.OrderBy(d => d.Days ?? double.MaxValue).ToList();
+            Destinations.Clear();
+            var position = 1;
+            foreach (var d in ordered)
+                Destinations.Add(new DestinationViewModel(d.Group, _workspace, position++));
+
+            _host.Log($"Loaded {Destinations.Count} destination(s) from {_workspace.ConfigPath}");
+            NotifyIfStarving();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"config.json could not be read: {ex.Message}";
+        }
+
+        RaiseWorkspaceState();
+    }
+
+    /// <summary>
+    /// A dry group is not an error anyone sees from outside, since the bot quietly starts
+    /// re-posting the archive. Worth saying out loud.
+    /// </summary>
+    private void NotifyIfStarving()
+    {
+        var dry = Destinations.Where(d => d.IsDry).Select(d => d.Name).ToList();
+        if (dry.Count == 0)
+        {
+            _host.Notifications.ClearCondition("dry-groups");
+            return;
+        }
+
+        _host.Notifications.SetCondition(
+            "dry-groups",
+            NotificationSeverity.Warning,
+            dry.Count == 1 ? "1 group has run dry" : $"{dry.Count} groups have run dry",
+            $"{string.Join(", ", dry)}. The bot will re-post from the archive instead of new material.");
+    }
+
+    /// <summary>The decode pass currently running, so a test can wait for it instead of sleeping.</summary>
+    public Task ThumbnailPass => _thumbnailPass;
+
+    private async Task LoadThumbnailsAsync()
+    {
+        CancelThumbnails();
+        _thumbnailCts = new CancellationTokenSource();
+        var token = _thumbnailCts.Token;
+
+        try
+        {
+            foreach (var file in Incoming.ToList())
+            {
+                if (token.IsCancellationRequested)
+                    return;
+                await file.LoadThumbnailAsync(ThumbnailWidth, token);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // Opening another folder mid-load. Expected.
+        }
+    }
+
+    private async Task LoadPreviewAsync(IncomingFileViewModel? file)
+    {
+        if (file is null)
+        {
+            PreviewImage = null;
+            return;
+        }
+
+        var path = file.Path;
+        var bitmap = await Task.Run(() =>
+        {
+            try
+            {
+                if (MediaRules.IsComic(path))
+                {
+                    var cover = MediaRules.ComicCover(path);
+                    if (cover is null)
+                        return null;
+                    using var coverStream = new MemoryStream(cover);
+                    return Bitmap.DecodeToWidth(coverStream, PreviewWidth);
+                }
+
+                if (!MediaRules.IsRenderableImage(path))
+                    return null;
+
+                using var stream = MediaRules.OpenShared(path);
+                return Bitmap.DecodeToWidth(stream, PreviewWidth);
+            }
+            catch (Exception)
+            {
+                return null;
+            }
+        }).ConfigureAwait(true);
+
+        if (Selected?.Path != path)
+        {
+            bitmap?.Dispose();
+            return;
+        }
+
+        PreviewImage = bitmap;
+    }
+
+    private void OpenInExplorer(string path)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = $"Could not open {path}: {ex.Message}";
+        }
+    }
+
+    private void ClearIncoming()
+    {
+        foreach (var file in Incoming)
+            file.Dispose();
+        Incoming.Clear();
+        _pending.Clear();
+        _loadedTarget = 0;
+        RaiseWindowState();
+        SetSelection([]);
+        Selected = null;
+        PreviewImage = null;
+        RaiseGridState();
+    }
+
+    private void CancelThumbnails()
+    {
+        _thumbnailCts?.Cancel();
+        _thumbnailCts?.Dispose();
+        _thumbnailCts = null;
+    }
+
+    private void RaiseGridState()
+    {
+        OnPropertyChanged(nameof(RemainingText));
+        OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(SummaryText));
+        RaiseWindowState();
+    }
+
+    private void RaiseWorkspaceState()
+    {
+        OnPropertyChanged(nameof(HasWorkspace));
+        OnPropertyChanged(nameof(BotRootText));
+        OnPropertyChanged(nameof(SummaryText));
+    }
+
+    private void SaveSettings()
+    {
+        try
+        {
+            _host.SaveSettings(_settings);
+        }
+        catch (Exception ex)
+        {
+            _host.Log($"Could not save Kibble settings: {ex.Message}");
+        }
+    }
+
+    public void Dispose()
+    {
+        CancelThumbnails();
+        PreviewImage = null;
+        foreach (var file in Incoming)
+            file.Dispose();
+    }
+}
