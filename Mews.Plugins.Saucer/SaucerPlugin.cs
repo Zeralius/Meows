@@ -16,6 +16,8 @@ public sealed class SaucerPlugin : IMewsPlugin
 
     public string Icon => "🥛";
 
+    public string Category => "Everyday";
+
     public Control CreateView(IMewsHost host) => new SaucerView
     {
         DataContext = new SaucerViewModel(host),

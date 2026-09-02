@@ -19,6 +19,16 @@ public interface IMewsPlugin
     string? Icon { get; }
 
     /// <summary>
+    /// Which heading this appears under on the Plugins tab. Null puts it with everything else
+    /// that did not say, which is why this has a default: a plugin written against 0.1.0 keeps
+    /// compiling and keeps loading, it simply does not join a group.
+    ///
+    /// The shell does not interpret the text. Two plugins are in the same group when they spell
+    /// it the same way, and nothing here knows which groups are supposed to exist.
+    /// </summary>
+    string? Category => null;
+
+    /// <summary>
     /// Called once per activation. The control, and its DataContext, get disposed on
     /// deactivation if they implement IDisposable.
     /// </summary>

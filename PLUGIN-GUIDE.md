@@ -148,7 +148,7 @@ dotnet pack Mews.Plugins.Abstractions/Mews.Plugins.Abstractions.csproj -c Releas
 ```xml
 <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Mews.Plugins.Abstractions" Version="0.1.0" ExcludeAssets="runtime" />
+    <PackageReference Include="Mews.Plugins.Abstractions" Version="0.2.0" ExcludeAssets="runtime" />
 </ItemGroup>
 ```
 
@@ -186,8 +186,8 @@ The shell checks this for you. At discovery it reads the contract version your a
 compiled against and refuses anything it cannot honour, **before constructing your plugin**, so
 none of your code runs. The reason appears on your plugin's card in place of its toggle:
 
-> Built for Mews contract 0.2.0, which is newer than this shell's 0.1.0. Update Mews, or rebuild
-> the plugin against 0.1.0.
+> Built for Mews contract 0.3.0, which is newer than this shell's 0.2.0. Update Mews, or rebuild
+> the plugin against 0.2.0.
 
 A mismatched **major** is refused either way, since a major bump means members may have been
 removed. A **newer** minor or patch is refused; an older one loads fine, because additive
@@ -275,6 +275,7 @@ public sealed class MyPlugin : IMewsPlugin
     public string DisplayName => "My Plugin";
     public string Description => "One sentence, shown on the Plugins tab.";
     public string? Icon => "🎲";            // shown on the tab header
+    public string? Category => "Everyday";  // heading on the Plugins tab, optional
 
     public Control CreateView(IMewsHost host) =>
         new MyView { DataContext = new MyViewModel(host) };
@@ -283,6 +284,11 @@ public sealed class MyPlugin : IMewsPlugin
 
 Public, with a parameterless constructor, since the shell instantiates it by reflection. `Id` is
 the identity for stored settings and activation state, so changing it later orphans both.
+
+`Category` is optional and has a default, so leaving it out compiles and loads exactly as before;
+the plugin simply appears under **Everything else**. The shell does not interpret the text and
+holds no list of valid groups: two plugins share a heading when they spell it the same way,
+ignoring case. Pick an existing one to join it, or invent your own.
 
 `CreateView` runs once per activation. If it throws, the shell catches it, marks the plugin
 *Failed* on its card, and logs the exception; a broken plugin cannot take the window down.

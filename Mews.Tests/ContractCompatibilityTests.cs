@@ -30,6 +30,15 @@ public sealed class ContractCompatibilityTests
     }
 
     [Fact]
+    public void A_plugin_built_against_the_first_contract_still_loads()
+    {
+        // 0.1.0 is what every plugin written before Category existed was built against, including
+        // any living outside this repository. Adding a member with a default must not strand them,
+        // and this is the assertion that says so in as many words.
+        Assert.Null(ContractCompatibility.Check(new Version(0, 1, 0)));
+    }
+
+    [Fact]
     public void A_newer_minor_is_refused_because_it_may_call_members_we_lack()
     {
         var newer = new Version(Shell.Major, Shell.Minor + 1, 0);

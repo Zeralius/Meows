@@ -1,5 +1,6 @@
 using Mews.Plugins.Abstractions;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using Mews.Plugins;
 using Mews.Services;
 using Mews.Views;
@@ -35,6 +36,7 @@ public sealed class MainWindowViewModel : ObservableObject
         _background = background;
 
         RescanCommand = new RelayCommand(Rescan);
+        OpenPluginsFolderCommand = new RelayCommand(OpenPluginsFolder, () => _catalog.PluginsDirectories.Count > 0);
         ToggleLogCommand = new RelayCommand(() => IsLogVisible = !IsLogVisible);
         ToggleNotificationsCommand = new RelayCommand(() => IsNotificationsOpen = !IsNotificationsOpen);
         ToggleTasksCommand = new RelayCommand(() => IsTasksOpen = !IsTasksOpen);
@@ -51,6 +53,9 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public ObservableCollection<PluginEntryViewModel> Plugins { get; } = new();
 
+    /// <summary>The same plugins under their headings, which is what the tab actually shows.</summary>
+    public ObservableCollection<PluginGroupViewModel> PluginGroups { get; } = new();
+
     public ObservableCollection<string> LogLines => _log.Lines;
 
     public ObservableCollection<NotificationItem> Notifications => _notifications.Items;
@@ -58,6 +63,8 @@ public sealed class MainWindowViewModel : ObservableObject
     public ObservableCollection<BackgroundTaskItem> RunningTasks => _background.Running;
 
     public RelayCommand RescanCommand { get; }
+
+    public RelayCommand OpenPluginsFolderCommand { get; }
 
     public RelayCommand ToggleLogCommand { get; }
 
@@ -202,11 +209,41 @@ public sealed class MainWindowViewModel : ObservableObject
         foreach (var descriptor in _catalog.Discover())
             Plugins.Add(new PluginEntryViewModel(descriptor, OnActivationChanged));
 
+        Regroup();
+
         OnPropertyChanged(nameof(PluginsDirectoryText));
         OnPropertyChanged(nameof(HasPlugins));
+        OpenPluginsFolderCommand.RaiseCanExecuteChanged();
 
         foreach (var entry in Plugins.Where(p => activated.Contains(p.Id)))
             entry.IsActivated = true;
+    }
+
+    private void Regroup()
+    {
+        PluginGroups.Clear();
+        foreach (var group in PluginGroupViewModel.Arrange(Plugins))
+            PluginGroups.Add(group);
+    }
+
+    /// <summary>
+    /// Opens the folders plugins are read from. Usually one, but MEWS_PLUGINS_DIR adds to the
+    /// search rather than replacing it, so there can be more than one and opening only the first
+    /// would hide the one the user actually went looking for.
+    /// </summary>
+    private void OpenPluginsFolder()
+    {
+        foreach (var directory in _catalog.PluginsDirectories.Where(Directory.Exists))
+        {
+            try
+            {
+                Process.Start(new ProcessStartInfo { FileName = directory, UseShellExecute = true });
+            }
+            catch (Exception ex)
+            {
+                _log.Write("shell", $"Could not open {directory}: {ex.Message}");
+            }
+        }
     }
 
     private void OnActivationChanged(PluginEntryViewModel entry, bool activated)

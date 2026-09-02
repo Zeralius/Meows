@@ -16,6 +16,8 @@ public sealed class MoltPlugin : IMewsPlugin
 
     public string Icon => "🍂";
 
+    public string Category => "Disk and tidying";
+
     public Control CreateView(IMewsHost host) => new MoltView
     {
         DataContext = new MoltViewModel(host),

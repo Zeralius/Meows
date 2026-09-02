@@ -16,6 +16,8 @@ public sealed class MouserPlugin : IMewsPlugin
 
     public string Icon => "🐁";
 
+    public string Category => "Disk and tidying";
+
     public Control CreateView(IMewsHost host) => new MouserView
     {
         DataContext = new MouserViewModel(host),

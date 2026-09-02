@@ -16,6 +16,8 @@ public sealed class TelegramPosterPlugin : IMewsPlugin
 
     public string Icon => "✈";
 
+    public string Category => "Posting bot";
+
     public Control CreateView(IMewsHost host) => new TelegramPosterView
     {
         DataContext = new TelegramPosterViewModel(host),

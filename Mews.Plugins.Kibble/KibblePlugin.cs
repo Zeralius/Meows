@@ -16,6 +16,8 @@ public sealed class KibblePlugin : IMewsPlugin
 
     public string? Icon => "🍽";
 
+    public string Category => "Posting bot";
+
     public Control CreateView(IMewsHost host) => new KibbleView
     {
         DataContext = new KibbleViewModel(host),

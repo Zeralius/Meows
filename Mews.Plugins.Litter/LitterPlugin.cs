@@ -16,6 +16,8 @@ public sealed class LitterPlugin : IMewsPlugin
 
     public string Icon => "🧺";
 
+    public string Category => "Disk and tidying";
+
     public Control CreateView(IMewsHost host) => new LitterView
     {
         DataContext = new LitterViewModel(host),

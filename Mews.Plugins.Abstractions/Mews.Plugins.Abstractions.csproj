@@ -11,7 +11,7 @@
          it must be loaded by a shell carrying the same major version. -->
     <PropertyGroup>
         <PackageId>Mews.Plugins.Abstractions</PackageId>
-        <Version>0.1.0</Version>
+        <Version>0.2.0</Version>
         <Description>The contract a Mews plugin implements: IMewsPlugin, IMewsHost, notifications, background work.</Description>
         <Authors>Dennis</Authors>
         <PackageTags>mews;plugin;avalonia</PackageTags>

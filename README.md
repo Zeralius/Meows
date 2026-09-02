@@ -37,6 +37,10 @@ files they need. Mews will start, but those plugins refuse to open and say so on
 Every plugin starts switched off. Open the **Plugins** tab, turn on the ones you want, and each
 gets its own tab. Turning one off closes its tab again. Nothing runs until you ask for it.
 
+The cards sit under headings a plugin picks for itself, so the disk tools are together and the two
+built around the posting bot are together. **Open plugins folder** on that tab takes you to where
+they are read from.
+
 Settings and logs live in `%APPDATA%\Mews`, never inside the folder you unzipped, so deleting
 that folder resets Mews completely.
 
@@ -132,8 +136,8 @@ contract itself does: **major** if a member is removed or changed, **minor** if 
 Mews checks that version when it loads a plugin and refuses anything it cannot honour, with the
 reason on the plugin's card rather than a crash later:
 
-> Built for Mews contract 0.2.0, which is newer than this shell's 0.1.0. Update Mews, or rebuild
-> the plugin against 0.1.0.
+> Built for Mews contract 0.3.0, which is newer than this shell's 0.2.0. Update Mews, or rebuild
+> the plugin against 0.2.0.
 
 A newer contract is refused; an older one is fine, since additions stay backward compatible.
 
