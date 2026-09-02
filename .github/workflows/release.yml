@@ -11,6 +11,9 @@ on:
 
 permissions:
   contents: write
+  # Lets the job ask GitHub for the short lived token NuGet exchanges for a publishing key.
+  # Without it there is no long lived secret to leak, and also no way to publish.
+  id-token: write
 
 jobs:
   release:
@@ -151,28 +154,52 @@ jobs:
           dotnet pack Mews.Plugins.Abstractions/Mews.Plugins.Abstractions.csproj --configuration Release --output artifacts/nuget
           dotnet pack template/Mews.Plugins.Template.csproj --configuration Release --output artifacts/nuget
 
-      - name: Publish the contract to NuGet
+      # Is there anything to publish with? Asked separately so the two steps below can be
+      # skipped cleanly: a fork with no nuget.org account should still get a working release,
+      # and a step that is skipped says so far more plainly than one that exits early.
+      - name: Can we publish to NuGet
+        id: nuget
         shell: pwsh
         env:
-          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+          # Through the environment rather than pasted into the script text, so a value with a
+          # quote in it cannot end up being read as part of the script.
+          NUGET_USER: ${{ secrets.NUGET_USER }}
         run: |
-          # Skipped rather than failed when no key is configured, so a release still completes
-          # for anyone who forked this and has no NuGet account.
-          if (-not $env:NUGET_API_KEY) {
-            "No NUGET_API_KEY secret, so nothing was pushed. The package is still attached to the release."
-            exit 0
+          $can = -not [string]::IsNullOrWhiteSpace($env:NUGET_USER)
+          "publish=$($can.ToString().ToLower())" | Out-File $env:GITHUB_OUTPUT -Append
+          if (-not $can) {
+            "No NUGET_USER secret, so nothing will be pushed to NuGet. The packages are still attached to the release."
           }
 
+      # Trusted Publishing rather than a stored key: the job proves who it is with a token
+      # GitHub signs, and nuget.org hands back an API key good for one hour. Nothing long lived
+      # exists to be leaked. The policy on nuget.org names this repository and this file, so
+      # renaming this workflow breaks publishing until the policy is updated to match.
+      #
+      # Requested here rather than earlier because the key expires in an hour, and everything
+      # slow, the tests and the publish, has already happened by this point.
+      - name: Get a short lived NuGet key
+        id: login
+        if: steps.nuget.outputs.publish == 'true'
+        uses: NuGet/login@v1
+        with:
+          # The nuget.org profile name, not an email address.
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Publish the contract and template to NuGet
+        if: steps.nuget.outputs.publish == 'true'
+        shell: pwsh
+        run: |
           # --skip-duplicate because NuGet refuses a version it already has, and re-running a
           # release should not turn that refusal into a failed build. Nothing is ever
           # overwritten: a published version is permanent, which is why the contract version
           # only moves when the contract does.
           dotnet nuget push artifacts/nuget/*.nupkg `
             --source https://api.nuget.org/v3/index.json `
-            --api-key $env:NUGET_API_KEY `
+            --api-key ${{ steps.login.outputs.NUGET_API_KEY }} `
             --skip-duplicate
 
-          if ($LASTEXITCODE -ne 0) { throw "Pushing the contract to NuGet failed" }
+          if ($LASTEXITCODE -ne 0) { throw "Pushing to NuGet failed" }
           "pushed"
 
       - name: Publish the release
@@ -184,12 +211,15 @@ jobs:
           $notes = @"
           Self-contained Windows x64 build. No .NET runtime needed.
 
-          Download ``Mews-$v-win-x64.zip``, unzip it anywhere, and run ``Mews.exe``.
-          Telegram Poster, Purrge, Kibble, Chonk, Litter, Molt and Saucer are included; activate them
-          on the Plugins tab.
+          Download ``Mews-$v-win-x64.zip``, unzip it anywhere, and run ``Mews.exe``. Extract the
+          zip before running it: launching straight out of the archive leaves some plugins
+          without files they need.
 
-          ``Mews.Plugins.Abstractions`` is attached for anyone building a plugin in their own
-          repository. See PLUGIN-GUIDE.md.
+          Every plugin starts switched off. Turn on the ones you want on the Plugins tab.
+
+          Writing your own: ``dotnet new install Mews.Plugins.Template`` then
+          ``dotnet new mews-plugin -n YourPlugin``. Both packages are on NuGet and attached here.
+          See PLUGIN-GUIDE.md.
           "@
           $assets = @("artifacts/Mews-$v-win-x64.zip") +
                     (Get-ChildItem artifacts/nuget/*.nupkg | ForEach-Object { $_.FullName })

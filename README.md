@@ -184,7 +184,14 @@ which is what keeps them drop in. A plain `dotnet publish` would produce an app 
 all. Which plugins to build and stage is worked out from the folders on disk rather than from a
 list in the workflow, so adding one needs no edit here.
 
-The check at the end runs `Mews.exe --list-plugins` against the package and fails the build if
+It also publishes `Mews.Plugins.Abstractions` and `Mews.Plugins.Template` to NuGet, using
+[Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) rather
+than a stored key: the job proves who it is with a token GitHub signs, and nuget.org returns a key
+valid for one hour, so there is no long lived secret to leak. The policy on nuget.org names this
+repository and `release.yml` by name, so renaming that file stops publishing until the policy is
+updated to match. A fork with no `NUGET_USER` secret skips those steps and still gets a release.
+
+The check before all that runs `Mews.exe --list-plugins` against the package and fails the build if
 anything was refused or is missing a private library. Asking the app is not the same as checking
 file names: a plugin whose shared library did not get staged loads perfectly and then fails the
 moment it is switched on, which is exactly how three plugins once shipped broken.
