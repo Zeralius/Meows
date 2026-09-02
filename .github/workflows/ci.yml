@@ -67,21 +67,32 @@ jobs:
           $feed = (Resolve-Path (Join-Path $env:GITHUB_WORKSPACE 'artifacts/nuget')).Path
           "feed $feed holds: $((Get-ChildItem $feed | ForEach-Object Name) -join ', ')"
 
-          # Built as an array of lines rather than a here-string: PowerShell wants the closing
-          # marker of one at column zero, which YAML indentation makes impossible.
-          $config = @(
-            '<?xml version="1.0" encoding="utf-8"?>',
-            '<configuration>',
-            '  <packageSources>',
-            '    <add key="mews-local" value="' + $feed + '" />',
-            '  </packageSources>',
-            '</configuration>'
-          )
-          Set-Content WeatherWatch/nuget.config -Value $config -Encoding utf8
-
           Push-Location WeatherWatch
-          dotnet build --configuration Release
-          $built = $LASTEXITCODE
+
+          # One string with a placeholder swapped out, rather than pieces joined together.
+          # Building this XML by concatenation inside an array literal made PowerShell treat
+          # each piece as its own element, so the path was written on a line of its own, XML
+          # folded the newline into a space, and NuGet read a path starting with a space as
+          # relative. Nothing about the source read wrongly; it was three quoting rules meeting.
+          #
+          # A config file rather than --source, because --source replaces the configured sources
+          # instead of adding to them, and passing nuget.org's URL that way had it normalised
+          # into a relative path relative to the project folder. Adding a source in a config
+          # leaves the inherited ones alone, which is what is wanted.
+          $xml = '<?xml version="1.0" encoding="utf-8"?><configuration><packageSources><add key="mews-local" value="FEED-PATH" /></packageSources></configuration>'
+          Set-Content nuget.config -Value $xml.Replace('FEED-PATH', $feed) -Encoding utf8
+          "nuget.config written as:"
+          Get-Content nuget.config | ForEach-Object { "  $_" }
+
+          dotnet restore
+          $restored = $LASTEXITCODE
+
+          $built = 1
+          if ($restored -eq 0) {
+            dotnet build --no-restore --configuration Release
+            $built = $LASTEXITCODE
+          }
+
           Pop-Location
           Pop-Location
 
@@ -90,6 +101,7 @@ jobs:
           # being tested worked perfectly.
           dotnet new uninstall $template | Out-Null
 
+          if ($restored -ne 0) { throw "The generated plugin does not restore" }
           if ($built -ne 0) { throw "The generated plugin does not compile" }
           "the template generates a plugin that builds"
           exit 0
