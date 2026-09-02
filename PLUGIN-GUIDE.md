@@ -148,7 +148,7 @@ dotnet pack Mews.Plugins.Abstractions/Mews.Plugins.Abstractions.csproj -c Releas
 ```xml
 <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Mews.Plugins.Abstractions" Version="0.2.0" ExcludeAssets="runtime" />
+    <PackageReference Include="Mews.Plugins.Abstractions" Version="0.2.1" ExcludeAssets="runtime" />
 </ItemGroup>
 ```
 
@@ -186,8 +186,8 @@ The shell checks this for you. At discovery it reads the contract version your a
 compiled against and refuses anything it cannot honour, **before constructing your plugin**, so
 none of your code runs. The reason appears on your plugin's card in place of its toggle:
 
-> Built for Mews contract 0.3.0, which is newer than this shell's 0.2.0. Update Mews, or rebuild
-> the plugin against 0.2.0.
+> Built for Mews contract 0.3.0, which is newer than this shell's 0.2.1. Update Mews, or rebuild
+> the plugin against 0.2.1.
 
 A mismatched **major** is refused either way, since a major bump means members may have been
 removed. A **newer** minor or patch is refused; an older one loads fine, because additive

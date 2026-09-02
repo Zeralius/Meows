@@ -191,9 +191,8 @@ jobs:
         shell: pwsh
         run: |
           # Listed here rather than handed to dotnet as a wildcard. PowerShell passes
-          # artifacts/nuget/*.nupkg through untouched and dotnet nuget push does not expand it,
-          # so the whole step failed with "file does not exist" while pointing at a folder that
-          # plainly had the packages in it.
+          # artifacts/nuget/*.nupkg through untouched, and whether dotnet expands it varies, so
+          # a wildcard either pushes nothing or quietly pushes the .snupkg too.
           #
           # Only .nupkg: the matching .snupkg goes up with its package automatically, and
           # pushing one on its own is an error.
@@ -201,22 +200,47 @@ jobs:
             Where-Object { $_.Extension -eq '.nupkg' }
 
           if ($packages.Count -eq 0) { throw "Nothing to push: artifacts/nuget has no .nupkg" }
-          "pushing: $(($packages | ForEach-Object Name) -join ', ')"
 
           foreach ($package in $packages) {
-            # --skip-duplicate because NuGet refuses a version it already has, and re-running a
-            # release should not turn that refusal into a failed build. Nothing is ever
-            # overwritten: a published version is permanent, which is why the contract version
-            # only moves when the contract does.
+            # The id and version out of the file name. Ours have no digit-only segment in the
+            # id, so the first thing that looks like a version starts the version.
+            if ($package.Name -notmatch '^(?<id>.+?)\.(?<version>\d+\.\d+\.\d+.*)\.nupkg$') {
+              throw "Cannot read an id and version from $($package.Name)"
+            }
+            $id = $Matches.id
+            $version = $Matches.version
+
+            # Asked before pushing rather than inferred from the result afterwards. A version
+            # already on NuGet is normal and expected: the contract only moves when the contract
+            # changes, so most releases re-pack a version that is already published.
+            $already = $false
+            try {
+              $index = Invoke-RestMethod -UseBasicParsing `
+                -Uri "https://api.nuget.org/v3-flatcontainer/$($id.ToLower())/index.json"
+              $already = $index.versions -contains $version
+            } catch {
+              $already = $false
+            }
+
+            if ($already) {
+              "$id $version is already on NuGet, leaving it alone"
+              continue
+            }
+
+            # No --skip-duplicate. It was here so a repeated release would not fail, and it did
+            # something far worse: NuGet answered 409 Conflict for a version that does not exist
+            # publicly, --skip-duplicate called that success, and the build went green having
+            # published nothing at all. A version we have just established is not published must
+            # either go up or fail loudly.
+            "pushing $id $version"
             dotnet nuget push $package.FullName `
               --source https://api.nuget.org/v3/index.json `
-              --api-key ${{ steps.login.outputs.NUGET_API_KEY }} `
-              --skip-duplicate
+              --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
 
-            if ($LASTEXITCODE -ne 0) { throw "Pushing $($package.Name) to NuGet failed" }
+            if ($LASTEXITCODE -ne 0) { throw "Pushing $id $version to NuGet failed" }
           }
 
-          "pushed $($packages.Count) package(s)"
+          "done"
 
       - name: Publish the release
         shell: pwsh

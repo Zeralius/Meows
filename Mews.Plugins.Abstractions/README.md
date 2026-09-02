@@ -31,7 +31,7 @@ cannot host the control you hand back.
 
 ```xml
 <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-<PackageReference Include="Mews.Plugins.Abstractions" Version="0.2.0" ExcludeAssets="runtime" PrivateAssets="all" />
+<PackageReference Include="Mews.Plugins.Abstractions" Version="0.2.1" ExcludeAssets="runtime" PrivateAssets="all" />
 ```
 
 There is a `dotnet new` template that writes all of this for you:

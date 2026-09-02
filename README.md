@@ -156,8 +156,8 @@ contract itself does: **major** if a member is removed or changed, **minor** if 
 Mews checks that version when it loads a plugin and refuses anything it cannot honour, with the
 reason on the plugin's card rather than a crash later:
 
-> Built for Mews contract 0.3.0, which is newer than this shell's 0.2.0. Update Mews, or rebuild
-> the plugin against 0.2.0.
+> Built for Mews contract 0.3.0, which is newer than this shell's 0.2.1. Update Mews, or rebuild
+> the plugin against 0.2.1.
 
 A newer contract is refused; an older one is fine, since additions stay backward compatible.
 

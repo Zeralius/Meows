@@ -5,7 +5,7 @@
     <PropertyGroup>
         <PackageType>Template</PackageType>
         <PackageId>Mews.Plugins.Template</PackageId>
-        <Version>0.2.0</Version>
+        <Version>0.2.1</Version>
         <Title>Mews plugin template</Title>
         <Description>dotnet new template for a Mews plugin: project, plugin class, view and view model, ready to build.</Description>
         <Authors>Dennis</Authors>
