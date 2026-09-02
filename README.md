@@ -98,9 +98,17 @@ public sealed class MyPlugin : IMewsPlugin
 `IMewsHost` gives you a private data directory, JSON settings, the shared log, the notification
 surface, and background work the shell cancels for you.
 
+There is a template that writes all of that for you:
+
+```bash
+dotnet new install Mews.Plugins.Template
+dotnet new mews-plugin -n WeatherWatch
+```
+
 Drop the built DLL into a folder under `plugins/` and Mews picks it up. You do not need to fork
-this repository: set `MEWS_PLUGINS_DIR` to your own folder and your plugin loads alongside the
-built in ones.
+this repository, or even clone it: reference the
+[`Mews.Plugins.Abstractions`](https://www.nuget.org/packages/Mews.Plugins.Abstractions) package,
+and set `MEWS_PLUGINS_DIR` to your own folder to load your plugin alongside the built in ones.
 
 **[PLUGIN-GUIDE.md](PLUGIN-GUIDE.md)** is the full contract: project setup, every member of
 `IMewsHost`, notifications, background work, threading, lifetime, packaging and the assembly
@@ -127,7 +135,8 @@ Duplicate plugin ids are ignored, and a plugin that throws while starting up is 
 | `Mews.Plugins.Abstractions/` | The contract a plugin implements, published as a NuGet package |
 | `Mews.Plugins.*/` | The plugins listed above |
 | `Mews.Bot.Core/` | Shared: the posting bot's config and media rules |
-| `Mews.Disk/` | Shared: Recycle Bin deletion and folder walk rules |
+| `Mews.Disk/` | Shared: Recycle Bin deletion, folder walking and what a folder is |
+| `template/` | The `dotnet new` template, published as `Mews.Plugins.Template` |
 | `Mews.Tests/` | The test suite |
 
 ## Versioning
@@ -151,6 +160,11 @@ reason on the plugin's card rather than a crash later:
 > the plugin against 0.2.0.
 
 A newer contract is refused; an older one is fine, since additions stay backward compatible.
+
+The same check covers **Avalonia**, for the same reason. The shell and every plugin share one copy
+of it, because a plugin hands back a `Control` and two copies mean two unrelated types with that
+name. A plugin built against a different major, or a newer version than the shell carries, is
+refused with the reason on its card rather than failing somewhere far from the cause.
 
 ## CI and releases
 
@@ -183,4 +197,4 @@ git tag v0.7.0 && git push origin v0.7.0
 
 ## Licence
 
-Not yet chosen. Ask before reusing anything here.
+MIT. See [LICENSE](LICENSE). Use it, fork it, build plugins on it and sell them if you like.

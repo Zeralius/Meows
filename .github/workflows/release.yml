@@ -146,10 +146,34 @@ jobs:
             -DestinationPath "artifacts/Mews-${{ steps.version.outputs.value }}-win-x64.zip" `
             -CompressionLevel Optimal
 
-      - name: Pack the plugin contract
-        run: >
-          dotnet pack Mews.Plugins.Abstractions/Mews.Plugins.Abstractions.csproj
-          --configuration Release --output artifacts/nuget
+      - name: Pack the plugin contract and the template
+        run: |
+          dotnet pack Mews.Plugins.Abstractions/Mews.Plugins.Abstractions.csproj --configuration Release --output artifacts/nuget
+          dotnet pack template/Mews.Plugins.Template.csproj --configuration Release --output artifacts/nuget
+
+      - name: Publish the contract to NuGet
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_API_KEY }}
+        run: |
+          # Skipped rather than failed when no key is configured, so a release still completes
+          # for anyone who forked this and has no NuGet account.
+          if (-not $env:NUGET_API_KEY) {
+            "No NUGET_API_KEY secret, so nothing was pushed. The package is still attached to the release."
+            exit 0
+          }
+
+          # --skip-duplicate because NuGet refuses a version it already has, and re-running a
+          # release should not turn that refusal into a failed build. Nothing is ever
+          # overwritten: a published version is permanent, which is why the contract version
+          # only moves when the contract does.
+          dotnet nuget push artifacts/nuget/*.nupkg `
+            --source https://api.nuget.org/v3/index.json `
+            --api-key $env:NUGET_API_KEY `
+            --skip-duplicate
+
+          if ($LASTEXITCODE -ne 0) { throw "Pushing the contract to NuGet failed" }
+          "pushed"
 
       - name: Publish the release
         shell: pwsh

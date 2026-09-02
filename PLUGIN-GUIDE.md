@@ -266,6 +266,20 @@ never see on a real machine.
 
 ---
 
+## Starting from the template
+
+```bash
+dotnet new install Mews.Plugins.Template
+dotnet new mews-plugin -n WeatherWatch --Category "Everyday"
+```
+
+That writes the project, the plugin class, a view and a view model, already wired together. The id
+comes from the name in lower case; change it before anyone installs the plugin, because it is the
+settings key and moving it later orphans whatever was stored.
+
+Everything below is what the template writes and why, which is worth reading once even if you
+never write it by hand.
+
 ## 3. The entry point
 
 ```csharp

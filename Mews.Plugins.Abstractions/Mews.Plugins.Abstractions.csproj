@@ -14,7 +14,14 @@
         <Version>0.2.0</Version>
         <Description>The contract a Mews plugin implements: IMewsPlugin, IMewsHost, notifications, background work.</Description>
         <Authors>Dennis</Authors>
-        <PackageTags>mews;plugin;avalonia</PackageTags>
+        <PackageTags>mews;plugin;avalonia;desktop</PackageTags>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageProjectUrl>https://github.com/Zeralius/Mews</PackageProjectUrl>
+        <RepositoryUrl>https://github.com/Zeralius/Mews</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <!-- Anyone writing a plugin reads the guide, so ship a pointer to it in the package. -->
+        <PackageReleaseNotes>See https://github.com/Zeralius/Mews/blob/main/PLUGIN-GUIDE.md</PackageReleaseNotes>
         <IncludeSymbols>true</IncludeSymbols>
         <SymbolPackageFormat>snupkg</SymbolPackageFormat>
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
@@ -24,6 +31,11 @@
 
     <ItemGroup>
       <PackageReference Include="Avalonia" Version="12.1.1" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="README.md" Pack="true" PackagePath="\" />
+      <None Include="..\LICENSE" Pack="true" PackagePath="\" />
     </ItemGroup>
 
 </Project>

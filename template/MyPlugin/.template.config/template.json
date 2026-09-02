@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Dennis",
+  "classifications": [ "Mews", "Plugin", "Avalonia", "Desktop" ],
+  "identity": "Mews.Plugin.CSharp",
+  "name": "Mews plugin",
+  "shortName": "mews-plugin",
+  "description": "A Mews plugin: project, plugin class, view and view model, ready to build and drop into a plugins folder.",
+  "tags": { "language": "C#", "type": "project" },
+  "sourceName": "MyPlugin",
+  "preferNameDirectory": true,
+  "symbols": {
+    "Category": {
+      "type": "parameter",
+      "datatype": "string",
+      "replaces": "PLUGIN-CATEGORY",
+      "defaultValue": "Everyday",
+      "description": "Heading this plugin appears under on the Plugins tab."
+    },
+    "pluginId": {
+      "type": "generated",
+      "generator": "casing",
+      "parameters": { "source": "name", "toLower": true },
+      "replaces": "PLUGIN-ID",
+      "description": "The id, taken from the project name in lower case. Change it before anyone installs the plugin: it is the settings key, and moving it later orphans stored settings."
+    }
+  }
+}

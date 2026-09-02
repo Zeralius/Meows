@@ -78,4 +78,62 @@ public sealed class ContractCompatibilityTests
         Assert.Equal("1.2.3", ContractCompatibility.Format(new Version(1, 2, 3, 4)));
         Assert.Equal("1.2.0", ContractCompatibility.Format(new Version(1, 2)));
     }
+
+    [Fact]
+    public void A_plugin_built_against_the_same_avalonia_is_fine()
+    {
+        Assert.Null(ContractCompatibility.CheckUi(ContractCompatibility.ShellUiVersion));
+
+        // Drawing nothing at all is not a disagreement about how to draw.
+        Assert.Null(ContractCompatibility.CheckUi(null));
+    }
+
+    [Fact]
+    public void A_plugin_built_against_another_major_of_avalonia_is_refused()
+    {
+        var ui = ContractCompatibility.ShellUiVersion;
+
+        // The shell and the plugin share one copy of Avalonia on purpose, because a plugin hands
+        // back a Control. Two majors mean two unrelated types with that name, and the failure
+        // lands somewhere far from the cause.
+        var reason = ContractCompatibility.CheckUi(new Version(ui.Major + 1, 0, 0));
+
+        Assert.NotNull(reason);
+        Assert.Contains("Avalonia", reason);
+    }
+
+    [Fact]
+    public void A_plugin_built_against_a_newer_avalonia_is_refused()
+    {
+        var ui = ContractCompatibility.ShellUiVersion;
+
+        var reason = ContractCompatibility.CheckUi(new Version(ui.Major, ui.Minor + 1, 0));
+
+        Assert.NotNull(reason);
+        Assert.Contains("newer", reason);
+    }
+
+    [Fact]
+    public void An_older_avalonia_within_the_same_major_is_accepted()
+    {
+        var ui = ContractCompatibility.ShellUiVersion;
+        if (ui.Minor == 0 && ui.Build == 0)
+            return; // Nothing older exists within this major to test against.
+
+        var older = ui.Build > 0
+            ? new Version(ui.Major, ui.Minor, ui.Build - 1)
+            : new Version(ui.Major, ui.Minor - 1, 0);
+
+        Assert.Null(ContractCompatibility.CheckUi(older));
+    }
+
+    [Fact]
+    public void The_shell_accepts_a_plugin_built_the_way_this_repository_builds_them()
+    {
+        // The real assembly, checked the way discovery checks it. If the guard were too strict
+        // it would refuse every plugin here, which is the failure worth catching early.
+        var plugin = typeof(Mews.Plugins.Mouser.MouserPlugin).Assembly;
+
+        Assert.Null(ContractCompatibility.CheckAssembly(plugin));
+    }
 }

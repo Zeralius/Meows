@@ -30,3 +30,46 @@ jobs:
 
       - name: Check the plugin contract still packs
         run: dotnet pack Mews.Plugins.Abstractions/Mews.Plugins.Abstractions.csproj --no-build --configuration Release --output artifacts/nuget
+
+      - name: Check the plugin template still produces something that builds
+        shell: pwsh
+        run: |
+          # Generated and built for real, against the contract packed a moment ago. A template is
+          # not compiled by anything, so nothing else here would notice it breaking: the first
+          # version of this one renamed IMewsPlugin to IWeatherWatch, because the token it
+          # substitutes was a substring of the interface name. That built fine as a template and
+          # produced a project that could not compile.
+          $work = Join-Path $env:RUNNER_TEMP 'template-check'
+          Remove-Item $work -Recurse -Force -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force $work | Out-Null
+
+          dotnet new install ./template
+          if ($LASTEXITCODE -ne 0) { throw "The template would not install" }
+
+          Push-Location $work
+          dotnet new mews-plugin -n WeatherWatch --Category "Everyday"
+          if ($LASTEXITCODE -ne 0) { throw "The template would not generate" }
+
+          # A local feed, because the contract version being tested is the one just built rather
+          # than whatever is on NuGet.
+          $feed = (Resolve-Path "$env:GITHUB_WORKSPACE/artifacts/nuget").Path
+          # Built as an array of lines rather than a here-string: PowerShell wants the closing
+          # marker of one at column zero, which YAML indentation makes impossible.
+          $config = @(
+            '<?xml version="1.0" encoding="utf-8"?>',
+            '<configuration>',
+            '  <packageSources>',
+            '    <add key="mews-local" value="' + $feed + '" />',
+            '  </packageSources>',
+            '</configuration>'
+          )
+          Set-Content WeatherWatch/nuget.config -Value $config -Encoding utf8
+
+          Push-Location WeatherWatch
+          dotnet build --configuration Release
+          if ($LASTEXITCODE -ne 0) { throw "The generated plugin does not compile" }
+          Pop-Location
+          Pop-Location
+
+          dotnet new uninstall ./template
+          "the template generates a plugin that builds"

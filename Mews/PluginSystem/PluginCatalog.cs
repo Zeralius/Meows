@@ -154,8 +154,7 @@ public sealed class PluginCatalog
             var assembly = new PluginLoadContext(assemblyPath).LoadFromAssemblyPath(assemblyPath);
 
             // Before touching its types, so an unusable plugin never runs any of its code.
-            var problem = ContractCompatibility.Check(
-                ContractCompatibility.ReferencedContractVersion(assembly));
+            var problem = ContractCompatibility.CheckAssembly(assembly);
             if (problem is not null)
                 return ([], problem);
 
