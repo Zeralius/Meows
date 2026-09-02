@@ -138,7 +138,11 @@ jobs:
           $loaded = ([regex]::Matches(($output -join "`n"), '(?m)^ok\s')).Count
 
           if ($loaded -ne $expected) {
-            throw "Packaged $loaded plugin(s), but the repository has $expected"
+            # Says what it read, so a failure here explains itself rather than needing a rerun
+            # with more printing. Nothing read at all usually means the output went somewhere
+            # else rather than that the package is empty.
+            throw "Packaged $loaded plugin(s), but the repository has $expected. " +
+                  "The listing was $($output.Count) line(s) long."
           }
           "all $expected plugin(s) present and loadable"
 

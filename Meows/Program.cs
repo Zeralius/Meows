@@ -22,6 +22,13 @@ internal static class Program
     {
         try
         {
+            // Not when somebody is already capturing the output. Replacing Console.Out after
+            // attaching sends everything to the borrowed console instead of down the pipe, and
+            // the caller reads an empty file having asked for exactly this listing. A build
+            // checking the package that way saw no plugins at all and failed a good package.
+            if (Console.IsOutputRedirected)
+                return;
+
             if (!OperatingSystem.IsWindows() || !AttachConsole(AttachParentProcess))
                 return;
 
@@ -30,8 +37,7 @@ internal static class Program
         }
         catch (Exception)
         {
-            // Launched without a console to borrow. The output still reaches a redirect, which
-            // is how a build reads it.
+            // No console to borrow. Output still goes wherever it was already going.
         }
     }
 
