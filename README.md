@@ -20,7 +20,7 @@ to install.
 | **[Litter](Meows.Plugins.Litter/README.md)** | Sorts out the downloads folder by age and kind, and calls out the downloads that never finished |
 | **[Saucer](Meows.Plugins.Saucer/README.md)** | Keeps what you copy, images included, and drops images into a folder for sorting |
 | **[Kibble](Meows.Plugins.Kibble/README.md)** | Sorts a folder of new material into queues, one key press at a time, and can bundle a pick into a comic |
-| **[Telegram Poster](Meows.Plugins.TelegramPoster/README.md)** | Drives a [Telegram posting bot](https://github.com/Zeralius/telegram-posting-bot): its groups, queues and schedule |
+| **[Telegram Poster](Meows.Plugins.TelegramPoster/README.md)** | Drives a [Telegram posting bot](https://github.com/Zeralius/telegram-posting-bot): its groups, queues and schedule, including slowing a group down so a short queue lasts |
 
 The last two are built around a specific posting bot. The rest are general purpose.
 

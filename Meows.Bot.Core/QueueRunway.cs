@@ -21,11 +21,56 @@ public static class QueueRunway
         return interval > 0 ? 1440d / interval * perPost : perPost;
     }
 
+    /// <summary>
+    /// How far apart the bot will actually put this group's posts, given what is left in its
+    /// queue. Null when the group is not being stretched, which is when the answer is simply
+    /// the interval in config.json.
+    ///
+    /// This is a copy of stretched_interval in bot.py and has to stay one. The bot does the
+    /// stretching; this only works out what it is going to do, so the number on screen is the
+    /// real one rather than the configured one. StretchTests pins both against the same table.
+    /// </summary>
+    public static int? StretchedIntervalMinutes(GroupConfig group, int queued)
+    {
+        if (group.Stretch?.TargetDays is not { } target || target <= 0)
+            return null;
+
+        // Only an interval group has a gap to widen. A daily group already posts as rarely as
+        // its schedule allows, and bot.py says so and ignores the setting.
+        if (group.Schedule?.IntervalMinutes is not { } baseMinutes || baseMinutes <= 0)
+            return null;
+
+        var cap = group.Stretch.MaxIntervalMinutes is { } c && c > 0 ? c : DefaultCapMinutes;
+        var perPost = Math.Max(1, group.FilesPerPost ?? 1);
+        var postsLeft = (int)Math.Ceiling(queued / (double)perPost);
+
+        // Nothing left to spread out. Posting less often would only slow the archive repeats.
+        if (postsLeft <= 0)
+            return baseMinutes;
+
+        var wanted = target * 1440 / postsLeft;
+        return (int)Math.Max(baseMinutes, Math.Min(cap, wanted));
+    }
+
+    /// <summary>Whether this group is being slowed down right now, rather than merely allowed to be.</summary>
+    public static bool IsStretching(GroupConfig group, int queued) =>
+        StretchedIntervalMinutes(group, queued) is { } effective &&
+        effective > (group.Schedule?.IntervalMinutes ?? 0);
+
     /// <summary>Days of queue left, or null when the group is disabled or posts nothing.</summary>
     public static double? Days(GroupConfig group, int queued)
     {
         if (group.Enabled == false)
             return null;
+
+        // A stretched group lasts longer than its configured rate suggests, and how long it
+        // lasts is the whole question this answers, so use the pace it will really run at.
+        if (StretchedIntervalMinutes(group, queued) is { } effective)
+        {
+            var perPost = Math.Max(1, group.FilesPerPost ?? 1);
+            var postsLeft = (int)Math.Ceiling(queued / (double)perPost);
+            return postsLeft * effective / 1440d;
+        }
 
         var rate = FilesPerDay(group);
         return rate <= 0 ? null : queued / rate;
@@ -44,4 +89,7 @@ public static class QueueRunway
 
     /// <summary>Anything under this is worth shouting about.</summary>
     public const double LowDays = 3;
+
+    /// <summary>What bot.py uses when a stretch does not name a limit of its own.</summary>
+    public const int DefaultCapMinutes = 1440;
 }

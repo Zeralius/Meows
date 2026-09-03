@@ -30,6 +30,9 @@ public sealed class GroupViewModel : ObservableObject
     private string _postOrder;
     private string _comicOrder;
     private bool _isEnabled;
+    private bool _stretchEnabled;
+    private double _stretchTargetDays;
+    private int _stretchCapMinutes;
     private bool _isDirty;
     private IReadOnlyList<GroupIssue> _issues = [];
     private int _queueCount;
@@ -53,6 +56,9 @@ public sealed class GroupViewModel : ObservableObject
         _postOrder = Normalize(config.PostOrder, PostOrders, "oldest");
         _comicOrder = Normalize(config.ComicOrder, ComicOrders, "name");
         _isEnabled = config.Enabled ?? true;
+        _stretchEnabled = config.Stretch?.TargetDays is > 0;
+        _stretchTargetDays = config.Stretch?.TargetDays ?? 7;
+        _stretchCapMinutes = config.Stretch?.MaxIntervalMinutes ?? QueueRunway.DefaultCapMinutes;
 
         RefreshCounts();
     }
@@ -271,6 +277,86 @@ public sealed class GroupViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// Whether the bot should slow this group down when its queue runs short. Off leaves it
+    /// posting at its configured rate until there is nothing left, which is when it starts
+    /// repeating the archive.
+    /// </summary>
+    public bool StretchEnabled
+    {
+        get => _stretchEnabled;
+        set
+        {
+            if (SetEdited(ref _stretchEnabled, value))
+                RaiseStretch();
+        }
+    }
+
+    /// <summary>How long what is left should be made to last.</summary>
+    public double StretchTargetDays
+    {
+        get => _stretchTargetDays;
+        set
+        {
+            if (SetEdited(ref _stretchTargetDays, Math.Clamp(value, 0.5, 365)))
+                RaiseStretch();
+        }
+    }
+
+    /// <summary>As far apart as the posts are ever allowed to get.</summary>
+    public int StretchCapMinutes
+    {
+        get => _stretchCapMinutes;
+        set
+        {
+            if (SetEdited(ref _stretchCapMinutes, Math.Max(1, value)))
+                RaiseStretch();
+        }
+    }
+
+    /// <summary>
+    /// What the bot is doing about this group right now, in words.
+    ///
+    /// Worked out from the same sum bot.py uses, because the pace on screen should be the pace
+    /// it is running at rather than the one written in config.json.
+    /// </summary>
+    public string StretchSummary
+    {
+        get
+        {
+            if (!_stretchEnabled)
+                return MeowsText.Current["tp.stretch.off"];
+
+            if (!_useInterval)
+                return MeowsText.Current["tp.stretch.daily"];
+
+            var config = ToConfig();
+            if (QueueRunway.StretchedIntervalMinutes(config, QueueCount) is not { } effective)
+                return MeowsText.Current["tp.stretch.off"];
+
+            if (effective <= _intervalMinutes)
+                return MeowsText.Current.Format("tp.stretch.resting", _intervalMinutes);
+
+            var reached = QueueRunway.Days(config, QueueCount) ?? 0;
+            var key = effective >= _stretchCapMinutes
+                ? "tp.stretch.capped"
+                : "tp.stretch.active";
+
+            return MeowsText.Current.Format(key, Describe(effective), reached.ToString("0.#"));
+        }
+    }
+
+    /// <summary>Minutes as something readable, since a stretched gap is usually hours.</summary>
+    private static string Describe(int minutes) => minutes < 120
+        ? MeowsText.Current.Format("tp.stretch.minutes", minutes)
+        : MeowsText.Current.Format("tp.stretch.hours", (minutes / 60d).ToString("0.#"));
+
+    private void RaiseStretch()
+    {
+        OnPropertyChanged(nameof(StretchSummary));
+        OnPropertyChanged(nameof(NextPostText));
+    }
+
     public void RefreshCounts()
     {
         var config = ToConfig();
@@ -278,6 +364,7 @@ public sealed class GroupViewModel : ObservableObject
         ArchiveCount = _workspace.Scan(_workspace.AlreadySentFolder(config), recursive: true).Count;
         OnPropertyChanged(nameof(IsStarving));
         OnPropertyChanged(nameof(NextPostText));
+        OnPropertyChanged(nameof(StretchSummary));
     }
 
     public GroupConfig ToConfig() => new()
@@ -295,6 +382,15 @@ public sealed class GroupViewModel : ObservableObject
         PostOrder = _postOrder,
         // Leave it out while it matches the default, to keep the file tidy.
         ComicOrder = _comicOrder == "name" && _saved.ComicOrder is null ? null : _comicOrder,
+        Stretch = _stretchEnabled
+            ? new StretchConfig { TargetDays = _stretchTargetDays, MaxIntervalMinutes = _stretchCapMinutes }
+            : null,
+
+        // Carried through rather than rebuilt, because nothing here edits them and saving
+        // writes the whole file. Dropping start_offset_minutes would put every group back on
+        // the same minute of the hour, and Extra is everything the bot has that we do not.
+        StartOffsetMinutes = _saved.StartOffsetMinutes,
+        Extra = _saved.Extra,
     };
 
     public void AcceptChanges()
@@ -318,6 +414,9 @@ public sealed class GroupViewModel : ObservableObject
         _postOrder = Normalize(config.PostOrder, PostOrders, "oldest");
         _comicOrder = Normalize(config.ComicOrder, ComicOrders, "name");
         _isEnabled = config.Enabled ?? true;
+        _stretchEnabled = config.Stretch?.TargetDays is > 0;
+        _stretchTargetDays = config.Stretch?.TargetDays ?? 7;
+        _stretchCapMinutes = config.Stretch?.MaxIntervalMinutes ?? QueueRunway.DefaultCapMinutes;
 
         foreach (var name in new[]
                  {
@@ -325,6 +424,8 @@ public sealed class GroupViewModel : ObservableObject
                      nameof(IntervalMinutes), nameof(Hour), nameof(Minute), nameof(JitterMinutes),
                      nameof(FilesPerPost), nameof(PostOrder), nameof(ComicOrder),
                      nameof(IsEnabled), nameof(RowOpacity),
+                     nameof(StretchEnabled), nameof(StretchTargetDays), nameof(StretchCapMinutes),
+                     nameof(StretchSummary),
                      nameof(ScheduleSummary), nameof(NextPostText), nameof(ResolvedFolder),
                  })
         {

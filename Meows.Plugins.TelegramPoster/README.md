@@ -100,7 +100,7 @@ that group.
 | | |
 |---|---|
 | **Error** | `name`, `chat_id` or `folder` blank; chat ID still an unfilled placeholder like `REPLACE_WITH_CHAT_ID`, which is what a fresh clone ships |
-| **Warning** | Folder does not exist yet; no `To_Send` subfolder; chat ID neither numeric nor `@name`; chat ID positive, which is a private chat; duplicate chat ID; shared folder; nothing in either folder |
+| **Warning** | Folder does not exist yet; no `To_Send` subfolder; chat ID neither numeric nor `@name`; chat ID positive, which is a private chat; duplicate chat ID; shared folder; nothing in either folder; `To_Send` empty while the archive is not, so the bot is repeating itself |
 
 A duplicate chat ID is worse than it looks. Jobs are keyed by chat ID with
 `replace_existing=True`, so only the **last** such group is scheduled and the earlier one
@@ -109,14 +109,48 @@ silently never posts.
 `bot.py` does the same required-key check itself at startup and skips unusable groups instead of
 crashing, so hand-editing `config.json` outside Meows is covered too.
 
+## Stretching a short queue
+
+Left alone, a group posts at its configured rate until `To_Send` is empty and then starts
+repeating its archive. The channel looks busy while nothing new is going out, which is the
+failure you do not notice.
+
+**When the queue runs short** turns that into a slowdown instead. Give it how long what is left
+should last and how far apart the posts may get, and the bot widens its own interval as the queue
+runs down and puts it back as soon as you feed it.
+
+The line under the two fields is what the bot is doing right now, not what the file says. The two
+differ the moment a queue runs short, which is the whole point of the feature:
+
+> Posting every 12 h instead, which makes what is left run for 7 days.
+
+Some queues cannot be stretched into health, only slowed down, and it says so rather than
+pretending:
+
+> Posting every 24 h, the slowest allowed, which gets it to 5 days.
+
+The stretching itself is `bot.py`'s work. Only the bot knows the queue at the moment it posts and
+only it can retime a job that is already running, so this tab writes the setting and shows the
+result. The sum is duplicated in `QueueRunway` so the pace on screen is the pace the bot will
+actually run at, and a test pins the two against the same table.
+
+Runway everywhere else, including Kibble's group list, is the stretched figure for the same
+reason: it is the honest answer to when the group runs out.
+
 ## Editing settings
 
 The right column edits `name`, `chat_id`, `folder`, the schedule (interval or daily), jitter,
-`files_per_post`, `post_order` and `comic_order`. Edits stay local until you press **Save
-config.json**, so a stray keystroke never reaches a running bot. Saving rewrites the whole file,
-so every group is written, not just the edited one.
+`files_per_post`, `post_order`, `comic_order` and the stretch. Edits stay local until you press
+**Save config.json**, so a stray keystroke never reaches a running bot. Saving rewrites the whole
+file, so every group is written, not just the edited one.
 
-The bot reads its config only at startup, so restart it for changes to take effect.
+Because it rewrites the whole file, anything in `config.json` that this does not edit is carried
+across untouched rather than rebuilt. `start_offset_minutes` is the reason: it spaces groups so
+they do not all fire on the hour, nothing here changes it, and saving used to drop it. Keys the
+bot gains later are kept the same way without needing a field here.
+
+The bot reads its config only at startup, so restart it for a changed schedule to take effect.
+The stretch is the exception: the bot adjusts that itself while it runs.
 
 ## Settings
 

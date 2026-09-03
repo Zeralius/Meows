@@ -455,6 +455,50 @@
                                        Margin="0,10,0,0"
                                        TextWrapping="Wrap" />
 
+                            <TextBlock Classes="section" Text="{m:Tr tp.stretch}" Margin="0,16,0,6" />
+
+                            <CheckBox Content="{m:Tr tp.stretch.enabled}"
+                                      IsChecked="{Binding StretchEnabled}"
+                                      FontSize="11" />
+
+                            <Grid ColumnDefinitions="*,8,*"
+                                  Margin="0,6,0,0"
+                                  IsEnabled="{Binding StretchEnabled}">
+                                <StackPanel Grid.Column="0" Spacing="2">
+                                    <TextBlock Classes="label" Text="{m:Tr tp.stretch.targetdays}" />
+                                    <NumericUpDown Value="{Binding StretchTargetDays}"
+                                                   Minimum="0.5" Maximum="365"
+                                                   Increment="1"
+                                                   FormatString="0.#" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="2">
+                                    <TextBlock Classes="label" Text="{m:Tr tp.stretch.cap}" />
+                                    <NumericUpDown Value="{Binding StretchCapMinutes}"
+                                                   Minimum="1" Maximum="20160"
+                                                   Increment="60"
+                                                   FormatString="0" />
+                                </StackPanel>
+                            </Grid>
+
+                            <!-- What the bot is doing right now, not what the file says. The two
+                                 differ the moment a queue runs short, which is the whole point. -->
+                            <Border Background="{DynamicResource MeowsInfo}"
+                                    BorderBrush="{DynamicResource MeowsInfoLine}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="8,6"
+                                    Margin="0,8,0,0">
+                                <TextBlock Text="{Binding StretchSummary}"
+                                           Foreground="{DynamicResource MeowsInfoText}"
+                                           FontSize="11"
+                                           TextWrapping="Wrap" />
+                            </Border>
+
+                            <TextBlock Classes="label"
+                                       Text="{m:Tr tp.stretch.hint}"
+                                       Margin="0,6,0,0"
+                                       TextWrapping="Wrap" />
+
                                     </StackPanel>
                                 </DataTemplate>
                             </ContentControl.ContentTemplate>

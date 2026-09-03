@@ -168,8 +168,17 @@ public static class GroupValidator
             return; // Already reported; counts would be meaningless.
 
         if (queueCount == 0 && archiveCount == 0)
+        {
             issues.Add(new GroupIssue(IssueSeverity.Warning,
                 MeowsText.Current["tp.issue.nocontent"]));
+            return;
+        }
+
+        // An empty queue with a full archive is the quiet failure: the bot keeps posting, so
+        // the channel looks alive, and it is all material that has already been out.
+        if (queueCount == 0)
+            issues.Add(new GroupIssue(IssueSeverity.Warning,
+                MeowsText.Current["tp.issue.onarchive"]));
     }
 
     private static string Describe(GroupConfig group) =>
