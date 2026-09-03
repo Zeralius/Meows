@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -59,7 +60,7 @@ public partial class MoltView : UserControl, IDisposable
 
         var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Which folder holds your projects",
+            Title = MeowsText.Current["molt.dialog.folder"],
             AllowMultiple = false,
         });
 

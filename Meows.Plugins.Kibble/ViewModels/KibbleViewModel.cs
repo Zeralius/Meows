@@ -62,21 +62,35 @@ public enum GridSort
 }
 
 /// <summary>A sort with words on it, so the dropdown does not show an enum name.</summary>
-public sealed record SortOption(GridSort Value, string Label)
+/// <summary>
+/// What every dropdown row here has in common, so one data template draws all four of them.
+/// </summary>
+public interface ILabelledOption
 {
-    public override string ToString() => Label;
+    TranslatedString Label { get; }
+}
+
+public sealed record SortOption(GridSort Value, string Key) : ILabelledOption
+{
+    public TranslatedString Label { get; } = MeowsText.Entry(Key);
+
+    public override string ToString() => Label.Value;
 }
 
 /// <summary>A naming rule with words on it.</summary>
-public sealed record NamingOption(ComicNaming Value, string Label)
+public sealed record NamingOption(ComicNaming Value, string Key) : ILabelledOption
 {
-    public override string ToString() => Label;
+    public TranslatedString Label { get; } = MeowsText.Entry(Key);
+
+    public override string ToString() => Label.Value;
 }
 
 /// <summary>A page order with words on it.</summary>
-public sealed record PageOrderOption(PageOrder Value, string Label)
+public sealed record PageOrderOption(PageOrder Value, string Key) : ILabelledOption
 {
-    public override string ToString() => Label;
+    public TranslatedString Label { get; } = MeowsText.Entry(Key);
+
+    public override string ToString() => Label.Value;
 }
 
 public sealed class KibbleViewModel : ObservableObject, IDisposable
@@ -109,7 +123,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     /// <summary>Whether the last selection was already a comic, so a random tag holds still.</summary>
     private bool _wasBundle;
     private string _sourceFolder = "";
-    private string _statusMessage = "Open a folder to start.";
+    private string _statusMessage = MeowsText.Current["kibble.status.start"];
     private string? _errorMessage;
     private string? _blockedReason;
 
@@ -152,8 +166,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
     public IReadOnlyList<StampOption> StampOptions { get; } =
     [
-        new(IntakeStamp.KeepSource, "Keep each file's own date"),
-        new(IntakeStamp.QueuedNow, "Date them as they are queued"),
+        new(IntakeStamp.KeepSource, "kibble.stamp.keep"),
+        new(IntakeStamp.QueuedNow, "kibble.stamp.queued"),
     ];
 
     public StampOption SelectedStamp
@@ -176,13 +190,12 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     /// Spelled out because it decides posting order, and getting it wrong does not show up
     /// until the queue behaves oddly weeks later.
     /// </summary>
-    public string StampHint => Stamp == IntakeStamp.KeepSource
-        ? "Files keep their original date, so genuinely older art posts first."
-        : "Files are stamped as they are queued, so it is first in, first out.";
+    public string StampHint =>
+        _host.Text[Stamp == IntakeStamp.KeepSource ? "kibble.stamp.hint.keep" : "kibble.stamp.hint.queued"];
 
     public bool HasWorkspace => _workspace?.LooksValid == true;
 
-    public string BotRootText => _workspace?.Root ?? "No bot folder found";
+    public string BotRootText => _workspace?.Root ?? _host.Text["kibble.nobotfolder"];
 
     public string SourceFolder
     {
@@ -278,10 +291,10 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
     public IReadOnlyList<SortOption> SortOptions { get; } =
     [
-        new(GridSort.NameAscending, "Name, A to Z"),
-        new(GridSort.NameDescending, "Name, Z to A"),
-        new(GridSort.NewestFirst, "Newest first"),
-        new(GridSort.OldestFirst, "Oldest first"),
+        new(GridSort.NameAscending, "kibble.sort.nameasc"),
+        new(GridSort.NameDescending, "kibble.sort.namedesc"),
+        new(GridSort.NewestFirst, "kibble.sort.newest"),
+        new(GridSort.OldestFirst, "kibble.sort.oldest"),
     ];
 
     public SortOption SelectedSort
@@ -374,14 +387,14 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         get
         {
             var rest = _pending.Count - Incoming.Count;
-            return rest <= 0 ? "" : $"Load {Math.Min(Batch, rest)} more, {rest} still waiting";
+            return rest <= 0 ? "" : _host.Text.Format("kibble.loadmore", Math.Min(Batch, rest), rest);
         }
     }
 
     public IReadOnlyList<PageOrderOption> PageOrderOptions { get; } =
     [
-        new(PageOrder.ByName, "Pages in file name order"),
-        new(PageOrder.AsPicked, "Pages in the order I picked them"),
+        new(PageOrder.ByName, "kibble.pageorder.byname"),
+        new(PageOrder.AsPicked, "kibble.pageorder.aspicked"),
     ];
 
     public PageOrderOption SelectedPageOrder
@@ -468,24 +481,25 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     /// <summary>Two or more picked means the next send makes a comic out of them.</summary>
     public bool IsBundle => _selection.Count >= Intake.MinBundle;
 
-    public string SelectionText => _selection.Count > 1 ? $"{_selection.Count} picked" : "";
+    public string SelectionText =>
+        _selection.Count > 1 ? _host.Text.Format("kibble.selected", _selection.Count) : "";
 
     /// <summary>What the destination buttons are about to do, so the left column stays honest.</summary>
     public string SendVerb => IsBundle
-        ? (IsComicMode ? "SEND AS ONE COMIC" : $"SEND {_selection.Count} FILES")
-        : "SEND TO";
+        ? IsComicMode
+            ? _host.Text["kibble.sendverb.comic"]
+            : _host.Text.Format("kibble.sendverb.files", _selection.Count)
+        : _host.Text["kibble.sendverb.to"];
 
     public string BundleText => IsBundle
-        ? (IsComicMode
-            ? $"{_selection.Count} files will be zipped into one comic and queued as a single post."
-            : $"{_selection.Count} files will be queued as they are, in the order shown, each posting on its own.")
+        ? _host.Text.Format(IsComicMode ? "kibble.bundle.comic" : "kibble.bundle.separate", _selection.Count)
         : "";
 
     public IReadOnlyList<NamingOption> NamingOptions { get; } =
     [
-        new(ComicNaming.Folder, "The folder name"),
-        new(ComicNaming.Weighted, "Words the files share"),
-        new(ComicNaming.RandomTag, "Folder name plus a random tag"),
+        new(ComicNaming.Folder, "kibble.naming.folder"),
+        new(ComicNaming.Weighted, "kibble.naming.weighted"),
+        new(ComicNaming.RandomTag, "kibble.naming.randomtag"),
     ];
 
     public NamingOption SelectedNaming
@@ -556,9 +570,9 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
     public string RemainingText => _pending.Count switch
     {
-        0 => "Nothing left",
-        1 => "1 file left",
-        _ => $"{_pending.Count} files left",
+        0 => _host.Text["kibble.remaining.none"],
+        1 => _host.Text["kibble.remaining.one"],
+        _ => _host.Text.Format("kibble.remaining.many", _pending.Count),
     };
 
     public bool IsEmpty => _pending.Count == 0;
@@ -572,10 +586,10 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
             var dry = Destinations.Count(d => d.IsDry);
             var low = Destinations.Count(d => d.IsLow);
             if (dry == 0 && low == 0)
-                return $"{Destinations.Count} group(s), all stocked";
+                return _host.Text.Format("kibble.summary.stocked", Destinations.Count);
             var parts = new List<string>();
-            if (dry > 0) parts.Add($"{dry} dry");
-            if (low > 0) parts.Add($"{low} running low");
+            if (dry > 0) parts.Add(_host.Text.Format("kibble.summary.dry", dry));
+            if (low > 0) parts.Add(_host.Text.Format("kibble.summary.low", low));
             return string.Join(", ", parts);
         }
     }
@@ -595,7 +609,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
         if (!Directory.Exists(folder))
         {
-            ErrorMessage = $"{folder} does not exist.";
+            ErrorMessage = _host.Text.Format("kibble.error.missing", folder);
             return;
         }
 
@@ -622,7 +636,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Could not read {folder}: {ex.Message}";
+            ErrorMessage = _host.Text.Format("kibble.error.read", folder, ex.Message);
             return;
         }
 
@@ -638,8 +652,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     {
         var where = Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar));
         return HasMore
-            ? $"showing {Incoming.Count} of {_pending.Count} in {where}"
-            : $"{_pending.Count} file(s) in {where}";
+            ? _host.Text.Format("kibble.describe.showing", Incoming.Count, _pending.Count, where)
+            : _host.Text.Format("kibble.describe.all", _pending.Count, where);
     }
 
     /// <summary>
@@ -784,12 +798,12 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         {
             // Not worded as a send. The queue count has not moved, and saying "sent" when it
             // has not is just confusing.
-            StatusMessage = $"Already in {destination.Name}, so it went to Duplicates";
+            StatusMessage = _host.Text.Format("kibble.status.duplicate", destination.Name);
             _host.Log($"Set aside {Path.GetFileName(result.Destination!)}: {result.Detail}");
         }
         else
         {
-            StatusMessage = $"Sent to {destination.Name}, {destination.RunwayText}";
+            StatusMessage = _host.Text.Format("kibble.status.sent", destination.Name, destination.RunwayText);
             _host.Log($"Queued {Path.GetFileName(result.Destination!)} into {destination.Name}");
         }
         RaiseGridState();
@@ -829,7 +843,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         Selected = next;
 
         destination.Refresh();
-        StatusMessage = $"Sent {files.Count} pages as {Path.GetFileName(result.Destination!)}, {destination.RunwayText}";
+        StatusMessage = _host.Text.Format("kibble.status.sentcomic",
+            files.Count, Path.GetFileName(result.Destination!), destination.RunwayText);
         _host.Log($"Queued comic {Path.GetFileName(result.Destination!)} ({files.Count} pages) into {destination.Name}");
         RaiseGridState();
     }
@@ -853,7 +868,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
             if (results[i].Moved)
                 sent.Add(files[i]);
             else
-                refused.Add($"{files[i].FileName}: {results[i].Detail}");
+                refused.Add(_host.Text.Format("kibble.refused.line", files[i].FileName, results[i].Detail));
         }
 
         if (sent.Count == 0)
@@ -876,8 +891,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         destination.Refresh();
         BlockedReason = refused.Count > 0 ? string.Join("\n", refused) : null;
         StatusMessage = refused.Count == 0
-            ? $"Sent {sent.Count} files to {destination.Name}, {destination.RunwayText}"
-            : $"Sent {sent.Count} to {destination.Name}, {refused.Count} refused";
+            ? _host.Text.Format("kibble.status.sentfiles", sent.Count, destination.Name, destination.RunwayText)
+            : _host.Text.Format("kibble.status.sentsome", sent.Count, destination.Name, refused.Count);
         _host.Log($"Queued {sent.Count} file(s) into {destination.Name}" +
                   (refused.Count > 0 ? $", {refused.Count} refused" : ""));
         RaiseGridState();
@@ -994,7 +1009,9 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         foreach (var destination in Destinations)
             destination.Refresh();
 
-        StatusMessage = restored > 0 ? $"Put {restored} file(s) back" : "Nothing to undo";
+        StatusMessage = restored > 0
+            ? _host.Text.Format("kibble.status.undone", restored)
+            : _host.Text["kibble.status.nothingtoundo"];
         RaiseGridState();
     }
 
@@ -1009,7 +1026,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         if (root is null)
         {
             _workspace = null;
-            ErrorMessage = "Could not find the posting bot. Pick its folder.";
+            ErrorMessage = _host.Text["kibble.error.nobot"];
             RaiseWorkspaceState();
             return;
         }
@@ -1041,7 +1058,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"config.json could not be read: {ex.Message}";
+            ErrorMessage = _host.Text.Format("kibble.error.config", ex.Message);
         }
 
         RaiseWorkspaceState();
@@ -1063,8 +1080,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         _host.Notifications.SetCondition(
             "dry-groups",
             NotificationSeverity.Warning,
-            dry.Count == 1 ? "1 group has run dry" : $"{dry.Count} groups have run dry",
-            $"{string.Join(", ", dry)}. The bot will re-post from the archive instead of new material.");
+            dry.Count == 1 ? _host.Text["kibble.dry.one"] : _host.Text.Format("kibble.dry.many", dry.Count),
+            _host.Text.Format("kibble.dry.detail", string.Join(", ", dry)));
     }
 
     /// <summary>The decode pass currently running, so a test can wait for it instead of sleeping.</summary>
@@ -1142,7 +1159,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Could not open {path}: {ex.Message}";
+            ErrorMessage = _host.Text.Format("kibble.error.open", path, ex.Message);
         }
     }
 

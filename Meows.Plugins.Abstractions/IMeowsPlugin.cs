@@ -13,6 +13,11 @@ public interface IMeowsPlugin
 
     string DisplayName { get; }
 
+    /// <summary>
+    /// One sentence, shown on the Plugins tab. Return a key from your strings catalogue to have
+    /// it translated; anything that is not a key is shown exactly as written, which is what a
+    /// plugin with no catalogue does.
+    /// </summary>
     string Description { get; }
 
     /// <summary>Glyph next to the tab header. Null just shows the name.</summary>
@@ -24,7 +29,9 @@ public interface IMeowsPlugin
     /// compiling and keeps loading, it simply does not join a group.
     ///
     /// The shell does not interpret the text. Two plugins are in the same group when they spell
-    /// it the same way, and nothing here knows which groups are supposed to exist.
+    /// it the same way, and nothing here knows which groups are supposed to exist. Grouping is
+    /// done on what you return here, and only the heading itself is translated, so two plugins
+    /// sharing a group still share it in every language.
     /// </summary>
     string? Category => null;
 

@@ -6,4 +6,21 @@
         <Nullable>enable</Nullable>
     </PropertyGroup>
 
+    <!-- One file per language. WithCulture and LogicalName are both load bearing: MSBuild reads
+         the middle of Strings.de.json as a culture and would otherwise put the file in a de\
+         satellite assembly, where the shell never looks. -->
+    <ItemGroup>
+      <EmbeddedResource Include="Strings\Strings.*.json">
+        <WithCulture>false</WithCulture>
+        <LogicalName>$(AssemblyName).Strings.%(Filename)%(Extension)</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <!-- Only for the string table. How much runway a group has left is read aloud in the UI. -->
+    <ItemGroup>
+      <ProjectReference Include="..\Meows.Plugins.Abstractions\Meows.Plugins.Abstractions.csproj"
+                        Private="false"
+                        ExcludeAssets="runtime" />
+    </ItemGroup>
+
 </Project>

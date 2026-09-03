@@ -20,7 +20,7 @@ public sealed class FolderNodeViewModel : ObservableObject
         Children = [Placeholder];
     }
 
-    private static FolderNodeViewModel Placeholder { get; } = new("", "Loading…");
+    private static FolderNodeViewModel Placeholder { get; } = new("", MeowsText.Current["purrge.loading"]);
 
     public string Path { get; }
 

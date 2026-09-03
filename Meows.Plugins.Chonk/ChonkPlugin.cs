@@ -11,12 +11,11 @@ public sealed class ChonkPlugin : IMeowsPlugin
 
     public string DisplayName => "Chonk";
 
-    public string Description =>
-        "Measures where the room on a drive went, biggest first, and clears out what you no longer want.";
+    public string Description => "chonk.description";
 
     public string Icon => "🐈";
 
-    public string Category => "Disk and tidying";
+    public string Category => "group.disk";
 
     public Control CreateView(IMeowsHost host) => new ChonkView
     {

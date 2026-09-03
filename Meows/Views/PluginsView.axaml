@@ -1,16 +1,17 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Meows.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
              x:Class="Meows.Views.PluginsView"
              x:DataType="vm:MainWindowViewModel">
 
     <DockPanel Margin="20">
 
         <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,18">
-            <TextBlock Text="Plugins" FontSize="24" FontWeight="SemiBold" />
+            <TextBlock Text="{m:Tr plugins.title}" FontSize="24" FontWeight="SemiBold" />
             <TextBlock Opacity="0.55"
                        TextWrapping="Wrap"
-                       Text="Activate a plugin to give it a tab. Deactivating closes the tab and releases it." />
+                       Text="{m:Tr plugins.subtitle}" />
             <TextBlock Opacity="0.35" FontSize="11" Text="{Binding ContractVersionText}" />
         </StackPanel>
 
@@ -18,8 +19,8 @@
                     Orientation="Horizontal"
                     Spacing="10"
                     Margin="0,0,0,14">
-            <Button Content="Rescan plugins folder" Command="{Binding RescanCommand}" />
-            <Button Content="Open plugins folder" Command="{Binding OpenPluginsFolderCommand}" />
+            <Button Content="{m:Tr plugins.rescan}" Command="{Binding RescanCommand}" />
+            <Button Content="{m:Tr plugins.open}" Command="{Binding OpenPluginsFolderCommand}" />
         </StackPanel>
 
         <TextBlock DockPanel.Dock="Top"
@@ -27,7 +28,7 @@
                    Opacity="0.5"
                    TextWrapping="Wrap"
                    IsVisible="{Binding !HasPlugins}"
-                   Text="Nothing found. Each plugin lives in its own subfolder of the plugins directory shown at the bottom of the window." />
+                   Text="{m:Tr plugins.empty}" />
 
         <ScrollViewer>
             <ItemsControl ItemsSource="{Binding PluginGroups}">
@@ -49,8 +50,8 @@
                             <ItemsControl ItemsSource="{Binding Entries}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:PluginEntryViewModel">
-                        <Border Background="#1C1C22"
-                                BorderBrush="#2E2E36"
+                        <Border Background="{DynamicResource MeowsCard}"
+                                BorderBrush="{DynamicResource MeowsLine}"
                                 BorderThickness="1"
                                 CornerRadius="8"
                                 Padding="16,13"
@@ -65,27 +66,27 @@
                                     <TextBlock Text="{Binding Description}" Opacity="0.6" TextWrapping="Wrap" />
                                     <TextBlock Text="{Binding Origin}" Opacity="0.35" FontSize="11" />
                                     <TextBlock Text="{Binding Error}"
-                                               Foreground="#FF7A7A"
+                                               Foreground="{DynamicResource MeowsDangerStrong}"
                                                TextWrapping="Wrap"
                                                IsVisible="{Binding HasError}" />
                                     <TextBlock Text="{Binding IncompatibleReason}"
-                                               Foreground="#FF9A6A"
+                                               Foreground="{DynamicResource MeowsWarnText}"
                                                TextWrapping="Wrap"
                                                IsVisible="{Binding IsIncompatible}" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center">
                                     <ToggleSwitch IsChecked="{Binding IsActivated}"
                                                   IsEnabled="{Binding IsCompatible}"
-                                                  OnContent="Active"
-                                                  OffContent="Inactive"
+                                                  OnContent="{m:Tr plugins.active}"
+                                                  OffContent="{m:Tr plugins.inactive}"
                                                   IsVisible="{Binding IsCompatible}" />
-                                    <Border Background="#3A2418"
-                                            BorderBrush="#6B4423"
+                                    <Border Background="{DynamicResource MeowsWarn}"
+                                            BorderBrush="{DynamicResource MeowsWarnLine}"
                                             BorderThickness="1"
                                             CornerRadius="4"
                                             Padding="8,3"
                                             IsVisible="{Binding IsIncompatible}">
-                                        <TextBlock Text="Incompatible" Foreground="#FFC168" FontSize="11" />
+                                        <TextBlock Text="{m:Tr plugins.incompatible}" Foreground="{DynamicResource MeowsWarnText}" FontSize="11" />
                                     </Border>
                                 </StackPanel>
                             </Grid>

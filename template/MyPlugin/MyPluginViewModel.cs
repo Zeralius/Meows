@@ -10,7 +10,7 @@ public sealed class MyPluginViewModel : ObservableObject
     public MyPluginViewModel(IMeowsHost host)
     {
         _host = host;
-        _status = $"Settings and anything else you save live in {host.DataDirectory}";
+        _status = host.Text.Format("PLUGIN-ID.where", host.DataDirectory);
 
         SayHelloCommand = new RelayCommand(SayHello);
     }
@@ -26,8 +26,12 @@ public sealed class MyPluginViewModel : ObservableObject
     private void SayHello()
     {
         // Everything the host gives you: a private folder, JSON settings, the shared log, the
-        // notification surface, and background work the shell cancels when this is switched off.
+        // notification surface, the language the window is in, and background work the shell
+        // cancels when this is switched off.
+        //
+        // The log stays in English on purpose. It is the thing that gets pasted into a bug
+        // report, and a report nobody can read is not much of a report.
         _host.Log("MyPlugin said hello.");
-        Status = $"Said hello at {DateTime.Now:HH:mm:ss}. Look in the Log at the bottom right.";
+        Status = _host.Text.Format("PLUGIN-ID.said", DateTime.Now.ToString("HH:mm:ss"));
     }
 }

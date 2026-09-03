@@ -14,6 +14,16 @@
         <OutputPath Condition="'$(Configuration)' != 'Debug'">$(MSBuildThisFileDirectory)bin\$(Configuration)\</OutputPath>
     </PropertyGroup>
 
+    <!-- One file per language. WithCulture and LogicalName are both load bearing: MSBuild reads
+         the middle of Strings.de.json as a culture and would otherwise file it under a de
+         satellite assembly, where the shell never looks. -->
+    <ItemGroup>
+      <EmbeddedResource Include="Strings\Strings.*.json">
+        <WithCulture>false</WithCulture>
+        <LogicalName>$(AssemblyName).Strings.%(Filename)%(Extension)</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+
     <ItemGroup>
       <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
       <ProjectReference Include="..\Meows.Disk\Meows.Disk.csproj" />

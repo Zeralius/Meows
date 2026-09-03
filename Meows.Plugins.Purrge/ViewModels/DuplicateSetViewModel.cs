@@ -12,6 +12,17 @@ public enum AgeBasis
     Created,
 }
 
+/// <summary>
+/// One row of the "compare ages by" dropdown. Label is the shared bindable string for its key, so
+/// the dropdown reads correctly the moment the language changes rather than on the next restart.
+/// </summary>
+public sealed class AgeBasisOption(AgeBasis value, string key)
+{
+    public AgeBasis Value { get; } = value;
+
+    public TranslatedString Label { get; } = MeowsText.Entry(key);
+}
+
 public sealed class DuplicateFileViewModel : ObservableObject, IDisposable
 {
     private Bitmap? _thumbnail;

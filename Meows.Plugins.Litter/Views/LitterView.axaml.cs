@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -67,7 +68,7 @@ public partial class LitterView : UserControl, IDisposable
 
         var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Which folder collects your downloads",
+            Title = MeowsText.Current["litter.dialog.folder"],
             AllowMultiple = false,
         });
 

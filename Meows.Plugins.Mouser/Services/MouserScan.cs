@@ -11,7 +11,15 @@ public enum DeadKind
     Leftover,
 }
 
-public sealed record Finding(string Path, string Name, DeadKind Kind, string Detail, long Size);
+/// <summary>
+/// One thing worth removing. Detail is a key from the strings catalogue rather than a sentence,
+/// with DetailValues holding anything that goes into its placeholders: the scan runs off the UI
+/// thread and has no business knowing what language the window is in.
+/// </summary>
+public sealed record Finding(string Path, string Name, DeadKind Kind, string Detail, long Size)
+{
+    public object?[] DetailValues { get; init; } = [];
+}
 
 public sealed record MouserOptions
 {
@@ -210,7 +218,7 @@ public static class MouserScan
                 continue;
 
             findings.Add(new Finding(folder.FullName, folder.Name, DeadKind.EmptyFolder,
-                "Nothing inside it, at any depth.", 0));
+                "mouser.detail.emptyfolder", 0));
         }
 
         progress?.Report(new MouserProgress(seen, findings.Count, root));
@@ -239,7 +247,7 @@ public static class MouserScan
         if (MouserOptions.LeftoverNames.Contains(file.Name, StringComparer.OrdinalIgnoreCase))
         {
             return new Finding(file.FullName, file.Name, DeadKind.Leftover,
-                "Left behind by a file browser. Rebuilt whenever it is wanted again.", SafeLength(file));
+                "mouser.detail.leftover", SafeLength(file));
         }
 
         if (file.Extension.Equals(".lnk", StringComparison.OrdinalIgnoreCase))
@@ -252,13 +260,13 @@ public static class MouserScan
                 return null;
 
             return new Finding(file.FullName, file.Name, DeadKind.BrokenShortcut,
-                $"Points at {target}, which is not there.", SafeLength(file));
+                "mouser.detail.brokenshortcut", SafeLength(file)) { DetailValues = [target] };
         }
 
         if (SafeLength(file) == 0 && !MouserOptions.IsMeantToBeEmpty(file.Name))
         {
             return new Finding(file.FullName, file.Name, DeadKind.EmptyFile,
-                "No contents at all.", 0);
+                "mouser.detail.emptyfile", 0);
         }
 
         return null;
@@ -276,11 +284,12 @@ public static class MouserScan
         }
     }
 
+    /// <summary>The key for a filter heading, looked up wherever it is actually drawn.</summary>
     public static string Describe(DeadKind kind) => kind switch
     {
-        DeadKind.EmptyFolder => "Empty folders",
-        DeadKind.EmptyFile => "Empty files",
-        DeadKind.BrokenShortcut => "Broken shortcuts",
-        _ => "Leftovers",
+        DeadKind.EmptyFolder => "mouser.kind.emptyfolder",
+        DeadKind.EmptyFile => "mouser.kind.emptyfile",
+        DeadKind.BrokenShortcut => "mouser.kind.brokenshortcut",
+        _ => "mouser.kind.leftover",
     };
 }

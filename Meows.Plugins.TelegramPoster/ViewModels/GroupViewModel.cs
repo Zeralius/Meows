@@ -233,8 +233,8 @@ public sealed class GroupViewModel : ObservableObject
     }
 
     public string QueueSummary => QueueCount == 0
-        ? $"queue empty · {ArchiveCount} archived"
-        : $"{QueueCount} queued · {ArchiveCount} archived";
+        ? MeowsText.Current.Format("tp.queue.empty", ArchiveCount)
+        : MeowsText.Current.Format("tp.queue.some", QueueCount, ArchiveCount);
 
     /// <summary>Empty queue, so the bot starts re-posting the archive.</summary>
     public bool IsStarving => QueueCount == 0;
@@ -246,8 +246,8 @@ public sealed class GroupViewModel : ObservableObject
     public string AlreadySentFolder => _workspace.AlreadySentFolder(ToConfig());
 
     public string ScheduleSummary => UseInterval
-        ? $"every {IntervalMinutes} min ± {JitterMinutes}"
-        : $"daily at {Hour:00}:{Minute:00} ± {JitterMinutes} min";
+        ? MeowsText.Current.Format("tp.schedule.interval", IntervalMinutes, JitterMinutes)
+        : MeowsText.Current.Format("tp.schedule.daily", $"{Hour:00}:{Minute:00}", JitterMinutes);
 
     /// <summary>
     /// Daily groups get a real time. Interval groups count from whenever the bot started,
@@ -258,16 +258,16 @@ public sealed class GroupViewModel : ObservableObject
         get
         {
             if (!IsEnabled)
-                return "disabled, not scheduled";
+                return MeowsText.Current["tp.next.disabled"];
 
             if (UseInterval)
-                return $"every {IntervalMinutes} min from the bot's start";
+                return MeowsText.Current.Format("tp.next.interval", IntervalMinutes);
 
             var now = DateTime.Now;
             var today = new DateTime(now.Year, now.Month, now.Day, Hour, Minute, 0);
             var next = today > now ? today : today.AddDays(1);
-            var day = next.Date == now.Date ? "today" : "tomorrow";
-            return $"{day} {next:HH:mm} ± {JitterMinutes} min";
+            var key = next.Date == now.Date ? "tp.next.today" : "tp.next.tomorrow";
+            return MeowsText.Current.Format(key, next.ToString("HH:mm"), JitterMinutes);
         }
     }
 

@@ -1,0 +1,112 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        Every colour the shell and the built-in plugins use, named by what it is for rather than
+        by what it looks like. Before this file the same hex sat in a hundred and ninety places
+        across twelve views, which is why there was only ever one theme.
+
+        Plugins pick these up with {DynamicResource MeowsCard} and so on. Resource lookup walks
+        up to the application, so a plugin in its own assembly finds them without referencing the
+        shell, and follows a theme change without doing anything.
+
+        The dark column is exactly what the app used before this file existed. Where two nearly
+        identical hexes were doing the same job they now share one token, so a few borders shifted
+        by a shade.
+    -->
+    <ResourceDictionary.ThemeDictionaries>
+
+        <ResourceDictionary x:Key="Dark">
+
+            <!-- Surfaces, from the most recessed to the most raised. -->
+            <SolidColorBrush x:Key="MeowsSunken" Color="#101014" />
+            <SolidColorBrush x:Key="MeowsPanel" Color="#141418" />
+            <SolidColorBrush x:Key="MeowsBase" Color="#17171C" />
+            <SolidColorBrush x:Key="MeowsBar" Color="#1B1B20" />
+            <SolidColorBrush x:Key="MeowsCard" Color="#1C1C22" />
+            <SolidColorBrush x:Key="MeowsInset" Color="#1F1F26" />
+            <SolidColorBrush x:Key="MeowsRaised" Color="#22222A" />
+            <SolidColorBrush x:Key="MeowsHeader" Color="#23232B" />
+
+            <!-- Separators. Line is the one you are meant to notice. -->
+            <SolidColorBrush x:Key="MeowsLine" Color="#2E2E36" />
+            <SolidColorBrush x:Key="MeowsLineSoft" Color="#2A2A32" />
+
+            <!-- The selected row in a list. -->
+            <SolidColorBrush x:Key="MeowsSelection" Color="#24384A" />
+            <SolidColorBrush x:Key="MeowsSelectionLine" Color="#3E6C90" />
+
+            <!-- Saying something, with no suggestion that anything is wrong. -->
+            <SolidColorBrush x:Key="MeowsInfo" Color="#1D2A36" />
+            <SolidColorBrush x:Key="MeowsInfoLine" Color="#304F69" />
+            <SolidColorBrush x:Key="MeowsInfoText" Color="#9CC7E8" />
+
+            <!-- Something went wrong, or is about to. -->
+            <SolidColorBrush x:Key="MeowsDanger" Color="#3A1F22" />
+            <SolidColorBrush x:Key="MeowsDangerLine" Color="#5C2B30" />
+            <SolidColorBrush x:Key="MeowsDangerText" Color="#FFB4B4" />
+            <SolidColorBrush x:Key="MeowsDangerStrong" Color="#FF8A8A" />
+
+            <!-- Worth reading before you carry on. -->
+            <SolidColorBrush x:Key="MeowsWarn" Color="#32291A" />
+            <SolidColorBrush x:Key="MeowsWarnLine" Color="#5A4826" />
+            <SolidColorBrush x:Key="MeowsWarnText" Color="#E8CE97" />
+
+            <!-- Healthy. Only ever used for text, so far. -->
+            <SolidColorBrush x:Key="MeowsGoodText" Color="#5E9E6E" />
+
+            <!-- Badges that sit on top of a thumbnail, so they carry their own opacity. -->
+            <SolidColorBrush x:Key="MeowsBadge" Color="#E63E6C90" />
+            <SolidColorBrush x:Key="MeowsDangerBadge" Color="#CC5C2B30" />
+
+            <!-- Dims the window behind a confirmation. -->
+            <SolidColorBrush x:Key="MeowsVeil" Color="#C0000000" />
+
+        </ResourceDictionary>
+
+        <ResourceDictionary x:Key="Light">
+
+            <SolidColorBrush x:Key="MeowsSunken" Color="#E2E2E8" />
+            <SolidColorBrush x:Key="MeowsPanel" Color="#ECECF1" />
+            <SolidColorBrush x:Key="MeowsBase" Color="#F4F4F7" />
+            <SolidColorBrush x:Key="MeowsBar" Color="#E8E8EE" />
+            <SolidColorBrush x:Key="MeowsCard" Color="#FFFFFF" />
+            <SolidColorBrush x:Key="MeowsInset" Color="#EFEFF4" />
+            <SolidColorBrush x:Key="MeowsRaised" Color="#FAFAFD" />
+            <SolidColorBrush x:Key="MeowsHeader" Color="#E9E9EF" />
+
+            <!-- Flipped against the dark column on purpose: the subtler line is the paler one
+                 here and the darker one there, because "subtle" means close to the background. -->
+            <SolidColorBrush x:Key="MeowsLine" Color="#D2D2DC" />
+            <SolidColorBrush x:Key="MeowsLineSoft" Color="#E1E1E8" />
+
+            <SolidColorBrush x:Key="MeowsSelection" Color="#CFE3F5" />
+            <SolidColorBrush x:Key="MeowsSelectionLine" Color="#7FAFD6" />
+
+            <SolidColorBrush x:Key="MeowsInfo" Color="#E6F1FA" />
+            <SolidColorBrush x:Key="MeowsInfoLine" Color="#A9C9E3" />
+            <SolidColorBrush x:Key="MeowsInfoText" Color="#1B5175" />
+
+            <SolidColorBrush x:Key="MeowsDanger" Color="#FCE8E8" />
+            <SolidColorBrush x:Key="MeowsDangerLine" Color="#DFA5A5" />
+            <SolidColorBrush x:Key="MeowsDangerText" Color="#8C1F27" />
+            <SolidColorBrush x:Key="MeowsDangerStrong" Color="#B32731" />
+
+            <SolidColorBrush x:Key="MeowsWarn" Color="#FBF1DC" />
+            <SolidColorBrush x:Key="MeowsWarnLine" Color="#DEC086" />
+            <SolidColorBrush x:Key="MeowsWarnText" Color="#7A5310" />
+
+            <SolidColorBrush x:Key="MeowsGoodText" Color="#2E7043" />
+
+            <SolidColorBrush x:Key="MeowsBadge" Color="#E62E6088" />
+            <SolidColorBrush x:Key="MeowsDangerBadge" Color="#CC9E3A42" />
+
+            <!-- Lighter than the dark theme's. A near opaque black over a white window reads as
+                 the lights going out rather than as a dialog. -->
+            <SolidColorBrush x:Key="MeowsVeil" Color="#73000000" />
+
+        </ResourceDictionary>
+
+    </ResourceDictionary.ThemeDictionaries>
+
+</ResourceDictionary>

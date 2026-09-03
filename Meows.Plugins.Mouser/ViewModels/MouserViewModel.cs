@@ -24,7 +24,9 @@ public sealed class FindingViewModel(Finding finding) : ObservableObject
 
     public string Path => Finding.Path;
 
-    public string Detail => Finding.Detail;
+    public string Detail => Finding.DetailValues.Length == 0
+        ? MeowsText.Current[Finding.Detail]
+        : MeowsText.Current.Format(Finding.Detail, Finding.DetailValues);
 
     public string Folder => System.IO.Path.GetDirectoryName(Finding.Path) ?? "";
 
@@ -43,9 +45,11 @@ public sealed class KindViewModel(DeadKind kind, int count) : ObservableObject
 
     public DeadKind Kind { get; } = kind;
 
-    public string Name { get; } = MouserScan.Describe(kind);
+    public string Name => MeowsText.Current[MouserScan.Describe(Kind)];
 
-    public string Detail { get; } = count == 1 ? "1 thing" : $"{count} things";
+    public string Detail => count == 1
+        ? MeowsText.Current["mouser.things.one"]
+        : MeowsText.Current.Format("mouser.things.many", count);
 
     public bool IsOn
     {
@@ -63,7 +67,7 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
     private DeadKind? _filter;
     private List<FindingViewModel> _pending = [];
 
-    private string _status = "Pick a folder and look through it.";
+    private string _status = MeowsText.Current["mouser.status.start"];
     private string? _errorMessage;
     private bool _isScanning;
     private int _pendingCount;
@@ -180,9 +184,12 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
 
     public bool IsEmpty => Findings.Count == 0;
 
-    public string Summary => _all.Count == 0
-        ? ""
-        : _all.Count == 1 ? "1 thing worth removing" : $"{_all.Count} things worth removing";
+    public string Summary => _all.Count switch
+    {
+        0 => "",
+        1 => _host.Text["mouser.summary.one"],
+        var n => _host.Text.Format("mouser.summary.many", n),
+    };
 
     public bool WasStopped => _wasStopped;
 
@@ -192,10 +199,7 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
     /// has been read, so the ones near where the sweep stopped are held back rather than
     /// guessed at.
     /// </summary>
-    public string StoppedNote =>
-        $"Stopped after {_foldersSeen} folders, so this is only what turned up before then. " +
-        "Everything listed is still safe to act on. Folders the sweep had not finished reading " +
-        "are held back rather than guessed at, so run it again to see the rest.";
+    public string StoppedNote => _host.Text.Format("mouser.stopped.note", _foldersSeen);
 
     public FindingViewModel? SelectedOne => Selected.Count == 1 ? Selected[0] : null;
 
@@ -203,7 +207,7 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
     {
         0 => "",
         1 => Selected[0].Name,
-        var n => $"{n} picked",
+        var n => _host.Text.Format("mouser.selected", n),
     };
 
     public int PendingCount
@@ -224,8 +228,8 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
     public bool IsAsking => PendingCount > 0;
 
     public string ConfirmPrompt => PendingCount == 1
-        ? $"Send {_pending.FirstOrDefault()?.Name} to the Recycle Bin?"
-        : $"Send {PendingCount} things to the Recycle Bin?";
+        ? _host.Text.Format("mouser.confirm.one", _pending.FirstOrDefault()?.Name ?? "")
+        : _host.Text.Format("mouser.confirm.many", PendingCount);
 
     public string ConfirmDetail
     {
@@ -235,11 +239,10 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
                 return "";
 
             var folders = _pending.Count(p => p.Finding.Kind == DeadKind.EmptyFolder);
-            var note = folders > 0
-                ? $" {folders} of them are folders, which are empty at every depth."
-                : "";
 
-            return $"None of this holds anything.{note} It can be brought back from the Recycle Bin.";
+            return folders > 0
+                ? _host.Text.Format("mouser.confirm.detail.folders", folders)
+                : _host.Text["mouser.confirm.detail"];
         }
     }
 
@@ -270,12 +273,12 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
 
         ErrorMessage = null;
         IsScanning = true;
-        Status = "Looking";
+        Status = _host.Text["mouser.status.looking"];
 
         var root = Root;
         var options = new MouserOptions { SkipSystemFolders = SkipSystemFolders };
 
-        _scan = _host.Background.Run($"Looking through {root}", async context =>
+        _scan = _host.Background.Run(_host.Text.Format("mouser.task.look", root), async context =>
         {
             var progress = new Progress<MouserProgress>(p =>
                 Status = $"{p.FoldersSeen} folders, {p.Found} found");
@@ -308,8 +311,8 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
         Rebuild();
 
         Status = _wasStopped
-            ? $"Stopped after {_foldersSeen} folders"
-            : _all.Count == 0 ? "Nothing dead in here." : "";
+            ? _host.Text.Format("mouser.status.stopped", _foldersSeen)
+            : _all.Count == 0 ? _host.Text["mouser.status.empty"] : "";
 
         _host.Log(_wasStopped
             ? $"Mouser stopped after {_foldersSeen} folder(s) in {Root}, keeping {_all.Count} finding(s)"
@@ -366,12 +369,12 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
 
         if (!outcome.Succeeded)
         {
-            ErrorMessage = outcome.FailureReason ?? "Nothing could be removed.";
+            ErrorMessage = outcome.FailureReason ?? _host.Text["mouser.error.nothing"];
             _host.Log($"Mouser could not remove {items.Count} thing(s): {ErrorMessage}");
         }
         else
         {
-            Status = $"Sent {outcome.Deleted} thing(s) to the Recycle Bin";
+            Status = _host.Text.Format("mouser.status.removed", outcome.Deleted);
             _host.Log($"Mouser sent {outcome.Deleted} thing(s) to the Recycle Bin");
         }
 
@@ -391,7 +394,7 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Could not open {path}: {ex.Message}";
+            ErrorMessage = _host.Text.Format("mouser.error.open", path, ex.Message);
         }
     }
 

@@ -323,6 +323,7 @@ public interface IMeowsHost
     void SaveSettings<T>(T settings) where T : class;
     IMeowsNotifications Notifications { get; }
     IMeowsBackgroundWork Background { get; }
+    IMeowsText Text { get; }
 }
 ```
 
@@ -360,9 +361,112 @@ Never store secrets here. Tokens and passwords belong wherever the tool they bel
 them; the Telegram plugin writes `BOT_TOKEN` to the bot's own `.env` and only ever reports
 *whether* one exists.
 
+### `Text`
+
+The language the window is in. See [section 5](#5-colours-and-language) for how to use it.
+
 ---
 
-## 5. Notifications
+## 5. Colours and language
+
+The shell hands both of these out by name at run time, so a plugin picks them up without
+referencing anything but the contract. A plugin that ignores both still works; it simply stays
+in English and paints its own colours in every theme.
+
+### Colours
+
+The window is light or dark depending on what the person chose on the Settings tab, and Windows
+gets a vote when they chose to follow it. A hardcoded `#1C1C22` looks right in one of those and
+wrong in the other, so ask for a token instead:
+
+```xml
+<Border Background="{DynamicResource MeowsCard}"
+        BorderBrush="{DynamicResource MeowsLine}"
+        BorderThickness="1"
+        CornerRadius="8" />
+```
+
+Lookup walks up to the application, so this resolves from the shell without a reference, and it
+follows a theme change on its own.
+
+| Token | For |
+|---|---|
+| `MeowsSunken` | the recess a thumbnail or a code block sits in |
+| `MeowsPanel` | a drawer along an edge |
+| `MeowsBase` | the background of a whole pane |
+| `MeowsBar` | the strip along the bottom |
+| `MeowsCard` | a card or a row |
+| `MeowsInset` | a well inside a card |
+| `MeowsRaised` | something standing slightly proud |
+| `MeowsHeader` | a column heading |
+| `MeowsLine` / `MeowsLineSoft` | separators, the second one subtler |
+| `MeowsSelection` / `MeowsSelectionLine` | the selected row |
+| `MeowsInfo` / `MeowsInfoLine` / `MeowsInfoText` | saying something, nothing wrong |
+| `MeowsWarn` / `MeowsWarnLine` / `MeowsWarnText` | worth reading before carrying on |
+| `MeowsDanger` / `MeowsDangerLine` / `MeowsDangerText` / `MeowsDangerStrong` | something is wrong |
+| `MeowsGoodText` | healthy |
+| `MeowsBadge` / `MeowsDangerBadge` | a badge over a thumbnail, carrying its own opacity |
+| `MeowsVeil` | dims the window behind a confirmation |
+
+Text and controls come from the Fluent theme and follow the variant without you doing anything,
+so leave `Foreground` alone unless you mean something by it.
+
+### Language
+
+Ship a `Strings.<code>.json` per language as an embedded resource and the shell merges it into one
+table when it finds your plugin. Keys are flat and namespaced by you:
+
+```json
+{
+  "weatherwatch.title": "Weather Watch",
+  "weatherwatch.found": "{0} stations within {1} km"
+}
+```
+
+```xml
+<ItemGroup>
+    <EmbeddedResource Include="Strings\Strings.*.json">
+        <WithCulture>false</WithCulture>
+        <LogicalName>$(AssemblyName).Strings.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+</ItemGroup>
+```
+
+Both of those lines matter. MSBuild reads the middle of `Strings.de.json` as a culture and, left
+alone, files it under a `de` satellite assembly and strips the code out of the name, so both
+languages end up called `Strings.json` and neither is where the shell looks.
+
+From XAML, with `xmlns:m="using:Meows.Plugins.Abstractions"`:
+
+```xml
+<TextBlock Text="{m:Tr weatherwatch.title}" />
+```
+
+That is a binding, not a lookup, so it repaints when the language changes rather than needing a
+restart. From code, through the host:
+
+```csharp
+Status = host.Text.Format("weatherwatch.found", count, radius);
+```
+
+Anything you build in code has to be recomputed yourself when the language changes: raise
+`PropertyChanged` for it, or expose `MeowsText.Entry("your.key")` and bind to its `Value`, which
+is what `{m:Tr}` does underneath.
+
+Three things are worth knowing:
+
+- A key nobody has is shown as the key. Visibly wrong, never an exception from inside a binding.
+- A key English has and your language does not reads in English. Half a window in the wrong
+  language is a nuisance; half a window of dotted identifiers is unusable.
+- `Description` and `Category` on `IMeowsPlugin` go through the table too, so returning a key
+  gets them translated and returning a sentence shows it as written.
+
+The shell ships `en` and `de`. Log messages are deliberately not translated: the log is what gets
+pasted into a bug report.
+
+---
+
+## 6. Notifications
 
 Use these when the user needs to know something. The point is that the shell owns one surface,
 so a problem raised by a tab in the background is still seen.
@@ -421,7 +525,7 @@ elsewhere. It draws duplicate sets in the tab, because they only mean anything t
 
 ---
 
-## 6. Background work
+## 7. Background work
 
 For anything that should keep running while the user is on another tab: a folder watch, a long
 import, a periodic scan.
@@ -469,7 +573,7 @@ delays the next one instead of two overlapping.
 
 ---
 
-## 7. MVVM and threading
+## 8. MVVM and threading
 
 `ObservableObject` and `RelayCommand` ship in the contract assembly, so a plugin needs no MVVM
 dependency:
@@ -497,7 +601,7 @@ random crashes in a plugin.
 
 ---
 
-## 8. Lifetime
+## 9. Lifetime
 
 Activation builds your view. Deactivation:
 
@@ -523,7 +627,7 @@ registered through `IMeowsBackgroundWork` are already handled.
 
 ---
 
-## 9. How the shell finds you
+## 10. How the shell finds you
 
 One subfolder per plugin inside a `plugins` directory, resolved in this order:
 
@@ -553,7 +657,7 @@ Private dependencies are fine. Ship them in your folder and the resolver finds t
 
 ---
 
-## 10. Checklist
+## 11. Checklist
 
 - [ ] `Id` is stable and unique
 - [ ] Added to the solution
@@ -565,8 +669,10 @@ Private dependencies are fine. Ship them in your folder and the resolver finds t
 - [ ] UI state is only touched on the UI thread
 - [ ] Settings use `?? new()` on load
 - [ ] No secrets in settings
+- [ ] Colours come from `{DynamicResource Meows...}`, not from hex
+- [ ] Strings come from a catalogue, with `WithCulture` and `LogicalName` set on the resource
 
-## 11. Debugging
+## 12. Debugging
 
 `%APPDATA%\Meows\meows.log` is truncated per run and shows discovery:
 

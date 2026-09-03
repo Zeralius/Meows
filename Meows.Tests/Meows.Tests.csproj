@@ -18,6 +18,15 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- A deliberately lopsided catalogue: German is missing a key English has, which is how the
+       fallback gets tested. The real catalogues are checked for parity instead. -->
+  <ItemGroup>
+    <EmbeddedResource Include="Strings\Strings.*.json">
+      <WithCulture>false</WithCulture>
+      <LogicalName>$(AssemblyName).Strings.%(Filename)%(Extension)</LogicalName>
+    </EmbeddedResource>
+  </ItemGroup>
+
   <!-- Covers pure and filesystem logic. Anything needing an Avalonia render backend or a
        running dispatcher is deliberately out of scope, so this suite stays headless. -->
   <ItemGroup>

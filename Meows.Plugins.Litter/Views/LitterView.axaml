@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Meows.Plugins.Litter.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
              x:Class="Meows.Plugins.Litter.Views.LitterView"
              x:DataType="vm:LitterViewModel">
 
@@ -16,37 +17,37 @@
             <Setter Property="Margin" Value="14,12,14,6" />
         </Style>
         <Style Selector="Border.panel">
-            <Setter Property="Background" Value="#17171C" />
-            <Setter Property="BorderBrush" Value="#2A2A32" />
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
         </Style>
         <Style Selector="ListBoxItem">
             <Setter Property="Padding" Value="10,7" />
             <Setter Property="CornerRadius" Value="5" />
         </Style>
         <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="#24384A" />
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
         </Style>
         <Style Selector="Button.bucket">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
-            <Setter Property="Background" Value="#1C1C22" />
-            <Setter Property="BorderBrush" Value="#2E2E36" />
+            <Setter Property="Background" Value="{DynamicResource MeowsCard}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLine}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="6" />
             <Setter Property="Padding" Value="10,7" />
             <Setter Property="Margin" Value="0,0,0,5" />
         </Style>
         <Style Selector="Button.bucket.on">
-            <Setter Property="Background" Value="#24384A" />
-            <Setter Property="BorderBrush" Value="#3E6C90" />
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsSelectionLine}" />
         </Style>
     </UserControl.Styles>
 
     <DockPanel>
 
         <Border DockPanel.Dock="Top"
-                Background="#1C1C22"
-                BorderBrush="#2A2A32"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
                 BorderThickness="0,0,0,1"
                 Padding="14,10">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
@@ -58,24 +59,24 @@
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <CheckBox Content="Ask before deleting"
+                    <CheckBox Content="{m:Tr litter.confirmdeletes}"
                               IsChecked="{Binding ConfirmDeletes}"
                               FontSize="11"
                               VerticalAlignment="Center" />
-                    <Button Name="PickFolderButton" Content="Folder…" />
-                    <Button Content="Open" Command="{Binding OpenFolderCommand}" />
-                    <Button Content="Refresh" Command="{Binding RefreshCommand}" />
+                    <Button Name="PickFolderButton" Content="{m:Tr litter.folder}" />
+                    <Button Content="{m:Tr litter.open}" Command="{Binding OpenFolderCommand}" />
+                    <Button Content="{m:Tr litter.refresh}" Command="{Binding RefreshCommand}" />
                 </StackPanel>
             </Grid>
         </Border>
 
         <Border DockPanel.Dock="Top"
-                Background="#3A1F22"
-                BorderBrush="#5C2B30"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
                 BorderThickness="0,0,0,1"
                 Padding="14,8"
                 IsVisible="{Binding HasError}">
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFB4B4" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
         </Border>
 
         <Panel>
@@ -83,9 +84,9 @@
 
             <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="SHOW ONLY" />
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr litter.showonly}" />
                     <Button DockPanel.Dock="Bottom"
-                            Content="Show everything"
+                            Content="{m:Tr litter.showall}"
                             Command="{Binding ClearFilterCommand}"
                             Margin="8,6,8,12"
                             FontSize="11"
@@ -111,17 +112,17 @@
                 </DockPanel>
             </Border>
 
-            <GridSplitter Grid.Column="1" Background="#22222A" ResizeDirection="Columns" />
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
 
             <DockPanel Grid.Column="2">
                 <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="14,10,14,6" ColumnSpacing="10">
                     <TextBlock Grid.Column="0" Classes="label" Text="{Binding SelectionText}" VerticalAlignment="Center" />
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                        <Button Content="Show in Explorer" Command="{Binding ExploreCommand}" FontSize="11" />
-                        <Button Content="Send to Recycle Bin"
+                        <Button Content="{m:Tr litter.explore}" Command="{Binding ExploreCommand}" FontSize="11" />
+                        <Button Content="{m:Tr litter.recycle}"
                                 Command="{Binding DeleteCommand}"
-                                Background="#3A1F22"
-                                BorderBrush="#5C2B30"
+                                Background="{DynamicResource MeowsDanger}"
+                                BorderBrush="{DynamicResource MeowsDangerLine}"
                                 FontSize="11" />
                     </StackPanel>
                 </Grid>
@@ -131,7 +132,7 @@
                            Opacity="0.45"
                            TextWrapping="Wrap"
                            IsVisible="{Binding IsEmpty}"
-                           Text="Nothing to show. Either the folder is clean, or a filter on the left is hiding everything." />
+                           Text="{m:Tr litter.empty}" />
 
                 <ListBox Name="ItemList"
                          ItemsSource="{Binding Items}"
@@ -148,12 +149,12 @@
                                            TextTrimming="CharacterEllipsis"
                                            VerticalAlignment="Center" />
                                 <Border Grid.Column="2"
-                                        Background="#5C2B30"
+                                        Background="{DynamicResource MeowsDangerLine}"
                                         CornerRadius="3"
                                         Padding="5,1"
                                         VerticalAlignment="Center"
                                         IsVisible="{Binding IsJunk}">
-                                    <TextBlock Text="NEVER FINISHED" FontSize="9" />
+                                    <TextBlock Text="{m:Tr litter.unfinished}" FontSize="9" />
                                 </Border>
                                 <TextBlock Grid.Column="3"
                                            Text="{Binding AgeText}"
@@ -172,9 +173,9 @@
 
         </Grid>
 
-        <Border IsVisible="{Binding IsAsking}" Background="#C0000000">
-            <Border Background="#1C1C22"
-                    BorderBrush="#5C2B30"
+        <Border IsVisible="{Binding IsAsking}" Background="{DynamicResource MeowsVeil}">
+            <Border Background="{DynamicResource MeowsCard}"
+                    BorderBrush="{DynamicResource MeowsDangerLine}"
                     BorderThickness="1"
                     CornerRadius="8"
                     Padding="20,16"
@@ -184,18 +185,18 @@
                 <StackPanel Spacing="10">
                     <TextBlock Text="{Binding ConfirmPrompt}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding ConfirmDetail}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
-                    <CheckBox Content="Do not ask again" IsChecked="{Binding DoNotAskAgain}" FontSize="11" Margin="0,4,0,0" />
+                    <CheckBox Content="{m:Tr litter.dontask}" IsChecked="{Binding DoNotAskAgain}" FontSize="11" Margin="0,4,0,0" />
                     <Grid ColumnDefinitions="*,8,*">
                         <Button Grid.Column="0"
-                                Content="Cancel"
+                                Content="{m:Tr litter.cancel}"
                                 Command="{Binding CancelDeleteCommand}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center" />
                         <Button Grid.Column="2"
-                                Content="Send to Recycle Bin"
+                                Content="{m:Tr litter.recycle}"
                                 Command="{Binding ConfirmDeleteCommand}"
-                                Background="#3A1F22"
-                                BorderBrush="#5C2B30"
+                                Background="{DynamicResource MeowsDanger}"
+                                BorderBrush="{DynamicResource MeowsDangerLine}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center" />
                     </Grid>

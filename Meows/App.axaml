@@ -3,6 +3,17 @@
              x:Class="Meows.App"
              RequestedThemeVariant="Dark">
 
+    <!-- The variant above is only the starting point. Whatever was saved is applied on startup,
+         and the Settings tab changes it while the app is running. -->
+
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceInclude Source="avares://Meows/Themes/Palette.axaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+    </Application.Resources>
+
     <Application.Styles>
         <FluentTheme />
     </Application.Styles>

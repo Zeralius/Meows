@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -123,7 +124,7 @@ public partial class KibbleView : UserControl, IDisposable
 
         var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Open a folder to sort",
+            Title = MeowsText.Current["kibble.dialog.openfolder"],
             AllowMultiple = false,
         });
 
@@ -146,7 +147,7 @@ public partial class KibbleView : UserControl, IDisposable
 
         var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Select the telegram-posting-bot folder",
+            Title = MeowsText.Current["kibble.dialog.botfolder"],
             AllowMultiple = false,
         });
 

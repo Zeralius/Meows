@@ -39,8 +39,10 @@ public sealed class EntryViewModel(DiskEntry entry, long parentSize) : Observabl
 
     public string Detail => Entry.Kind switch
     {
-        DiskEntryKind.Folder => Entry.FileCount == 1 ? "1 file inside" : $"{Entry.FileCount} files inside",
-        DiskEntryKind.SmallFiles => "not listed separately",
+        DiskEntryKind.Folder => Entry.FileCount == 1
+            ? MeowsText.Current["chonk.files.one"]
+            : MeowsText.Current.Format("chonk.files.many", Entry.FileCount),
+        DiskEntryKind.SmallFiles => MeowsText.Current["chonk.notlisted"],
         _ => "",
     };
 
@@ -70,7 +72,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
     private DiskEntry? _current;
     private EntryViewModel? _selected;
     private EntryViewModel? _pendingDelete;
-    private string _status = "Pick a drive and scan it.";
+    private string _status = MeowsText.Current["chonk.status.start"];
     private string? _errorMessage;
     private bool _isScanning;
 
@@ -181,7 +183,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
 
     public string ConfirmPrompt => PendingDelete is null
         ? ""
-        : $"Send {PendingDelete.Name} to the Recycle Bin?";
+        : _host.Text.Format("chonk.confirm.prompt", PendingDelete.Name);
 
     /// <summary>
     /// The size, plus the file count for a folder. The count is the useful part: the name
@@ -194,25 +196,26 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
             if (PendingDelete is not { } pending)
                 return "";
 
-            var inside = pending.Entry.IsFolder
+            // One whole sentence per case rather than fragments glued together, because the
+            // count sits in the middle of it and no two languages put it in the same place.
+            var line = pending.Entry.IsFolder
                 ? pending.Entry.FileCount switch
                 {
-                    1 => ", with 1 file inside it",
-                    var n => $", with {n} files inside it",
+                    1 => _host.Text.Format("chonk.confirm.folder.one", pending.SizeText),
+                    var n => _host.Text.Format("chonk.confirm.folder.many", pending.SizeText, n),
                 }
-                : "";
+                : _host.Text.Format("chonk.confirm.file", pending.SizeText);
 
             // What it is belongs here more than anywhere else on the tab. This is the last moment
             // anyone gets to notice that the folder is a Steam game or that a program has it open.
             var warning = Identity switch
             {
-                { Verdict: FolderVerdict.Game } => " This is a Steam game, and deleting the folder " +
-                    "leaves Steam still believing it is installed. Uninstall it through Steam instead.",
-                { InUse: true } => " Something has a file in here open right now.",
+                { Verdict: FolderVerdict.Game } => _host.Text["chonk.warn.game"],
+                { InUse: true } => _host.Text["chonk.warn.inuse"],
                 _ => "",
             };
 
-            return $"{pending.SizeText}{inside}. It can be brought back from the Recycle Bin.{warning}";
+            return warning.Length == 0 ? line : $"{line} {warning}";
         }
     }
 
@@ -386,7 +389,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Could not list drives: {ex.Message}";
+            ErrorMessage = _host.Text.Format("chonk.error.drives", ex.Message);
         }
     }
 
@@ -397,7 +400,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
 
         if (!Directory.Exists(root))
         {
-            ErrorMessage = $"{root} does not exist.";
+            ErrorMessage = _host.Text.Format("chonk.error.missing", root);
             return;
         }
 
@@ -407,16 +410,16 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
 
         ErrorMessage = null;
         IsScanning = true;
-        Status = $"Measuring {root}";
+        Status = _host.Text.Format("chonk.status.measuring", root);
 
         var options = new ScanOptions { SkipSystemFolders = SkipSystemFolders };
 
         // Background work, so switching tabs does not abandon a drive scan half way through
         // and the Tasks panel can say what it is doing.
-        _scan = _host.Background.Run($"Measuring {root}", async context =>
+        _scan = _host.Background.Run(_host.Text.Format("chonk.status.measuring", root), async context =>
         {
             var progress = new Progress<ScanProgress>(p =>
-                Status = $"{p.FoldersSeen} folders, {DiskScan.Humanise(p.BytesSeen)} so far");
+                Status = _host.Text.Format("chonk.status.progress", p.FoldersSeen, DiskScan.Humanise(p.BytesSeen)));
 
             var tree = await Task.Run(
                 () => DiskScan.Run(root, options, progress, context.Token), context.Token);
@@ -503,7 +506,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
 
         if (!outcome.Succeeded)
         {
-            ErrorMessage = outcome.FailureReason ?? $"Could not remove that {what}.";
+            ErrorMessage = outcome.FailureReason ?? _host.Text[$"chonk.error.{what}"];
             _host.Log($"Chonk could not remove {entry.Path}: {ErrorMessage}");
             return;
         }
@@ -515,10 +518,10 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
         // adjusted, so a rescan would only tell us what we know.
         Show(Current);
 
-        Status = $"Sent {entry.Name} to the Recycle Bin, {DiskScan.Humanise(freed)} freed";
+        Status = _host.Text.Format("chonk.status.removed", entry.Name, DiskScan.Humanise(freed));
         _host.Log($"Chonk sent {what} {entry.Path} to the Recycle Bin, {DiskScan.Humanise(freed)} freed");
-        _host.Notifications.Post(NotificationSeverity.Info, "Sent to the Recycle Bin",
-            $"{entry.Name}, {DiskScan.Humanise(freed)} freed. It is still recoverable.");
+        _host.Notifications.Post(NotificationSeverity.Info, _host.Text["chonk.notify.recycled"],
+            _host.Text.Format("chonk.notify.detail", entry.Name, DiskScan.Humanise(freed)));
     }
 
     private void OpenInExplorer(string? path)
@@ -532,7 +535,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Could not open {path}: {ex.Message}";
+            ErrorMessage = _host.Text.Format("chonk.error.open", path, ex.Message);
         }
     }
 
@@ -559,8 +562,9 @@ public sealed class DriveViewModel(DriveInfo drive) : ObservableObject
         ? drive.Name
         : $"{drive.Name} {drive.VolumeLabel}";
 
-    public string UsageText { get; } =
-        $"{DiskScan.Humanise(drive.TotalSize - drive.TotalFreeSpace)} of {DiskScan.Humanise(drive.TotalSize)} used";
+    public string UsageText { get; } = MeowsText.Current.Format("chonk.drive.usage",
+        DiskScan.Humanise(drive.TotalSize - drive.TotalFreeSpace),
+        DiskScan.Humanise(drive.TotalSize));
 
     public double Fraction { get; } =
         drive.TotalSize <= 0 ? 0 : (double)(drive.TotalSize - drive.TotalFreeSpace) / drive.TotalSize;

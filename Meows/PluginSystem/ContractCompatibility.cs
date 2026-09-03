@@ -85,14 +85,10 @@ public static class ContractCompatibility
             return null; // Draws nothing, so there is nothing to disagree about.
 
         if (pluginUi.Major != ShellUiVersion.Major)
-            return $"Built against Avalonia {Format(pluginUi)}, but this shell hosts " +
-                   $"{ShellUiVersionText}. The two share one copy of Avalonia, so the major " +
-                   "version has to match or the controls it builds are not controls this can show.";
+            return MeowsText.Current.Format("contract.ui.major", Format(pluginUi), ShellUiVersionText);
 
         if (pluginUi > ShellUiVersion)
-            return $"Built against Avalonia {Format(pluginUi)}, which is newer than the " +
-                   $"{ShellUiVersionText} this shell provides. Update Meows, or rebuild the plugin " +
-                   $"against Avalonia {ShellUiVersionText}.";
+            return MeowsText.Current.Format("contract.ui.newer", Format(pluginUi), ShellUiVersionText);
 
         return null;
     }
@@ -106,14 +102,12 @@ public static class ContractCompatibility
         // A major bump can remove or change members, so an older major is no safer than a
         // newer one.
         if (pluginContract.Major != ShellVersion.Major)
-            return $"Built for Meows contract {Format(pluginContract)}, but this shell provides " +
-                   $"{ShellVersionText}. Major versions must match.";
+            return MeowsText.Current.Format("contract.major", Format(pluginContract), ShellVersionText);
 
         // Newer within the same major may call members we do not have. Older is fine,
         // since additions stay backward compatible.
         if (pluginContract > ShellVersion)
-            return $"Built for Meows contract {Format(pluginContract)}, which is newer than this " +
-                   $"shell's {ShellVersionText}. Update Meows, or rebuild the plugin against {ShellVersionText}.";
+            return MeowsText.Current.Format("contract.newer", Format(pluginContract), ShellVersionText);
 
         return null;
     }

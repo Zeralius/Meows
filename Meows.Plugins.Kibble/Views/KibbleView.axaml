@@ -1,11 +1,30 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Meows.Plugins.Kibble.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
              x:Class="Meows.Plugins.Kibble.Views.KibbleView"
              x:DataType="vm:KibbleViewModel"
              Focusable="True">
 
+    <UserControl.Resources>
+        <!-- Every dropdown here holds option rows whose label is a translated string, so they all
+             draw the same way and all follow a language change. -->
+        <DataTemplate x:Key="OptionLabel" x:DataType="vm:ILabelledOption">
+            <TextBlock Text="{Binding Label.Value}" />
+        </DataTemplate>
+    </UserControl.Resources>
+
     <UserControl.Styles>
+        <!-- How much runway a group has left, as a colour, so the list reads at a glance. -->
+        <Style Selector="TextBlock.runway">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsGoodText}" />
+        </Style>
+        <Style Selector="TextBlock.runway.low">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsWarnText}" />
+        </Style>
+        <Style Selector="TextBlock.runway.dry">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsDangerStrong}" />
+        </Style>
         <Style Selector="TextBlock.label">
             <Setter Property="Opacity" Value="0.5" />
             <Setter Property="FontSize" Value="11" />
@@ -17,12 +36,12 @@
             <Setter Property="Margin" Value="14,12,14,6" />
         </Style>
         <Style Selector="Border.panel">
-            <Setter Property="Background" Value="#17171C" />
-            <Setter Property="BorderBrush" Value="#2A2A32" />
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
         </Style>
         <Style Selector="Button.mode">
-            <Setter Property="Background" Value="#1C1C22" />
-            <Setter Property="BorderBrush" Value="#2E2E36" />
+            <Setter Property="Background" Value="{DynamicResource MeowsCard}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLine}" />
             <Setter Property="BorderThickness" Value="1" />
             <Setter Property="CornerRadius" Value="6" />
             <Setter Property="Padding" Value="8,6" />
@@ -31,8 +50,8 @@
             <Setter Property="HorizontalContentAlignment" Value="Center" />
         </Style>
         <Style Selector="Button.mode.on">
-            <Setter Property="Background" Value="#24384A" />
-            <Setter Property="BorderBrush" Value="#3E6C90" />
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsSelectionLine}" />
         </Style>
         <Style Selector="ListBoxItem">
             <Setter Property="Padding" Value="4" />
@@ -40,11 +59,11 @@
             <Setter Property="CornerRadius" Value="5" />
         </Style>
         <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#23232B" />
+            <Setter Property="Background" Value="{DynamicResource MeowsHeader}" />
         </Style>
         <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="#24384A" />
-            <Setter Property="BorderBrush" Value="#3E6C90" />
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsSelectionLine}" />
             <Setter Property="BorderThickness" Value="1" />
         </Style>
     </UserControl.Styles>
@@ -52,8 +71,8 @@
     <DockPanel>
 
         <Border DockPanel.Dock="Top"
-                Background="#1C1C22"
-                BorderBrush="#2A2A32"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
                 BorderThickness="0,0,0,1"
                 Padding="14,10">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
@@ -62,7 +81,7 @@
                                FontWeight="SemiBold"
                                TextTrimming="CharacterEllipsis"
                                IsVisible="{Binding HasSource}" />
-                    <TextBlock Text="No folder open"
+                    <TextBlock Text="{m:Tr kibble.nofolder}"
                                FontWeight="SemiBold"
                                Opacity="0.5"
                                IsVisible="{Binding !HasSource}" />
@@ -70,28 +89,28 @@
                         <TextBlock Classes="label" Text="{Binding RemainingText}" />
                         <TextBlock Text="{Binding SelectionText}"
                                    FontSize="11"
-                                   Foreground="#7FB0DA"
+                                   Foreground="{DynamicResource MeowsInfoText}"
                                    IsVisible="{Binding IsBundle}" />
                         <TextBlock Classes="label" Text="{Binding SummaryText}" />
                         <TextBlock Classes="label" Text="{Binding StatusMessage}" />
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <Button Name="OpenFolderButton" Content="Open folder…" />
-                    <Button Content="Refresh" Command="{Binding RefreshCommand}" />
-                    <Button Content="Undo" Command="{Binding UndoCommand}" />
-                    <Button Name="ChooseBotButton" Content="Bot folder…" />
+                    <Button Name="OpenFolderButton" Content="{m:Tr kibble.openfolder}" />
+                    <Button Content="{m:Tr kibble.refresh}" Command="{Binding RefreshCommand}" />
+                    <Button Content="{m:Tr kibble.undo}" Command="{Binding UndoCommand}" />
+                    <Button Name="ChooseBotButton" Content="{m:Tr kibble.botfolder}" />
                 </StackPanel>
             </Grid>
         </Border>
 
         <Border DockPanel.Dock="Top"
-                Background="#3A1F22"
-                BorderBrush="#5C2B30"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
                 BorderThickness="0,0,0,1"
                 Padding="14,8"
                 IsVisible="{Binding HasError}">
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFB4B4" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
         </Border>
 
         <Grid ColumnDefinitions="300,4,*,4,400">
@@ -104,22 +123,22 @@
                                Classes="label"
                                Margin="14,6,14,12"
                                TextWrapping="Wrap"
-                               Text="Press 1 to 9 to send, space to skip. Ctrl click or shift click to pick several." />
+                               Text="{m:Tr kibble.keys}" />
 
                     <!-- What a send does when several are picked. -->
                     <StackPanel DockPanel.Dock="Bottom" Margin="14,10,14,0" Spacing="4">
-                        <TextBlock Classes="label" Text="Several picked go in as" />
+                        <TextBlock Classes="label" Text="{m:Tr kibble.severalgoin}" />
                         <Grid ColumnDefinitions="*,6,*">
                             <Button Grid.Column="0"
                                     Classes="mode"
                                     Classes.on="{Binding IsComicMode}"
                                     Command="{Binding ChooseComicCommand}"
-                                    Content="One comic" />
+                                    Content="{m:Tr kibble.onecomic}" />
                             <Button Grid.Column="2"
                                     Classes="mode"
                                     Classes.on="{Binding IsFileMode}"
                                     Command="{Binding ChooseFilesCommand}"
-                                    Content="Separate files" />
+                                    Content="{m:Tr kibble.separatefiles}" />
                         </Grid>
                     </StackPanel>
                     <ScrollViewer>
@@ -128,8 +147,8 @@
                                 <DataTemplate x:DataType="vm:DestinationViewModel">
                                     <Button HorizontalAlignment="Stretch"
                                             HorizontalContentAlignment="Left"
-                                            Background="#1C1C22"
-                                            BorderBrush="#2E2E36"
+                                            Background="{DynamicResource MeowsCard}"
+                                            BorderBrush="{DynamicResource MeowsLine}"
                                             BorderThickness="1"
                                             CornerRadius="6"
                                             Padding="10,8"
@@ -139,7 +158,7 @@
                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
                                             <Border Grid.Column="0"
                                                     Width="22" Height="22"
-                                                    Background="#2A2A32"
+                                                    Background="{DynamicResource MeowsLineSoft}"
                                                     CornerRadius="4"
                                                     VerticalAlignment="Center"
                                                     IsVisible="{Binding HasShortcut}">
@@ -156,7 +175,9 @@
                                             </StackPanel>
                                             <TextBlock Grid.Column="2"
                                                        Text="{Binding RunwayText}"
-                                                       Foreground="{Binding Accent}"
+                                                       Classes="runway"
+                                                       Classes.low="{Binding IsLow}"
+                                                       Classes.dry="{Binding IsDry}"
                                                        FontSize="11"
                                                        VerticalAlignment="Center" />
                                         </Grid>
@@ -168,19 +189,19 @@
                 </DockPanel>
             </Border>
 
-            <GridSplitter Grid.Column="1" Background="#22222A" ResizeDirection="Columns" />
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
 
             <!-- The folder you opened -->
             <DockPanel Grid.Column="2">
                 <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" Margin="0,0,14,0">
-                    <TextBlock Grid.Column="0" Classes="section" Text="WAITING TO BE SORTED" />
+                    <TextBlock Grid.Column="0" Classes="section" Text="{m:Tr kibble.waiting}" />
                     <ToggleButton Grid.Column="1"
                                   IsChecked="{Binding LazyLoad}"
-                                  Content="In batches"
+                                  Content="{m:Tr kibble.inbatches}"
                                   FontSize="11"
                                   Padding="8,4"
                                   Margin="0,0,6,0"
-                                  ToolTip.Tip="Build only a batch of tiles at a time. Much faster on a folder of thousands."
+                                  ToolTip.Tip="{m:Tr kibble.inbatches.tip}"
                                   VerticalAlignment="Center" />
                     <ComboBox Grid.Column="2"
                               ItemsSource="{Binding PageSizes}"
@@ -193,6 +214,7 @@
                     <ComboBox Grid.Column="3"
                               ItemsSource="{Binding SortOptions}"
                               SelectedItem="{Binding SelectedSort}"
+                              ItemTemplate="{StaticResource OptionLabel}"
                               FontSize="11"
                               MinWidth="150"
                               VerticalAlignment="Center" />
@@ -203,7 +225,7 @@
                            Opacity="0.45"
                            TextWrapping="Wrap"
                            IsVisible="{Binding IsEmpty}"
-                           Text="Nothing here. Open a folder to start, or you have cleared it out, which is the idea." />
+                           Text="{m:Tr kibble.empty}" />
 
                 <Button DockPanel.Dock="Bottom"
                         Command="{Binding LoadMoreCommand}"
@@ -231,7 +253,7 @@
                         <DataTemplate x:DataType="vm:IncomingFileViewModel">
                             <StackPanel Width="150" Spacing="4" ToolTip.Tip="{Binding FileName}">
                                 <Border Width="150" Height="150"
-                                        Background="#101014"
+                                        Background="{DynamicResource MeowsSunken}"
                                         CornerRadius="4"
                                         ClipToBounds="True">
                                     <Panel>
@@ -244,17 +266,17 @@
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"
                                                    IsVisible="{Binding ShowGlyph}" />
-                                        <Border Background="#CC5C2B30"
+                                        <Border Background="{DynamicResource MeowsDangerBadge}"
                                                 CornerRadius="3"
                                                 Padding="4,1"
                                                 Margin="4"
                                                 HorizontalAlignment="Left"
                                                 VerticalAlignment="Top"
                                                 IsVisible="{Binding !IsPostable}">
-                                            <TextBlock Text="THE BOT SKIPS THIS" FontSize="9" />
+                                            <TextBlock Text="{m:Tr kibble.botskips}" FontSize="9" />
                                         </Border>
                                         <!-- Which page this will be inside the comic. -->
-                                        <Border Background="#E63E6C90"
+                                        <Border Background="{DynamicResource MeowsBadge}"
                                                 CornerRadius="12"
                                                 Width="24" Height="24"
                                                 Margin="4"
@@ -280,7 +302,7 @@
                 </ListBox>
             </DockPanel>
 
-            <GridSplitter Grid.Column="3" Background="#22222A" ResizeDirection="Columns" />
+            <GridSplitter Grid.Column="3" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
 
             <!-- Preview -->
             <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0">
@@ -290,13 +312,13 @@
                 <Grid RowDefinitions="Auto,*,Auto" Margin="16,12">
 
                     <TextBlock Grid.Row="0"
-                               Text="Preview"
+                               Text="{m:Tr kibble.preview}"
                                FontWeight="SemiBold"
                                FontSize="13"
                                Margin="0,0,0,8" />
 
                     <Border Grid.Row="1"
-                            Background="#101014"
+                            Background="{DynamicResource MeowsSunken}"
                             CornerRadius="6"
                             MinHeight="160"
                             Padding="6"
@@ -305,7 +327,7 @@
                             <Image Source="{Binding PreviewImage}"
                                    Stretch="Uniform"
                                    IsVisible="{Binding HasPreviewImage}" />
-                            <TextBlock Text="No inline preview for this file type"
+                            <TextBlock Text="{m:Tr kibble.nopreview}"
                                        Opacity="0.35"
                                        FontSize="11"
                                        HorizontalAlignment="Center"
@@ -327,20 +349,20 @@
                             </StackPanel>
                         </StackPanel>
 
-                        <Border Background="#3A2418"
-                                BorderBrush="#6B4423"
+                        <Border Background="{DynamicResource MeowsWarn}"
+                                BorderBrush="{DynamicResource MeowsWarnLine}"
                                 BorderThickness="1"
                                 CornerRadius="6"
                                 Padding="10,8"
                                 IsVisible="{Binding IsBlocked}">
                             <TextBlock Text="{Binding BlockedReason}"
-                                       Foreground="#FFC168"
+                                       Foreground="{DynamicResource MeowsWarnText}"
                                        TextWrapping="Wrap"
                                        FontSize="11" />
                         </Border>
 
-                        <Border Background="#1B2A38"
-                                BorderBrush="#31536E"
+                        <Border Background="{DynamicResource MeowsInfo}"
+                                BorderBrush="{DynamicResource MeowsInfoLine}"
                                 BorderThickness="1"
                                 CornerRadius="6"
                                 Padding="10,8"
@@ -349,52 +371,55 @@
                                 <TextBlock Text="{Binding BundleText}"
                                            TextWrapping="Wrap"
                                            FontSize="11"
-                                           Foreground="#BBD6EC" />
+                                           Foreground="{DynamicResource MeowsInfoText}" />
                                 <StackPanel Spacing="6" IsVisible="{Binding IsComicMode}">
-                                    <TextBlock Classes="label" Text="Name from" />
+                                    <TextBlock Classes="label" Text="{m:Tr kibble.namefrom}" />
                                     <ComboBox ItemsSource="{Binding NamingOptions}"
                                               SelectedItem="{Binding SelectedNaming}"
+                                              ItemTemplate="{StaticResource OptionLabel}"
                                               FontSize="11"
                                               HorizontalAlignment="Stretch" />
-                                    <TextBlock Classes="label" Text="Comic name" />
+                                    <TextBlock Classes="label" Text="{m:Tr kibble.comicname}" />
                                     <TextBox Text="{Binding ArchiveName}"
-                                             PlaceholderText="comic"
+                                             PlaceholderText="{m:Tr kibble.comicname.placeholder}"
                                              FontSize="12" />
-                                    <TextBlock Classes="label" Text="Page order" />
+                                    <TextBlock Classes="label" Text="{m:Tr kibble.pageorder}" />
                                     <ComboBox ItemsSource="{Binding PageOrderOptions}"
                                               SelectedItem="{Binding SelectedPageOrder}"
+                                              ItemTemplate="{StaticResource OptionLabel}"
                                               FontSize="11"
                                               HorizontalAlignment="Stretch" />
                                     <TextBlock Classes="label"
                                                TextWrapping="Wrap"
-                                               Text="Saved as .cbz. The number on each tile is the page it will be." />
+                                               Text="{m:Tr kibble.cbznote}" />
                                 </StackPanel>
                                 <TextBlock Classes="label"
                                            TextWrapping="Wrap"
                                            IsVisible="{Binding IsFileMode}"
-                                           Text="They go in one by one, in the order the grid is showing, so the sort above decides it." />
+                                           Text="{m:Tr kibble.separatenote}" />
                             </StackPanel>
                         </Border>
 
-                        <Button Content="Skip this one"
+                        <Button Content="{m:Tr kibble.skip}"
                                 Command="{Binding SkipCommand}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center" />
 
-                        <TextBlock Classes="label" Text="Queue order" Margin="0,10,0,0" />
+                        <TextBlock Classes="label" Text="{m:Tr kibble.queueorder}" Margin="0,10,0,0" />
                         <ComboBox ItemsSource="{Binding StampOptions}"
                                   SelectedItem="{Binding SelectedStamp}"
+                                  ItemTemplate="{StaticResource OptionLabel}"
                                   HorizontalAlignment="Stretch" />
                         <TextBlock Text="{Binding StampHint}" Classes="label" TextWrapping="Wrap" />
 
-                        <CheckBox Content="Set duplicates aside"
+                        <CheckBox Content="{m:Tr kibble.duplicates}"
                                   IsChecked="{Binding DuplicatesToFolder}"
                                   Margin="0,10,0,0" />
                         <TextBlock Classes="label" TextWrapping="Wrap"
-                                   Text="A file this group already has, queued or posted, goes to its Duplicates folder instead of being refused. The bot never looks in there." />
+                                   Text="{m:Tr kibble.duplicates.hint}" />
 
                         <TextBlock Classes="label" Margin="0,10,0,0" TextWrapping="Wrap"
-                                   Text="Files move rather than copy. Undo puts the last one back where it came from." />
+                                   Text="{m:Tr kibble.movenote}" />
                         <TextBlock Text="{Binding BotRootText}" Classes="label" TextWrapping="Wrap" />
 
                     </StackPanel>

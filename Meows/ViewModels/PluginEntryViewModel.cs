@@ -22,7 +22,11 @@ public sealed class PluginEntryViewModel : ObservableObject
 
     public string DisplayName => Descriptor.DisplayName;
 
-    public string Description => Descriptor.Description;
+    /// <summary>
+    /// Translated if the plugin returned a key, and left alone if it returned a sentence. A
+    /// plugin with no catalogue is the second case and reads the same as it always did.
+    /// </summary>
+    public string Description => MeowsText.Current[Descriptor.Description];
 
     public string Icon => Descriptor.Icon;
 
@@ -70,7 +74,14 @@ public sealed class PluginEntryViewModel : ObservableObject
 
     public bool HasError => !string.IsNullOrEmpty(Error);
 
-    public string StatusText => IsIncompatible ? "Incompatible"
-        : HasError ? "Failed"
-        : IsActivated ? "Active" : "Inactive";
+    public string StatusText => IsIncompatible ? MeowsText.Current["plugins.incompatible"]
+        : HasError ? MeowsText.Current["plugins.failed"]
+        : IsActivated ? MeowsText.Current["plugins.active"] : MeowsText.Current["plugins.inactive"];
+
+    /// <summary>Called after a language change. Only the strings we own are affected.</summary>
+    public void Retranslate()
+    {
+        OnPropertyChanged(nameof(Description));
+        OnPropertyChanged(nameof(StatusText));
+    }
 }

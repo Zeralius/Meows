@@ -1,3 +1,5 @@
+using Meows.Plugins.Abstractions;
+
 namespace Meows.Disk;
 
 /// <summary>What removing a folder would cost.</summary>
@@ -26,10 +28,14 @@ public sealed record FolderIdentity(
     IReadOnlyList<string> Evidence,
     bool InUse)
 {
-    public static FolderIdentity Nothing { get; } = new(
-        "Not sure what this is",
+    /// <summary>
+    /// Built fresh each time rather than held as one instance, because the language can change
+    /// between two people asking for it and a cached one would still be in the old one.
+    /// </summary>
+    public static FolderIdentity Nothing => new(
+        MeowsText.Current["disk.unknown.headline"],
         FolderVerdict.Unknown,
-        "Nothing here says what wrote this, so treat it as yours until you know otherwise.",
+        MeowsText.Current["disk.unknown.advice"],
         [],
         false);
 }
@@ -57,20 +63,24 @@ public static class FolderInspector
     /// </summary>
     private static readonly Dictionary<string, string> KnownRebuildable = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["node_modules"] = "installed npm packages",
-        ["obj"] = "intermediate build output",
-        ["bin"] = "compiled build output",
-        ["target"] = "build output",
-        ["__pycache__"] = "compiled Python bytecode",
-        ["Library"] = "Unity's imported asset cache",
-        ["Temp"] = "scratch space",
-        [".gradle"] = "Gradle's cache",
-        ["CachedData"] = "cached data",
-        ["ShaderCache"] = "compiled shaders",
-        ["shader_cache"] = "compiled shaders",
-        ["GPUCache"] = "cached GPU data",
-        ["Crashpad"] = "crash reports",
+        ["node_modules"] = "disk.known.node_modules",
+        ["obj"] = "disk.known.obj",
+        ["bin"] = "disk.known.bin",
+        ["target"] = "disk.known.target",
+        ["__pycache__"] = "disk.known.pycache",
+        ["Library"] = "disk.known.library",
+        ["Temp"] = "disk.known.temp",
+        [".gradle"] = "disk.known.gradle",
+        ["CachedData"] = "disk.known.cacheddata",
+        ["ShaderCache"] = "disk.known.shadercache",
+        ["shader_cache"] = "disk.known.shadercache",
+        ["GPUCache"] = "disk.known.gpucache",
+        ["Crashpad"] = "disk.known.crashpad",
     };
+
+    private static string Say(string key) => MeowsText.Current[key];
+
+    private static string Say(string key, params object?[] values) => MeowsText.Current.Format(key, values);
 
     public static FolderIdentity Of(string path, CancellationToken token = default)
     {
@@ -95,7 +105,7 @@ public static class FolderInspector
         var evidence = new List<string>();
 
         if (facts.FileCount == 0)
-            evidence.Add("No files inside it at all.");
+            evidence.Add(Say("disk.evidence.nofiles"));
         else
             evidence.Add(Composition(facts));
 
@@ -104,18 +114,18 @@ public static class FolderInspector
 
         var mine = UserFolder(directory);
         if (mine is not null)
-            evidence.Add($"Windows keeps this as your {mine} folder.");
+            evidence.Add(Say("disk.evidence.userfolder", Say(mine)));
 
         var owner = OwningApplication(directory);
         if (owner is not null)
-            evidence.Add($"It sits inside {owner}'s own folder.");
+            evidence.Add(Say("disk.evidence.owner", owner));
 
         if (facts.InUse)
-            evidence.Add("Something has a file in here open right now.");
+            evidence.Add(Say("disk.evidence.inuse"));
 
         var known = Rebuildable(directory);
         if (known is not null)
-            evidence.Add($"Folders named {directory.Name} hold {known}.");
+            evidence.Add(Say("disk.evidence.known", directory.Name, Say(known)));
 
         return Decide(directory, facts, mine, owner, known, evidence);
     }
@@ -127,20 +137,22 @@ public static class FolderInspector
     /// </summary>
     private static string? UserFolder(DirectoryInfo directory)
     {
-        var known = new (Environment.SpecialFolder Folder, string Name)[]
+        // Keys rather than names. Windows already has its own translated name for each of
+        // these, but it is the name on disk, and the sentence around it is ours.
+        var known = new (Environment.SpecialFolder Folder, string Key)[]
         {
-            (Environment.SpecialFolder.MyDocuments, "Documents"),
-            (Environment.SpecialFolder.MyPictures, "Pictures"),
-            (Environment.SpecialFolder.MyVideos, "Videos"),
-            (Environment.SpecialFolder.MyMusic, "Music"),
-            (Environment.SpecialFolder.Desktop, "Desktop"),
+            (Environment.SpecialFolder.MyDocuments, "disk.folder.documents"),
+            (Environment.SpecialFolder.MyPictures, "disk.folder.pictures"),
+            (Environment.SpecialFolder.MyVideos, "disk.folder.videos"),
+            (Environment.SpecialFolder.MyMusic, "disk.folder.music"),
+            (Environment.SpecialFolder.Desktop, "disk.folder.desktop"),
         };
 
-        foreach (var (folder, name) in known)
+        foreach (var (folder, key) in known)
         {
             var path = Environment.GetFolderPath(folder);
             if (path.Length > 0 && Same(path, directory.FullName))
-                return name;
+                return key;
         }
 
         return null;
@@ -153,17 +165,16 @@ public static class FolderInspector
     private static FolderIdentity ForGame(SteamGame game)
     {
         var played = game.PlayedUnknown
-            ? "Steam does not record when it was last played."
+            ? Say("disk.game.playedunknown")
             : game.NeverPlayed
-                ? "Steam says it has never been launched."
-                : $"Last played {Ago(game.LastPlayed!.Value)}.";
+                ? Say("disk.game.neverplayed")
+                : Say("disk.game.lastplayed", Ago(game.LastPlayed!.Value));
 
         return new FolderIdentity(
-            $"{game.Name}, installed through Steam",
+            Say("disk.game.headline", game.Name),
             FolderVerdict.Game,
-            "Uninstall it through Steam. Deleting the folder by hand leaves Steam still believing " +
-            "it is installed.",
-            [played, $"Steam records it as {FolderSize.Humanise(game.SizeOnDisk)}."],
+            Say("disk.game.advice"),
+            [played, Say("disk.game.size", FolderSize.Humanise(game.SizeOnDisk))],
             false);
     }
 
@@ -180,10 +191,9 @@ public static class FolderInspector
         if (mine is not null)
         {
             return new FolderIdentity(
-                $"Your {mine} folder",
+                Say("disk.yours.headline", Say(mine)),
                 FolderVerdict.Yours,
-                "This is one of your own folders. Look inside it for what to remove rather than " +
-                "removing the folder.",
+                Say("disk.yours.advice"),
                 evidence,
                 facts.InUse);
         }
@@ -191,13 +201,9 @@ public static class FolderInspector
         if (known is not null)
         {
             return new FolderIdentity(
-                $"{directory.Name}, which holds {known}",
+                Say("disk.rebuildable.headline", directory.Name, Say(known)),
                 FolderVerdict.Rebuildable,
-                facts.InUse
-                    ? "It will be rebuilt if you remove it, but something is using it right now. " +
-                      "Close that first."
-                    : "Safe to remove. Whatever wrote it will write it again, which costs time " +
-                      "rather than anything you cannot get back.",
+                Say(facts.InUse ? "disk.rebuildable.advice.inuse" : "disk.rebuildable.advice"),
                 evidence,
                 facts.InUse);
         }
@@ -205,10 +211,9 @@ public static class FolderInspector
         if (owner is not null)
         {
             return new FolderIdentity(
-                $"{owner}'s own data",
+                Say("disk.appdata.headline", owner),
                 FolderVerdict.ApplicationData,
-                "This is settings and state rather than something you put here. Removing it will " +
-                "not usually break the program, but it will forget whatever was in here.",
+                Say("disk.appdata.advice"),
                 evidence,
                 facts.InUse);
         }
@@ -216,10 +221,9 @@ public static class FolderInspector
         if (facts.FileCount > 0 && facts.LooksPersonal)
         {
             return new FolderIdentity(
-                "Looks like your own material",
+                Say("disk.personal.headline"),
                 FolderVerdict.Yours,
-                "Nothing here says a program made this, and the contents read like documents or " +
-                "media. Treat it as yours.",
+                Say("disk.personal.advice"),
                 evidence,
                 facts.InUse);
         }
@@ -376,12 +380,14 @@ public static class FolderInspector
 
     private static string Composition(Facts facts)
     {
-        var many = facts.FileCount >= SampleLimit ? $"at least {SampleLimit}" : facts.FileCount.ToString();
+        var many = facts.FileCount >= SampleLimit
+            ? Say("disk.count.atleast", SampleLimit)
+            : facts.FileCount.ToString();
         var share = facts.FileCount == 0 ? 0 : facts.TopCount * 100 / facts.FileCount;
 
         return facts.TopKind is "" or "(none)"
-            ? $"{many} files, mostly without an extension."
-            : $"{many} files, {share}% of them {facts.TopKind}.";
+            ? Say("disk.evidence.composition.noextension", many)
+            : Say("disk.evidence.composition", many, share, facts.TopKind);
     }
 
     /// <summary>
@@ -395,11 +401,9 @@ public static class FolderInspector
     private static string Recency(DateTime newest, bool truncated)
     {
         if ((DateTime.Now - newest).TotalDays < 2)
-            return $"Something wrote to it {Ago(newest)}.";
+            return Say("disk.evidence.justwritten", Ago(newest));
 
-        return truncated
-            ? $"Of the files looked at, the most recent was written {Ago(newest)}."
-            : $"Nothing has been written here since {Ago(newest)}.";
+        return Say(truncated ? "disk.evidence.newest.sampled" : "disk.evidence.newest", Ago(newest));
     }
 
     private static string Ago(DateTime when)
@@ -408,11 +412,13 @@ public static class FolderInspector
 
         return days switch
         {
+            // The two date formats follow the machine's own culture rather than the language
+            // picked here, which is what everything else on this computer writes dates in.
             < 0 => when.ToString("d MMMM yyyy"),
-            < 1 => "today",
-            < 2 => "yesterday",
-            < 31 => $"{(int)days} days ago",
-            < 365 => $"{(int)(days / 30)} months ago",
+            < 1 => Say("disk.ago.today"),
+            < 2 => Say("disk.ago.yesterday"),
+            < 31 => Say("disk.ago.days", (int)days),
+            < 365 => Say("disk.ago.months", (int)(days / 30)),
             _ => when.ToString("MMMM yyyy"),
         };
     }

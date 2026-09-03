@@ -50,7 +50,7 @@ public sealed class PluginGroupingTests
         var groups = PluginGroupViewModel.Arrange([Entry(new Plain("Older"))]);
 
         var only = Assert.Single(groups);
-        Assert.Equal(PluginGroupViewModel.Ungrouped, only.Name);
+        Assert.Equal(PluginGroupViewModel.Ungrouped, only.Key);
         Assert.Equal("Older", Assert.Single(only.Entries).DisplayName);
     }
 
@@ -79,8 +79,9 @@ public sealed class PluginGroupingTests
             Entry(new Grouped("Alpha", "Aaa first alphabetically")),
         ]);
 
+        // By the heading as shown, not by the key behind it, because that is the order on screen.
         Assert.Equal(
-            ["Aaa first alphabetically", "Zzz last alphabetically", PluginGroupViewModel.Ungrouped],
+            ["Aaa first alphabetically", "Zzz last alphabetically", "Everything else"],
             groups.Select(g => g.Name));
     }
 
@@ -102,7 +103,7 @@ public sealed class PluginGroupingTests
         // Whitespace is a typo, not a group name, and a heading made of spaces would be baffling.
         var groups = PluginGroupViewModel.Arrange([Entry(new Grouped("Careless", "   "))]);
 
-        Assert.Equal(PluginGroupViewModel.Ungrouped, Assert.Single(groups).Name);
+        Assert.Equal(PluginGroupViewModel.Ungrouped, Assert.Single(groups).Key);
     }
 
     [Fact]

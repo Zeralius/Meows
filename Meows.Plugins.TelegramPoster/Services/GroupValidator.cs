@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 using Meows.Plugins.TelegramPoster.Model;
 using Meows.Bot;
 
@@ -58,7 +59,7 @@ public static class GroupValidator
     {
         if (string.IsNullOrWhiteSpace(group.Name))
             issues.Add(new GroupIssue(IssueSeverity.Error,
-                "No name set. The bot reads this key directly and will not start without it."));
+                MeowsText.Current["tp.issue.noname"]));
     }
 
     private static void ValidateChatId(GroupConfig group, IReadOnlyList<GroupConfig> others, List<GroupIssue> issues)
@@ -68,7 +69,7 @@ public static class GroupValidator
         if (chatId.Length == 0)
         {
             issues.Add(new GroupIssue(IssueSeverity.Error,
-                "No chat ID yet. Forward a message from the group to @userinfobot to get it."));
+                MeowsText.Current["tp.issue.nochatid"]));
             return;
         }
 
@@ -77,8 +78,7 @@ public static class GroupValidator
             // Bailing here also skips the duplicate check, which would otherwise fire on
             // every group of a fresh clone and point at the wrong thing.
             issues.Add(new GroupIssue(IssueSeverity.Error,
-                "Chat ID is still a placeholder. Forward a message from the group to " +
-                "@userinfobot to get the real one."));
+                MeowsText.Current["tp.issue.placeholder"]));
             return;
         }
 
@@ -87,17 +87,16 @@ public static class GroupValidator
         {
             if (!long.TryParse(chatId, out var numeric))
                 issues.Add(new GroupIssue(IssueSeverity.Warning,
-                    "Chat ID is neither a number nor an @channelname. Groups look like -1001234567890."));
+                    MeowsText.Current["tp.issue.chatidshape"]));
             else if (numeric >= 0)
                 issues.Add(new GroupIssue(IssueSeverity.Warning,
-                    "Chat ID is positive, which is a private chat. Groups and channels are negative."));
+                    MeowsText.Current["tp.issue.chatidpositive"]));
         }
 
         var clash = others.FirstOrDefault(o => (o.ChatId?.Trim() ?? "") == chatId);
         if (clash is not null)
             issues.Add(new GroupIssue(IssueSeverity.Warning,
-                $"Same chat ID as '{Describe(clash)}'. The bot keys its schedule by chat ID, " +
-                "so only the last of them is scheduled and the other never posts."));
+                MeowsText.Current.Format("tp.issue.chatidclash", Describe(clash))));
     }
 
     private static void ValidateFolder(
@@ -111,13 +110,13 @@ public static class GroupValidator
         if (folder.Length == 0)
         {
             issues.Add(new GroupIssue(IssueSeverity.Error,
-                "No folder yet. Set something like groups/my_group, relative to the bot root."));
+                MeowsText.Current["tp.issue.nofolder"]));
             return;
         }
 
         if (folder.IndexOfAny(Path.GetInvalidPathChars()) >= 0)
         {
-            issues.Add(new GroupIssue(IssueSeverity.Error, "Folder contains characters that are not valid in a path."));
+            issues.Add(new GroupIssue(IssueSeverity.Error, MeowsText.Current["tp.issue.badfolder"]));
             return;
         }
 
@@ -128,7 +127,7 @@ public static class GroupValidator
         }
         catch (Exception ex)
         {
-            issues.Add(new GroupIssue(IssueSeverity.Error, $"Folder path cannot be resolved: {ex.Message}"));
+            issues.Add(new GroupIssue(IssueSeverity.Error, MeowsText.Current.Format("tp.issue.unresolvable", ex.Message)));
             return;
         }
 
@@ -137,12 +136,12 @@ public static class GroupValidator
             // setup_folders will create it, so not fatal. Still worth saying, because a
             // typo just gives you an empty queue and no error.
             issues.Add(new GroupIssue(IssueSeverity.Warning,
-                $"Folder does not exist yet. The bot will create it empty at startup: {resolved}"));
+                MeowsText.Current.Format("tp.issue.foldermissing", resolved)));
         }
         else if (!Directory.Exists(Path.Combine(resolved, "To_Send")))
         {
             issues.Add(new GroupIssue(IssueSeverity.Warning,
-                "Folder exists but has no To_Send subfolder yet. The bot creates it at startup."));
+                MeowsText.Current["tp.issue.notosend"]));
         }
 
         var clash = others.FirstOrDefault(o =>
@@ -160,7 +159,7 @@ public static class GroupValidator
 
         if (clash is not null)
             issues.Add(new GroupIssue(IssueSeverity.Warning,
-                $"Shares its folder with '{Describe(clash)}'. Whichever group posts first moves the file out of the queue."));
+                MeowsText.Current.Format("tp.issue.folderclash", Describe(clash))));
     }
 
     private static void ValidateContent(GroupConfig group, int queueCount, int archiveCount, List<GroupIssue> issues)
@@ -170,7 +169,7 @@ public static class GroupValidator
 
         if (queueCount == 0 && archiveCount == 0)
             issues.Add(new GroupIssue(IssueSeverity.Warning,
-                "Nothing in To_Send or Already_Sent, so this group has nothing to post."));
+                MeowsText.Current["tp.issue.nocontent"]));
     }
 
     private static string Describe(GroupConfig group) =>

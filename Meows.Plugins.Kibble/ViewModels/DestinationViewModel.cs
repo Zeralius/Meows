@@ -26,7 +26,9 @@ public sealed class DestinationViewModel : ObservableObject
     /// <summary>Position in the list, so 1 to 9 can be typed instead of clicked.</summary>
     public int Index { get; }
 
-    public string Name => string.IsNullOrWhiteSpace(Group.Name) ? "(unnamed)" : Group.Name;
+    public string Name => string.IsNullOrWhiteSpace(Group.Name)
+        ? MeowsText.Current["kibble.unnamed"]
+        : Group.Name;
 
     /// <summary>Only the first nine get a key. Past that you click.</summary>
     public string ShortcutText => Index <= 9 ? Index.ToString() : "";
@@ -53,22 +55,18 @@ public sealed class DestinationViewModel : ObservableObject
             OnPropertyChanged(nameof(RunwayText));
             OnPropertyChanged(nameof(IsLow));
             OnPropertyChanged(nameof(IsDry));
-            OnPropertyChanged(nameof(Accent));
         }
     }
 
     public string RunwayText => QueueRunway.Describe(Days);
 
-    public string QueueText => $"{Queued} queued";
+    public string QueueText => MeowsText.Current.Format("kibble.queued", Queued);
 
     public bool IsDisabled => Group.Enabled == false;
 
     public bool IsDry => Days is not null && Queued == 0;
 
     public bool IsLow => Days is not null && Days > 0 && Days < QueueRunway.LowDays;
-
-    /// <summary>Colour carries the urgency, so the list reads without being read.</summary>
-    public string Accent => IsDry ? "#FF8A8A" : IsLow ? "#E0B25E" : "#5E9E6E";
 
     public void Refresh()
     {

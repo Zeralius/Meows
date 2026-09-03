@@ -11,12 +11,11 @@ public sealed class TelegramPosterPlugin : IMeowsPlugin
 
     public string DisplayName => "Telegram Poster";
 
-    public string Description =>
-        "Browse the posting bot's groups and queues, preview what goes out next, edit group settings, and run the bot.";
+    public string Description => "tp.description";
 
     public string Icon => "✈";
 
-    public string Category => "Posting bot";
+    public string Category => "group.bot";
 
     public Control CreateView(IMeowsHost host) => new TelegramPosterView
     {

@@ -23,4 +23,13 @@ public interface IMeowsHost
     T? LoadSettings<T>() where T : class;
 
     void SaveSettings<T>(T settings) where T : class;
+
+    /// <summary>
+    /// The language the window is in. Ship a <c>Strings.&lt;code&gt;.json</c> per language as an
+    /// embedded resource and the shell merges it in when your plugin is switched on.
+    ///
+    /// Has a default so a plugin written against 0.2.x keeps compiling. That default hands back
+    /// the key it was given, which is what a plugin with no catalogue would get anyway.
+    /// </summary>
+    IMeowsText Text => MeowsText.Current;
 }

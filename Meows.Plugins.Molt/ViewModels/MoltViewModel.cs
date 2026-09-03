@@ -22,17 +22,26 @@ public sealed class SheddableViewModel(Sheddable item) : ObservableObject
 
     public Sheddable Item { get; } = item;
 
-    public string Name => Item.Name;
+    /// <summary>
+    /// The catalogue hands us keys, so this is where they become words. A real path in Where is
+    /// not a key and comes back untouched, which is the point of looking everything up the same
+    /// way rather than only some of it.
+    /// </summary>
+    public string Name => Item.NameValues.Length == 0
+        ? MeowsText.Current[Item.Name]
+        : MeowsText.Current.Format(Item.Name, Item.NameValues);
 
-    public string Where => Item.Where;
+    public string Where => MeowsText.Current[Item.Where];
 
-    public string What => Item.What;
+    public string What => MeowsText.Current[Item.What];
 
-    public string Cost => Item.Cost;
+    public string Cost => MeowsText.Current[Item.Cost];
 
     public string SizeText => FolderSize.Humanise(Item.Size);
 
-    public string CountText => Item.Paths.Count == 1 ? "1 item" : $"{Item.Paths.Count} items";
+    public string CountText => Item.Paths.Count == 1
+        ? MeowsText.Current["molt.items.one"]
+        : MeowsText.Current.Format("molt.items.many", Item.Paths.Count);
 
     public bool IsPicked
     {
@@ -47,7 +56,7 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
     private MoltSettings _settings;
     private IBackgroundTask? _scan;
 
-    private string _status = "Nothing measured yet.";
+    private string _status = MeowsText.Current["molt.status.start"];
     private string? _errorMessage;
     private bool _isScanning;
     private bool _isAsking;
@@ -110,9 +119,7 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
         }
     }
 
-    public string ModeText => Permanent
-        ? "Deleted outright. The room comes back immediately and nothing can be undone."
-        : "Sent to the Recycle Bin. Recoverable, but the room is not back until the bin is emptied.";
+    public string ModeText => _host.Text[Permanent ? "molt.mode.permanent" : "molt.mode.bin"];
 
     public bool IsScanning
     {
@@ -164,22 +171,22 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
     public long PickedSize => Items.Where(i => i.IsPicked).Sum(i => i.Item.Size);
 
     public string PickedText => PickedCount == 0
-        ? "Nothing picked"
-        : $"{PickedCount} picked, {FolderSize.Humanise(PickedSize)}";
+        ? _host.Text["molt.picked.none"]
+        : _host.Text.Format("molt.picked.some", PickedCount, FolderSize.Humanise(PickedSize));
 
     public string TotalText => Items.Count == 0
         ? ""
-        : $"{FolderSize.Humanise(Items.Sum(i => i.Item.Size))} could be shed";
+        : _host.Text.Format("molt.total", FolderSize.Humanise(Items.Sum(i => i.Item.Size)));
 
-    private string Lots => PickedCount == 1 ? "1 lot" : $"{PickedCount} lots";
+    private string Lots => PickedCount == 1
+        ? _host.Text["molt.lots.one"]
+        : _host.Text.Format("molt.lots.many", PickedCount);
 
-    public string ConfirmPrompt => Permanent
-        ? $"Permanently delete {Lots}, {FolderSize.Humanise(PickedSize)}?"
-        : $"Send {Lots} to the Recycle Bin, {FolderSize.Humanise(PickedSize)}?";
+    public string ConfirmPrompt => _host.Text.Format(
+        Permanent ? "molt.confirm.permanent" : "molt.confirm.bin",
+        Lots, FolderSize.Humanise(PickedSize));
 
-    public string ConfirmDetail => Permanent
-        ? "This cannot be undone. Everything here is rebuilt by the tool that made it, so the cost is time rather than data."
-        : "Recoverable from the Recycle Bin. Note that the room does not actually come back until the bin is emptied.";
+    public string ConfirmDetail => _host.Text[Permanent ? "molt.detail.permanent" : "molt.detail.bin"];
 
     public void Repick()
     {
@@ -212,7 +219,7 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
 
         ErrorMessage = null;
         IsScanning = true;
-        Status = "Measuring";
+        Status = _host.Text["molt.status.measuring"];
 
         var options = new MoltOptions
         {
@@ -220,7 +227,7 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
             BuildRoot = _settings.BuildRoot,
         };
 
-        _scan = _host.Background.Run("Measuring what can be shed", async context =>
+        _scan = _host.Background.Run(_host.Text["molt.task.measure"], async context =>
         {
             var progress = new Progress<string>(where => Status = where);
             var found = await Task.Run(
@@ -248,7 +255,7 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
         }
 
         IsScanning = false;
-        Status = Items.Count == 0 ? "Nothing to shed." : "";
+        Status = Items.Count == 0 ? _host.Text["molt.status.nothing"] : "";
         OnPropertyChanged(nameof(TotalText));
         Repick();
         _host.Log($"Molt found {Items.Count} thing(s) worth {FolderSize.Humanise(Items.Sum(i => i.Item.Size))}");
@@ -283,17 +290,21 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
 
         var result = Shedder.Shed(paths, mode, expected);
 
-        var where = Permanent ? "deleted" : "sent to the Recycle Bin";
+        // Whole sentences rather than a size glued to a phrase. German puts the verb somewhere
+        // else entirely, so there is nothing to glue it to.
+        var freed = FolderSize.Humanise(result.Freed);
+        var wording = Permanent ? "permanent" : "bin";
         Status = result.Failed == 0
-            ? $"{FolderSize.Humanise(result.Freed)} {where}"
-            : $"{FolderSize.Humanise(result.Freed)} {where}, {result.Failed} left behind";
+            ? _host.Text.Format($"molt.status.done.{wording}", freed)
+            : _host.Text.Format($"molt.status.left.{wording}", freed, result.Failed);
 
         if (result.FailureReason is not null)
             ErrorMessage = result.FailureReason;
 
-        _host.Log($"Molt {where} {result.Removed} item(s), {FolderSize.Humanise(result.Freed)}, {result.Failed} failed");
-        _host.Notifications.Post(NotificationSeverity.Info, "Molt finished",
-            $"{FolderSize.Humanise(result.Freed)} {where}.");
+        _host.Log($"Molt shed {result.Removed} item(s) {(Permanent ? "outright" : "to the Recycle Bin")}, " +
+                  $"{freed}, {result.Failed} failed");
+        _host.Notifications.Post(NotificationSeverity.Info, _host.Text["molt.notify.finished"],
+            _host.Text.Format($"molt.notify.{wording}", freed));
 
         StartScan();
     }
@@ -309,7 +320,7 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Could not open {path}: {ex.Message}";
+            ErrorMessage = _host.Text.Format("molt.error.open", path, ex.Message);
         }
     }
 

@@ -42,7 +42,9 @@ public sealed class ClipViewModel : ObservableObject, IDisposable
     public string TimeText => Taken.ToString("HH:mm:ss");
 
     public string Summary => IsImage
-        ? Thumbnail is { } picture ? $"Image, {picture.PixelSize.Width} by {picture.PixelSize.Height}" : "Image"
+        ? Thumbnail is { } picture
+            ? MeowsText.Current.Format("saucer.image.size", picture.PixelSize.Width, picture.PixelSize.Height)
+            : MeowsText.Current["saucer.image"]
         : WindowsClipboard.Summarise(Clipping.Text ?? "");
 
     public Bitmap? Thumbnail
@@ -108,7 +110,7 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable
     private uint _lastSeen;
 
     private ClipViewModel? _selected;
-    private string _status = "Watching the clipboard.";
+    private string _status = MeowsText.Current["saucer.status.watching"];
     private string? _errorMessage;
 
     public SaucerViewModel(IMeowsHost host)
@@ -166,7 +168,7 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable
             _settings.WatchClipboard = value;
             SaveSettings();
             OnPropertyChanged();
-            Status = value ? "Watching the clipboard." : "Not watching. Nothing is being kept.";
+            Status = _host.Text[value ? "saucer.status.watching" : "saucer.status.off"];
         }
     }
 
@@ -220,7 +222,7 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable
     {
         _lastSeen = WindowsClipboard.SequenceNumber();
 
-        _watch = _host.Background.Schedule("Watching the clipboard", TimeSpan.FromMilliseconds(600),
+        _watch = _host.Background.Schedule(_host.Text["saucer.task.watch"], TimeSpan.FromMilliseconds(600),
             async context =>
             {
                 if (!WatchClipboard)
@@ -299,13 +301,13 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable
             clip.Thumbnail.Save(path, new PngBitmapEncoderOptions());
             clip.SavedTo = path;
 
-            Status = $"Saved {Path.GetFileName(path)} into the intake folder";
+            Status = _host.Text.Format("saucer.status.saved", Path.GetFileName(path));
             _host.Log($"Saucer saved a clipping to {path}");
             return path;
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Could not save into {IntakeFolder}: {ex.Message}";
+            ErrorMessage = _host.Text.Format("saucer.error.save", IntakeFolder, ex.Message);
             _host.Log($"Saucer could not save a clipping: {ex.Message}");
             return null;
         }
@@ -340,7 +342,7 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable
         //
         // Writing it will bump the sequence number and come straight back round as a new
         // clipping, which Add throws away as a repeat of what is already at the top.
-        Status = WindowsClipboard.SetText(text) ? "Copied again" : "Could not copy that back";
+        Status = _host.Text[WindowsClipboard.SetText(text) ? "saucer.status.copied" : "saucer.status.copyfailed"];
     }
 
     private void Pin(ClipViewModel? clip)
@@ -372,7 +374,7 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable
         Clips.Clear();
         Selected = null;
         OnPropertyChanged(nameof(IsEmpty));
-        Status = "Cleared.";
+        Status = _host.Text["saucer.status.cleared"];
     }
 
     private static string DefaultIntake()
@@ -393,7 +395,7 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Could not open {path}: {ex.Message}";
+            ErrorMessage = _host.Text.Format("saucer.error.open", path, ex.Message);
         }
     }
 

@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 using Meows.Disk;
 using System.Security.Cryptography;
 
@@ -82,7 +83,7 @@ public sealed class DuplicateScanner
         // A size with one file in it cannot contain a duplicate.
         var candidates = bySize.Where(kv => kv.Value.Count > 1).ToList();
         var candidateCount = candidates.Sum(kv => kv.Value.Count);
-        progress?.Report(new ScanProgress(ScanPhase.Hashing, seen, candidateCount, "Comparing content…"));
+        progress?.Report(new ScanProgress(ScanPhase.Hashing, seen, candidateCount, MeowsText.Current["purrge.comparing"]));
 
         var results = new List<DuplicateSet>();
         var hashed = 0;

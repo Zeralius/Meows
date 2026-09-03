@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Views.SettingsView"
+             x:DataType="vm:SettingsViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Border.section">
+            <Setter Property="Background" Value="{DynamicResource MeowsCard}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="18,15" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+        <Style Selector="TextBlock.heading">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+        <Style Selector="TextBlock.hint">
+            <Setter Property="Opacity" Value="0.55" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Margin="20" MaxWidth="720" HorizontalAlignment="Left">
+
+            <StackPanel Spacing="4" Margin="0,0,0,18">
+                <TextBlock Text="{m:Tr settings.title}" FontSize="24" FontWeight="SemiBold" />
+                <TextBlock Classes="hint" Text="{m:Tr settings.subtitle}" />
+            </StackPanel>
+
+            <Border Classes="section">
+                <StackPanel Spacing="10">
+                    <TextBlock Classes="heading" Text="{m:Tr settings.theme}" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.theme.hint}" />
+                    <StackPanel Spacing="4" Margin="0,4,0,0">
+                        <RadioButton GroupName="theme"
+                                     Content="{m:Tr settings.theme.system}"
+                                     IsChecked="{Binding IsThemeSystem}" />
+                        <RadioButton GroupName="theme"
+                                     Content="{m:Tr settings.theme.light}"
+                                     IsChecked="{Binding IsThemeLight}" />
+                        <RadioButton GroupName="theme"
+                                     Content="{m:Tr settings.theme.dark}"
+                                     IsChecked="{Binding IsThemeDark}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="section">
+                <StackPanel Spacing="10">
+                    <TextBlock Classes="heading" Text="{m:Tr settings.language}" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.language.hint}" />
+                    <StackPanel Spacing="4" Margin="0,4,0,0">
+                        <RadioButton GroupName="language"
+                                     Content="{m:Tr settings.language.system}"
+                                     IsChecked="{Binding IsLanguageSystem}" />
+                        <RadioButton GroupName="language"
+                                     Content="English"
+                                     IsChecked="{Binding IsLanguageEnglish}" />
+                        <RadioButton GroupName="language"
+                                     Content="Deutsch"
+                                     IsChecked="{Binding IsLanguageGerman}" />
+                    </StackPanel>
+                    <TextBlock Classes="hint"
+                               Text="{Binding FollowingText}"
+                               IsVisible="{Binding IsLanguageSystem}" />
+                </StackPanel>
+            </Border>
+
+            <Border Classes="section">
+                <StackPanel Spacing="10">
+                    <TextBlock Classes="heading" Text="{m:Tr settings.storage}" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.storage.hint}" />
+                    <SelectableTextBlock Text="{Binding SettingsFolder}"
+                                         FontFamily="Cascadia Mono,Consolas,monospace"
+                                         FontSize="12"
+                                         Opacity="0.75"
+                                         TextWrapping="Wrap" />
+                    <Button Content="{m:Tr settings.storage.open}"
+                            HorizontalAlignment="Left"
+                            Command="{Binding OpenSettingsFolderCommand}" />
+                </StackPanel>
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+
+</UserControl>

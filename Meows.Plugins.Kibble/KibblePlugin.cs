@@ -11,12 +11,11 @@ public sealed class KibblePlugin : IMeowsPlugin
 
     public string DisplayName => "Kibble";
 
-    public string Description =>
-        "Fills the posting bot's queues. Open a folder, go through it, and send each file to a group.";
+    public string Description => "kibble.description";
 
     public string? Icon => "🍽";
 
-    public string Category => "Posting bot";
+    public string Category => "group.bot";
 
     public Control CreateView(IMeowsHost host) => new KibbleView
     {

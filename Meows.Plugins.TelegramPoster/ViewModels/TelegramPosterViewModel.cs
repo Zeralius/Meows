@@ -75,9 +75,9 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
                 return;
             _host.Notifications.Post(
                 code == 0 ? NotificationSeverity.Warning : NotificationSeverity.Error,
-                "The posting bot stopped",
-                $"It exited with code {code} without being asked to. Nothing is being posted.",
-                new NotificationAction("Start again", StartBot));
+                _host.Text["tp.bot.died"],
+                _host.Text.Format("tp.bot.died.detail", code),
+                new NotificationAction(_host.Text["tp.bot.startagain"], StartBot));
         });
 
         Reload();
@@ -133,10 +133,14 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
         get
         {
             if (!_toolsChecked)
-                return "Checking for Python and git…";
+                return _host.Text["tp.tools.checking"];
             var parts = new List<string>();
-            parts.Add(_python.Found ? $"Python: {_python.Version} ({_python.Command})" : "Python: not found");
-            parts.Add(_git.Found ? $"git: {_git.Version}" : "git: not found");
+            parts.Add(_python.Found
+                ? _host.Text.Format("tp.tools.python", _python.Version, _python.Command)
+                : _host.Text["tp.tools.python.missing"]);
+            parts.Add(_git.Found
+                ? _host.Text.Format("tp.tools.git", _git.Version)
+                : _host.Text["tp.tools.git.missing"]);
             return string.Join("   ·   ", parts);
         }
     }
@@ -148,15 +152,14 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
         {
             var parts = new List<string>();
             if (IsPythonMissing)
-                parts.Add("Python was not found on PATH, so the bot cannot be started or have its dependencies installed. " +
-                          "Install it from python.org and tick \"Add python.exe to PATH\".");
+                parts.Add(_host.Text["tp.tools.warn.python"]);
             if (IsGitMissing)
-                parts.Add("git was not found on PATH, so the plugin cannot clone the bot for you.");
+                parts.Add(_host.Text["tp.tools.warn.git"]);
             return string.Join(" ", parts);
         }
     }
 
-    public string BotRootText => _workspace?.Root ?? "No bot folder selected";
+    public string BotRootText => _workspace?.Root ?? _host.Text["tp.nobotfolder"];
 
     public bool HasWorkspace => _workspace?.LooksValid == true;
 
@@ -176,8 +179,8 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
                 return "";
             var scheduled = Groups.Count(g => g.IsEnabled);
             return scheduled == Groups.Count
-                ? $"{Groups.Count} group(s), all scheduled"
-                : $"{scheduled} of {Groups.Count} group(s) scheduled";
+                ? _host.Text.Format("tp.groups.allscheduled", Groups.Count)
+                : _host.Text.Format("tp.groups.someskipped", scheduled, Groups.Count);
         }
     }
 
@@ -195,22 +198,22 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
 
             var parts = new List<string>();
             if (broken.Count > 0)
-                parts.Add($"{broken.Count} group(s) will stop the bot from starting: {string.Join(", ", broken)}");
+                parts.Add(_host.Text.Format("tp.groups.broken", broken.Count, string.Join(", ", broken)));
             if (warned.Count > 0)
-                parts.Add($"{warned.Count} group(s) need a look: {string.Join(", ", warned)}");
+                parts.Add(_host.Text.Format("tp.groups.warned", warned.Count, string.Join(", ", warned)));
             return string.Join("   ·   ", parts);
         }
     }
 
     private static string Describe(GroupViewModel group) =>
-        string.IsNullOrWhiteSpace(group.Name) ? "(unnamed)" : group.Name;
+        string.IsNullOrWhiteSpace(group.Name) ? MeowsText.Current["tp.unnamed"] : group.Name;
 
     public string TokenStatusText => !HasWorkspace
         // No checkout means no .env to have an opinion about.
         ? ""
         : HasToken
-            ? "BOT_TOKEN found in .env"
-            : "No BOT_TOKEN in .env, so the bot will refuse to start";
+            ? _host.Text["tp.token.found"]
+            : _host.Text["tp.token.missing"];
 
     public string? ErrorMessage
     {
@@ -244,8 +247,8 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
     }
 
     public string BotStatusText => IsBotRunning
-        ? $"Running (pid {_bot.ProcessId?.ToString() ?? "?"})"
-        : "Stopped";
+        ? _host.Text.Format("tp.bot.running", _bot.ProcessId?.ToString() ?? "?")
+        : _host.Text["tp.bot.stopped"];
 
     public GroupViewModel? SelectedGroup
     {
@@ -294,7 +297,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
 
     public bool HasDetail => DetailItem is not null;
 
-    public string DetailHeader => SelectedMedia is not null ? "Selected" : "Next up";
+    public string DetailHeader => _host.Text[SelectedMedia is not null ? "tp.detail.selected" : "tp.detail.nextup"];
 
     /// <summary>Albums cap at ten, so the page count tells you how many messages this becomes.</summary>
     public string DetailComicText
@@ -305,9 +308,11 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
                 return "";
             var pages = MediaRules.ComicPages(item.Path, SelectedGroup?.ComicOrder ?? "name").Count;
             if (pages == 0)
-                return "No postable pages found in this archive.";
+                return _host.Text["tp.detail.nopages"];
             var batches = (pages + MediaRules.MediaGroupLimit - 1) / MediaRules.MediaGroupLimit;
-            return $"{pages} pages · posts as {batches} album{(batches == 1 ? "" : "s")}";
+            return batches == 1
+                ? _host.Text.Format("tp.detail.pages.one", pages)
+                : _host.Text.Format("tp.detail.pages.many", pages, batches);
         }
     }
 
@@ -344,20 +349,22 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
 
     public bool ShowQueue => !_showArchive;
 
-    public string MediaHeaderText => ShowArchive ? "Already_Sent" : "To_Send";
+    public string MediaHeaderText => _host.Text[ShowArchive ? "tp.alreadysent" : "tp.tosend"];
 
-    public string MediaCountText => MediaItems.Count == 1 ? "1 file" : $"{MediaItems.Count} files";
+    public string MediaCountText => MediaItems.Count == 1
+        ? _host.Text["tp.media.one"]
+        : _host.Text.Format("tp.media.many", MediaItems.Count);
 
     /// <summary>What the bot will do next, including the cases where there is no answer.</summary>
     public string NextUpMessage => SelectedGroup is { IsEnabled: false }
-        ? "This group is disabled, so the bot skips it entirely. The queue is what it would send once re-enabled."
+        ? _host.Text["tp.nextup.disabled"]
         : _nextUp?.Kind switch
     {
         NextUpKind.Known => _nextUp.FilesPerPost > 1
-            ? $"{_nextUp.Files.Count} file(s) go out together on the next run."
+            ? _host.Text.Format("tp.nextup.together", _nextUp.Files.Count)
             : "",
-        NextUpKind.RandomAtPostTime => "post_order is random, so the bot draws its file at post time. Nothing to preview.",
-        NextUpKind.FallbackRandom => "To_Send is empty. The bot will re-post a random file from Already_Sent and leave it there.",
+        NextUpKind.RandomAtPostTime => _host.Text["tp.nextup.random"],
+        NextUpKind.FallbackRandom => _host.Text["tp.nextup.fallback"],
         // The validator covers this one, and it drives the list glyph too.
         NextUpKind.Nothing => "",
         _ => "",
@@ -383,7 +390,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
             Groups.Clear();
             MediaItems.Clear();
             NextUpItems.Clear();
-            ErrorMessage = "Could not find the bot. Pick the telegram-posting-bot folder.";
+            ErrorMessage = _host.Text["tp.error.nobot"];
             RaiseWorkspaceChanged();
             return;
         }
@@ -404,7 +411,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"config.json could not be read: {ex.Message}";
+            ErrorMessage = _host.Text.Format("tp.error.config", ex.Message);
             return;
         }
 
@@ -422,7 +429,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
         }
 
         SelectedGroup = Groups.FirstOrDefault(g => g.ChatId == previouslySelected) ?? Groups.FirstOrDefault();
-        StatusMessage = "Loaded config.json";
+        StatusMessage = _host.Text["tp.loaded"];
         OnPropertyChanged(nameof(ScheduledSummaryText));
         ValidateGroups();
         _host.Log($"Loaded {Groups.Count} group(s) from {_workspace.ConfigPath}");
@@ -568,13 +575,13 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
             _host.Log($"Wrote {_workspace.ConfigPath}");
 
             if (IsBotRunning)
-                StatusMessage = "Saved config.json. Restart the bot for it to take effect";
+                StatusMessage = _host.Text["tp.saved"];
 
             RefreshMedia();
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Could not write config.json: {ex.Message}";
+            ErrorMessage = _host.Text.Format("tp.error.writeconfig", ex.Message);
             _host.Log($"Saving config.json failed: {ex}");
         }
     }
@@ -591,9 +598,9 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
     }
 
     private void CheckTools() =>
-        _host.Background.Run("Checking Python and git", async context =>
+        _host.Background.Run(_host.Text["tp.task.checktools"], async context =>
         {
-            context.Report("Probing PATH…");
+            context.Report(_host.Text["tp.task.probing"]);
             var python = await ToolProbe.FindPythonAsync(_settings.PythonPath, context.Token);
             var git = await ToolProbe.FindGitAsync(context.Token);
             await Dispatcher.UIThread.InvokeAsync(() => ApplyToolStatus(python, git));
@@ -613,9 +620,9 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
             _host.Notifications.SetCondition(
                 "missing-tools",
                 IsPythonMissing ? NotificationSeverity.Error : NotificationSeverity.Warning,
-                IsPythonMissing ? "Python not found" : "git not found",
+                _host.Text[IsPythonMissing ? "tp.tools.notify.python" : "tp.tools.notify.git"],
                 ToolWarningText,
-                new NotificationAction("Re-check", CheckTools));
+                new NotificationAction(_host.Text["tp.tools.recheck"], CheckTools));
         else
             _host.Notifications.ClearCondition("missing-tools");
 
@@ -692,7 +699,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
             {
                 _bot.Start(candidate, _workspace);
                 IsBotRunning = true;
-                StatusMessage = $"Bot started via {candidate}";
+                StatusMessage = _host.Text.Format("tp.bot.started", candidate);
                 if (!string.Equals(_settings.PythonPath, candidate, StringComparison.Ordinal))
                 {
                     _settings.PythonPath = candidate;
@@ -706,14 +713,14 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
             }
         }
 
-        ErrorMessage = "Could not start python. Check that it is on PATH.";
+        ErrorMessage = _host.Text["tp.bot.nopython"];
     }
 
     private void StopBot()
     {
         _bot.Stop();
         IsBotRunning = false;
-        StatusMessage = "Bot stopped";
+        StatusMessage = _host.Text["tp.bot.wasstopped"];
     }
 
     private void OpenInExplorer(string? path)
@@ -728,7 +735,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Could not open {path}: {ex.Message}";
+            ErrorMessage = _host.Text.Format("tp.error.open", path, ex.Message);
         }
     }
 

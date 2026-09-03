@@ -10,11 +10,19 @@ public sealed class MyPluginPlugin : IMeowsPlugin
 
     public string DisplayName => "MyPlugin";
 
-    public string Description => "One sentence, shown on the Plugins tab.";
+    /// <summary>
+    /// A key from the Strings folder, so the card reads in whatever language the window is in.
+    /// A plain sentence works too and is shown exactly as written.
+    /// </summary>
+    public string Description => "PLUGIN-ID.description";
 
     public string? Icon => "🎲";
 
-    /// <summary>Heading on the Plugins tab. Null puts it with everything else.</summary>
+    /// <summary>
+    /// Heading on the Plugins tab. Null puts it with everything else. The built-in headings are
+    /// keys, so returning one of those joins that group and gets translated with it; any other
+    /// text makes a group of its own and is shown as written.
+    /// </summary>
     public string? Category => "PLUGIN-CATEGORY";
 
     public Control CreateView(IMeowsHost host) => new MyPluginView

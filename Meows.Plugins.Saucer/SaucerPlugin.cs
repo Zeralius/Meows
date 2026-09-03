@@ -11,12 +11,11 @@ public sealed class SaucerPlugin : IMeowsPlugin
 
     public string DisplayName => "Saucer";
 
-    public string Description =>
-        "Keeps what you copy, images included, and drops them into an intake folder Kibble can sort.";
+    public string Description => "saucer.description";
 
     public string Icon => "🥛";
 
-    public string Category => "Everyday";
+    public string Category => "group.everyday";
 
     public Control CreateView(IMeowsHost host) => new SaucerView
     {

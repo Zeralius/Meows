@@ -1,15 +1,28 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:MyPlugin"
+             xmlns:m="using:Meows.Plugins.Abstractions"
              x:Class="MyPlugin.MyPluginView"
              x:DataType="vm:MyPluginViewModel">
 
-    <StackPanel Margin="20" Spacing="12">
-        <TextBlock Text="MyPlugin" FontSize="20" FontWeight="SemiBold" />
-        <TextBlock Text="{Binding Status}" Opacity="0.7" TextWrapping="Wrap" />
-        <Button Content="Say hello"
-                Command="{Binding SayHelloCommand}"
-                HorizontalAlignment="Left" />
-    </StackPanel>
+    <!-- {m:Tr key} reads a string out of the Strings folder and follows the language while the
+         window is open. {DynamicResource Meows...} does the same for colours and the theme.
+         Both are looked up by name at run time, so neither needs a reference to the shell. -->
+    <Border Background="{DynamicResource MeowsCard}"
+            BorderBrush="{DynamicResource MeowsLine}"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="18,15"
+            Margin="20"
+            VerticalAlignment="Top"
+            HorizontalAlignment="Left">
+        <StackPanel Spacing="12">
+            <TextBlock Text="{m:Tr PLUGIN-ID.title}" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding Status}" Opacity="0.7" TextWrapping="Wrap" />
+            <Button Content="{m:Tr PLUGIN-ID.hello}"
+                    Command="{Binding SayHelloCommand}"
+                    HorizontalAlignment="Left" />
+        </StackPanel>
+    </Border>
 
 </UserControl>

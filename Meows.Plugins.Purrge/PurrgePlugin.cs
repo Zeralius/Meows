@@ -11,12 +11,11 @@ public sealed class PurrgePlugin : IMeowsPlugin
 
     public string DisplayName => "Purrge";
 
-    public string Description =>
-        "Finds files with identical content anywhere on the machine, groups them, and clears out the copies you do not want.";
+    public string Description => "purrge.description";
 
     public string Icon => "🐾";
 
-    public string Category => "Disk and tidying";
+    public string Category => "group.disk";
 
     public Control CreateView(IMeowsHost host) => new PurrgeView
     {

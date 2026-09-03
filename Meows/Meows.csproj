@@ -11,7 +11,7 @@
 
         <!-- The app version. Moves independently of the plugin contract version;
              see the versioning section in README.md. -->
-        <Version>1.0.1</Version>
+        <Version>1.1.0</Version>
     </PropertyGroup>
 
     <ItemGroup>
@@ -19,6 +19,20 @@
       <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
       <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
       <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.1" />
+    </ItemGroup>
+
+    <!-- One file per language, merged into the string table at startup. Plugins ship their own
+         the same way and the shell reads them when the plugin is switched on.
+
+         WithCulture and LogicalName are both load bearing. MSBuild reads the middle part of
+         Strings.de.json as a culture and, left alone, files it under a de satellite assembly and
+         strips the code out of the name, so both languages end up called Strings.json and neither
+         is in the assembly the shell reads. -->
+    <ItemGroup>
+      <EmbeddedResource Include="Strings\Strings.*.json">
+        <WithCulture>false</WithCulture>
+        <LogicalName>$(AssemblyName).Strings.%(Filename)%(Extension)</LogicalName>
+      </EmbeddedResource>
     </ItemGroup>
 
     <ItemGroup>

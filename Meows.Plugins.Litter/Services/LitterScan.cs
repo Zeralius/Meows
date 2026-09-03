@@ -167,11 +167,15 @@ public static class LitterScan
 
     public static string Humanise(long bytes) => FolderSize.Humanise(bytes);
 
+    /// <summary>
+    /// The key for a bucket heading rather than the heading itself. Nothing here draws anything,
+    /// so nothing here needs to know what language the window is in.
+    /// </summary>
     public static string Describe(LitterAge age) => age switch
     {
-        LitterAge.Today => "Today",
-        LitterAge.ThisWeek => "This week",
-        LitterAge.ThisMonth => "This month",
-        _ => "Older",
+        LitterAge.Today => "litter.bucket.today",
+        LitterAge.ThisWeek => "litter.bucket.thisweek",
+        LitterAge.ThisMonth => "litter.bucket.thismonth",
+        _ => "litter.bucket.older",
     };
 }

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Meows.Plugins.Saucer.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
              x:Class="Meows.Plugins.Saucer.Views.SaucerView"
              x:DataType="vm:SaucerViewModel">
 
@@ -10,23 +11,23 @@
             <Setter Property="FontSize" Value="11" />
         </Style>
         <Style Selector="Border.panel">
-            <Setter Property="Background" Value="#17171C" />
-            <Setter Property="BorderBrush" Value="#2A2A32" />
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
         </Style>
         <Style Selector="ListBoxItem">
             <Setter Property="Padding" Value="8,6" />
             <Setter Property="CornerRadius" Value="5" />
         </Style>
         <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="#24384A" />
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
         </Style>
     </UserControl.Styles>
 
     <DockPanel>
 
         <Border DockPanel.Dock="Top"
-                Background="#1C1C22"
-                BorderBrush="#2A2A32"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
                 BorderThickness="0,0,0,1"
                 Padding="14,10">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
@@ -35,28 +36,28 @@
                     <TextBlock Text="{Binding Status}" Classes="label" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <CheckBox Content="Watch the clipboard"
+                    <CheckBox Content="{m:Tr saucer.watch}"
                               IsChecked="{Binding WatchClipboard}"
                               FontSize="11"
                               VerticalAlignment="Center" />
-                    <CheckBox Content="Save images automatically"
+                    <CheckBox Content="{m:Tr saucer.autosave}"
                               IsChecked="{Binding AutoSaveImages}"
                               FontSize="11"
                               VerticalAlignment="Center" />
-                    <Button Name="PickIntakeButton" Content="Intake folder…" />
-                    <Button Content="Open" Command="{Binding OpenIntakeCommand}" />
-                    <Button Content="Clear" Command="{Binding ClearCommand}" />
+                    <Button Name="PickIntakeButton" Content="{m:Tr saucer.intake}" />
+                    <Button Content="{m:Tr saucer.open}" Command="{Binding OpenIntakeCommand}" />
+                    <Button Content="{m:Tr saucer.clear}" Command="{Binding ClearCommand}" />
                 </StackPanel>
             </Grid>
         </Border>
 
         <Border DockPanel.Dock="Top"
-                Background="#3A1F22"
-                BorderBrush="#5C2B30"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
                 BorderThickness="0,0,0,1"
                 Padding="14,8"
                 IsVisible="{Binding HasError}">
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFB4B4" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
         </Border>
 
         <Grid ColumnDefinitions="*,4,420">
@@ -67,7 +68,7 @@
                            Opacity="0.45"
                            TextWrapping="Wrap"
                            IsVisible="{Binding IsEmpty}"
-                           Text="Nothing copied yet. Copy an image in a browser with right click and Copy Image, and it turns up here." />
+                           Text="{m:Tr saucer.empty}" />
 
                 <ListBox Name="ClipList"
                          ItemsSource="{Binding Clips}"
@@ -80,7 +81,7 @@
                             <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
                                 <Border Grid.Column="0"
                                         Width="52" Height="40"
-                                        Background="#101014"
+                                        Background="{DynamicResource MeowsSunken}"
                                         CornerRadius="4"
                                         ClipToBounds="True">
                                     <Panel>
@@ -99,15 +100,15 @@
                                     <TextBlock Text="{Binding TimeText}" Classes="label" />
                                 </StackPanel>
                                 <Border Grid.Column="2"
-                                        Background="#24384A"
+                                        Background="{DynamicResource MeowsSelection}"
                                         CornerRadius="3"
                                         Padding="5,1"
                                         VerticalAlignment="Center"
                                         IsVisible="{Binding IsSaved}">
-                                    <TextBlock Text="SAVED" FontSize="9" />
+                                    <TextBlock Text="{m:Tr saucer.saved}" FontSize="9" />
                                 </Border>
                                 <TextBlock Grid.Column="3"
-                                           Text="PINNED"
+                                           Text="{m:Tr saucer.pinned}"
                                            FontSize="9"
                                            Opacity="0.6"
                                            VerticalAlignment="Center"
@@ -118,18 +119,18 @@
                 </ListBox>
             </DockPanel>
 
-            <GridSplitter Grid.Column="1" Background="#22222A" ResizeDirection="Columns" />
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
 
             <Border Grid.Column="2" Classes="panel" BorderThickness="1,0,0,0">
                 <Grid RowDefinitions="Auto,*,Auto" Margin="16,12">
                     <TextBlock Grid.Row="0"
-                               Text="The one you picked"
+                               Text="{m:Tr saucer.picked}"
                                FontWeight="SemiBold"
                                FontSize="13"
                                Margin="0,0,0,8" />
 
                     <Border Grid.Row="1"
-                            Background="#101014"
+                            Background="{DynamicResource MeowsSunken}"
                             CornerRadius="6"
                             MinHeight="160"
                             Padding="6"
@@ -150,12 +151,12 @@
                     <StackPanel Grid.Row="2" Spacing="8" Margin="0,10,0,0" IsVisible="{Binding HasSelection}">
                         <TextBlock Text="{Binding Selected.Summary}" Classes="label" TextWrapping="Wrap" />
 
-                        <Button Content="Save into the intake folder"
+                        <Button Content="{m:Tr saucer.save}"
                                 Command="{Binding SaveCommand}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center" />
 
-                        <Button Content="Copy again"
+                        <Button Content="{m:Tr saucer.copyagain}"
                                 Command="{Binding CopyAgainCommand}"
                                 CommandParameter="{Binding Selected}"
                                 IsVisible="{Binding !Selected.IsImage}"
@@ -164,13 +165,13 @@
 
                         <Grid ColumnDefinitions="*,8,*">
                             <Button Grid.Column="0"
-                                    Content="Pin"
+                                    Content="{m:Tr saucer.pin}"
                                     Command="{Binding PinCommand}"
                                     CommandParameter="{Binding Selected}"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center" />
                             <Button Grid.Column="2"
-                                    Content="Forget"
+                                    Content="{m:Tr saucer.forget}"
                                     Command="{Binding ForgetCommand}"
                                     CommandParameter="{Binding Selected}"
                                     HorizontalAlignment="Stretch"
@@ -179,7 +180,7 @@
 
                         <TextBlock Classes="label"
                                    TextWrapping="Wrap"
-                                   Text="History is kept in memory only and never written to disk, because a clipboard ends up holding passwords sooner or later. Saving an image is the one thing here that writes anything." />
+                                   Text="{m:Tr saucer.privacy}" />
                     </StackPanel>
                 </Grid>
             </Border>

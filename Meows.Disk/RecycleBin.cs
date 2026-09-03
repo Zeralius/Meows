@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 using System.Runtime.InteropServices;
 
 namespace Meows.Disk;
@@ -67,7 +68,7 @@ public static class RecycleBin
         }
 
         if (!OperatingSystem.IsWindows())
-            return new DeleteOutcome(0, existing.Count, "Recycle Bin deletion is only implemented for Windows.");
+            return new DeleteOutcome(0, existing.Count, MeowsText.Current["disk.delete.windowsonly"]);
 
         // SHFileOperation wants a double-null-terminated list. The embedded nulls survive the
         // LPWStr marshaller because it copies the managed string by Length.
@@ -93,10 +94,10 @@ public static class RecycleBin
         }
 
         if (result != 0)
-            return new DeleteOutcome(0, existing.Count, $"Shell delete failed with code 0x{result:X}.");
+            return new DeleteOutcome(0, existing.Count, MeowsText.Current.Format("disk.delete.shellfailed", result.ToString("X")));
 
         if (operation.fAnyOperationsAborted)
-            return new DeleteOutcome(0, existing.Count, "The delete was aborted.");
+            return new DeleteOutcome(0, existing.Count, MeowsText.Current["disk.delete.aborted"]);
 
         // Check the disk rather than trusting the return code.
         var stillThere = existing.Count(Exists) + unsafePaths.Count;
@@ -107,7 +108,7 @@ public static class RecycleBin
 
         var reason = unsafePaths.Count > 0 && existing.Count(Exists) == 0
             ? Refusal(unsafePaths.Count)
-            : $"{stillThere} item(s) could not be removed." +
+            : MeowsText.Current.Format("disk.delete.leftover", stillThere) +
               (unsafePaths.Count > 0 ? " " + Refusal(unsafePaths.Count) : "");
 
         return new DeleteOutcome(deleted, stillThere, reason);
@@ -116,10 +117,6 @@ public static class RecycleBin
     /// <summary>Explains what was refused and why.</summary>
     private static string Refusal(int count) =>
         count == 1
-            ? "One of these has a name ending in a space or a dot, which Windows cannot address " +
-              "safely. Removing it would delete whatever sits next to it instead, so it was left alone. " +
-              "Rename it first."
-            : $"{count} of these have names ending in a space or a dot, which Windows cannot " +
-              "address safely. Removing them would delete whatever sits next to them instead, so " +
-              "they were left alone. Rename them first.";
+            ? MeowsText.Current["disk.delete.refused.one"]
+            : MeowsText.Current.Format("disk.delete.refused.many", count);
 }

@@ -10,7 +10,15 @@ public sealed class Sheddable
 {
     public required string Id { get; init; }
 
+    /// <summary>
+    /// A key from the strings catalogue rather than a sentence. The rows are built here, off the
+    /// UI thread and with no idea what language the window is in, so the view model looks them up
+    /// when it shows them. The same goes for What, Cost and Where.
+    /// </summary>
     public required string Name { get; init; }
+
+    /// <summary>What goes into the placeholders in Name, if it has any.</summary>
+    public object?[] NameValues { get; init; } = [];
 
     /// <summary>Where it lives, shown so the claim can be checked rather than trusted.</summary>
     public required string Where { get; init; }
@@ -81,21 +89,16 @@ public static class MoltCatalog
         var all = new List<Sheddable>
         {
             Temp(options, token),
-            Simple("nuget-http", "NuGet download cache", Path.Combine(local, "NuGet", "v3-cache"),
-                "Packages NuGet kept a copy of after downloading them.",
-                "Nothing, beyond a slower first restore while they are fetched again."),
-            Simple("nuget-packages", "NuGet global packages", Path.Combine(profile, ".nuget", "packages"),
-                "Every package version any project on this machine has ever restored.",
-                "Every project has to download its packages again on the next restore. Safe, but not quick, and useless without an internet connection."),
-            Simple("npm", "npm cache", Path.Combine(local, "npm-cache"),
-                "What npm keeps so it does not fetch the same tarball twice.",
-                "Nothing, beyond a slower first install."),
-            Simple("pip", "pip cache", Path.Combine(local, "pip", "Cache"),
-                "Wheels pip kept after building or downloading them.",
-                "Nothing, beyond a slower first install."),
-            Simple("dumps", "Crash dumps", Path.Combine(local, "CrashDumps"),
-                "Memory dumps written when something crashed.",
-                "Nothing, unless you are in the middle of investigating a crash."),
+            Simple("nuget-http", "molt.nuget-http.name", Path.Combine(local, "NuGet", "v3-cache"),
+                "molt.nuget-http.what", "molt.nuget-http.cost"),
+            Simple("nuget-packages", "molt.nuget-packages.name", Path.Combine(profile, ".nuget", "packages"),
+                "molt.nuget-packages.what", "molt.nuget-packages.cost"),
+            Simple("npm", "molt.npm.name", Path.Combine(local, "npm-cache"),
+                "molt.npm.what", "molt.npm.cost"),
+            Simple("pip", "molt.pip.name", Path.Combine(local, "pip", "Cache"),
+                "molt.pip.what", "molt.pip.cost"),
+            Simple("dumps", "molt.dumps.name", Path.Combine(local, "CrashDumps"),
+                "molt.dumps.what", "molt.dumps.cost"),
         };
 
         all.AddRange(Hunt(options, progress, token));
@@ -112,10 +115,11 @@ public static class MoltCatalog
         var entry = new Sheddable
         {
             Id = "temp",
-            Name = $"Windows temp, older than {options.TempOlderThanDays} days",
+            Name = "molt.temp.name",
+            NameValues = [options.TempOlderThanDays],
             Where = TempOf(options),
-            What = "Scratch files programs wrote and did not clean up.",
-            Cost = "Nothing. Anything touched in the last few days is left alone in case it is still in use.",
+            What = "molt.temp.what",
+            Cost = "molt.temp.cost",
         };
 
         var cutoff = DateTime.Now.AddDays(-options.TempOlderThanDays);
@@ -201,19 +205,19 @@ public static class MoltCatalog
         var build = new Sheddable
         {
             Id = "build",
-            Name = "bin and obj folders",
-            Where = options.BuildRoot ?? "no folder chosen yet",
-            What = "Compiler output under every project in the folder you pick.",
-            Cost = "The next build of each project is a full one rather than an incremental one.",
+            Name = "molt.build.name",
+            Where = options.BuildRoot ?? "molt.nofolder",
+            What = "molt.build.what",
+            Cost = "molt.build.cost",
         };
 
         var unity = new Sheddable
         {
             Id = "unity",
-            Name = "Unity Library and Temp folders",
-            Where = options.BuildRoot ?? "no folder chosen yet",
-            What = "What Unity imports every asset into so it does not have to do it again.",
-            Cost = "Unity reimports the whole project the next time it opens it, which on a large project is a long coffee.",
+            Name = "molt.unity.name",
+            Where = options.BuildRoot ?? "molt.nofolder",
+            What = "molt.unity.what",
+            Cost = "molt.unity.cost",
         };
 
         if (string.IsNullOrWhiteSpace(options.BuildRoot) || !Directory.Exists(options.BuildRoot))

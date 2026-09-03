@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 using System.Diagnostics;
 
 namespace Meows.Plugins.TelegramPoster.Services;
@@ -70,7 +71,7 @@ public static class CommandRunner
         {
             var exitCode = await exited.Task.ConfigureAwait(true);
             return token.IsCancellationRequested
-                ? new CommandResult(true, exitCode, "Cancelled.")
+                ? new CommandResult(true, exitCode, MeowsText.Current["tp.cancelled"])
                 : new CommandResult(true, exitCode, null);
         }
     }

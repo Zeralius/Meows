@@ -25,7 +25,7 @@ public sealed class BotSetupViewModel : ObservableObject
     private bool? _dependenciesPresent;
     private bool _pythonAvailable = true;
     private bool _gitAvailable = true;
-    private string _toolStatusText = "Checking for Python and git…";
+    private string _toolStatusText = MeowsText.Current["tp.tools.checking"];
 
     public BotSetupViewModel(
         Action<string> log,
@@ -132,9 +132,9 @@ public sealed class BotSetupViewModel : ObservableObject
 
     public string DependencyStatusText => DependenciesPresent switch
     {
-        true => "aiogram, apscheduler and python-dotenv are importable",
-        false => "Dependencies are missing, so the bot cannot start",
-        _ => "Not checked yet",
+        true => MeowsText.Current["tp.deps.present"],
+        false => MeowsText.Current["tp.deps.missing"],
+        _ => MeowsText.Current["tp.deps.unchecked"],
     };
 
     /// <summary>Pushed in by the parent, which probes once for the whole tab.</summary>
@@ -179,7 +179,7 @@ public sealed class BotSetupViewModel : ObservableObject
         var url = RepositoryUrl.Trim();
         if (url.Length == 0)
         {
-            ErrorMessage = "Enter the repository URL to clone from.";
+            ErrorMessage = MeowsText.Current["tp.setup.needurl"];
             return;
         }
 
@@ -191,14 +191,14 @@ public sealed class BotSetupViewModel : ObservableObject
         }
 
         IsBusy = true;
-        StatusMessage = "Cloning…";
+        StatusMessage = MeowsText.Current["tp.setup.cloning"];
         try
         {
             var result = await BotSetup.CloneAsync(url, Destination, _log);
 
             if (!result.Started)
             {
-                ErrorMessage = $"Could not run git: {result.FailureReason}. Is git installed and on PATH?";
+                ErrorMessage = MeowsText.Current.Format("tp.setup.gitfailed", result.FailureReason);
                 StatusMessage = "";
                 return;
             }
@@ -206,13 +206,12 @@ public sealed class BotSetupViewModel : ObservableObject
             if (!result.Succeeded)
             {
                 // Usually credentials. We suppress the prompt on purpose, so say so.
-                ErrorMessage = $"git clone failed (exit {result.ExitCode}). See the log for details. " +
-                               "If the repository is private, make sure your credentials are already set up for it.";
+                ErrorMessage = MeowsText.Current.Format("tp.setup.clonefailed", result.ExitCode);
                 StatusMessage = "";
                 return;
             }
 
-            StatusMessage = "Cloned.";
+            StatusMessage = MeowsText.Current["tp.setup.cloned"];
             _onBotRootReady(Path.GetFullPath(Destination));
             Refresh();
             await CheckDependenciesAsync();
@@ -231,17 +230,17 @@ public sealed class BotSetupViewModel : ObservableObject
 
         ErrorMessage = null;
         IsBusy = true;
-        StatusMessage = "Installing dependencies…";
+        StatusMessage = MeowsText.Current["tp.setup.installing"];
         try
         {
             var result = await BotSetup.InstallDependenciesAsync(_pythonPath(), workspace.Root, _log);
 
             if (!result.Started)
-                ErrorMessage = $"Could not run python: {result.FailureReason}. Is Python installed and on PATH?";
+                ErrorMessage = MeowsText.Current.Format("tp.setup.pythonfailed", result.FailureReason);
             else if (!result.Succeeded)
-                ErrorMessage = $"pip install failed (exit {result.ExitCode}). See the log.";
+                ErrorMessage = MeowsText.Current.Format("tp.setup.pipfailed", result.ExitCode);
 
-            StatusMessage = result.Succeeded ? "Dependencies installed." : "";
+            StatusMessage = result.Succeeded ? MeowsText.Current["tp.setup.installed"] : "";
             await CheckDependenciesAsync();
         }
         finally
@@ -277,7 +276,7 @@ public sealed class BotSetupViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Could not write .env: {ex.Message}";
+            ErrorMessage = MeowsText.Current.Format("tp.setup.envfailed", ex.Message);
         }
     }
 }

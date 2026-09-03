@@ -1,0 +1,7 @@
+{
+  "PLUGIN-ID.description": "One sentence, shown on the Plugins tab.",
+  "PLUGIN-ID.title": "MyPlugin",
+  "PLUGIN-ID.hello": "Say hello",
+  "PLUGIN-ID.where": "Settings and anything else you save live in {0}",
+  "PLUGIN-ID.said": "Said hello at {0}. Look in the Log at the bottom right."
+}

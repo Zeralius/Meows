@@ -14,6 +14,8 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly ShellLog _log;
     private readonly NotificationCenter _notifications;
     private readonly BackgroundTaskService _background;
+    private readonly Translations _text;
+    private readonly ShellPreferences _preferences;
     private readonly Dictionary<string, TabViewModel> _pluginTabs = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _sourceById = new(StringComparer.OrdinalIgnoreCase);
 
@@ -27,13 +29,17 @@ public sealed class MainWindowViewModel : ObservableObject
         ShellSettings settings,
         ShellLog log,
         NotificationCenter notifications,
-        BackgroundTaskService background)
+        BackgroundTaskService background,
+        Translations text,
+        ShellPreferences preferences)
     {
         _catalog = catalog;
         _settings = settings;
         _log = log;
         _notifications = notifications;
         _background = background;
+        _text = text;
+        _preferences = preferences;
 
         RescanCommand = new RelayCommand(Rescan);
         OpenPluginsFolderCommand = new RelayCommand(OpenPluginsFolder, () => _catalog.PluginsDirectories.Count > 0);
@@ -47,6 +53,31 @@ public sealed class MainWindowViewModel : ObservableObject
 
         _notifications.Changed += RaiseNotificationState;
         _background.Changed += RaiseTaskState;
+        _text.PropertyChanged += (_, _) => Retranslate();
+    }
+
+    /// <summary>
+    /// Everything the shell holds that is a string rather than a binding to one.
+    ///
+    /// A view reading {m:Tr key} looks after itself, because that is a binding to the string
+    /// table and the table says when it changed. What needs a nudge is anything the shell put
+    /// together in code: the tab headers, the plugin cards, and the headings the cards sit under,
+    /// which also reorder because they sort by what they say.
+    /// </summary>
+    private void Retranslate()
+    {
+        foreach (var tab in Tabs)
+            tab.Retranslate();
+
+        foreach (var entry in Plugins)
+            entry.Retranslate();
+
+        Regroup();
+
+        OnPropertyChanged(nameof(ContractVersionText));
+        OnPropertyChanged(nameof(PluginsDirectoryText));
+        RaiseNotificationState();
+        RaiseTaskState();
     }
 
     public ObservableCollection<TabViewModel> Tabs { get; } = new();
@@ -116,14 +147,14 @@ public sealed class MainWindowViewModel : ObservableObject
 
     /// <summary>Status bar badge. The glyph carries the severity so you can read it at a glance.</summary>
     public string NotificationBadge => _notifications.Count == 0
-        ? "Alerts"
+        ? _text["shell.alerts"]
         : $"{Glyph(_notifications.Worst)} {_notifications.Count}";
 
     public bool HasRunningTasks => _background.RunningCount > 0;
 
     public string TaskBadge => _background.RunningCount == 0
-        ? "Tasks"
-        : $"Tasks {_background.RunningCount}";
+        ? _text["shell.tasks"]
+        : _text.Format("shell.tasks.count", _background.RunningCount);
 
     private static string Glyph(NotificationSeverity? severity) => severity switch
     {
@@ -181,19 +212,24 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
-    public string ContractVersionText => $"Plugin contract {ContractCompatibility.ShellVersionText}";
+    public string ContractVersionText =>
+        _text.Format("plugins.contract", ContractCompatibility.ShellVersionText);
 
     public bool HasIncompatiblePlugins => Plugins.Any(p => p.IsIncompatible);
 
     public string PluginsDirectoryText =>
-        _catalog.PluginsDirectory ?? "No plugins directory found (set MEOWS_PLUGINS_DIR)";
+        _catalog.PluginsDirectory ?? _text["plugins.nodirectory"];
 
     public bool HasPlugins => Plugins.Count > 0;
 
     public void Initialize()
     {
         // Always tab zero, so an empty plugins folder still opens on something useful.
-        Tabs.Add(new TabViewModel("Plugins", "⛭", new PluginsView { DataContext = this }));
+        Tabs.Add(new TabViewModel("shell.tab.plugins", "⛭", new PluginsView { DataContext = this }));
+        Tabs.Add(new TabViewModel("shell.tab.settings", "⚙", new SettingsView
+        {
+            DataContext = new SettingsViewModel(_settings, _text, _log, _preferences),
+        }));
         SelectedTab = Tabs[0];
         Rescan();
     }
@@ -207,7 +243,15 @@ public sealed class MainWindowViewModel : ObservableObject
 
         var activated = _settings.LoadActivatedPlugins();
         foreach (var descriptor in _catalog.Discover())
+        {
+            // Its strings before its card, not when it is switched on. A card carries the
+            // plugin's own description, so waiting for activation left every inactive plugin
+            // introducing itself with a dotted key.
+            if (descriptor.Plugin is { } plugin)
+                _text.Add(plugin.GetType().Assembly);
+
             Plugins.Add(new PluginEntryViewModel(descriptor, OnActivationChanged));
+        }
 
         Regroup();
 
@@ -306,8 +350,7 @@ public sealed class MainWindowViewModel : ObservableObject
             ? full.Split(',')[0]
             : "a file";
 
-        return $"{name} is missing from this plugin's folder. If you ran Meows straight out of " +
-               "the zip, extract the whole thing to a folder first and run it from there.";
+        return MeowsText.Current.Format("plugins.missingfile", name);
     }
 
     private void Deactivate(PluginEntryViewModel entry)

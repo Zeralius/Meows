@@ -42,12 +42,13 @@ public sealed class NotificationItem
         _ => "ℹ",
     };
 
-    public string Accent => Severity switch
-    {
-        NotificationSeverity.Error => "#FF8A8A",
-        NotificationSeverity.Warning => "#E0B25E",
-        _ => "#7FB4E0",
-    };
+    /// <summary>
+    /// Severity as two flags rather than a colour. The view turns these into style classes and
+    /// the theme decides what they look like, which a hex string baked in here could not do.
+    /// </summary>
+    public bool IsError => Severity == NotificationSeverity.Error;
+
+    public bool IsWarning => Severity == NotificationSeverity.Warning;
 }
 
 /// <summary>

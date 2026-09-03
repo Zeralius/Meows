@@ -41,9 +41,18 @@ The cards sit under headings a plugin picks for itself, so the disk tools are to
 built around the posting bot are together. **Open plugins folder** on that tab takes you to where
 they are read from.
 
+The **Settings** tab has two choices, and both take effect as you make them:
+
+- **Theme**: light, dark, or follow the system. Following the system means Meows changes with
+  Windows, including when Windows switches itself at sunset.
+- **Language**: English, German, or follow the system. It applies to the shell and to every plugin
+  that ships the language. Anything a plugin has not translated stays in English rather than
+  disappearing.
+
 Settings and logs live in `%APPDATA%\Meows`, never inside the folder you unzipped, so deleting
 that folder resets Meows completely. `meows.log` there is also where a crash gets written, stack
-trace and all, which is worth attaching to a bug report.
+trace and all, which is worth attaching to a bug report. The log stays in English whatever the
+window is set to, because it is the thing that gets pasted into a bug report.
 
 To check an install without opening the window:
 
@@ -96,7 +105,12 @@ public sealed class MyPlugin : IMeowsPlugin
 ```
 
 `IMeowsHost` gives you a private data directory, JSON settings, the shared log, the notification
-surface, and background work the shell cancels for you.
+surface, background work the shell cancels for you, and the language the window is in.
+
+Colours come from the shell too. Ask for `{DynamicResource MeowsCard}` rather than writing a hex
+value and your plugin follows the theme; ship a `Strings.<code>.json` per language and it follows
+the language. Both are looked up by name at run time, so neither needs a reference to the shell,
+and a plugin that does neither still works.
 
 There is a template that writes all of that for you:
 

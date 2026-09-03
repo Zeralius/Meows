@@ -35,6 +35,8 @@ public sealed class PluginHost : IMeowsHost
 
     public IMeowsBackgroundWork Background { get; }
 
+    public IMeowsText Text => MeowsText.Current;
+
     public void Log(string message) => _log.Write(DisplayName, message);
 
     public T? LoadSettings<T>() where T : class => _settings.LoadPluginSettings<T>(PluginId);

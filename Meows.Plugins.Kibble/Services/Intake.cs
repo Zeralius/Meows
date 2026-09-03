@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 using System.IO.Compression;
 using Meows.Bot;
 
@@ -87,11 +88,11 @@ public static class Intake
     {
         if (!MediaRules.IsPostable(source))
             return new IntakeResult(IntakeOutcome.NotPostable, source, null,
-                "The bot does not recognise this extension, so it would sit in the queue being skipped.");
+                MeowsText.Current["kibble.refuse.notpostable"]);
 
         if (MediaRules.IsComic(source) && MediaRules.ComicPages(source, group.ComicOrder ?? "name").Count == 0)
             return new IntakeResult(IntakeOutcome.EmptyComic, source, null,
-                "No postable pages inside this archive, so sending it would fail.");
+                MeowsText.Current["kibble.refuse.emptycomic"]);
 
         // Against the queue and the archive both: re-sending something already posted is the
         // mistake that actually shows.
@@ -101,12 +102,12 @@ public static class Intake
         var match = ContentHash.FindMatch(source, existing);
         if (match is not null)
         {
-            var where = match.Contains(Path.DirectorySeparatorChar + "Already_Sent" + Path.DirectorySeparatorChar,
-                            StringComparison.OrdinalIgnoreCase)
-                ? "already posted to this group"
-                : "already in this group's queue";
+            var posted = match.Contains(Path.DirectorySeparatorChar + "Already_Sent" + Path.DirectorySeparatorChar,
+                StringComparison.OrdinalIgnoreCase);
             return new IntakeResult(IntakeOutcome.AlreadyInGroup, source, null,
-                $"{where}, as {Path.GetFileName(match)}.");
+                MeowsText.Current.Format(
+                    posted ? "kibble.refuse.duplicate.posted" : "kibble.refuse.duplicate.queued",
+                    Path.GetFileName(match)));
         }
 
         return null;
@@ -175,7 +176,7 @@ public static class Intake
             File.SetLastWriteTimeUtc(target, sourceWritten);
 
             return new IntakeResult(IntakeOutcome.MovedToDuplicates, source, target,
-                why ?? "already in this group.");
+                why ?? MeowsText.Current["kibble.duplicates.moved"]);
         }
         catch (Exception ex)
         {
@@ -193,13 +194,12 @@ public static class Intake
     {
         if (sources.Count < MinBundle)
             return new IntakeResult(IntakeOutcome.NotPostable, sources.FirstOrDefault() ?? "", null,
-                $"Pick at least {MinBundle} files to make a comic.");
+                MeowsText.Current.Format("kibble.refuse.minbundle", MinBundle));
 
         var offender = sources.FirstOrDefault(s => !MediaRules.CanBeComicPage(s));
         if (offender is not null)
             return new IntakeResult(IntakeOutcome.NotPostable, offender, null,
-                $"{Path.GetFileName(offender)} cannot be a comic page. A media group takes photos and " +
-                "videos only, so gifs, pdfs and archives have to be sent on their own.");
+                MeowsText.Current.Format("kibble.refuse.notacomicpage", Path.GetFileName(offender)));
 
         return null;
     }
@@ -262,7 +262,7 @@ public static class Intake
             var readBack = MediaRules.ComicPages(temp, group.ComicOrder ?? "name");
             if (readBack.Count != ordered.Count)
                 return new IntakeResult(IntakeOutcome.EmptyComic, ordered[0], null,
-                    $"The archive read back with {readBack.Count} of {ordered.Count} pages, so nothing was queued.");
+                    MeowsText.Current.Format("kibble.refuse.readback", readBack.Count, ordered.Count));
 
             var folder = workspace.ToSendFolder(group);
             Directory.CreateDirectory(folder);

@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 using System.Diagnostics;
 using Meows.Bot;
 
@@ -53,10 +54,10 @@ public sealed class BotProcess : IDisposable
         lock (_gate)
         {
             if (_process is { HasExited: false })
-                throw new InvalidOperationException("The bot is already running.");
+                throw new InvalidOperationException(MeowsText.Current["tp.bot.alreadyrunning"]);
 
             if (!workspace.LooksValid)
-                throw new InvalidOperationException($"No bot.py / config.json under {workspace.Root}.");
+                throw new InvalidOperationException(MeowsText.Current.Format("tp.bot.nofiles", workspace.Root));
 
             var info = new ProcessStartInfo
             {

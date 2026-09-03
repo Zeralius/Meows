@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -69,7 +70,7 @@ public partial class MouserView : UserControl, IDisposable
 
         var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Which folder should be looked through",
+            Title = MeowsText.Current["mouser.dialog.folder"],
             AllowMultiple = false,
         });
 

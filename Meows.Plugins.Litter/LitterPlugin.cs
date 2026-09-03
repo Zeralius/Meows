@@ -11,12 +11,11 @@ public sealed class LitterPlugin : IMeowsPlugin
 
     public string DisplayName => "Litter";
 
-    public string Description =>
-        "Sorts out the downloads folder: what arrived today, what has been rotting for months, and what never finished downloading at all.";
+    public string Description => "litter.description";
 
     public string Icon => "🧺";
 
-    public string Category => "Disk and tidying";
+    public string Category => "group.disk";
 
     public Control CreateView(IMeowsHost host) => new LitterView
     {

@@ -14,16 +14,23 @@ That gives you:
 WeatherWatch/
   WeatherWatch.csproj          net10.0, Avalonia and the contract, both runtime excluded
   WeatherWatch.cs              the IMeowsPlugin implementation
-  WeatherWatchView.axaml       the tab
+  WeatherWatchView.axaml       the tab, using theme colours and translated strings
   WeatherWatchView.axaml.cs
   WeatherWatchViewModel.cs     with the host wired in
+  Strings/Strings.en.json      what the tab says
+  Strings/Strings.de.json      the same in German
 ```
+
+The view asks the shell for its colours with `{DynamicResource Meows...}` and its words with
+`{m:Tr weatherwatch.title}`, so a generated plugin follows the theme and the language from the
+first build. Delete either if you would rather not.
 
 The plugin id is taken from the name in lower case. Change it before anyone installs the plugin:
 it is the settings key, so moving it later orphans whatever was stored.
 
-`--Category "Everyday"` sets the heading it appears under on the Plugins tab. Leave it or pick
-your own; the shell keeps no list of valid ones.
+`--Category "group.everyday"` sets the heading it appears under on the Plugins tab. The built-in
+headings are keys (`group.everyday`, `group.disk`, `group.bot`) and are translated; anything else
+makes a group of its own and is shown exactly as written. The shell keeps no list of valid ones.
 
 ## Building and installing it
 

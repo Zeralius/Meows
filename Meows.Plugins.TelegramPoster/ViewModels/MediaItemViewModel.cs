@@ -63,12 +63,12 @@ public sealed class MediaItemViewModel : ObservableObject, IDisposable
 
     public string KindText => Kind switch
     {
-        MediaKind.Photo => "Photo",
-        MediaKind.Video => "Video",
-        MediaKind.Animation => "Animation",
-        MediaKind.Document => "Document",
-        MediaKind.Comic => "Comic archive",
-        _ => "Unsupported",
+        MediaKind.Photo => MeowsText.Current["tp.kind.photo"],
+        MediaKind.Video => MeowsText.Current["tp.kind.video"],
+        MediaKind.Animation => MeowsText.Current["tp.kind.animation"],
+        MediaKind.Document => MeowsText.Current["tp.kind.document"],
+        MediaKind.Comic => MeowsText.Current["tp.kind.comic"],
+        _ => MeowsText.Current["tp.kind.unsupported"],
     };
 
     public Bitmap? Thumbnail

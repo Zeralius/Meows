@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -29,7 +30,7 @@ public partial class TelegramPosterView : UserControl, IDisposable
 
         var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Select the telegram-posting-bot folder",
+            Title = MeowsText.Current["tp.dialog.botfolder"],
             AllowMultiple = false,
         });
 
@@ -50,7 +51,7 @@ public partial class TelegramPosterView : UserControl, IDisposable
 
         var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Choose where to clone the bot into",
+            Title = MeowsText.Current["tp.dialog.cloneinto"],
             AllowMultiple = false,
         });
 

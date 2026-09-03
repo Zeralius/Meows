@@ -309,7 +309,9 @@ public sealed class MouserScanTests : IDisposable
 
         var broken = Assert.Single(found, f => f.Kind == DeadKind.BrokenShortcut);
         Assert.Equal("dead.lnk", broken.Name);
-        Assert.Contains("gone.exe", broken.Detail);
+        // The detail is a translation key now, so the target it names lives beside it.
+        Assert.Equal("mouser.detail.brokenshortcut", broken.Detail);
+        Assert.Contains("gone.exe", Assert.Single(broken.DetailValues)?.ToString());
     }
 
     [Fact]

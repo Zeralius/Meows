@@ -27,14 +27,14 @@ public sealed class ItemViewModel(LitterItem item) : ObservableObject
 
     public string AgeText => Item.Days switch
     {
-        0 => "today",
-        1 => "yesterday",
-        var d and < 30 => $"{d} days ago",
-        var d and < 365 => $"{d / 30} months ago",
-        var d => $"{d / 365} years ago",
+        0 => MeowsText.Current["litter.age.today"],
+        1 => MeowsText.Current["litter.age.yesterday"],
+        var d and < 30 => MeowsText.Current.Format("litter.age.days", d),
+        var d and < 365 => MeowsText.Current.Format("litter.age.months", d / 30),
+        var d => MeowsText.Current.Format("litter.age.years", d / 365),
     };
 
-    public string KindText => Item.Kind.ToString();
+    public string KindText => MeowsText.Current[$"litter.kind.{Item.Kind.ToString().ToLowerInvariant()}"];
 
     public string Glyph => Item.Kind switch
     {
@@ -57,13 +57,16 @@ public sealed class BucketViewModel(string name, string key, int count, long siz
 {
     private bool _isOn;
 
-    public string Name { get; } = name;
+    /// <summary>A key when the bucket is an age or a kind, which is every bucket there is.</summary>
+    public string Name => MeowsText.Current[_name];
+
+    private readonly string _name = name;
 
     public string Key { get; } = key;
 
-    public string Detail { get; } = count == 1
-        ? $"1 item, {LitterScan.Humanise(size)}"
-        : $"{count} items, {LitterScan.Humanise(size)}";
+    public string Detail => count == 1
+        ? MeowsText.Current.Format("litter.bucket.one", LitterScan.Humanise(size))
+        : MeowsText.Current.Format("litter.bucket.many", count, LitterScan.Humanise(size));
 
     public bool IsOn
     {
@@ -78,7 +81,7 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
     private LitterSettings _settings;
     private IReadOnlyList<LitterItem> _all = [];
 
-    private string _status = "Nothing read yet.";
+    private string _status = MeowsText.Current["litter.status.start"];
     private string? _errorMessage;
     private string? _activeFilter;
     private List<ItemViewModel> _pendingDelete = [];
@@ -153,8 +156,9 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
                 return "";
             var total = _all.Sum(i => i.Size);
             var junk = _all.Count(i => i.Kind == LitterKind.Unfinished);
-            var text = $"{_all.Count} items, {LitterScan.Humanise(total)}";
-            return junk > 0 ? $"{text}, {junk} unfinished" : text;
+            return junk > 0
+                ? _host.Text.Format("litter.summary.junk", _all.Count, LitterScan.Humanise(total), junk)
+                : _host.Text.Format("litter.summary", _all.Count, LitterScan.Humanise(total));
         }
     }
 
@@ -202,8 +206,8 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
     public bool IsAsking => PendingCount > 0;
 
     public string ConfirmPrompt => PendingCount == 1
-        ? $"Send {_pendingDelete.FirstOrDefault()?.Name} to the Recycle Bin?"
-        : $"Send {PendingCount} items to the Recycle Bin?";
+        ? _host.Text.Format("litter.confirm.one", _pendingDelete.FirstOrDefault()?.Name ?? "")
+        : _host.Text.Format("litter.confirm.many", PendingCount);
 
     public string ConfirmDetail
     {
@@ -213,10 +217,9 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
                 return "";
             var size = _pendingDelete.Sum(i => i.Item.Size);
             var folders = _pendingDelete.Count(i => Directory.Exists(i.Path));
-            var note = folders > 0
-                ? $" {folders} of them are folders and go whole, with everything inside."
-                : "";
-            return $"{LitterScan.Humanise(size)} in total.{note} It can be brought back from the Recycle Bin.";
+            return folders > 0
+                ? _host.Text.Format("litter.confirm.detail.folders", LitterScan.Humanise(size), folders)
+                : _host.Text.Format("litter.confirm.detail", LitterScan.Humanise(size));
         }
     }
 
@@ -234,7 +237,7 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
     {
         0 => "",
         1 => Selected[0].SizeText,
-        var n => $"{n} picked, {LitterScan.Humanise(Selected.Sum(i => i.Item.Size))}",
+        var n => _host.Text.Format("litter.selected", n, LitterScan.Humanise(Selected.Sum(i => i.Item.Size))),
     };
 
     public void SetFolder(string folder)
@@ -251,7 +254,7 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
 
         if (!Directory.Exists(Folder))
         {
-            ErrorMessage = $"{Folder} does not exist. Pick a folder.";
+            ErrorMessage = _host.Text.Format("litter.error.nofolder", Folder);
             _all = [];
             Rebuild();
             return;
@@ -260,7 +263,7 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
         _all = LitterScan.Read(Folder, DateTime.Now);
         BuildBuckets();
         Rebuild();
-        Status = _all.Count == 0 ? "Nothing in here." : "";
+        Status = _all.Count == 0 ? _host.Text["litter.status.empty"] : "";
         _host.Log($"Litter read {_all.Count} item(s) from {Folder}");
     }
 
@@ -280,7 +283,7 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
         {
             var matching = _all.Where(i => i.Kind == kind).ToList();
             if (matching.Count > 0)
-                Buckets.Add(new BucketViewModel(kind.ToString(), $"kind:{kind}",
+                Buckets.Add(new BucketViewModel($"litter.kind.{kind.ToString().ToLowerInvariant()}", $"kind:{kind}",
                     matching.Count, matching.Sum(i => i.Size)));
         }
     }
@@ -343,13 +346,13 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
 
         if (!outcome.Succeeded)
         {
-            ErrorMessage = outcome.FailureReason ?? "Nothing could be removed.";
+            ErrorMessage = outcome.FailureReason ?? _host.Text["litter.error.nothing"];
             _host.Log($"Litter could not remove {items.Count} item(s): {ErrorMessage}");
             Refresh();
             return;
         }
 
-        Status = $"Sent {outcome.Deleted} item(s) to the Recycle Bin, {LitterScan.Humanise(freed)} freed";
+        Status = _host.Text.Format("litter.status.removed", outcome.Deleted, LitterScan.Humanise(freed));
         _host.Log($"Litter sent {outcome.Deleted} item(s) to the Recycle Bin, {LitterScan.Humanise(freed)} freed");
         Refresh();
     }
@@ -372,7 +375,7 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Could not open {path}: {ex.Message}";
+            ErrorMessage = _host.Text.Format("litter.error.open", path, ex.Message);
         }
     }
 

@@ -132,6 +132,42 @@ public sealed class ShellSettings
 
     private string ActivationFile => Path.Combine(Root, "activated-plugins.json");
 
+    private string PreferencesFile => Path.Combine(Root, "preferences.json");
+
+    /// <summary>
+    /// How the window should look and read. Kept apart from the plugin activation list because
+    /// it is read before any plugin exists: the theme has to be on the first frame, not after
+    /// the catalogue has been walked.
+    /// </summary>
+    public ShellPreferences LoadPreferences()
+    {
+        try
+        {
+            if (!File.Exists(PreferencesFile))
+                return new ShellPreferences();
+
+            return JsonSerializer.Deserialize<ShellPreferences>(File.ReadAllText(PreferencesFile), Json)
+                   ?? new ShellPreferences();
+        }
+        catch (Exception ex)
+        {
+            SetAside(PreferencesFile, ex);
+            return new ShellPreferences();
+        }
+    }
+
+    public void SavePreferences(ShellPreferences preferences)
+    {
+        try
+        {
+            WriteWholly(PreferencesFile, JsonSerializer.Serialize(preferences, Json));
+        }
+        catch (Exception ex)
+        {
+            Report?.Invoke($"Could not save your settings: {ex.Message}");
+        }
+    }
+
     public string PluginDataDirectory(string pluginId)
     {
         var safe = string.Concat(pluginId.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
@@ -232,4 +268,17 @@ public sealed class ShellSettings
         else
             File.Move(temporary, file);
     }
+}
+
+/// <summary>
+/// The two choices on the Settings tab. Both default to following the machine, so a first run
+/// looks like the rest of the desktop rather than like whatever we happened to prefer.
+/// </summary>
+public sealed class ShellPreferences
+{
+    /// <summary>"system", "light" or "dark".</summary>
+    public string Theme { get; set; } = "system";
+
+    /// <summary>"system", or a two letter language code the shell ships.</summary>
+    public string Language { get; set; } = "system";
 }

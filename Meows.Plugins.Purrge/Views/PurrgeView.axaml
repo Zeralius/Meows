@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:Meows.Plugins.Purrge.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
              x:Class="Meows.Plugins.Purrge.Views.PurrgeView"
              x:DataType="vm:PurrgeViewModel">
 
@@ -19,15 +20,15 @@
             <Setter Property="Background" Value="Transparent" />
         </Style>
         <Style Selector="Button.row:pointerover /template/ ContentPresenter">
-            <Setter Property="Background" Value="#23232B" />
+            <Setter Property="Background" Value="{DynamicResource MeowsHeader}" />
         </Style>
         <Style Selector="Button.row.selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="#24384A" />
-            <Setter Property="BorderBrush" Value="#3E6C90" />
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsSelectionLine}" />
         </Style>
         <Style Selector="Border.panel">
-            <Setter Property="Background" Value="#17171C" />
-            <Setter Property="BorderBrush" Value="#2A2A32" />
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
         </Style>
     </UserControl.Styles>
 
@@ -35,8 +36,8 @@
 
         <!-- Scan controls -->
         <Border DockPanel.Dock="Top"
-                Background="#1C1C22"
-                BorderBrush="#2A2A32"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
                 BorderThickness="0,0,0,1"
                 Padding="14,10">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
@@ -46,19 +47,19 @@
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="{Binding ResultSummary}" VerticalAlignment="Center" Opacity="0.65" />
-                    <Button Content="Scan" Command="{Binding ScanCommand}" />
-                    <Button Content="Cancel" Command="{Binding CancelScanCommand}" />
+                    <Button Content="{m:Tr purrge.scan}" Command="{Binding ScanCommand}" />
+                    <Button Content="{m:Tr purrge.cancel}" Command="{Binding CancelScanCommand}" />
                 </StackPanel>
             </Grid>
         </Border>
 
         <Border DockPanel.Dock="Top"
-                Background="#3A1F22"
-                BorderBrush="#5C2B30"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
                 BorderThickness="0,0,0,1"
                 Padding="14,8"
                 IsVisible="{Binding HasError}">
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="#FFB4B4" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
         </Border>
 
         <Grid ColumnDefinitions="300,4,*,4,400">
@@ -66,7 +67,7 @@
             <!-- Folder tree -->
             <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="FOLDER TO SCAN" />
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.foldertoscan}" />
                     <TreeView ItemsSource="{Binding Roots}"
                               SelectedItem="{Binding SelectedFolder}"
                               Background="Transparent"
@@ -88,25 +89,25 @@
                 </DockPanel>
             </Border>
 
-            <GridSplitter Grid.Column="1" Background="#22222A" ResizeDirection="Columns" />
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
 
             <!-- Duplicate sets -->
             <DockPanel Grid.Column="2">
-                <TextBlock DockPanel.Dock="Top" Classes="section" Text="IDENTICAL CONTENT, GROUPED" />
+                <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.grouped}" />
 
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,0,14,10"
                            Opacity="0.45"
                            TextWrapping="Wrap"
                            IsVisible="{Binding !HasResults}"
-                           Text="Pick a folder on the left and press Scan. Files are grouped by size first, then by content hash, so only real matches are read in full." />
+                           Text="{m:Tr purrge.empty}" />
 
                 <ScrollViewer>
                     <ItemsControl ItemsSource="{Binding Sets}" Margin="10,0,10,10">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:DuplicateSetViewModel">
-                                <Border Background="#1C1C22"
-                                        BorderBrush="#2E2E36"
+                                <Border Background="{DynamicResource MeowsCard}"
+                                        BorderBrush="{DynamicResource MeowsLine}"
                                         BorderThickness="1"
                                         CornerRadius="7"
                                         Padding="12,10"
@@ -133,7 +134,7 @@
                                                         <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
                                                             <Border Grid.Column="0"
                                                                     Width="48" Height="48"
-                                                                    Background="#101014"
+                                                                    Background="{DynamicResource MeowsSunken}"
                                                                     CornerRadius="3"
                                                                     ClipToBounds="True">
                                                                 <Image Source="{Binding Thumbnail}"
@@ -147,11 +148,11 @@
                                                                            TextTrimming="CharacterEllipsis" />
                                                             </StackPanel>
                                                             <StackPanel Grid.Column="2" VerticalAlignment="Center">
-                                                                <TextBlock Classes="label" Text="modified" />
+                                                                <TextBlock Classes="label" Text="{m:Tr purrge.modified}" />
                                                                 <TextBlock Text="{Binding ModifiedText}" FontSize="11" />
                                                             </StackPanel>
                                                             <StackPanel Grid.Column="3" VerticalAlignment="Center">
-                                                                <TextBlock Classes="label" Text="created" />
+                                                                <TextBlock Classes="label" Text="{m:Tr purrge.created}" />
                                                                 <TextBlock Text="{Binding CreatedText}" FontSize="11" />
                                                             </StackPanel>
                                                         </Grid>
@@ -167,16 +168,16 @@
                 </ScrollViewer>
             </DockPanel>
 
-            <GridSplitter Grid.Column="3" Background="#22222A" ResizeDirection="Columns" />
+            <GridSplitter Grid.Column="3" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
 
             <!-- Preview and actions -->
             <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0">
                 <ScrollViewer Padding="16,12">
                     <StackPanel Spacing="8">
 
-                        <TextBlock Text="Preview" FontWeight="SemiBold" FontSize="13" />
+                        <TextBlock Text="{m:Tr purrge.preview}" FontWeight="SemiBold" FontSize="13" />
 
-                        <Border Background="#101014"
+                        <Border Background="{DynamicResource MeowsSunken}"
                                 CornerRadius="6"
                                 MinHeight="220"
                                 Padding="6"
@@ -186,7 +187,7 @@
                                        Stretch="Uniform"
                                        MaxHeight="430"
                                        IsVisible="{Binding HasPreviewImage}" />
-                                <TextBlock Text="No inline preview for this file type"
+                                <TextBlock Text="{m:Tr purrge.nopreview}"
                                            Opacity="0.35"
                                            FontSize="11"
                                            HorizontalAlignment="Center"
@@ -200,17 +201,23 @@
                             <TextBlock Text="{Binding SelectedFile.Folder}" Classes="label" TextWrapping="Wrap" />
                         </StackPanel>
 
-                        <Border Background="#1F1F26" CornerRadius="6" Padding="10,8">
-                            <TextBlock Text="Matches are byte-identical, so the preview is a sanity check rather than proof. Every removal goes to the Recycle Bin."
+                        <Border Background="{DynamicResource MeowsInset}" CornerRadius="6" Padding="10,8">
+                            <TextBlock Text="{m:Tr purrge.sanity}"
                                        TextWrapping="Wrap"
                                        FontSize="11"
                                        Opacity="0.7" />
                         </Border>
 
-                        <TextBlock Classes="label" Text="Compare ages by" Margin="0,6,0,0" />
+                        <TextBlock Classes="label" Text="{m:Tr purrge.compareby}" Margin="0,6,0,0" />
                         <ComboBox ItemsSource="{Binding AgeBasisOptions}"
-                                  SelectedItem="{Binding AgeBasis}"
-                                  HorizontalAlignment="Stretch" />
+                                  SelectedItem="{Binding SelectedAgeBasis}"
+                                  HorizontalAlignment="Stretch">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:AgeBasisOption">
+                                    <TextBlock Text="{Binding Label.Value}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
                         <TextBlock Text="{Binding AgeBasisHint}" Classes="label" TextWrapping="Wrap" />
 
                         <TextBlock Text="{Binding PendingActionText}"
@@ -226,11 +233,11 @@
                                 Command="{Binding KeepNewestCommand}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center" />
-                        <Button Content="Delete selected file"
+                        <Button Content="{m:Tr purrge.deleteselected}"
                                 Command="{Binding DeleteSelectedCommand}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center" />
-                        <Button Content="Show in Explorer"
+                        <Button Content="{m:Tr purrge.explore}"
                                 Command="{Binding RevealCommand}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center" />

@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 namespace Meows.Plugins.TelegramPoster.Services;
 
 /// <summary>Getting a bot checkout onto a machine that does not have one yet.</summary>
@@ -37,18 +38,18 @@ public static class BotSetup
     public static string? DestinationProblem(string destination)
     {
         if (string.IsNullOrWhiteSpace(destination))
-            return "Pick a folder to clone into.";
+            return MeowsText.Current["tp.clone.pickfolder"];
 
         try
         {
             var full = Path.GetFullPath(destination);
             if (Directory.Exists(full) && Directory.EnumerateFileSystemEntries(full).Any())
-                return $"{full} already exists and is not empty.";
+                return MeowsText.Current.Format("tp.clone.notempty", full);
             return null;
         }
         catch (Exception ex)
         {
-            return $"That path cannot be used: {ex.Message}";
+            return MeowsText.Current.Format("tp.clone.badpath", ex.Message);
         }
     }
 

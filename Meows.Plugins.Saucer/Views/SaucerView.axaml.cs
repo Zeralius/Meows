@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
@@ -29,7 +30,7 @@ public partial class SaucerView : UserControl, IDisposable
 
         var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Where saved clippings should land",
+            Title = MeowsText.Current["saucer.dialog.folder"],
             AllowMultiple = false,
         });
 

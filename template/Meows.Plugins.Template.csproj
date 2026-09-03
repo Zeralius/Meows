@@ -7,10 +7,10 @@
         <PackageId>Meows.Plugins.Template</PackageId>
         <!-- Pinned the same way as the contract, so a command line -p:Version aimed at the app
              cannot rename what this package is. -->
-        <Version>0.2.1</Version>
-        <PackageVersion>0.2.1</PackageVersion>
+        <Version>0.3.0</Version>
+        <PackageVersion>0.3.0</PackageVersion>
         <Title>Meows plugin template</Title>
-        <Description>dotnet new template for a Meows plugin: project, plugin class, view and view model, ready to build.</Description>
+        <Description>dotnet new template for a Meows plugin: project, plugin class, view, view model and string catalogues, ready to build.</Description>
         <Authors>Dennis</Authors>
         <PackageTags>dotnet-new;templates;meows;plugin;avalonia</PackageTags>
         <PackageLicenseExpression>MIT</PackageLicenseExpression>

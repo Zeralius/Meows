@@ -1,3 +1,5 @@
+using Meows.Plugins.Abstractions;
+
 namespace Meows.Bot;
 
 /// <summary>
@@ -32,12 +34,12 @@ public static class QueueRunway
     public static string Describe(double? days)
     {
         if (days is null)
-            return "not scheduled";
+            return MeowsText.Current["bot.runway.unscheduled"];
         if (days == 0)
-            return "dry";
+            return MeowsText.Current["bot.runway.dry"];
         if (days < 1)
-            return $"{days * 24:0.#} hours left";
-        return $"{days:0.#} days left";
+            return MeowsText.Current.Format("bot.runway.hours", (days.Value * 24).ToString("0.#"));
+        return MeowsText.Current.Format("bot.runway.days", days.Value.ToString("0.#"));
     }
 
     /// <summary>Anything under this is worth shouting about.</summary>

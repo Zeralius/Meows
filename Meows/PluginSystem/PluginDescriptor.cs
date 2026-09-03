@@ -55,7 +55,7 @@ public sealed record PluginDescriptor
         {
             Id = "file:" + Path.GetFileNameWithoutExtension(assemblyPath),
             DisplayName = Path.GetFileNameWithoutExtension(assemblyPath),
-            Description = "This plugin cannot be loaded by this version of Meows.",
+            Description = "plugins.unloadable",
             Icon = "⛔",
             IncompatibleReason = reason,
         };

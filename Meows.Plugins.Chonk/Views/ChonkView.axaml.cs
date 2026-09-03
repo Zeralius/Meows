@@ -1,3 +1,4 @@
+using Meows.Plugins.Abstractions;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
@@ -75,7 +76,7 @@ public partial class ChonkView : UserControl, IDisposable
 
         var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
         {
-            Title = "Measure which folder",
+            Title = MeowsText.Current["chonk.dialog.folder"],
             AllowMultiple = false,
         });
 

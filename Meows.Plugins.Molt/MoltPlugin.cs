@@ -11,12 +11,11 @@ public sealed class MoltPlugin : IMeowsPlugin
 
     public string DisplayName => "Molt";
 
-    public string Description =>
-        "Sheds the caches and build output that can be rebuilt, and says what losing each one costs before you do it.";
+    public string Description => "molt.description";
 
     public string Icon => "🍂";
 
-    public string Category => "Disk and tidying";
+    public string Category => "group.disk";
 
     public Control CreateView(IMeowsHost host) => new MoltView
     {

@@ -5,7 +5,7 @@
   "identity": "Meows.Plugin.CSharp",
   "name": "Meows plugin",
   "shortName": "meows-plugin",
-  "description": "A Meows plugin: project, plugin class, view and view model, ready to build and drop into a plugins folder.",
+  "description": "A Meows plugin: project, plugin class, view, view model and string catalogues, ready to build and drop into a plugins folder.",
   "tags": { "language": "C#", "type": "project" },
   "sourceName": "MyPlugin",
   "preferNameDirectory": true,
@@ -14,8 +14,8 @@
       "type": "parameter",
       "datatype": "string",
       "replaces": "PLUGIN-CATEGORY",
-      "defaultValue": "Everyday",
-      "description": "Heading this plugin appears under on the Plugins tab."
+      "defaultValue": "group.everyday",
+      "description": "Heading this plugin appears under on the Plugins tab. The built-in headings are keys (group.everyday, group.disk, group.bot) and are translated; anything else is shown as written."
     },
     "pluginId": {
       "type": "generated",

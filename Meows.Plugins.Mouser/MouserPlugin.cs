@@ -11,12 +11,11 @@ public sealed class MouserPlugin : IMeowsPlugin
 
     public string DisplayName => "Mouser";
 
-    public string Description =>
-        "Hunts down dead weight: empty folders, empty files, shortcuts pointing at things that are gone, and the leftovers a file browser scatters about.";
+    public string Description => "mouser.description";
 
     public string Icon => "🐁";
 
-    public string Category => "Disk and tidying";
+    public string Category => "group.disk";
 
     public Control CreateView(IMeowsHost host) => new MouserView
     {

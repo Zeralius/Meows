@@ -35,7 +35,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
     private DuplicateFileViewModel? _selectedFile;
     private Bitmap? _previewImage;
     private bool _isScanning;
-    private string _statusMessage = "Pick a folder on the left, then scan.";
+    private string _statusMessage = MeowsText.Current["purrge.status.start"];
     private string? _errorMessage;
     private string _scanRoot = "";
 
@@ -74,7 +74,26 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
 
     public RelayCommand SelectFileCommand { get; }
 
-    public IReadOnlyList<AgeBasis> AgeBasisOptions { get; } = [AgeBasis.Modified, AgeBasis.Created];
+    /// <summary>
+    /// The dropdown holds these rather than the bare enum, because the enum's names are what
+    /// the combo would otherwise show and they are English. Each carries a bindable label that
+    /// changes with the language, so an open window follows a language switch.
+    /// </summary>
+    public IReadOnlyList<AgeBasisOption> AgeBasisOptions { get; } =
+    [
+        new(AgeBasis.Modified, "purrge.basis.modified"),
+        new(AgeBasis.Created, "purrge.basis.created"),
+    ];
+
+    public AgeBasisOption? SelectedAgeBasis
+    {
+        get => AgeBasisOptions.FirstOrDefault(o => o.Value == AgeBasis);
+        set
+        {
+            if (value is not null)
+                AgeBasis = value.Value;
+        }
+    }
 
     public AgeBasis AgeBasis
     {
@@ -89,19 +108,19 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(KeepOldestLabel));
             OnPropertyChanged(nameof(KeepNewestLabel));
             OnPropertyChanged(nameof(AgeBasisHint));
+            OnPropertyChanged(nameof(SelectedAgeBasis));
         }
     }
 
     /// <summary>On the button itself, since the two timestamps disagree after a copy.</summary>
-    public string KeepOldestLabel => $"Keep oldest ({BasisWord})";
+    public string KeepOldestLabel => _host.Text.Format("purrge.keepoldest", BasisWord);
 
-    public string KeepNewestLabel => $"Keep newest ({BasisWord})";
+    public string KeepNewestLabel => _host.Text.Format("purrge.keepnewest", BasisWord);
 
-    public string AgeBasisHint => AgeBasis == AgeBasis.Modified
-        ? "Copying usually preserves the modified time, so the original and its copies often match here."
-        : "Copying sets a new created time, so the copy looks newer than the original.";
+    public string AgeBasisHint =>
+        _host.Text[AgeBasis == AgeBasis.Modified ? "purrge.hint.modified" : "purrge.hint.created"];
 
-    private string BasisWord => AgeBasis == AgeBasis.Created ? "created" : "modified";
+    private string BasisWord => _host.Text[AgeBasis == AgeBasis.Created ? "purrge.created" : "purrge.modified"];
 
     public string ScanRoot
     {
@@ -212,7 +231,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
                 return "";
             var recoverable = Sets.Sum(s => s.RedundantBytes);
             var copies = Sets.Sum(s => s.Count - 1);
-            return $"{Sets.Count} set(s) · {copies} redundant copies · {DuplicateSetViewModel.Format(recoverable)} recoverable";
+            return _host.Text.Format("purrge.summary", Sets.Count, copies, DuplicateSetViewModel.Format(recoverable));
         }
     }
 
@@ -223,7 +242,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
         {
             if (SelectedSet is null || SelectedSet.Count < 2)
                 return "";
-            return $"Either keep button removes {SelectedSet.Count - 1} file(s) to the Recycle Bin.";
+            return _host.Text.Format("purrge.pending", SelectedSet.Count - 1);
         }
     }
 
@@ -265,7 +284,8 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
 
         var options = new ScanOptions(_settings.MinimumBytes, _settings.SkipSystemFolders);
 
-        _scanTask = _host.Background.Run($"Scanning {Path.GetFileName(root.TrimEnd(Path.DirectorySeparatorChar))}",
+        _scanTask = _host.Background.Run(
+            _host.Text.Format("purrge.task.scan", Path.GetFileName(root.TrimEnd(Path.DirectorySeparatorChar))),
             async context =>
             {
                 var total = 0;
@@ -274,13 +294,13 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
                     switch (p.Phase)
                     {
                         case ScanPhase.Enumerating:
-                            context.Report($"Listing files… {p.FilesSeen:N0} seen");
+                            context.Report(_host.Text.Format("purrge.progress.listing", p.FilesSeen.ToString("N0")));
                             context.ReportProgress(null);
                             break;
                         case ScanPhase.Hashing:
                             if (total == 0)
                                 total = p.Candidates;
-                            context.Report($"Comparing content… {p.Detail}");
+                            context.Report(_host.Text.Format("purrge.progress.comparing", p.Detail));
                             context.ReportProgress(total == 0 ? null : (double)(total - p.Candidates) / total);
                             break;
                         default:
@@ -296,7 +316,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
                 }
                 catch (OperationCanceledException)
                 {
-                    await Dispatcher.UIThread.InvokeAsync(() => StatusMessage = "Scan cancelled.");
+                    await Dispatcher.UIThread.InvokeAsync(() => StatusMessage = _host.Text["purrge.status.cancelled"]);
                     throw;
                 }
                 finally
@@ -313,11 +333,13 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
         foreach (var set in found)
             Sets.Add(new DuplicateSetViewModel(set));
 
-        StatusMessage = Sets.Count == 0 ? "No duplicates found." : $"Done. {ResultSummary}";
+        StatusMessage = Sets.Count == 0
+            ? _host.Text["purrge.status.none"]
+            : _host.Text.Format("purrge.status.done", ResultSummary);
         _host.Log($"Scan finished: {(Sets.Count == 0 ? "no duplicates" : ResultSummary)}");
 
         if (Sets.Count > 0)
-            _host.Notifications.Post(NotificationSeverity.Info, "Duplicate scan finished", ResultSummary);
+            _host.Notifications.Post(NotificationSeverity.Info, _host.Text["purrge.notify.finished"], ResultSummary);
 
         RaiseResultState();
         _ = LoadThumbnailsAsync();
@@ -333,7 +355,8 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
             return;
 
         var doomed = set.Files.Where(f => !ReferenceEquals(f, survivor)).ToList();
-        await RemoveAsync(set, doomed, $"kept {(keepOldest ? "oldest" : "newest")} of {set.Count}");
+        await RemoveAsync(set, doomed,
+            _host.Text.Format(keepOldest ? "purrge.what.keptoldest" : "purrge.what.keptnewest", set.Count));
     }
 
     private async Task DeleteSelectedAsync()
@@ -341,7 +364,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
         if (SelectedSet is not { Count: > 1 } set || SelectedFile is null)
             return;
 
-        await RemoveAsync(set, [SelectedFile], "deleted one file");
+        await RemoveAsync(set, [SelectedFile], _host.Text["purrge.what.deletedone"]);
     }
 
     private async Task RemoveAsync(DuplicateSetViewModel set, IReadOnlyList<DuplicateFileViewModel> doomed, string what)
@@ -373,7 +396,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
         if (outcome.FailureReason is not null)
             ErrorMessage = outcome.FailureReason;
 
-        StatusMessage = $"{what}: {outcome.Deleted} file(s) sent to the Recycle Bin.";
+        StatusMessage = _host.Text.Format("purrge.status.removed", what, outcome.Deleted);
         _host.Log($"Purrge {what}: {outcome.Deleted} deleted, {outcome.Failed} failed");
     }
 
@@ -434,7 +457,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
         }
         catch (Exception ex)
         {
-            ErrorMessage = $"Could not open Explorer: {ex.Message}";
+            ErrorMessage = _host.Text.Format("purrge.error.explorer", ex.Message);
         }
     }
 
