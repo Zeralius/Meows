@@ -28,6 +28,78 @@ public sealed class SettingsViewModel : ObservableObject
 
     public RelayCommand OpenSettingsFolderCommand { get; }
 
+    /// <summary>
+    /// Read from the registry each time rather than remembered here, so this cannot drift from
+    /// what Windows will actually do. Somebody switching it off in the Task Manager should show
+    /// up on this tab, not be quietly overwritten by a stale copy of the answer.
+    /// </summary>
+    private StartupRegistration Startup => StartWithWindows.Read();
+
+    public bool StartsWithWindows
+    {
+        get => Startup.IsOn;
+        set
+        {
+            if (StartWithWindows.Set(value) is { } problem)
+            {
+                _log.Write("shell", $"Could not change the startup list: {problem}");
+                StartupProblem = _text.Format("settings.startup.failed", problem);
+            }
+            else
+            {
+                StartupProblem = null;
+            }
+
+            RaiseStartup();
+        }
+    }
+
+    /// <summary>Where the entry will point, which is worth seeing before it is written.</summary>
+    public string StartupPath => StartWithWindows.ExecutablePath ?? "";
+
+    public bool CanStartWithWindows => StartWithWindows.ExecutablePath is not null;
+
+    private string? _startupProblem;
+
+    public string? StartupProblem
+    {
+        get => _startupProblem;
+        private set => SetField(ref _startupProblem, value);
+    }
+
+    /// <summary>
+    /// What is worth saying about the entry beyond the tick: pointing at another copy, switched
+    /// off by Windows, or nothing at all.
+    /// </summary>
+    public string StartupNote
+    {
+        get
+        {
+            if (_startupProblem is { } problem)
+                return problem;
+
+            var registration = Startup;
+            return registration.State switch
+            {
+                StartupState.Elsewhere =>
+                    _text.Format("settings.startup.elsewhere", registration.RegisteredPath ?? ""),
+                StartupState.BlockedByWindows => _text["settings.startup.blocked"],
+                StartupState.Unavailable when !CanStartWithWindows =>
+                    _text["settings.startup.unavailable"],
+                _ => "",
+            };
+        }
+    }
+
+    public bool HasStartupNote => StartupNote.Length > 0;
+
+    private void RaiseStartup()
+    {
+        OnPropertyChanged(nameof(StartsWithWindows));
+        OnPropertyChanged(nameof(StartupNote));
+        OnPropertyChanged(nameof(HasStartupNote));
+    }
+
     /// <summary>Where the two files behind this tab actually live.</summary>
     public string SettingsFolder => _settings.Root;
 

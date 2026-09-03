@@ -48,6 +48,9 @@ The **Settings** tab has two choices, and both take effect as you make them:
 - **Language**: English, German, or follow the system. It applies to the shell and to every plugin
   that ships the language. Anything a plugin has not translated stays in English rather than
   disappearing.
+- **Starting up**: whether Meows opens when you log in. It writes one entry to the per-user
+  startup list, which needs no admin rights and shows up in the Task Manager's Startup tab like
+  anything else. There is no tray icon yet, so the window opens with it.
 
 Settings and logs live in `%APPDATA%\Meows`, never inside the folder you unzipped, so deleting
 that folder resets Meows completely. `meows.log` there is also where a crash gets written, stack

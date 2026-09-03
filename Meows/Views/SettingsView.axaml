@@ -74,6 +74,43 @@
 
             <Border Classes="section">
                 <StackPanel Spacing="10">
+                    <TextBlock Classes="heading" Text="{m:Tr settings.startup}" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.startup.hint}" />
+
+                    <CheckBox Content="{m:Tr settings.startup.enabled}"
+                              IsChecked="{Binding StartsWithWindows}"
+                              IsEnabled="{Binding CanStartWithWindows}"
+                              Margin="0,4,0,0" />
+
+                    <StackPanel Spacing="2" IsVisible="{Binding CanStartWithWindows}">
+                        <TextBlock Classes="hint" Text="{m:Tr settings.startup.path}" />
+                        <SelectableTextBlock Text="{Binding StartupPath}"
+                                             FontFamily="Cascadia Mono,Consolas,monospace"
+                                             FontSize="11"
+                                             Opacity="0.7"
+                                             TextWrapping="Wrap" />
+                    </StackPanel>
+
+                    <TextBlock Classes="hint" Text="{m:Tr settings.startup.window}" />
+
+                    <!-- Only shown when there is something to say: pointing at another copy, or
+                         switched off in Windows' own list, where a tick here would be a lie. -->
+                    <Border Background="{DynamicResource MeowsWarn}"
+                            BorderBrush="{DynamicResource MeowsWarnLine}"
+                            BorderThickness="1"
+                            CornerRadius="4"
+                            Padding="8,6"
+                            IsVisible="{Binding HasStartupNote}">
+                        <TextBlock Text="{Binding StartupNote}"
+                                   Foreground="{DynamicResource MeowsWarnText}"
+                                   FontSize="11"
+                                   TextWrapping="Wrap" />
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="section">
+                <StackPanel Spacing="10">
                     <TextBlock Classes="heading" Text="{m:Tr settings.storage}" />
                     <TextBlock Classes="hint" Text="{m:Tr settings.storage.hint}" />
                     <SelectableTextBlock Text="{Binding SettingsFolder}"
