@@ -1,0 +1,290 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Birdwatch.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Birdwatch.Views.BirdwatchView"
+             x:DataType="vm:BirdwatchViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="14,12,14,6" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding IntakeFolder}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Status}" Classes="label" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <CheckBox Content="{m:Tr birdwatch.reposts}"
+                              IsChecked="{Binding IncludeReposts}"
+                              FontSize="11"
+                              VerticalAlignment="Center" />
+                    <Button Name="PickIntakeButton" Content="{m:Tr birdwatch.intake}" />
+                    <Button Content="{m:Tr birdwatch.open}" Command="{Binding OpenIntakeCommand}" />
+                    <Button Content="{m:Tr birdwatch.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="{DynamicResource MeowsDangerText}"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="250,4,*,4,380">
+
+            <!-- Who is being watched -->
+            <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr birdwatch.watching}" />
+
+                    <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="10,0,10,10">
+                        <TextBox Text="{Binding NewHandle}"
+                                 PlaceholderText="{m:Tr birdwatch.handle.placeholder}"
+                                 FontSize="11" />
+                        <Button Content="{m:Tr birdwatch.add}"
+                                Command="{Binding AddHandleCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                    </StackPanel>
+
+                    <TextBlock DockPanel.Dock="Bottom"
+                               Classes="label"
+                               Margin="10,6,10,12"
+                               TextWrapping="Wrap"
+                               Text="{m:Tr birdwatch.intake.hint}" />
+
+                    <Button DockPanel.Dock="Bottom"
+                            Content="{m:Tr birdwatch.loadmore}"
+                            Command="{Binding LoadMoreCommand}"
+                            Margin="10,0,10,6"
+                            FontSize="11"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center" />
+
+                    <TextBlock DockPanel.Dock="Top"
+                               Classes="label"
+                               Margin="10,0,10,8"
+                               IsVisible="{Binding !Watched.Count}"
+                               Text="{m:Tr birdwatch.noaccounts}" />
+
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding Watched}" Margin="10,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:WatchedViewModel">
+                                    <Border Background="{DynamicResource MeowsCard}"
+                                            BorderBrush="{DynamicResource MeowsLine}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="9,6"
+                                            Margin="0,0,0,5">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                            <StackPanel Grid.Column="0" Spacing="1">
+                                                <TextBlock Text="{Binding Handle}"
+                                                           FontWeight="SemiBold"
+                                                           FontSize="12"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Status}" Classes="label" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1"
+                                                    Content="✕"
+                                                    FontSize="10"
+                                                    Padding="6,2"
+                                                    VerticalAlignment="Center"
+                                                    ToolTip.Tip="{m:Tr birdwatch.remove}"
+                                                    Command="{Binding $parent[UserControl].((vm:BirdwatchViewModel)DataContext).RemoveHandleCommand}"
+                                                    CommandParameter="{Binding}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <!-- What they posted -->
+            <DockPanel Grid.Column="2">
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,14,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsEmpty}"
+                           Text="{m:Tr birdwatch.empty}" />
+
+                <ListBox ItemsSource="{Binding Shown}"
+                         SelectedItem="{Binding Selected}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8">
+                    <ListBox.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel />
+                        </ItemsPanelTemplate>
+                    </ListBox.ItemsPanel>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:MediaViewModel">
+                            <StackPanel Width="150" Spacing="4" ToolTip.Tip="{Binding Alt}">
+                                <Border Width="150" Height="150"
+                                        Background="{DynamicResource MeowsSunken}"
+                                        CornerRadius="4"
+                                        ClipToBounds="True">
+                                    <Panel>
+                                        <Image Source="{Binding Thumbnail}"
+                                               Stretch="UniformToFill"
+                                               IsVisible="{Binding HasThumbnail}" />
+
+                                        <Border Background="{DynamicResource MeowsBadge}"
+                                                CornerRadius="3"
+                                                Padding="4,1"
+                                                Margin="4"
+                                                HorizontalAlignment="Left"
+                                                VerticalAlignment="Top"
+                                                IsVisible="{Binding IsSaved}">
+                                            <TextBlock Text="{m:Tr birdwatch.saved}" FontSize="9" Foreground="White" />
+                                        </Border>
+
+                                        <Border Background="{DynamicResource MeowsDangerBadge}"
+                                                CornerRadius="3"
+                                                Padding="4,1"
+                                                Margin="4"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Top"
+                                                IsVisible="{Binding IsVideo}">
+                                            <TextBlock Text="{m:Tr birdwatch.video}" FontSize="9" Foreground="White" />
+                                        </Border>
+
+                                        <Border Background="{DynamicResource MeowsVeil}"
+                                                CornerRadius="3"
+                                                Padding="4,1"
+                                                Margin="4"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Bottom"
+                                                IsVisible="{Binding IsRepost}">
+                                            <TextBlock Text="{m:Tr birdwatch.repost}" FontSize="9" Foreground="White" />
+                                        </Border>
+                                    </Panel>
+                                </Border>
+                                <TextBlock Text="{Binding AuthorHandle}"
+                                           FontSize="10"
+                                           TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="3" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <!-- The one you picked -->
+            <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0">
+                <ScrollViewer Padding="16,12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{m:Tr birdwatch.selected}" FontWeight="SemiBold" FontSize="13" />
+
+                        <TextBlock Text="{m:Tr birdwatch.nothingselected}"
+                                   Classes="label"
+                                   IsVisible="{Binding !HasSelection}" />
+
+                        <StackPanel Spacing="8" IsVisible="{Binding HasSelection}">
+                            <Border Background="{DynamicResource MeowsSunken}"
+                                    CornerRadius="6"
+                                    MinHeight="180"
+                                    Padding="6">
+                                <Image Source="{Binding Preview}"
+                                       Stretch="Uniform"
+                                       MaxHeight="420"
+                                       IsVisible="{Binding HasPreview}" />
+                            </Border>
+
+                            <TextBlock Text="{Binding Selected.AuthorHandle}" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding Selected.WhenText}" Classes="label" />
+
+                            <StackPanel Spacing="2" IsVisible="{Binding Selected.HasLabels}">
+                                <TextBlock Text="{m:Tr birdwatch.labels}" Classes="label" />
+                                <TextBlock Text="{Binding Selected.LabelsText}"
+                                           Foreground="{DynamicResource MeowsWarnText}"
+                                           FontSize="11"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="2" IsVisible="{Binding Selected.HasAlt}">
+                                <TextBlock Text="{m:Tr birdwatch.alt}" Classes="label" />
+                                <TextBlock Text="{Binding Selected.Alt}" FontSize="11" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <Border Background="{DynamicResource MeowsInfo}"
+                                    BorderBrush="{DynamicResource MeowsInfoLine}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="8,6"
+                                    IsVisible="{Binding Selected.IsVideo}">
+                                <TextBlock Text="{m:Tr birdwatch.video.note}"
+                                           Foreground="{DynamicResource MeowsInfoText}"
+                                           FontSize="11"
+                                           TextWrapping="Wrap" />
+                            </Border>
+
+                            <Button Content="{m:Tr birdwatch.save}"
+                                    Command="{Binding SaveCommand}"
+                                    CommandParameter="{Binding Selected}"
+                                    IsEnabled="{Binding Selected.CanSave}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
+
+                            <Button Content="{m:Tr birdwatch.savepost}"
+                                    Command="{Binding SavePostCommand}"
+                                    CommandParameter="{Binding Selected}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
+
+                            <Button Content="{m:Tr birdwatch.openpost}"
+                                    Command="{Binding OpenPostCommand}"
+                                    CommandParameter="{Binding Selected}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

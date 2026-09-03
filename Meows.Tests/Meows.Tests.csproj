@@ -18,6 +18,12 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Real responses, captured from the live service. A fixture written by hand to match
+       the parser only ever proves the parser agrees with itself. -->
+  <ItemGroup>
+    <None Include="Fixtures\**" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
   <!-- A deliberately lopsided catalogue: German is missing a key English has, which is how the
        fallback gets tested. The real catalogues are checked for parity instead. -->
   <ItemGroup>
@@ -40,6 +46,7 @@
       <ProjectReference Include="..\Meows.Plugins.Saucer\Meows.Plugins.Saucer.csproj" />
       <ProjectReference Include="..\Meows.Plugins.Mouser\Meows.Plugins.Mouser.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Kibble\Meows.Plugins.Kibble.csproj" />
+    <ProjectReference Include="..\Meows.Plugins.Birdwatch\Meows.Plugins.Birdwatch.csproj" />
   </ItemGroup>
 
 </Project>
