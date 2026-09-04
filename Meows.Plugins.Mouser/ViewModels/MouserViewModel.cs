@@ -67,12 +67,18 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
     private DeadKind? _filter;
     private List<FindingViewModel> _pending = [];
 
-    private string _status = MeowsText.Current["mouser.status.start"];
+    private string? _status;
     private string? _errorMessage;
     private bool _isScanning;
     private int _pendingCount;
     private bool _wasStopped;
     private int _foldersSeen;
+
+    /// <summary>
+    /// Text worked out in code rather than bound with {m:Tr} has to be read again when the
+    /// language changes. Nothing moves, but everything reads differently.
+    /// </summary>
+    private readonly LanguageWatch _language;
 
     public MouserViewModel(IMeowsHost host)
     {
@@ -90,6 +96,7 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
 
         if (HasRoot)
             StartScan();
+        _language = new LanguageWatch(OnEverythingChanged);
     }
 
     public ObservableCollection<FindingViewModel> Findings { get; } = new();
@@ -166,7 +173,7 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
 
     public string Status
     {
-        get => _status;
+        get => _status ?? MeowsText.Current["mouser.status.start"];
         private set => SetField(ref _status, value);
     }
 
@@ -410,5 +417,9 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
         }
     }
 
-    public void Dispose() => _scan?.Cancel();
+    public void Dispose()
+    {
+        _language.Dispose();
+        _scan?.Cancel();
+    }
 }

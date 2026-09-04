@@ -72,13 +72,19 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
     private DiskEntry? _current;
     private EntryViewModel? _selected;
     private EntryViewModel? _pendingDelete;
-    private string _status = MeowsText.Current["chonk.status.start"];
+    private string? _status;
     private string? _errorMessage;
     private bool _isScanning;
 
     private FolderIdentity? _identity;
     private bool _isIdentifying;
     private CancellationTokenSource? _identifying;
+
+    /// <summary>
+    /// Text worked out in code rather than bound with {m:Tr} has to be read again when the
+    /// language changes. Nothing moves, but everything reads differently.
+    /// </summary>
+    private readonly LanguageWatch _language;
 
     public ChonkViewModel(IMeowsHost host)
     {
@@ -97,6 +103,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
 
         LoadDrives();
         SelectedRoot = _settings.LastRoot ?? Drives.FirstOrDefault()?.Path;
+        _language = new LanguageWatch(OnEverythingChanged);
     }
 
     public ObservableCollection<DriveViewModel> Drives { get; } = new();
@@ -363,7 +370,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
 
     public string Status
     {
-        get => _status;
+        get => _status ?? MeowsText.Current["chonk.status.start"];
         private set => SetField(ref _status, value);
     }
 
@@ -551,7 +558,11 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
         }
     }
 
-    public void Dispose() => _scan?.Cancel();
+    public void Dispose()
+    {
+        _language.Dispose();
+        _scan?.Cancel();
+    }
 }
 
 public sealed class DriveViewModel(DriveInfo drive) : ObservableObject

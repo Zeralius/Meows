@@ -110,8 +110,14 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable
     private uint _lastSeen;
 
     private ClipViewModel? _selected;
-    private string _status = MeowsText.Current["saucer.status.watching"];
+    private string? _status;
     private string? _errorMessage;
+
+    /// <summary>
+    /// Text worked out in code rather than bound with {m:Tr} has to be read again when the
+    /// language changes. Nothing moves, but everything reads differently.
+    /// </summary>
+    private readonly LanguageWatch _language;
 
     public SaucerViewModel(IMeowsHost host)
     {
@@ -127,6 +133,7 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable
         OpenIntakeCommand = new RelayCommand(() => Open(IntakeFolder), () => Directory.Exists(IntakeFolder));
 
         StartWatching();
+        _language = new LanguageWatch(OnEverythingChanged);
     }
 
     public ObservableCollection<ClipViewModel> Clips { get; } = new();
@@ -190,7 +197,7 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable
 
     public string Status
     {
-        get => _status;
+        get => _status ?? MeowsText.Current["saucer.status.watching"];
         private set => SetField(ref _status, value);
     }
 
@@ -413,6 +420,7 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _language.Dispose();
         _watch?.Cancel();
         foreach (var clip in Clips)
             clip.Dispose();

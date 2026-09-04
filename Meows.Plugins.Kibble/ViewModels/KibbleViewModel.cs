@@ -123,12 +123,18 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     /// <summary>Whether the last selection was already a comic, so a random tag holds still.</summary>
     private bool _wasBundle;
     private string _sourceFolder = "";
-    private string _statusMessage = MeowsText.Current["kibble.status.start"];
+    private string? _statusMessage;
     private string? _errorMessage;
     private string? _blockedReason;
 
     /// <summary>Everything the last send moved, so it can be put back.</summary>
     private readonly List<IntakeResult> _lastBatch = [];
+
+    /// <summary>
+    /// Text worked out in code rather than bound with {m:Tr} has to be read again when the
+    /// language changes. Nothing moves, but everything reads differently.
+    /// </summary>
+    private readonly LanguageWatch _language;
 
     public KibbleViewModel(IMeowsHost host)
     {
@@ -148,6 +154,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         Reload();
         if (_sourceFolder.Length > 0 && Directory.Exists(_sourceFolder))
             LoadFolder(_sourceFolder);
+        _language = new LanguageWatch(OnEverythingChanged);
     }
 
     public ObservableCollection<DestinationViewModel> Destinations { get; } = new();
@@ -214,7 +221,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
     public string StatusMessage
     {
-        get => _statusMessage;
+        get => _statusMessage ?? MeowsText.Current["kibble.status.start"];
         private set => SetField(ref _statusMessage, value);
     }
 
@@ -1213,6 +1220,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _language.Dispose();
         CancelThumbnails();
         PreviewImage = null;
         foreach (var file in Incoming)

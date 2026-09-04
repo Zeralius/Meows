@@ -449,9 +449,52 @@ restart. From code, through the host:
 Status = host.Text.Format("weatherwatch.found", count, radius);
 ```
 
-Anything you build in code has to be recomputed yourself when the language changes: raise
-`PropertyChanged` for it, or expose `MeowsText.Entry("your.key")` and bind to its `Value`, which
-is what `{m:Tr}` does underneath.
+### The half that is easy to miss
+
+`{m:Tr}` looks after itself, because it is a binding to a string that announces when it changed.
+**Anything your view model works out in code does not.** The property would return the new
+language perfectly well, but nothing asks it to, so an open tab keeps showing whatever it read
+when it opened. Half of Mouser stayed in German this way and it looked like the setting had not
+taken.
+
+Hold a `LanguageWatch` for the life of the view model:
+
+```csharp
+private readonly LanguageWatch _language;
+
+public MyViewModel(IMeowsHost host)
+{
+    ...
+    _language = new LanguageWatch(OnEverythingChanged);
+}
+
+public void Dispose() => _language.Dispose();
+```
+
+`OnEverythingChanged` is on `ObservableObject` and says every property may now read differently,
+which is exactly what a language change is. It saves you listing your own text properties, which
+is a list that goes stale the first time you add one.
+
+Disposing it matters. The string table outlives every plugin, so a view model that forgets stays
+alive through it, along with the whole tab hanging off it.
+
+**Do not capture translated text into a field**, either:
+
+```csharp
+private string _status = host.Text["my.status.start"];       // stuck in whatever language
+                                                             // it was switched on in
+
+private string? _status;                                     // better
+public string Status
+{
+    get => _status ?? MeowsText.Current["my.status.start"];
+    private set => SetField(ref _status, value);
+}
+```
+
+Null meaning "nothing has happened yet" lets the opening line follow the language, while a
+message about something that already happened stays as it was said. Re-translating that would be
+rewriting history, and impossible anyway once numbers are formatted into it.
 
 Three things are worth knowing:
 
@@ -671,6 +714,8 @@ Private dependencies are fine. Ship them in your folder and the resolver finds t
 - [ ] No secrets in settings
 - [ ] Colours come from `{DynamicResource Meows...}`, not from hex
 - [ ] Strings come from a catalogue, with `WithCulture` and `LogicalName` set on the resource
+- [ ] A `LanguageWatch` is held and disposed, so an open tab follows a language change
+- [ ] No translated text captured into a field at construction
 
 ## 12. Debugging
 

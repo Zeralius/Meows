@@ -38,6 +38,12 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
     private ToolProbeResult _git = ToolProbeResult.Missing;
     private bool _toolsChecked;
 
+    /// <summary>
+    /// Text worked out in code rather than bound with {m:Tr} has to be read again when the
+    /// language changes. Nothing moves, but everything reads differently.
+    /// </summary>
+    private readonly LanguageWatch _language;
+
     public TelegramPosterViewModel(IMeowsHost host)
     {
         _host = host;
@@ -82,6 +88,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
 
         Reload();
         CheckTools();
+        _language = new LanguageWatch(OnEverythingChanged);
     }
 
     public BotSetupViewModel Setup { get; }
@@ -760,6 +767,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _language.Dispose();
         foreach (var group in Groups)
             group.PropertyChanged -= OnGroupPropertyChanged;
 

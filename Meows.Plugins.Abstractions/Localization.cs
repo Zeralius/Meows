@@ -135,6 +135,48 @@ public static class MeowsText
 }
 
 /// <summary>
+/// Tells a view model when the language changed.
+///
+/// <c>{m:Tr}</c> in a view looks after itself, because that is a binding to a string that says
+/// when it changed. Anything a view model works out in code is a different matter: the property
+/// would return the new language perfectly well, but nothing asks it to, so the window keeps
+/// showing what it read the first time.
+///
+/// Hold one of these for the life of the view model and dispose it with everything else:
+///
+/// <code>
+/// _language = new LanguageWatch(OnEverythingChanged);
+/// </code>
+/// </summary>
+public sealed class LanguageWatch : IDisposable
+{
+    private readonly Action _changed;
+    private bool _finished;
+
+    public LanguageWatch(Action changed)
+    {
+        _changed = changed;
+        MeowsText.Current.PropertyChanged += OnTextChanged;
+    }
+
+    private void OnTextChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (!_finished)
+            _changed();
+    }
+
+    /// <summary>
+    /// Unhooks. The string table outlives every plugin, so a view model that forgets this stays
+    /// alive through it, along with the whole tab hanging off it.
+    /// </summary>
+    public void Dispose()
+    {
+        _finished = true;
+        MeowsText.Current.PropertyChanged -= OnTextChanged;
+    }
+}
+
+/// <summary>
 /// Looks a string up from XAML: <c>Text="{m:Tr chonk.scan}"</c>.
 ///
 /// Returns a binding rather than the string, so switching language redraws the window instead of

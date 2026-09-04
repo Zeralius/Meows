@@ -2,24 +2,34 @@ using Meows.Plugins.Abstractions;
 
 namespace MyPlugin;
 
-public sealed class MyPluginViewModel : ObservableObject
+public sealed class MyPluginViewModel : ObservableObject, IDisposable
 {
     private readonly IMeowsHost _host;
-    private string _status;
+
+    /// <summary>
+    /// Text worked out here rather than bound with {m:Tr} has to be read again when the language
+    /// changes. Without this an open tab keeps whatever it read when it opened.
+    /// </summary>
+    private readonly LanguageWatch _language;
+
+    private string? _status;
 
     public MyPluginViewModel(IMeowsHost host)
     {
         _host = host;
-        _status = host.Text.Format("PLUGIN-ID.where", host.DataDirectory);
-
         SayHelloCommand = new RelayCommand(SayHello);
+        _language = new LanguageWatch(OnEverythingChanged);
     }
 
     public RelayCommand SayHelloCommand { get; }
 
+    /// <summary>
+    /// Null until something happens, so the opening line follows the language. Once there is
+    /// real news it stays as it was said: re-translating a past event would be rewriting it.
+    /// </summary>
     public string Status
     {
-        get => _status;
+        get => _status ?? _host.Text.Format("PLUGIN-ID.where", _host.DataDirectory);
         private set => SetField(ref _status, value);
     }
 
@@ -34,4 +44,6 @@ public sealed class MyPluginViewModel : ObservableObject
         _host.Log("MyPlugin said hello.");
         Status = _host.Text.Format("PLUGIN-ID.said", DateTime.Now.ToString("HH:mm:ss"));
     }
+
+    public void Dispose() => _language.Dispose();
 }

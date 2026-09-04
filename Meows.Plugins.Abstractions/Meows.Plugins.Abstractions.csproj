@@ -22,7 +22,7 @@
              plugin built against 0.2.0 still share a major. Going to 1.0.0 is what made it show.
              AssemblyVersion and FileVersion are set explicitly here, which a command line Version
              does not override. -->
-        <ContractVersion>0.3.0</ContractVersion>
+        <ContractVersion>0.4.0</ContractVersion>
         <Version>$(ContractVersion)</Version>
         <PackageVersion>$(ContractVersion)</PackageVersion>
         <AssemblyVersion>$(ContractVersion)</AssemblyVersion>

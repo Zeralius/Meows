@@ -81,10 +81,16 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
     private LitterSettings _settings;
     private IReadOnlyList<LitterItem> _all = [];
 
-    private string _status = MeowsText.Current["litter.status.start"];
+    private string? _status;
     private string? _errorMessage;
     private string? _activeFilter;
     private List<ItemViewModel> _pendingDelete = [];
+
+    /// <summary>
+    /// Text worked out in code rather than bound with {m:Tr} has to be read again when the
+    /// language changes. Nothing moves, but everything reads differently.
+    /// </summary>
+    private readonly LanguageWatch _language;
 
     public LitterViewModel(IMeowsHost host)
     {
@@ -102,6 +108,7 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
         OpenFolderCommand = new RelayCommand(() => Open(Folder), () => Directory.Exists(Folder));
 
         Refresh();
+        _language = new LanguageWatch(OnEverythingChanged);
     }
 
     public ObservableCollection<ItemViewModel> Items { get; } = new();
@@ -130,7 +137,7 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
 
     public string Status
     {
-        get => _status;
+        get => _status ?? MeowsText.Current["litter.status.start"];
         private set => SetField(ref _status, value);
     }
 
@@ -393,5 +400,6 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _language.Dispose();
     }
 }

@@ -56,10 +56,16 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
     private MoltSettings _settings;
     private IBackgroundTask? _scan;
 
-    private string _status = MeowsText.Current["molt.status.start"];
+    private string? _status;
     private string? _errorMessage;
     private bool _isScanning;
     private bool _isAsking;
+
+    /// <summary>
+    /// Text worked out in code rather than bound with {m:Tr} has to be read again when the
+    /// language changes. Nothing moves, but everything reads differently.
+    /// </summary>
+    private readonly LanguageWatch _language;
 
     public MoltViewModel(IMeowsHost host)
     {
@@ -76,6 +82,7 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
         ExploreCommand = new RelayCommand(p => Open((p as SheddableViewModel)?.Where));
 
         StartScan();
+        _language = new LanguageWatch(OnEverythingChanged);
     }
 
     public ObservableCollection<SheddableViewModel> Items { get; } = new();
@@ -150,7 +157,7 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
 
     public string Status
     {
-        get => _status;
+        get => _status ?? MeowsText.Current["molt.status.start"];
         private set => SetField(ref _status, value);
     }
 
@@ -338,6 +345,7 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _language.Dispose();
         foreach (var item in Items)
             item.PropertyChanged -= OnItemChanged;
 

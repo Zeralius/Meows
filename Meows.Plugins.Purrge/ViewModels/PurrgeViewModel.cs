@@ -35,9 +35,15 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
     private DuplicateFileViewModel? _selectedFile;
     private Bitmap? _previewImage;
     private bool _isScanning;
-    private string _statusMessage = MeowsText.Current["purrge.status.start"];
+    private string? _statusMessage;
     private string? _errorMessage;
     private string _scanRoot = "";
+
+    /// <summary>
+    /// Text worked out in code rather than bound with {m:Tr} has to be read again when the
+    /// language changes. Nothing moves, but everything reads differently.
+    /// </summary>
+    private readonly LanguageWatch _language;
 
     public PurrgeViewModel(IMeowsHost host)
     {
@@ -54,6 +60,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
         DeleteSelectedCommand = new RelayCommand(() => _ = DeleteSelectedAsync(), CanDeleteSelected);
         RevealCommand = new RelayCommand(RevealSelected, () => SelectedFile is not null);
         SelectFileCommand = new RelayCommand(SelectFile);
+        _language = new LanguageWatch(OnEverythingChanged);
     }
 
     public ObservableCollection<FolderNodeViewModel> Roots { get; }
@@ -205,7 +212,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
 
     public string StatusMessage
     {
-        get => _statusMessage;
+        get => _statusMessage ?? MeowsText.Current["purrge.status.start"];
         private set => SetField(ref _statusMessage, value);
     }
 
@@ -509,6 +516,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _language.Dispose();
         _scanTask?.Dispose();
         CancelThumbnails();
         PreviewImage = null;

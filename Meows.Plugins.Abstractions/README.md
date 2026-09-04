@@ -31,7 +31,7 @@ cannot host the control you hand back.
 
 ```xml
 <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-<PackageReference Include="Meows.Plugins.Abstractions" Version="0.3.0" ExcludeAssets="runtime" PrivateAssets="all" />
+<PackageReference Include="Meows.Plugins.Abstractions" Version="0.4.0" ExcludeAssets="runtime" PrivateAssets="all" />
 ```
 
 There is a `dotnet new` template that writes all of this for you:
@@ -62,6 +62,10 @@ your plugin by name at run time, so neither needs a reference to the shell:
 does the same from code. A key nobody has is shown as the key, and a key your language is missing
 reads in English. A plugin that uses neither still works: it stays in English and paints its own
 colours in every theme.
+
+`{m:Tr}` follows a language change on its own. Anything your view model works out in code does
+not, so hold a `LanguageWatch(OnEverythingChanged)` for its lifetime and dispose it with
+everything else.
 
 The template writes all of this out for you, and
 [PLUGIN-GUIDE.md](https://github.com/Zeralius/Meows/blob/main/PLUGIN-GUIDE.md#5-colours-and-language)

@@ -25,7 +25,7 @@ public sealed class BotSetupViewModel : ObservableObject
     private bool? _dependenciesPresent;
     private bool _pythonAvailable = true;
     private bool _gitAvailable = true;
-    private string _toolStatusText = MeowsText.Current["tp.tools.checking"];
+    private string? _toolStatusText;
 
     public BotSetupViewModel(
         Action<string> log,
@@ -155,7 +155,7 @@ public sealed class BotSetupViewModel : ObservableObject
 
     public bool GitAvailable => _gitAvailable;
 
-    public string ToolStatusText => _toolStatusText;
+    public string ToolStatusText => _toolStatusText ?? MeowsText.Current["tp.tools.checking"];
 
     public string CloneStepStatus => HasWorkspace ? "done" : "todo";
 

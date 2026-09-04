@@ -12,6 +12,16 @@ public abstract class ObservableObject : INotifyPropertyChanged
     protected void OnPropertyChanged([CallerMemberName] string? name = null) =>
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
 
+    /// <summary>
+    /// Says that every property may now read differently, without any of them having changed.
+    ///
+    /// Which is exactly what a language change is. A null name is the long standing way to say
+    /// "all of them", and it saves a view model listing its own text properties, which is a list
+    /// that goes stale the first time somebody adds one.
+    /// </summary>
+    protected void OnEverythingChanged() =>
+        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(null));
+
     protected bool SetField<T>(ref T field, T value, [CallerMemberName] string? name = null)
     {
         if (EqualityComparer<T>.Default.Equals(field, value))

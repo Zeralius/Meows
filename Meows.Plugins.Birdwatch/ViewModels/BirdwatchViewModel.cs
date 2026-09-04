@@ -149,12 +149,18 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
     private CancellationTokenSource? _thumbnails;
 
     private string _newHandle = "";
-    private string _status = "";
+    private string? _status;
     private string? _errorMessage;
     private bool _isBusy;
     private MediaViewModel? _selected;
     private Bitmap? _preview;
     private int _shown;
+
+    /// <summary>
+    /// Text worked out in code rather than bound with {m:Tr} has to be read again when the
+    /// language changes. Nothing moves, but everything reads differently.
+    /// </summary>
+    private readonly LanguageWatch _language;
 
     public BirdwatchViewModel(IMeowsHost host) : this(host, null, null)
     {
@@ -186,7 +192,7 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
         OpenPostCommand = new RelayCommand(p => OpenLink((p as MediaViewModel)?.Post.WebUrl));
         OpenIntakeCommand = new RelayCommand(() => OpenLink(IntakeFolder));
 
-        Status = _host.Text["birdwatch.status.start"];
+        _language = new LanguageWatch(OnEverythingChanged);
     }
 
     private static HttpClient NewClient()
@@ -249,7 +255,10 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
 
     public string Status
     {
-        get => _status;
+        // Null until something happens, so the opening line is worked out fresh and follows a
+        // language change. Once there is real news it stays put: a past event should not be
+        // re-translated into a tense it was never written in.
+        get => _status ?? MeowsText.Current["birdwatch.status.start"];
         private set => SetField(ref _status, value);
     }
 
@@ -629,6 +638,7 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
 
     public void Dispose()
     {
+        _language.Dispose();
         _work?.Cancel();
         _thumbnails?.Cancel();
 
