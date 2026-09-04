@@ -212,7 +212,14 @@
             <TabControl.ItemTemplate>
                 <DataTemplate x:DataType="vm:TabViewModel">
                     <StackPanel Orientation="Horizontal" Spacing="7">
-                        <TextBlock Text="{Binding Icon}" VerticalAlignment="Center" />
+                        <!-- Named rather than left to fallback. Windows has two fonts holding
+                             these characters, Segoe UI Symbol in monochrome outlines and Segoe UI
+                             Emoji in colour, and left to itself the first layout picks the outline
+                             for some of them. Hovering a tab lays it out again, it comes back in
+                             colour and stays that way, so the icons changed under the pointer. -->
+                        <TextBlock Text="{Binding Icon}"
+                                   FontFamily="Segoe UI Emoji"
+                                   VerticalAlignment="Center" />
                         <TextBlock Text="{Binding Header}" VerticalAlignment="Center" />
                     </StackPanel>
                 </DataTemplate>

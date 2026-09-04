@@ -213,6 +213,39 @@ public class SourceTests
         Assert.Empty(missing);
     }
 
+    /// <summary>
+    /// The plugin icons are emoji, and Windows has two fonts holding those characters: Segoe UI
+    /// Symbol in monochrome outlines and Segoe UI Emoji in colour. Left to fallback, the first
+    /// layout picked the outline for some of them and a later one picked the colour, so hovering
+    /// a tab changed its icon and left it changed. Naming the font is the whole fix, and it is
+    /// exactly the sort of attribute that gets left off the next place icons are drawn.
+    /// </summary>
+    [Fact]
+    public void Wherever_an_icon_is_drawn_the_font_is_named()
+    {
+        var bare = new List<string>();
+        var found = 0;
+
+        foreach (var view in Views())
+        {
+            foreach (Match match in Regex.Matches(Markup(view),
+                         @"<TextBlock\b[^>]*?/>", RegexOptions.Singleline))
+            {
+                if (!match.Value.Contains("{Binding Icon}", StringComparison.Ordinal))
+                    continue;
+
+                found++;
+                if (!match.Value.Contains("FontFamily", StringComparison.Ordinal))
+                    bare.Add(Path.GetFileName(view));
+            }
+        }
+
+        Assert.Empty(bare);
+
+        // Guards the search. A regex that matches nothing would pass with no icons examined.
+        Assert.Equal(2, found);
+    }
+
     [Fact]
     public void The_views_really_were_read()
     {
