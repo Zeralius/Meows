@@ -79,6 +79,9 @@
                                 Command="{Binding AddHandleCommand}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center" />
+                        <TextBlock Classes="label"
+                                   Text="{m:Tr birdwatch.handle.hint}"
+                                   TextWrapping="Wrap" />
                     </StackPanel>
 
                     <TextBlock DockPanel.Dock="Bottom"

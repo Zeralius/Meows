@@ -21,15 +21,33 @@ natural next step and the point at which the credential question has to be answe
 
 ## What it does
 
-Type a handle, press **Watch**, press **Refresh**. Every watched account is read and the pictures
-are merged into one grid, newest first, regardless of who posted them.
+Give it an account, press **Watch**, press **Refresh**. Every watched account is read and the
+pictures are merged into one grid, newest first, regardless of who posted them.
+
+**Paste whatever you have.** A handle, a handle with the at sign, a profile link out of the
+address bar, or the link the share button gives you, which points at one particular post. They
+all name the same account in the same place, so they all end up watching it:
+
+```
+zeralius.bsky.social
+@zeralius.bsky.social
+https://bsky.app/profile/zeralius.bsky.social
+https://bsky.app/profile/zeralius.bsky.social/post/3ktabcdefgh
+```
+
+A `did:` works too and is left exactly as written, since it is an identifier rather than a name.
 
 Clicking a tile shows it full size along with the poster's own description and any content labels
 the service put on it. **Save to intake** writes it to the intake folder; **Save all from this
 post** takes the whole set, which is what you want when the pictures only make sense together.
 
-**Read further back** pages further into each account's history. Every account keeps its own place,
-so accounts that post at wildly different rates stay in step.
+**Read further back** goes further into each account's history, a batch at a time. Every account
+keeps its own place, so accounts that post at wildly different rates stay in step, and one that
+has run out is not asked again.
+
+It spends what is already in hand before spending a request. Each account fetches fifty posts at
+a time into a grid that starts at sixty pictures, so with more than one account most presses need
+no network at all.
 
 ## Where the files go
 
@@ -88,4 +106,5 @@ that supports it on Tuesdays.
 ## Settings
 
 `%APPDATA%\Meows\plugins\meows.birdwatch\settings.json` holds the watched handles, the intake
-folder, and whether reposts are shown. No credentials, because there are none.
+folder, whether reposts are shown, and `batch`, which is how many pictures the grid grows by each
+time you read further back. No credentials, because there are none.

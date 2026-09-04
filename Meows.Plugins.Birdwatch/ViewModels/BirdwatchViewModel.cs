@@ -154,7 +154,12 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
     private bool _isBusy;
     private MediaViewModel? _selected;
     private Bitmap? _preview;
-    private int _shown;
+    /// <summary>
+    /// How many tiles the grid is currently allowed to hold. Grows a batch at a time rather
+    /// than being recomputed from what is on screen, which is what made reading further back
+    /// fetch a page and then throw it away.
+    /// </summary>
+    private int _window;
 
     /// <summary>
     /// Text worked out in code rather than bound with {m:Tr} has to be read again when the
@@ -192,6 +197,7 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
         OpenPostCommand = new RelayCommand(p => OpenLink((p as MediaViewModel)?.Post.WebUrl));
         OpenIntakeCommand = new RelayCommand(() => OpenLink(IntakeFolder));
 
+        _window = _settings.Batch;
         _language = new LanguageWatch(OnEverythingChanged);
     }
 
@@ -288,8 +294,15 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
 
     public bool IsEmpty => Shown.Count == 0;
 
-    /// <summary>Whether any watched account has somewhere further to read from.</summary>
-    public bool HasMore => Watched.Any(w => w.Cursor is { Length: > 0 });
+    /// <summary>
+    /// Whether there is anything further to show, either already here or still out there.
+    ///
+    /// Both halves matter. Turning reposts back on, or reading two accounts where one runs out
+    /// first, leaves material in hand that the window has not reached yet, and the button has
+    /// to stay alive for that as much as for the next request.
+    /// </summary>
+    public bool HasMore =>
+        Watched.Any(w => w.Cursor is { Length: > 0 }) || Ordered().Count > Shown.Count;
 
     public MediaViewModel? Selected
     {
@@ -375,6 +388,19 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
     {
         if (IsBusy || Watched.Count == 0)
             return;
+
+        if (more)
+        {
+            _window += _settings.Batch;
+
+            // Spend what is already here before spending a request. Two accounts read fifty
+            // posts each into a grid of twenty, so most presses of this need no network at all.
+            if (Ordered().Count > Shown.Count)
+            {
+                Rebuild();
+                return;
+            }
+        }
 
         _work?.Cancel();
         _work = new CancellationTokenSource();
@@ -478,22 +504,25 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
     /// picture for everything at once is what made a folder of thousands crawl, and a feed is
     /// worse than a folder because it grows while you are looking at it.
     /// </summary>
-    private void Rebuild()
-    {
-        var wanted = _all
+    /// <summary>Everything worth showing, newest first, before the window is applied.</summary>
+    private List<MediaViewModel> Ordered() =>
+        _all
             .Where(m => IncludeReposts || !m.IsRepost)
             .OrderByDescending(m => m.Post.PostedAt)
             .ThenBy(m => m.Index)
-            .Take(Math.Max(_shown, _settings.Batch))
             .ToList();
+
+    private void Rebuild()
+    {
+        var wanted = Ordered().Take(_window).ToList();
 
         Shown.Clear();
         foreach (var media in wanted)
             Shown.Add(media);
 
-        _shown = Shown.Count;
-
         OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(HasMore));
+        LoadMoreCommand.RaiseCanExecuteChanged();
         _ = LoadThumbnailsAsync();
     }
 

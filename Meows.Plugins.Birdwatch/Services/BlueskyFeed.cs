@@ -24,11 +24,43 @@ public sealed class BlueskyFeed : IFeedSource
     public string ServiceName => "Bluesky";
 
     /// <summary>
-    /// A handle as the API wants it: no leading at sign, lower case, trimmed. People copy them
-    /// with the at sign because that is how they are written everywhere else.
+    /// The account out of whatever somebody pasted.
+    ///
+    /// Almost nobody types a handle. They copy a profile link out of the address bar, or hit
+    /// share on a post and get a link to that post, and both of those name the same account in
+    /// the same place: the segment after /profile/. The at sign turns up too, because that is
+    /// how handles are written everywhere else.
+    ///
+    /// What comes back may be a handle or a did, and the API takes either as its actor.
     /// </summary>
-    public static string TidyHandle(string handle) =>
-        handle.Trim().TrimStart('@').Trim().ToLowerInvariant();
+    public static string TidyHandle(string handle)
+    {
+        var text = handle.Trim();
+
+        // A profile or post link. Everything after /profile/ up to the next slash is the actor,
+        // so a link to a single post lands on the account that wrote it.
+        var marker = text.IndexOf("/profile/", StringComparison.OrdinalIgnoreCase);
+        if (marker >= 0)
+        {
+            text = text[(marker + "/profile/".Length)..];
+
+            var slash = text.IndexOf('/');
+            if (slash >= 0)
+                text = text[..slash];
+        }
+
+        // Whatever a share button decided to append.
+        var extra = text.IndexOfAny(['?', '#']);
+        if (extra >= 0)
+            text = text[..extra];
+
+        text = text.Trim().TrimStart('@').Trim().TrimEnd('/').Trim();
+
+        // A did is an identifier rather than a name, so it is left exactly as written.
+        return text.StartsWith("did:", StringComparison.OrdinalIgnoreCase)
+            ? text
+            : text.ToLowerInvariant();
+    }
 
     public async Task<FeedPage> FetchAsync(string handle, string? cursor, CancellationToken token)
     {
