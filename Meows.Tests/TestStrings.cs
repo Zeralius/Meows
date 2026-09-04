@@ -37,6 +37,7 @@ internal static class TestStrings
         typeof(Plugins.Purrge.PurrgePlugin).Assembly,
         typeof(Plugins.Saucer.SaucerPlugin).Assembly,
         typeof(Plugins.TelegramPoster.TelegramPosterPlugin).Assembly,
+        typeof(Plugins.Birdwatch.BirdwatchPlugin).Assembly,
     ];
 
     /// <summary>A fresh table holding everything, for tests that want to poke at it directly.</summary>

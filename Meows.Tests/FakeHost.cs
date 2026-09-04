@@ -30,6 +30,9 @@ public sealed class FakeHost : IMeowsHost
 
     public IMeowsBackgroundWork Background { get; } = new FakeBackgroundWork();
 
+    /// <summary>The same thing, typed, so a test can read what was asked for.</summary>
+    public FakeBackgroundWork Work => (FakeBackgroundWork)Background;
+
     public void Log(string message) => Lines.Add(message);
 
     public T? LoadSettings<T>() where T : class =>
@@ -46,7 +49,21 @@ public sealed class FakeHost : IMeowsHost
     /// </summary>
     public sealed class FakeBackgroundWork : IMeowsBackgroundWork
     {
+        /// <summary>One thing a plugin asked to have run on a timer.</summary>
+        public sealed record ScheduledWork(
+            string Title, TimeSpan Interval, Func<IBackgroundContext, Task> Work, bool RunImmediately)
+        {
+            public DeadTask Task { get; init; } = null!;
+        }
+
         public List<string> Requested { get; } = [];
+
+        /// <summary>
+        /// Everything handed to Schedule, so a test can see how often a plugin asked to be run
+        /// and drive one pass itself. Nothing runs on its own: a timer in a test is a way of
+        /// making it slow and occasionally wrong.
+        /// </summary>
+        public List<ScheduledWork> Scheduled { get; } = [];
 
         public IBackgroundTask Run(string title, Func<IBackgroundContext, Task> work)
         {
@@ -58,20 +75,48 @@ public sealed class FakeHost : IMeowsHost
             bool runImmediately = true)
         {
             Requested.Add(title);
-            return new DeadTask(title);
+            var task = new DeadTask(title);
+            Scheduled.Add(new ScheduledWork(title, interval, work, runImmediately) { Task = task });
+            return task;
         }
 
-        private sealed class DeadTask(string title) : IBackgroundTask
+        /// <summary>
+        /// Runs one pass of the newest schedule with the work already called off, which is what
+        /// the shell does to a timer when a plugin is switched off mid-wait.
+        ///
+        /// Only the called off case, and deliberately so. A pass that is allowed to proceed hops
+        /// onto the UI thread, and this suite has no dispatcher running to hop onto, so it would
+        /// wait for a loop that is never pumped. Asking for that here would hang rather than fail.
+        /// </summary>
+        public Task RunLatestCalledOffAsync()
+        {
+            using var stopped = new CancellationTokenSource();
+            stopped.Cancel();
+            return Scheduled[^1].Work(new DeadContext(stopped.Token));
+        }
+
+        public sealed class DeadTask(string title) : IBackgroundTask
         {
             public string Title { get; } = title;
 
-            public bool IsRunning => false;
+            public bool IsRunning => !Cancelled;
 
-            public void Cancel()
+            public bool Cancelled { get; private set; }
+
+            public void Cancel() => Cancelled = true;
+
+            public void Dispose() => Cancelled = true;
+        }
+
+        private sealed class DeadContext(CancellationToken token) : IBackgroundContext
+        {
+            public CancellationToken Token { get; } = token;
+
+            public void Report(string status)
             {
             }
 
-            public void Dispose()
+            public void ReportProgress(double? fraction)
             {
             }
         }

@@ -162,6 +162,7 @@ public class CatalogueTests
         typeof(Plugins.Purrge.PurrgePlugin).Assembly,
         typeof(Plugins.Saucer.SaucerPlugin).Assembly,
         typeof(Plugins.TelegramPoster.TelegramPosterPlugin).Assembly,
+        typeof(Plugins.Birdwatch.BirdwatchPlugin).Assembly,
     ];
 
     private static Dictionary<string, string> Read(Assembly assembly, string language)
@@ -240,6 +241,30 @@ public class CatalogueTests
                 seen[key] = name;
             }
         }
+    }
+
+    /// <summary>
+    /// Guards the list above. Birdwatch was left out of it and out of the table the rest of the
+    /// suite reads, so its sixty odd strings went unchecked in both languages and every test
+    /// touching them was quietly comparing against bare keys. Nothing failed, which is the
+    /// problem. A list of assemblies typed out by hand needs something asking whether it is
+    /// still the whole list.
+    /// </summary>
+    [Fact]
+    public void Every_plugin_that_ships_is_on_the_list()
+    {
+        var here = Path.GetDirectoryName(typeof(CatalogueTests).Assembly.Location)!;
+        var built = Directory.GetFiles(here, "Meows.Plugins.*.dll")
+            .Select(Path.GetFileNameWithoutExtension)
+            .Where(n => n != "Meows.Plugins.Abstractions")
+            .ToList();
+
+        // Guards the guard. A wrong folder would find nothing and pass.
+        Assert.True(built.Count >= 9, $"Only found {built.Count} plugins in {here}.");
+
+        var listed = Carriers.Select(a => a.GetName().Name).ToHashSet(StringComparer.Ordinal);
+
+        Assert.Empty(built.Except(listed));
     }
 
     public static TheoryData<string> EveryCarrier()

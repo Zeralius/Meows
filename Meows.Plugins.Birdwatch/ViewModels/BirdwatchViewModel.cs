@@ -17,8 +17,28 @@ public sealed class BirdwatchSettings
 
     public bool IncludeReposts { get; set; }
 
+    /// <summary>Whether to go and look again on its own.</summary>
+    public bool AutoRefresh { get; set; }
+
+    /// <summary>
+    /// How long to leave between looks. Fifteen minutes by default: an account posts a few
+    /// times a day, so anything faster mostly asks a question that already has the same answer.
+    /// </summary>
+    public int RefreshEveryMinutes { get; set; } = 15;
+
     /// <summary>How many tiles to build at once. A feed does not end.</summary>
     public int Batch { get; set; } = 60;
+}
+
+/// <summary>
+/// One entry in the how often list. The label is the shared bindable string for its key, so the
+/// dropdown reads correctly the moment the language changes rather than on the next restart.
+/// </summary>
+public sealed class RefreshOption(int minutes, string key)
+{
+    public int Minutes { get; } = minutes;
+
+    public TranslatedString Label { get; } = MeowsText.Entry(key);
 }
 
 /// <summary>One account being watched, and how its last look went.</summary>
@@ -147,6 +167,13 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
     private readonly List<MediaViewModel> _all = [];
     private CancellationTokenSource? _work;
     private CancellationTokenSource? _thumbnails;
+    private IBackgroundTask? _auto;
+
+    /// <summary>
+    /// What the preview currently belongs to, so clicking back onto the same picture, or a
+    /// rebuild putting the selection back, does not fetch it again.
+    /// </summary>
+    private MediaViewModel? _previewFor;
 
     private string _newHandle = "";
     private string? _status;
@@ -199,6 +226,8 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
 
         _window = _settings.Batch;
         _language = new LanguageWatch(OnEverythingChanged);
+
+        StartAutoRefresh();
     }
 
     private static HttpClient NewClient()
@@ -244,6 +273,59 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
     }
 
     public string IntakeFolder => _settings.IntakeFolder ?? DefaultIntake();
+
+    /// <summary>
+    /// How often it may go and look on its own. A minute is offered because it was asked for,
+    /// but an account posts a few times a day, so the slower settings are the useful ones.
+    /// </summary>
+    public IReadOnlyList<RefreshOption> RefreshOptions { get; } =
+    [
+        new(1, "birdwatch.every.1"),
+        new(5, "birdwatch.every.5"),
+        new(10, "birdwatch.every.10"),
+        new(15, "birdwatch.every.15"),
+        new(30, "birdwatch.every.30"),
+        new(60, "birdwatch.every.60"),
+        new(180, "birdwatch.every.180"),
+        new(360, "birdwatch.every.360"),
+    ];
+
+    public bool AutoRefresh
+    {
+        get => _settings.AutoRefresh;
+        set
+        {
+            if (_settings.AutoRefresh == value)
+                return;
+            _settings.AutoRefresh = value;
+            Save();
+            OnPropertyChanged();
+            StartAutoRefresh();
+        }
+    }
+
+    /// <summary>
+    /// A number hand written into settings.json is honoured even though the dropdown cannot show
+    /// it, and falls back to reading as fifteen. Quietly rounding it to whatever is on the list
+    /// would be overruling somebody who went to the trouble of editing the file.
+    /// </summary>
+    public RefreshOption SelectedRefresh
+    {
+        get => RefreshOptions.FirstOrDefault(o => o.Minutes == _settings.RefreshEveryMinutes)
+               ?? RefreshOptions[3];
+        set
+        {
+            if (value is null || _settings.RefreshEveryMinutes == value.Minutes)
+                return;
+            _settings.RefreshEveryMinutes = value.Minutes;
+            Save();
+            OnPropertyChanged();
+
+            // The interval is fixed when the work is scheduled, so changing it means asking
+            // for the work again rather than adjusting anything.
+            StartAutoRefresh();
+        }
+    }
 
     public bool IncludeReposts
     {
@@ -333,6 +415,41 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
 
     public bool HasPreview => _preview is not null;
 
+    /// <summary>
+    /// Puts the automatic look on or off, and restarts it when the interval changes.
+    ///
+    /// The shell owns the lifetime, so this stops on its own when the plugin is switched off.
+    /// It does not run straight away: turning it on means "from now on", and anyone wanting a
+    /// look this second has a Refresh button right there.
+    /// </summary>
+    private void StartAutoRefresh()
+    {
+        _auto?.Cancel();
+        _auto = null;
+
+        if (!_settings.AutoRefresh || Watched.Count == 0)
+            return;
+
+        var every = TimeSpan.FromMinutes(Math.Max(1, _settings.RefreshEveryMinutes));
+
+        _auto = _host.Background.Schedule(
+            _host.Text["birdwatch.task.auto"], every,
+            async context =>
+            {
+                if (context.Token.IsCancellationRequested)
+                    return;
+
+                // Everything below touches the grid, which belongs to the UI thread.
+                await Dispatcher.UIThread.InvokeAsync(async () =>
+                {
+                    // Never on top of a look somebody asked for themselves.
+                    if (!IsBusy)
+                        await LoadAsync(more: false);
+                });
+            },
+            runImmediately: false);
+    }
+
     public void SetIntakeFolder(string folder)
     {
         _settings.IntakeFolder = folder;
@@ -356,6 +473,7 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
 
         NewHandle = "";
         RefreshCommand.RaiseCanExecuteChanged();
+        StartAutoRefresh();
         _ = LoadAsync(more: false);
     }
 
@@ -375,6 +493,7 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
         }
 
         RefreshCommand.RaiseCanExecuteChanged();
+        StartAutoRefresh();
         Rebuild();
     }
 
@@ -516,9 +635,17 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
     {
         var wanted = Ordered().Take(_window).ToList();
 
+        // Emptying the list drops whatever the list control had selected, which is a shrug
+        // when somebody pressed Refresh themselves and a real nuisance every ten minutes when
+        // nobody did. The preview knows what it belongs to, so putting it back costs nothing.
+        var keep = _selected;
+
         Shown.Clear();
         foreach (var media in wanted)
             Shown.Add(media);
+
+        if (keep is not null && Shown.Contains(keep))
+            Selected = keep;
 
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(HasMore));
@@ -562,7 +689,14 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
 
     private async Task ShowPreviewAsync(MediaViewModel? media)
     {
+        // Already showing this one, so there is nothing to fetch. Happens when a rebuild puts
+        // the selection back, and when somebody clicks between two tiles and back again.
+        if (media is not null && ReferenceEquals(_previewFor, media) && _preview is not null)
+            return;
+
         Preview = null;
+        _previewFor = media;
+
         if (media is null)
             return;
 
@@ -579,9 +713,14 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
             // Still the one being looked at? Clicking through a grid quickly means several of
             // these are in flight, and the last to arrive is not necessarily the right one.
             if (ReferenceEquals(_selected, media))
+            {
                 Preview = bitmap;
+                _previewFor = media;
+            }
             else
+            {
                 bitmap.Dispose();
+            }
         }
         catch (Exception)
         {
@@ -668,6 +807,7 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _language.Dispose();
+        _auto?.Cancel();
         _work?.Cancel();
         _thumbnails?.Cancel();
 

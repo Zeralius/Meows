@@ -41,6 +41,16 @@ Clicking a tile shows it full size along with the poster's own description and a
 the service put on it. **Save to intake** writes it to the intake folder; **Save all from this
 post** takes the whole set, which is what you want when the pictures only make sense together.
 
+**Refresh on its own** ticks and it goes and looks without being asked, as often as you pick,
+from every minute to every six hours. It waits after each pass rather than on a fixed clock, so a
+slow read never has a second one starting on top of it, and a pass landing while you are reading
+something back is skipped rather than queued. It appears in the background tasks panel like
+anything else, so you can see it there and call it off from the same place.
+
+Turning it on means from now on. Nothing fetches the moment the box is ticked, because the Refresh
+button is right beside it. Fifteen minutes is the default; a minute is offered because it was asked
+for, but an account posts a few times a day, so the slower settings are the ones that make sense.
+
 **Read further back** goes further into each account's history, a batch at a time. Every account
 keeps its own place, so accounts that post at wildly different rates stay in step, and one that
 has run out is not asked again.
@@ -106,5 +116,6 @@ that supports it on Tuesdays.
 ## Settings
 
 `%APPDATA%\Meows\plugins\meows.birdwatch\settings.json` holds the watched handles, the intake
-folder, whether reposts are shown, and `batch`, which is how many pictures the grid grows by each
-time you read further back. No credentials, because there are none.
+folder, whether reposts are shown, `autoRefresh` and `refreshEveryMinutes` for looking on its own,
+and `batch`, which is how many pictures the grid grows by each time you read further back. No
+credentials, because there are none.

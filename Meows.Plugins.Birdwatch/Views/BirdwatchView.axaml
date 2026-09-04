@@ -48,6 +48,27 @@
                               VerticalAlignment="Center" />
                     <Button Name="PickIntakeButton" Content="{m:Tr birdwatch.intake}" />
                     <Button Content="{m:Tr birdwatch.open}" Command="{Binding OpenIntakeCommand}" />
+
+                    <!-- Beside the button it automates. The hint is a tooltip rather than a line
+                         of its own, because the header is already carrying enough. -->
+                    <CheckBox Content="{m:Tr birdwatch.auto}"
+                              IsChecked="{Binding AutoRefresh}"
+                              ToolTip.Tip="{m:Tr birdwatch.auto.hint}"
+                              FontSize="11"
+                              VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{Binding RefreshOptions}"
+                              SelectedItem="{Binding SelectedRefresh}"
+                              IsEnabled="{Binding AutoRefresh}"
+                              FontSize="11"
+                              VerticalAlignment="Center"
+                              MinWidth="130">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RefreshOption">
+                                <TextBlock Text="{Binding Label.Value}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
                     <Button Content="{m:Tr birdwatch.refresh}" Command="{Binding RefreshCommand}" />
                 </StackPanel>
             </Grid>
