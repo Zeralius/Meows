@@ -1,0 +1,583 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Tin.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             xmlns:views="using:Meows.Plugins.Tin.Views"
+             x:Class="Meows.Plugins.Tin.Views.TinView"
+             x:DataType="vm:TinViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="14,12,14,6" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
+        </Style>
+        <Style Selector="Border.badge">
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="5,1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+        <Style Selector="Button.bucket">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Background" Value="{DynamicResource MeowsCard}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Margin" Value="0,0,0,5" />
+        </Style>
+        <Style Selector="Button.bucket.on">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsSelectionLine}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Folder}"
+                               FontWeight="SemiBold"
+                               TextTrimming="CharacterEllipsis"
+                               IsVisible="{Binding HasFolder}" />
+                    <TextBlock Text="{m:Tr tin.nofolder}"
+                               FontWeight="SemiBold"
+                               IsVisible="{Binding !HasFolder}" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Classes="label" Text="{Binding Summary}" />
+                        <TextBlock Classes="label" Text="{Binding Status}" />
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Classes="label"
+                               Text="{m:Tr tin.account.name}"
+                               VerticalAlignment="Center"
+                               IsVisible="{Binding IsShowingOneAccount}" />
+                    <TextBox Text="{Binding AccountName}"
+                             PlaceholderText="{m:Tr tin.account.name.hint}"
+                             Width="130"
+                             FontSize="11"
+                             VerticalAlignment="Center"
+                             IsVisible="{Binding IsShowingOneAccount}" />
+                    <TextBlock Classes="label" Text="{m:Tr tin.currency}" VerticalAlignment="Center" />
+                    <TextBox Text="{Binding Currency}" Width="64" FontSize="11" VerticalAlignment="Center" />
+                    <ToggleButton Content="{m:Tr tin.chart}"
+                                  IsChecked="{Binding ShowChart}"
+                                  VerticalAlignment="Center" />
+                    <Button Name="PickFolderButton" Content="{m:Tr tin.folder}" />
+                    <Button Content="{m:Tr tin.open}" Command="{Binding OpenFolderCommand}" />
+                    <Button Content="{m:Tr tin.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsInfo}"
+                BorderBrush="{DynamicResource MeowsInfoLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasTotal}">
+            <TextBlock Text="{Binding MonthlyTotal}"
+                       Foreground="{DynamicResource MeowsInfoText}"
+                       FontWeight="SemiBold"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsWarn}"
+                BorderBrush="{DynamicResource MeowsWarnLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasAdvice}">
+            <TextBlock Text="{Binding Advice}"
+                       Foreground="{DynamicResource MeowsWarnText}"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="{DynamicResource MeowsDangerText}"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="260" MinWidth="180" />
+                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="*" MinWidth="260" />
+                <ColumnDefinition Width="4" />
+
+                <!-- A pixel width rather than Auto, or the splitter beside it has nothing it can
+                     change. Bound both ways so a width dragged out stays dragged out. -->
+                <ColumnDefinition Width="{Binding ChartWidth, Mode=TwoWay}" MinWidth="240" MaxWidth="680" />
+            </Grid.ColumnDefinitions>
+
+
+            <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top"
+                               Classes="section"
+                               Text="{m:Tr tin.accounts}"
+                               IsVisible="{Binding HasAccounts}" />
+
+                    <ItemsControl DockPanel.Dock="Top"
+                                  ItemsSource="{Binding Accounts}"
+                                  IsVisible="{Binding HasAccounts}"
+                                  Margin="8,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AccountViewModel">
+                                <Button Classes="bucket"
+                                        Classes.on="{Binding IsOn}"
+                                        Command="{Binding $parent[UserControl].((vm:TinViewModel)DataContext).AccountCommand}"
+                                        CommandParameter="{Binding}">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding Under}"
+                                                   Classes="label"
+                                                   IsVisible="{Binding HasUnder}" />
+                                        <TextBlock Text="{Binding Detail}" Classes="label" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr tin.showonly}" />
+
+                    <ItemsControl DockPanel.Dock="Top" ItemsSource="{Binding Buckets}" Margin="8,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:BucketViewModel">
+                                <Button Classes="bucket"
+                                        Classes.on="{Binding IsOn}"
+                                        Command="{Binding $parent[UserControl].((vm:TinViewModel)DataContext).FilterCommand}"
+                                        CommandParameter="{Binding}">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{Binding Detail}" Classes="label" />
+                                    </StackPanel>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr tin.files}" />
+
+                    <ListBox ItemsSource="{Binding Sources}"
+                             SelectedItem="{Binding SelectedSource}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Margin="8,0,8,10">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SourceViewModel">
+                                <StackPanel Spacing="2">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="⚠"
+                                                   Foreground="{DynamicResource MeowsWarnText}"
+                                                   IsVisible="{Binding !IsUnderstood}" />
+                                        <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Detail}" Classes="label" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <DockPanel Grid.Column="2">
+
+                <Border DockPanel.Dock="Top"
+                        Background="{DynamicResource MeowsInset}"
+                        BorderBrush="{DynamicResource MeowsLine}"
+                        BorderThickness="0,0,0,1"
+                        Padding="14,10"
+                        IsVisible="{Binding HasSource}">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Classes="label"
+                                   Text="{m:Tr tin.account.belongs}"
+                                   VerticalAlignment="Center" />
+                        <ComboBox ItemsSource="{Binding AccountChoices}"
+                                  SelectedItem="{Binding SourceAccount}"
+                                  MinWidth="220">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:AccountChoice">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <Button Content="{m:Tr tin.close}"
+                                Command="{Binding ClearSourceCommand}"
+                                FontSize="11"
+                                VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <Border DockPanel.Dock="Top"
+                        Background="{DynamicResource MeowsInset}"
+                        BorderBrush="{DynamicResource MeowsLine}"
+                        BorderThickness="0,0,0,1"
+                        Padding="14,10"
+                        IsVisible="{Binding CanMap}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{m:Tr tin.columns.title}"
+                                   FontWeight="SemiBold"
+                                   TextWrapping="Wrap" />
+                        <Grid ColumnDefinitions="*,10,*,10,*">
+                            <StackPanel Grid.Column="0" Spacing="3">
+                                <TextBlock Classes="label" Text="{m:Tr tin.column.date}" />
+                                <ComboBox ItemsSource="{Binding HeaderChoices}"
+                                          SelectedIndex="{Binding DateColumn}"
+                                          HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" Spacing="3">
+                                <TextBlock Classes="label" Text="{m:Tr tin.column.name}" />
+                                <ComboBox ItemsSource="{Binding HeaderChoices}"
+                                          SelectedIndex="{Binding NameColumn}"
+                                          HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="4" Spacing="3">
+                                <TextBlock Classes="label" Text="{m:Tr tin.column.amount}" />
+                                <ComboBox ItemsSource="{Binding HeaderChoices}"
+                                          SelectedIndex="{Binding AmountColumn}"
+                                          HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <Border DockPanel.Dock="Bottom"
+                        Background="{DynamicResource MeowsSunken}"
+                        BorderBrush="{DynamicResource MeowsLine}"
+                        BorderThickness="0,1,0,0"
+                        Height="190"
+                        IsVisible="{Binding HasSelection}">
+                    <DockPanel>
+                        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="14,10,14,6" ColumnSpacing="10">
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Text="{m:Tr tin.charges}" Classes="section" Margin="0" />
+                                <TextBlock Text="{Binding Selected.RiseText}"
+                                           Foreground="{DynamicResource MeowsWarnText}"
+                                           FontSize="11"
+                                           TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                                <Button Content="{m:Tr tin.hide}" Command="{Binding IgnoreCommand}" FontSize="11" />
+                                <Button Content="{m:Tr tin.restore}" Command="{Binding RestoreCommand}" FontSize="11" />
+                            </StackPanel>
+                        </Grid>
+
+                        <ListBox ItemsSource="{Binding Charges}"
+                                 Background="Transparent"
+                                 BorderThickness="0"
+                                 Margin="8,0,8,8">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ChargeViewModel">
+                                    <Grid ColumnDefinitions="90,*,Auto,120" ColumnSpacing="12">
+                                        <TextBlock Grid.Column="0" Text="{Binding DateText}" Classes="label" />
+                                        <StackPanel Grid.Column="1" Spacing="1">
+                                            <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Reference}"
+                                                       Classes="label"
+                                                       IsVisible="{Binding HasReference}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       ToolTip.Tip="{Binding Reference}" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2" Text="{Binding Source}" Classes="label" />
+                                        <TextBlock Grid.Column="3"
+                                                   Text="{Binding AmountText}"
+                                                   FontWeight="SemiBold"
+                                                   HorizontalAlignment="Right" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+                </Border>
+
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,12,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsEmpty}"
+                           Text="{m:Tr tin.empty}" />
+
+                <!-- Two kinds of row in one list. A company with several subscriptions is a row
+                     carrying their sum, with the parts indented under it; the template is picked
+                     by type. -->
+                <ListBox ItemsSource="{Binding Rows}"
+                         SelectedItem="{Binding Selected}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8,8,8,8">
+                    <ListBox.DataTemplates>
+
+                        <DataTemplate x:DataType="vm:FamilyViewModel">
+                            <Grid ColumnDefinitions="*,Auto,110,110" ColumnSpacing="12">
+                                <StackPanel Grid.Column="0" Spacing="2">
+                                    <TextBlock Text="{Binding Name}"
+                                               FontWeight="SemiBold"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding CountText}" Classes="label" />
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <Border Classes="badge"
+                                            Background="{DynamicResource MeowsWarnLine}"
+                                            IsVisible="{Binding WentUp}">
+                                        <TextBlock Text="{m:Tr tin.badge.up}" FontSize="9" />
+                                    </Border>
+                                    <Border Classes="badge"
+                                            Background="{DynamicResource MeowsLine}"
+                                            IsVisible="{Binding Lapsed}">
+                                        <TextBlock Text="{m:Tr tin.badge.stopped}" FontSize="9" />
+                                    </Border>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding TotalText}"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Right" />
+                                    <TextBlock Text="{Binding PerMonthText}"
+                                               Classes="label"
+                                               HorizontalAlignment="Right" />
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="3"
+                                           Text="{m:Tr tin.family.parts}"
+                                           Classes="label"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           TextWrapping="Wrap" />
+                            </Grid>
+                        </DataTemplate>
+
+                        <DataTemplate x:DataType="vm:SeriesViewModel">
+                            <Grid ColumnDefinitions="Auto,*,Auto,110,110" ColumnSpacing="12">
+                                <!-- The indent under a company row: a short rule, and nothing at
+                                     all for a row standing on its own. -->
+                                <Border Grid.Column="0"
+                                        Width="14"
+                                        Height="1"
+                                        Background="{DynamicResource MeowsLine}"
+                                        VerticalAlignment="Center"
+                                        IsVisible="{Binding IsChild}" />
+
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Reference}"
+                                               Classes="label"
+                                               IsVisible="{Binding HasReference}"
+                                               TextTrimming="CharacterEllipsis"
+                                               ToolTip.Tip="{Binding Reference}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding CadenceText}" Classes="label" />
+                                        <TextBlock Text="{Binding SeenText}" Classes="label" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                    <Border Classes="badge"
+                                            Background="{DynamicResource MeowsWarnLine}"
+                                            IsVisible="{Binding WentUp}">
+                                        <TextBlock Text="{m:Tr tin.badge.up}" FontSize="9" />
+                                    </Border>
+                                    <Border Classes="badge"
+                                            Background="{DynamicResource MeowsLine}"
+                                            IsVisible="{Binding Lapsed}">
+                                        <TextBlock Text="{m:Tr tin.badge.stopped}" FontSize="9" />
+                                    </Border>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="3" Spacing="2" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding AmountText}"
+                                               FontWeight="SemiBold"
+                                               HorizontalAlignment="Right" />
+                                    <TextBlock Text="{Binding PerMonthText}"
+                                               Classes="label"
+                                               HorizontalAlignment="Right" />
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="4"
+                                           Text="{Binding DueText}"
+                                           Classes="label"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           TextWrapping="Wrap" />
+                            </Grid>
+                        </DataTemplate>
+
+                    </ListBox.DataTemplates>
+                </ListBox>
+
+            </DockPanel>
+
+            <GridSplitter Grid.Column="3"
+                          Background="{DynamicResource MeowsRaised}"
+                          ResizeDirection="Columns"
+                          IsVisible="{Binding ShowChart}" />
+
+            <Border Grid.Column="4"
+                    Classes="panel"
+                    BorderThickness="1,0,0,0"
+                    IsVisible="{Binding ShowChart}">
+                <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Margin="14,12" Spacing="10">
+
+                        <TextBlock Classes="section" Text="{m:Tr tin.chart.title}" Margin="0" />
+                        <TextBlock Text="{Binding ChartSpan}" Classes="label" TextWrapping="Wrap" />
+
+                        <views:Donut Slices="{Binding Slices}"
+                                     Height="180"
+                                     HorizontalAlignment="Stretch"
+                                     Margin="0,4" />
+
+                        <ItemsControl ItemsSource="{Binding Slices}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SliceViewModel">
+                                    <Grid ColumnDefinitions="10,*,Auto" ColumnSpacing="8" Margin="0,0,0,4">
+                                        <Border Grid.Column="0"
+                                                Width="10"
+                                                Height="10"
+                                                CornerRadius="2"
+                                                VerticalAlignment="Center"
+                                                Background="{Binding Fill}" />
+                                        <StackPanel Grid.Column="1" Spacing="1">
+                                            <TextBlock Text="{Binding Name}"
+                                                       FontSize="11"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       ToolTip.Tip="{Binding Name}" />
+                                            <TextBlock Text="{Binding TotalText}" Classes="label" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding ShareText}"
+                                                   FontSize="11"
+                                                   VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Border Background="{DynamicResource MeowsLineSoft}" Height="1" Margin="0,6" />
+
+                        <TextBlock Classes="section" Text="{m:Tr tin.outlook.title}" Margin="0" />
+
+                        <TextBlock Text="{m:Tr tin.outlook.notenough}"
+                                   Classes="label"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding HasNoOutlook}" />
+
+                        <StackPanel Spacing="10" IsVisible="{Binding HasOutlook}">
+                            <TextBlock Text="{Binding MonthsRead}" Classes="label" TextWrapping="Wrap" />
+
+                            <Border Background="{DynamicResource MeowsCard}"
+                                    BorderBrush="{DynamicResource MeowsLine}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="10,8">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="{m:Tr tin.outlook.nextmonth}" FontWeight="SemiBold" FontSize="12" />
+
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="{m:Tr tin.outlook.in}" Classes="label" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding InNextMonth}"
+                                                   Foreground="{DynamicResource MeowsGoodText}"
+                                                   FontWeight="SemiBold" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding InMadeOf}" Classes="label" TextWrapping="Wrap" />
+
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="{m:Tr tin.outlook.out}" Classes="label" />
+                                        <TextBlock Grid.Column="1" Text="{Binding OutNextMonth}" FontWeight="SemiBold" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding OutMadeOf}" Classes="label" TextWrapping="Wrap" />
+
+                                    <Border Background="{DynamicResource MeowsLineSoft}" Height="1" />
+
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="{m:Tr tin.outlook.left}" Classes="label" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding LeftNextMonth}"
+                                                   FontWeight="SemiBold" />
+                                    </Grid>
+                                    <TextBlock Text="{m:Tr tin.outlook.short}"
+                                               Foreground="{DynamicResource MeowsWarnText}"
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
+                                               IsVisible="{Binding IsShortNextMonth}" />
+                                </StackPanel>
+                            </Border>
+
+                            <Border Background="{DynamicResource MeowsCard}"
+                                    BorderBrush="{DynamicResource MeowsLine}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="10,8">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="{m:Tr tin.outlook.year}" FontWeight="SemiBold" FontSize="12" />
+
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="{m:Tr tin.outlook.in}" Classes="label" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding InYear}"
+                                                   Foreground="{DynamicResource MeowsGoodText}"
+                                                   FontWeight="SemiBold" />
+                                    </Grid>
+
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="{m:Tr tin.outlook.out}" Classes="label" />
+                                        <TextBlock Grid.Column="1" Text="{Binding OutYear}" FontWeight="SemiBold" />
+                                    </Grid>
+
+                                    <Border Background="{DynamicResource MeowsLineSoft}" Height="1" />
+
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="{m:Tr tin.outlook.left}" Classes="label" />
+                                        <TextBlock Grid.Column="1" Text="{Binding LeftYear}" FontWeight="SemiBold" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+
+                            <TextBlock Text="{m:Tr tin.outlook.caveat}"
+                                       Classes="label"
+                                       TextWrapping="Wrap" />
+                        </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

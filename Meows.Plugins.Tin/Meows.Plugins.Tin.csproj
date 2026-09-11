@@ -1,0 +1,44 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+        <!-- A library project does not copy its NuGet dependencies to the output folder, and a
+             plugin's folder is exactly where the shell's resolver looks for them. Without this
+             the plugin loads and then throws the moment it opens a PDF. Avalonia and the
+             contract stay out of it: both are marked ExcludeAssets="runtime" below, because the
+             shell has to be the only source of those two. -->
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
+
+        <OutputPath Condition="'$(Configuration)' == 'Debug'">$(MSBuildThisFileDirectory)..\plugins\Meows.Plugins.Tin\</OutputPath>
+        <OutputPath Condition="'$(Configuration)' != 'Debug'">$(MSBuildThisFileDirectory)bin\$(Configuration)\</OutputPath>
+    </PropertyGroup>
+
+    <!-- One file per language. WithCulture and LogicalName are both load bearing: MSBuild reads
+         the middle of Strings.de.json as a culture and would otherwise file it under a de
+         satellite assembly, where the shell never looks. -->
+    <ItemGroup>
+      <EmbeddedResource Include="Strings\Strings.*.json">
+        <WithCulture>false</WithCulture>
+        <LogicalName>$(AssemblyName).Strings.%(Filename)%(Extension)</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+      <!-- The one private dependency in the project, and it earns it: some banks hand out
+           statements as PDFs and nothing else, so without this Tin has nothing to read. Pure
+           managed and Apache 2.0, so it ships as an ordinary DLL in the plugin's own folder
+           rather than as a native blob to stage and sign. -->
+      <PackageReference Include="PdfPig" Version="0.1.16" />
+
+      <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
+      <ProjectReference Include="..\Meows.Plugins.Abstractions\Meows.Plugins.Abstractions.csproj"
+                        Private="false"
+                        ExcludeAssets="runtime" />
+    </ItemGroup>
+
+</Project>

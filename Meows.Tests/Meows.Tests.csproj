@@ -47,6 +47,8 @@
       <ProjectReference Include="..\Meows.Plugins.Mouser\Meows.Plugins.Mouser.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Kibble\Meows.Plugins.Kibble.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Birdwatch\Meows.Plugins.Birdwatch.csproj" />
+    <ProjectReference Include="..\Meows.Plugins.Tin\Meows.Plugins.Tin.csproj" />
+    <ProjectReference Include="..\Meows.Plugins.Collar\Meows.Plugins.Collar.csproj" />
   </ItemGroup>
 
 </Project>

@@ -28,6 +28,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Plugins.Mouser", "Meo
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Plugins.Birdwatch", "Meows.Plugins.Birdwatch\Meows.Plugins.Birdwatch.csproj", "{FDD1F45C-5340-4C8C-8FEB-EDDA2D815246}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Plugins.Tin", "Meows.Plugins.Tin\Meows.Plugins.Tin.csproj", "{74B88601-CFC2-44A1-BA68-14484DCF3C16}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Plugins.Collar", "Meows.Plugins.Collar\Meows.Plugins.Collar.csproj", "{09355FA2-102A-4B3A-A451-BC7F06A667C5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -206,6 +210,30 @@ Global
 		{FDD1F45C-5340-4C8C-8FEB-EDDA2D815246}.Release|x64.Build.0 = Release|Any CPU
 		{FDD1F45C-5340-4C8C-8FEB-EDDA2D815246}.Release|x86.ActiveCfg = Release|Any CPU
 		{FDD1F45C-5340-4C8C-8FEB-EDDA2D815246}.Release|x86.Build.0 = Release|Any CPU
+		{74B88601-CFC2-44A1-BA68-14484DCF3C16}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{74B88601-CFC2-44A1-BA68-14484DCF3C16}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{74B88601-CFC2-44A1-BA68-14484DCF3C16}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{74B88601-CFC2-44A1-BA68-14484DCF3C16}.Debug|x64.Build.0 = Debug|Any CPU
+		{74B88601-CFC2-44A1-BA68-14484DCF3C16}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{74B88601-CFC2-44A1-BA68-14484DCF3C16}.Debug|x86.Build.0 = Debug|Any CPU
+		{74B88601-CFC2-44A1-BA68-14484DCF3C16}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{74B88601-CFC2-44A1-BA68-14484DCF3C16}.Release|Any CPU.Build.0 = Release|Any CPU
+		{74B88601-CFC2-44A1-BA68-14484DCF3C16}.Release|x64.ActiveCfg = Release|Any CPU
+		{74B88601-CFC2-44A1-BA68-14484DCF3C16}.Release|x64.Build.0 = Release|Any CPU
+		{74B88601-CFC2-44A1-BA68-14484DCF3C16}.Release|x86.ActiveCfg = Release|Any CPU
+		{74B88601-CFC2-44A1-BA68-14484DCF3C16}.Release|x86.Build.0 = Release|Any CPU
+		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Debug|x64.Build.0 = Debug|Any CPU
+		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Debug|x86.Build.0 = Debug|Any CPU
+		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Release|x64.ActiveCfg = Release|Any CPU
+		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Release|x64.Build.0 = Release|Any CPU
+		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Release|x86.ActiveCfg = Release|Any CPU
+		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

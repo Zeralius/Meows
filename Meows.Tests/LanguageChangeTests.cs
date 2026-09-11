@@ -156,6 +156,8 @@ public class LanguageChangeTests : IDisposable
                      typeof(Plugins.Saucer.SaucerPlugin).Assembly,
                      typeof(Plugins.TelegramPoster.TelegramPosterPlugin).Assembly,
                      typeof(Plugins.Birdwatch.BirdwatchPlugin).Assembly,
+                     typeof(Plugins.Tin.TinPlugin).Assembly,
+                     typeof(Plugins.Collar.CollarPlugin).Assembly,
                  })
         {
             // The one the plugin hands the shell, which is the one whose text is on screen.
@@ -180,6 +182,6 @@ public class LanguageChangeTests : IDisposable
 
         // Guards the loop above. A type lookup that quietly finds nothing would pass this
         // test with no plugins examined at all.
-        Assert.Equal(9, checked_);
+        Assert.Equal(11, checked_);
     }
 }

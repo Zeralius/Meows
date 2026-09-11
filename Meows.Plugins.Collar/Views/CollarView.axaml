@@ -1,0 +1,236 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Collar.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Collar.Views.CollarView"
+             x:DataType="vm:CollarViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+        <Style Selector="Border.marker">
+            <Setter Property="Width" Value="4" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Summary}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Classes="label" Text="{Binding Status}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Classes="label" Text="{m:Tr collar.lead}" VerticalAlignment="Center" />
+                    <NumericUpDown Value="{Binding LeadDays}"
+                                   Minimum="0"
+                                   Maximum="365"
+                                   Increment="5"
+                                   FormatString="0"
+                                   Width="110"
+                                   FontSize="11"
+                                   VerticalAlignment="Center" />
+                    <Button Name="AttachButton" Content="{m:Tr collar.fromfile}" />
+                    <Button Content="{m:Tr collar.add}" Command="{Binding AddCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="{DynamicResource MeowsDangerText}"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="*,4,330">
+
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,14,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsEmpty}"
+                           Text="{m:Tr collar.empty}" />
+
+                <ListBox Name="EntryList"
+                         ItemsSource="{Binding Entries}"
+                         SelectedItem="{Binding Selected}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:EntryViewModel">
+                            <Grid ColumnDefinitions="4,Auto,*,Auto" ColumnSpacing="10">
+                                <Border Grid.Column="0"
+                                        Classes="marker"
+                                        Background="{DynamicResource MeowsDangerStrong}"
+                                        IsVisible="{Binding IsOverdue}" />
+                                <Border Grid.Column="0"
+                                        Classes="marker"
+                                        Background="{DynamicResource MeowsWarnLine}"
+                                        IsVisible="{Binding IsSoon}" />
+
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Glyph}"
+                                           FontFamily="Segoe UI Emoji"
+                                           FontSize="14"
+                                           VerticalAlignment="Center" />
+
+                                <StackPanel Grid.Column="2" Spacing="2">
+                                    <TextBlock Text="{Binding Shown}" TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding KindText}" Classes="label" />
+                                        <TextBlock Text="{Binding RepeatText}" Classes="label" />
+                                        <TextBlock Text="{Binding FileName}"
+                                                   Classes="label"
+                                                   IsVisible="{Binding HasFile}"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="3"
+                                           Text="{Binding DueText}"
+                                           FontSize="11"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           TextWrapping="Wrap"
+                                           MaxWidth="170" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <Border Grid.Column="2"
+                    Background="{DynamicResource MeowsBase}"
+                    BorderBrush="{DynamicResource MeowsLineSoft}"
+                    BorderThickness="1,0,0,0">
+                <Panel>
+                    <TextBlock Text="{m:Tr collar.pickone}"
+                               Classes="label"
+                               Margin="16"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Top"
+                               IsVisible="{Binding !HasSelection}" />
+
+                    <ScrollViewer IsVisible="{Binding HasSelection}">
+                        <StackPanel Margin="16" Spacing="12">
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr collar.field.title}" />
+                                <TextBox Text="{Binding Selected.Title}" PlaceholderText="{m:Tr collar.field.title.hint}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr collar.field.kind}" />
+                                <ComboBox ItemsSource="{Binding Kinds}"
+                                          SelectedItem="{Binding Selected.KindChoice}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:Choice">
+                                            <TextBlock Text="{Binding Name}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr collar.field.due}" />
+                                <DatePicker SelectedDate="{Binding Selected.DueOn}" HorizontalAlignment="Stretch" />
+                                <TextBlock Text="{Binding Selected.DueText}" Classes="label" TextWrapping="Wrap" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr collar.field.repeat}" />
+                                <ComboBox ItemsSource="{Binding Repeats}"
+                                          SelectedItem="{Binding Selected.RepeatChoice}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:Choice">
+                                            <TextBlock Text="{Binding Name}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr collar.field.note}" />
+                                <TextBox Text="{Binding Selected.Note}"
+                                         AcceptsReturn="True"
+                                         TextWrapping="Wrap"
+                                         MinHeight="70" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr collar.field.file}" />
+                                <TextBlock Text="{Binding Selected.FileName}"
+                                           TextTrimming="CharacterEllipsis"
+                                           IsVisible="{Binding Selected.HasFile}" />
+                                <TextBlock Text="{m:Tr collar.nofile}"
+                                           Classes="label"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding !Selected.HasFile}" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="{m:Tr collar.openfile}"
+                                            Command="{Binding OpenFileCommand}"
+                                            FontSize="11" />
+                                    <Button Content="{m:Tr collar.detach}"
+                                            Command="{Binding DetachCommand}"
+                                            FontSize="11" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <Border Background="{DynamicResource MeowsLineSoft}" Height="1" Margin="0,4" />
+
+                            <StackPanel Spacing="8">
+                                <Button Content="{m:Tr collar.handled}"
+                                        Command="{Binding HandleCommand}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center" />
+                                <TextBlock Text="{m:Tr collar.handled.hint}" Classes="label" TextWrapping="Wrap" />
+                                <Button Content="{m:Tr collar.delete}"
+                                        Command="{Binding DeleteCommand}"
+                                        Background="{DynamicResource MeowsDanger}"
+                                        BorderBrush="{DynamicResource MeowsDangerLine}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center" />
+                            </StackPanel>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </Panel>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

@@ -163,6 +163,8 @@ public class CatalogueTests
         typeof(Plugins.Saucer.SaucerPlugin).Assembly,
         typeof(Plugins.TelegramPoster.TelegramPosterPlugin).Assembly,
         typeof(Plugins.Birdwatch.BirdwatchPlugin).Assembly,
+        typeof(Plugins.Tin.TinPlugin).Assembly,
+        typeof(Plugins.Collar.CollarPlugin).Assembly,
     ];
 
     private static Dictionary<string, string> Read(Assembly assembly, string language)

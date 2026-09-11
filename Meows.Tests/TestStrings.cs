@@ -38,6 +38,8 @@ internal static class TestStrings
         typeof(Plugins.Saucer.SaucerPlugin).Assembly,
         typeof(Plugins.TelegramPoster.TelegramPosterPlugin).Assembly,
         typeof(Plugins.Birdwatch.BirdwatchPlugin).Assembly,
+        typeof(Plugins.Tin.TinPlugin).Assembly,
+        typeof(Plugins.Collar.CollarPlugin).Assembly,
     ];
 
     /// <summary>A fresh table holding everything, for tests that want to poke at it directly.</summary>
