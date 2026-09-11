@@ -421,3 +421,114 @@ public sealed class ChonkSafeguardTests : IDisposable
         }
     }
 }
+
+/// <summary>
+/// The tree on the left: drives that open into their folders, and a scan that waits to be asked.
+/// A tab that opened by measuring an entire drive again, unasked, is the reason it exists.
+/// </summary>
+public sealed class ChonkTreeTests : IDisposable
+{
+    private readonly string _root = Path.Combine(Path.GetTempPath(), "chonk-tree-" + Guid.NewGuid().ToString("N")[..10]);
+
+    public ChonkTreeTests()
+    {
+        Directory.CreateDirectory(Path.Combine(_root, "Alpha", "Deeper"));
+        Directory.CreateDirectory(Path.Combine(_root, "Beta"));
+        TestStrings.Install();
+    }
+
+    public void Dispose()
+    {
+        try
+        {
+            Directory.Delete(_root, recursive: true);
+        }
+        catch (Exception)
+        {
+            // A leftover temp folder is not worth failing a run over.
+        }
+    }
+
+    [Fact]
+    public void A_folder_is_not_listed_until_it_is_opened()
+    {
+        var node = NodeViewModel.ForFolder(_root);
+
+        // One stand-in, so the arrow draws. Nothing on disk has been read yet.
+        var only = Assert.Single(node.Children);
+        Assert.True(only.IsPlaceholder);
+
+        node.IsExpanded = true;
+
+        Assert.Equal(["Alpha", "Beta"], node.Children.Select(c => c.Name));
+        Assert.All(node.Children, c => Assert.False(c.IsPlaceholder));
+    }
+
+    [Fact]
+    public void Opening_a_folder_twice_lists_it_once()
+    {
+        var node = NodeViewModel.ForFolder(_root);
+
+        node.IsExpanded = true;
+        node.IsExpanded = false;
+        node.IsExpanded = true;
+
+        Assert.Equal(2, node.Children.Count);
+    }
+
+    [Fact]
+    public void Opening_the_tab_measures_nothing()
+    {
+        var host = new FakeHost(Path.Combine(_root, "hostdata"));
+        using var model = new ChonkViewModel(host);
+
+        // Drives are listed, a root is chosen, and no scan has been started.
+        Assert.NotEmpty(model.Tree);
+        Assert.True(model.HasRoot);
+        Assert.Empty(host.Work.Requested);
+    }
+
+    [Fact]
+    public void Picking_a_folder_chooses_it_and_still_measures_nothing()
+    {
+        var host = new FakeHost(Path.Combine(_root, "hostdata"));
+        using var model = new ChonkViewModel(host);
+
+        model.Choose(Path.Combine(_root, "Alpha"));
+
+        Assert.Equal(Path.Combine(_root, "Alpha"), model.SelectedRoot);
+        Assert.Empty(host.Work.Requested);
+        Assert.Contains("Alpha", model.Status, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void Choosing_a_path_opens_the_tree_down_to_it()
+    {
+        var host = new FakeHost(Path.Combine(_root, "hostdata"));
+        using var model = new ChonkViewModel(host);
+
+        var target = Path.Combine(_root, "Alpha", "Deeper");
+        model.Choose(target);
+
+        // The drive it sits on was opened, and every folder on the way, and the folder itself is
+        // what is selected.
+        var drive = model.Tree.Single(d => target.StartsWith(d.Path, StringComparison.OrdinalIgnoreCase));
+        Assert.True(drive.IsExpanded);
+        Assert.NotNull(model.SelectedNode);
+        Assert.Equal(Path.TrimEndingDirectorySeparator(target),
+            Path.TrimEndingDirectorySeparator(model.SelectedNode!.Path), ignoreCase: true);
+    }
+
+    [Fact]
+    public void Scan_measures_what_was_chosen()
+    {
+        var host = new FakeHost(Path.Combine(_root, "hostdata"));
+        using var model = new ChonkViewModel(host);
+
+        model.Choose(Path.Combine(_root, "Beta"));
+        model.ScanCommand.Execute(null);
+
+        var started = Assert.Single(host.Work.Requested);
+        Assert.Contains("Beta", started, StringComparison.Ordinal);
+    }
+}

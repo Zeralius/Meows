@@ -80,9 +80,10 @@ public partial class ChonkView : UserControl, IDisposable
             AllowMultiple = false,
         });
 
+        // Chosen, shown in the tree, and not measured until Scan says so.
         var picked = folders.FirstOrDefault()?.TryGetLocalPath();
         if (!string.IsNullOrWhiteSpace(picked))
-            model.StartScan(picked);
+            model.Choose(picked);
     }
 
     public void Dispose() => (DataContext as IDisposable)?.Dispose();

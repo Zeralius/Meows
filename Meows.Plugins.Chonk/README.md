@@ -8,11 +8,25 @@ Plugin id `meows.chonk`. Windows only, because deletion goes through the shell's
 
 | | |
 |---|---|
-| **Left** | Every ready drive, with how much of it is used |
+| **Left** | Every ready drive, with how much of it is used, opening into the folders inside it |
 | **Middle** | What is inside the folder you are looking at, biggest first, with a breadcrumb above it |
 | **Right** | The selected item, and what you can do with it |
 
 Double click a folder to go into it. **Up** and the breadcrumb come back out.
+
+## Choosing what to measure
+
+Open a drive on the left and the folders inside it appear under it, and so on down. Pick any of
+them, or use **Folder…** for somewhere the tree does not reach, and it is shown at the bottom of
+the panel as what **Scan** will measure. **Nothing is measured until Scan is pressed.** Clicking a
+drive used to scan the whole thing on the spot, which is a long wait for a mis-click and a poor
+way to measure one folder on it.
+
+The tree lists a folder the first time it is opened and not before, so opening a drive costs a
+directory listing rather than a scan. The recycle bin and other system folders are left out of
+it, since they are not places anyone chooses to measure; hidden folders stay, because `AppData` is
+hidden and is exactly the sort of place worth measuring. Where you last scanned is chosen again
+when the tab opens, with the tree opened down to it, and still not measured.
 
 ## What it measures
 

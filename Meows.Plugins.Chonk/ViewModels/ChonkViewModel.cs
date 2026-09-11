@@ -102,11 +102,16 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
         CancelDeleteCommand = new RelayCommand(() => PendingDelete = null, () => PendingDelete is not null);
 
         LoadDrives();
-        SelectedRoot = _settings.LastRoot ?? Drives.FirstOrDefault()?.Path;
+
+        // Where the last scan was, shown and selected but not run. A tab that opened by measuring
+        // an entire drive again, unasked, was the reason this tree exists.
+        Choose(_settings.LastRoot ?? Tree.FirstOrDefault()?.Path);
+
         _language = new LanguageWatch(OnEverythingChanged);
     }
 
-    public ObservableCollection<DriveViewModel> Drives { get; } = new();
+    /// <summary>Every ready drive, each opening into the folders under it.</summary>
+    public ObservableCollection<NodeViewModel> Tree { get; } = new();
 
     public ObservableCollection<EntryViewModel> Entries { get; } = new();
 
@@ -130,7 +135,95 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
 
     public RelayCommand CancelDeleteCommand { get; }
 
-    public string? SelectedRoot { get; set; }
+    private string? _selectedRoot;
+    private NodeViewModel? _selectedNode;
+
+    /// <summary>What Scan will measure. Chosen in the tree, or with the folder picker.</summary>
+    public string? SelectedRoot
+    {
+        get => _selectedRoot;
+        private set
+        {
+            if (SetField(ref _selectedRoot, value))
+                OnPropertyChanged(nameof(HasRoot));
+        }
+    }
+
+    public bool HasRoot => !string.IsNullOrWhiteSpace(SelectedRoot);
+
+    /// <summary>
+    /// The node picked in the tree. Picking one chooses it and nothing more: the measuring waits
+    /// for the Scan button, because a whole drive is a long time to wait for a mis-click.
+    /// </summary>
+    public NodeViewModel? SelectedNode
+    {
+        get => _selectedNode;
+        set
+        {
+            if (!SetField(ref _selectedNode, value))
+                return;
+
+            if (value is { IsPlaceholder: false })
+                Choose(value.Path, reveal: false);
+        }
+    }
+
+    /// <summary>
+    /// Chooses what to scan, and shows it in the tree. Nothing is measured until Scan is pressed.
+    /// </summary>
+    public void Choose(string? path, bool reveal = true)
+    {
+        if (string.IsNullOrWhiteSpace(path))
+            return;
+
+        SelectedRoot = path;
+        ErrorMessage = null;
+
+        if (!IsScanning && Current is null)
+            Status = _host.Text.Format("chonk.status.ready", path);
+
+        if (reveal)
+            Reveal(path);
+    }
+
+    /// <summary>
+    /// Opens the tree down to a path and selects it, listing each folder on the way. The path
+    /// may be nowhere under a drive the tree knows, a network share for instance, and then it is
+    /// simply chosen without being shown.
+    /// </summary>
+    private void Reveal(string path)
+    {
+        var full = path.TrimEnd('\\', '/');
+
+        var drive = Tree.FirstOrDefault(d =>
+            full.StartsWith(d.Path.TrimEnd('\\', '/'), StringComparison.OrdinalIgnoreCase));
+
+        if (drive is null)
+            return;
+
+        var node = drive;
+        var root = drive.Path.TrimEnd('\\', '/');
+
+        if (!string.Equals(full, root, StringComparison.OrdinalIgnoreCase))
+        {
+            var rest = full[(root.Length + 1)..].Split(['\\', '/'], StringSplitOptions.RemoveEmptyEntries);
+            var walked = root;
+
+            foreach (var segment in rest)
+            {
+                walked = System.IO.Path.Combine(walked, segment);
+                node.IsExpanded = true;
+
+                if (node.Find(walked) is not { } next)
+                    return;
+
+                node = next;
+            }
+        }
+
+        _selectedNode = node;
+        OnPropertyChanged(nameof(SelectedNode));
+    }
 
     public bool SkipSystemFolders
     {
@@ -388,11 +481,11 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
 
     private void LoadDrives()
     {
-        Drives.Clear();
+        Tree.Clear();
         try
         {
             foreach (var drive in DriveInfo.GetDrives().Where(d => d.IsReady && d.DriveType != DriveType.CDRom))
-                Drives.Add(new DriveViewModel(drive));
+                Tree.Add(NodeViewModel.ForDrive(drive));
         }
         catch (Exception ex)
         {
@@ -411,7 +504,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
             return;
         }
 
-        SelectedRoot = root;
+        Choose(root, reveal: false);
         _settings.LastRoot = root;
         SaveSettings();
 
@@ -563,20 +656,4 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
         _language.Dispose();
         _scan?.Cancel();
     }
-}
-
-public sealed class DriveViewModel(DriveInfo drive) : ObservableObject
-{
-    public string Path { get; } = drive.RootDirectory.FullName;
-
-    public string Name { get; } = string.IsNullOrWhiteSpace(drive.VolumeLabel)
-        ? drive.Name
-        : $"{drive.Name} {drive.VolumeLabel}";
-
-    public string UsageText { get; } = MeowsText.Current.Format("chonk.drive.usage",
-        DiskScan.Humanise(drive.TotalSize - drive.TotalFreeSpace),
-        DiskScan.Humanise(drive.TotalSize));
-
-    public double Fraction { get; } =
-        drive.TotalSize <= 0 ? 0 : (double)(drive.TotalSize - drive.TotalFreeSpace) / drive.TotalSize;
 }
