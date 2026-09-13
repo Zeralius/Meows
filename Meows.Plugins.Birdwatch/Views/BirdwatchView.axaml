@@ -141,7 +141,10 @@
                                                            FontWeight="SemiBold"
                                                            FontSize="12"
                                                            TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding Status}" Classes="label" />
+                                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                                    <TextBlock Text="{Binding Service}" Classes="label" />
+                                                    <TextBlock Text="{Binding Status}" Classes="label" />
+                                                </StackPanel>
                                             </StackPanel>
                                             <Button Grid.Column="1"
                                                     Content="✕"

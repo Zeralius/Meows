@@ -41,12 +41,15 @@ public sealed class RefreshOption(int minutes, string key)
 }
 
 /// <summary>One account being watched, and how its last look went.</summary>
-public sealed class WatchedViewModel(string handle) : ObservableObject
+public sealed class WatchedViewModel(string handle, string service) : ObservableObject
 {
     private string _status = "";
     private bool _isBusy;
 
     public string Handle { get; } = handle;
+
+    /// <summary>Which service answers for this one: Bluesky, Mastodon, Reddit, or a feed.</summary>
+    public string Service { get; } = service;
 
     /// <summary>Where the next page starts. Null means back to the top.</summary>
     public string? Cursor { get; set; }
@@ -208,11 +211,11 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
         _settings.IntakeFolder ??= DefaultIntake();
 
         _http = http ?? NewClient();
-        _source = source ?? new BlueskyFeed(_http);
+        _source = source ?? new FeedRouter(_http);
         _saver = new MediaSaver(_http);
 
         foreach (var handle in _settings.Handles)
-            Watched.Add(new WatchedViewModel(handle));
+            Watched.Add(new WatchedViewModel(handle, _source.ServiceOf(handle)));
 
         AddHandleCommand = new RelayCommand(AddHandle, () => NewHandle.Trim().Length > 0);
         RemoveHandleCommand = new RelayCommand(p => RemoveHandle(p as WatchedViewModel));
@@ -459,14 +462,14 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
 
     private void AddHandle()
     {
-        var handle = BlueskyFeed.TidyHandle(NewHandle);
+        var handle = _source.TidyHandle(NewHandle);
         if (handle.Length == 0 || Watched.Any(w => w.Handle == handle))
         {
             NewHandle = "";
             return;
         }
 
-        Watched.Add(new WatchedViewModel(handle));
+        Watched.Add(new WatchedViewModel(handle, _source.ServiceOf(handle)));
         _settings.Handles = Watched.Select(w => w.Handle).ToList();
         Save();
 

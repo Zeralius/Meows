@@ -23,7 +23,7 @@ to install.
 | **[Mouser](Meows.Plugins.Mouser/README.md)** | Hunts down dead weight: empty folders, empty files, shortcuts pointing at things that are gone |
 | **[Litter](Meows.Plugins.Litter/README.md)** | Sorts out the downloads folder by age and kind, and calls out the downloads that never finished |
 | **[Saucer](Meows.Plugins.Saucer/README.md)** | Keeps what you copy, images included, and drops images into a folder for sorting |
-| **[Birdwatch](Meows.Plugins.Birdwatch/README.md)** | Watches Bluesky accounts and saves their pictures into that same folder, with no login needed |
+| **[Birdwatch](Meows.Plugins.Birdwatch/README.md)** | Watches accounts on Bluesky, Mastodon and Reddit, and any RSS feed with pictures in it, and saves what they post into that same folder, with no login anywhere |
 | **[Tin](Meows.Plugins.Tin/README.md)** | Reads the exports and statements your bank hands out, CSV or PDF, and says what is recurring, what quietly went up, and what is still going out for something you stopped using |
 | **[Collar](Meows.Plugins.Collar/README.md)** | Keeps the dates that matter and the paper behind them, and says so on the notification surface when one comes round |
 | **[Scruff](Meows.Plugins.Scruff/README.md)** | Takes the metadata out of pictures, posts them to Bluesky, Mastodon, Discord, DeviantArt and Tumblr, and hands them to FurAffinity, X, Instagram and Reddit with every field spelled that site's way |

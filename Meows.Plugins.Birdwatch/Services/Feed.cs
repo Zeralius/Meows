@@ -78,15 +78,23 @@ public sealed record FeedPage(IReadOnlyList<FeedPost> Posts, string? Cursor)
 /// <summary>
 /// One place posts come from.
 ///
-/// Bluesky is the only one so far. Mastodon fits the same shape and would be the second. X does
-/// not, and the reason is worth writing down rather than rediscovering: reading a timeline needs
-/// a paid tier, and working around that means fighting login walls that change without notice,
-/// so the feature would break repeatedly and always at the worst moment.
+/// Bluesky was the first; Mastodon, Reddit and plain RSS or Atom feeds followed in 2.8.0, all
+/// without a login, and <see cref="FeedRouter"/> picks between them by the shape of what was
+/// pasted. X does not fit, and the reason is worth writing down rather than rediscovering:
+/// reading a timeline needs a paid tier, and working around that means fighting login walls
+/// that change without notice, so the feature would break repeatedly and always at the worst
+/// moment. Instagram is the same story with a different logo.
 /// </summary>
 public interface IFeedSource
 {
     /// <summary>The name shown next to a watched account.</summary>
     string ServiceName { get; }
+
+    /// <summary>The service a particular kept handle belongs to. One service answers with its own name.</summary>
+    string ServiceOf(string handle) => ServiceName;
+
+    /// <summary>The handle to keep, out of whatever was pasted: a link, an at-sign, a prefix.</summary>
+    string TidyHandle(string pasted) => pasted.Trim();
 
     /// <summary>
     /// A page of an account's own posts. Cursor is null for the first page and comes back in

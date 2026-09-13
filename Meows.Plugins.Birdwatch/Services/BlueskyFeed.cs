@@ -33,6 +33,8 @@ public sealed class BlueskyFeed : IFeedSource
     ///
     /// What comes back may be a handle or a did, and the API takes either as its actor.
     /// </summary>
+    string IFeedSource.TidyHandle(string pasted) => TidyHandle(pasted);
+
     public static string TidyHandle(string handle)
     {
         var text = handle.Trim();

@@ -1,6 +1,7 @@
 # Birdwatch
 
-Watches Bluesky accounts and drops their pictures into the intake folder Kibble sorts.
+Watches accounts on Bluesky, Mastodon and Reddit, and any RSS or Atom feed with pictures in it,
+and drops what they post into the intake folder Kibble sorts. No login anywhere.
 
 Plugin id `meows.birdwatch`.
 
@@ -102,10 +103,42 @@ A scraper. It reads the same public pages a browser would, one page at a time, w
 and it saves what you click. There is deliberately no "download everything this account has ever
 posted": the rate limits would object, and so would anyone on the other end.
 
+## Four services, one box
+
+Since 2.8.0 the box takes more than a Bluesky handle, and what was pasted decides where it goes:
+
+| Paste | Goes to | Kept as |
+|---|---|---|
+| `someone.bsky.social`, `@someone.bsky.social`, a bsky.app profile or post link, a `did:` | **Bluesky** | the handle |
+| `@artist@mastodon.social`, `artist@pixelfed.social`, `https://mastodon.art/@artist`, a link to one post | **Mastodon**, and anything speaking its API | `artist@mastodon.art` |
+| `u/name`, `r/name`, or any reddit.com link to a user, a subreddit or a post | **Reddit** | `u/name` or `r/name` |
+| Any other address: a Tumblr blog's `/rss`, a DeviantArt gallery through `backend.deviantart.com/rss.xml?q=gallery:name`, a WordPress feed | the **feed reader**, RSS or Atom | the address |
+
+Each watched account says which service it is on, under its handle. The grid does not know or
+care: a post is a post, a picture is a picture, and *already saved* is remembered by the post's
+own id on its own service.
+
+**Mastodon** reads a public account's statuses through the instance's own API, two calls per
+refresh and no token. An instance that only answers signed-in users says so on the card rather
+than reading as an empty account. A boost carries the boosted post's pictures and is marked as a
+repost the way a Bluesky repost is. Video is listed and not saved.
+
+**Reddit** reads the `.json` view of a user's submissions or a subreddit's newest posts. Image
+posts and galleries carry pictures; a video post shows its thumbnail and is not saved, because
+Reddit video comes as a stream without its sound; a link or text post is listed with nothing to
+save. Reddit rate-limits generously but not infinitely, and says so on the card when it does.
+`nsfw` and `spoiler` arrive as labels.
+
+**A feed** is one page, newest first, and *more* has nothing more to give. Pictures are taken
+from enclosures, from `media:content` and `media:thumbnail`, and failing those from `img` tags
+in the description, with one-pixel tracking images left out. Whatever the feed calls itself is
+the author.
+
 ## Other services
 
-`IFeedSource` exists so a second one can be added without the grid learning about it. Mastodon fits
-the same shape, a per-instance token and one endpoint, and would be next.
+`IFeedSource` is the shape a fifth one would fill: a name, a way to tidy what was pasted, and a
+page of posts. `FeedRouter` picks by the shape of the handle, so the new one needs a shape of its
+own.
 
 X does not, and the reason is worth writing down rather than rediscovering. Reading a timeline
 needs a paid tier; the free one will not serve one at any useful volume. Working around that means
