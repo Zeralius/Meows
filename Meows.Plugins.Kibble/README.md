@@ -45,6 +45,22 @@ three days, green above it. Under a day is reported in hours rather than as `0,8
 
 **Files move, they do not copy.** **Undo** puts the last one back exactly where it came from.
 
+## Undo reaches back
+
+Undo is not one step. Every send is kept, and each press of **Undo** takes back the one before
+the last: the button says how far it can go, *Undo · 4*, and hovering it says what the next press
+would put back, which file, out of which group, sent when. A pick of several sent as files, or
+bundled into a comic, comes back in one press, the way it went in.
+
+It also reaches past the window being closed. Every send is written to Meows' history, and when
+the tab opens it reads that back for whatever is still sitting where Kibble put it. A file the
+bot has since posted has moved on to the archive and is not offered; one already put back is not
+offered twice. Thirty sends deep is as far as it looks.
+
+A send from before a restart may have come from a folder other than the one open now. It goes
+back where it came from, not into the grid, and the status line says so. Each put-back is
+written to the history as well, so the History tab shows the send and its reversal side by side.
+
 ## Sending several at once
 
 Ctrl click to add files to the pick, shift click to take a run of them. Arrow keys and shift

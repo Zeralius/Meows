@@ -126,8 +126,15 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
     private string? _errorMessage;
     private string? _blockedReason;
 
-    /// <summary>Everything the last send moved, so it can be put back.</summary>
-    private readonly List<IntakeResult> _lastBatch = [];
+    /// <summary>
+    /// Every send that can still be put back, oldest first, one entry per batch. Undo takes the
+    /// last. Seeded from the journal when the tab opens, so it reaches back past the last action
+    /// and past the window being closed: as far as the queue still holds what was sent.
+    /// </summary>
+    private readonly List<UndoBatch> _undoable = [];
+
+    /// <summary>How far back the journal is read for sends still worth undoing.</summary>
+    private const int UndoDepth = 30;
 
     /// <summary>
     /// Text worked out in code rather than bound with {m:Tr} has to be read again when the
@@ -147,13 +154,118 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         ChooseFilesCommand = new RelayCommand(() => BundleMode = BundleMode.AsFiles);
         SkipCommand = new RelayCommand(SkipSelected, () => Selected is not null);
         RefreshCommand = new RelayCommand(() => LoadFolder(SourceFolder), () => SourceFolder.Length > 0);
-        UndoCommand = new RelayCommand(UndoLastBatch, () => _lastBatch.Count > 0);
+        UndoCommand = new RelayCommand(UndoLastBatch, () => _undoable.Count > 0);
         OpenSourceCommand = new RelayCommand(() => OpenInExplorer(SourceFolder), () => SourceFolder.Length > 0);
 
         Reload();
+        SeedUndoFromJournal();
         if (_sourceFolder.Length > 0 && Directory.Exists(_sourceFolder))
             LoadFolder(_sourceFolder);
         _language = new LanguageWatch(OnEverythingChanged);
+    }
+
+    /// <summary>One send, however many files it moved, and the words for putting it back.</summary>
+    private sealed record UndoBatch(IReadOnlyList<IntakeResult> Results, string Group, DateTime At);
+
+    /// <summary>The Undo button's label: how many steps back it can go, when that is more than one.</summary>
+    public string UndoLabel => _undoable.Count > 1
+        ? _host.Text.Format("kibble.undo.count", _undoable.Count)
+        : _host.Text["kibble.undo"];
+
+    /// <summary>What the next Undo would put back, for the tooltip.</summary>
+    public string UndoHint
+    {
+        get
+        {
+            if (_undoable.Count == 0)
+                return _host.Text["kibble.status.nothingtoundo"];
+
+            var batch = _undoable[^1];
+            var name = batch.Results.Count == 1
+                ? Path.GetFileName(batch.Results[0].Destination ?? batch.Results[0].SourcePath)
+                : _host.Text.Format("kibble.undo.files", batch.Results.Count);
+            var when = batch.At.Date == DateTime.Today ? batch.At.ToString("HH:mm") : batch.At.ToString("d MMM HH:mm");
+
+            return _host.Text.Format("kibble.undo.hint", name, batch.Group, when);
+        }
+    }
+
+    /// <summary>How many sends Undo can currently reach back through.</summary>
+    public int UndoableCount => _undoable.Count;
+
+    private void Remember(IEnumerable<IntakeResult> results, string group)
+    {
+        _undoable.Add(new UndoBatch(results.ToList(), group, DateTime.Now));
+        RaiseUndoState();
+    }
+
+    private void RaiseUndoState()
+    {
+        UndoCommand.RaiseCanExecuteChanged();
+        OnPropertyChanged(nameof(UndoLabel));
+        OnPropertyChanged(nameof(UndoHint));
+        OnPropertyChanged(nameof(UndoableCount));
+    }
+
+    /// <summary>
+    /// Reads the journal back for sends whose file is still where Kibble put it, so Undo reaches
+    /// past a restart. A file the bot has since posted has moved on to the archive and is left
+    /// alone; a file already put back is skipped the same way. One record per file, grouped by
+    /// the batch id written at send time; records from before that id existed stand alone.
+    /// </summary>
+    private void SeedUndoFromJournal()
+    {
+        List<StoredEvent> recorded;
+        try
+        {
+            recorded = _host.Store.Recent(UndoDepth * 4, "sent")
+                .Concat(_host.Store.Recent(UndoDepth * 4, "set-aside"))
+                .OrderByDescending(e => e.At)
+                .ThenByDescending(e => e.Id)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            _host.Log($"Could not read Kibble's journal for undo: {ex.Message}");
+            return;
+        }
+
+        var batches = new List<UndoBatch>();
+        var byBatch = new Dictionary<string, List<IntakeResult>>(StringComparer.Ordinal);
+
+        foreach (var stored in recorded)
+        {
+            if (batches.Count >= UndoDepth)
+                break;
+
+            var result = Intake.FromJournal(stored.Kind, stored.Subject, stored.Data);
+            if (result is null || !Intake.CanUndo(result))
+                continue;
+
+            var group = stored.Data.GetValueOrDefault("group") ?? "";
+            if (stored.Data.TryGetValue("batch", out var id) && id.Length > 0)
+            {
+                if (byBatch.TryGetValue(id, out var open))
+                {
+                    open.Add(result);
+                    continue;
+                }
+
+                var members = new List<IntakeResult> { result };
+                byBatch[id] = members;
+                batches.Add(new UndoBatch(members, group, stored.At));
+            }
+            else
+            {
+                batches.Add(new UndoBatch([result], group, stored.At));
+            }
+        }
+
+        // Newest first as read, oldest first as kept, so the last entry is the next to undo.
+        batches.Reverse();
+        _undoable.Clear();
+        _undoable.AddRange(batches);
+        RaiseUndoState();
     }
 
     public ObservableCollection<DestinationViewModel> Destinations { get; } = new();
@@ -803,10 +915,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
             return;
         }
 
-        _lastBatch.Clear();
-        _lastBatch.Add(result);
-        UndoCommand.RaiseCanExecuteChanged();
-        Journal(result, destination.Name);
+        Remember([result], destination.Name);
+        Journal(result, destination.Name, Guid.NewGuid().ToString("N"));
 
         var next = NextAfter(file);
         Take([file]);
@@ -852,10 +962,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
             return;
         }
 
-        _lastBatch.Clear();
-        _lastBatch.Add(result);
-        UndoCommand.RaiseCanExecuteChanged();
-        Journal(result, destination.Name);
+        Remember([result], destination.Name);
+        Journal(result, destination.Name, Guid.NewGuid().ToString("N"));
 
         var next = NextAfterAll(files);
         Take(files);
@@ -899,11 +1007,10 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
             return;
         }
 
-        _lastBatch.Clear();
-        _lastBatch.AddRange(results.Where(r => r.Moved));
-        UndoCommand.RaiseCanExecuteChanged();
+        var batch = Guid.NewGuid().ToString("N");
+        Remember(results.Where(r => r.Moved), destination.Name);
         foreach (var moved in results.Where(r => r.Moved))
-            Journal(moved, destination.Name);
+            Journal(moved, destination.Name, batch);
 
         var next = NextAfterAll(sent);
         Take(sent);
@@ -925,18 +1032,25 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
     /// What went where, written to the shared store. This is the record IDEAS.md said nothing
     /// kept: it outlives the undo list, the tab, and the window.
     /// </summary>
-    private void Journal(IntakeResult result, string group)
+    private void Journal(IntakeResult result, string group, string batch)
     {
         var kind = result.Outcome == IntakeOutcome.MovedToDuplicates ? "set-aside" : "sent";
         var detail = result.Outcome == IntakeOutcome.MovedToDuplicates
             ? _host.Text.Format("kibble.journal.duplicate", group)
             : _host.Text.Format("kibble.journal.sent", group);
 
-        _host.Store.Record(kind, result.SourcePath, detail, new Dictionary<string, string>
+        // Enough for the record to be turned back into a result after a restart: the batch it
+        // went in, and for a comic the pages it was built from with the times they had.
+        var data = new Dictionary<string, string>
         {
             ["group"] = group,
             ["destination"] = result.Destination ?? "",
-        });
+            ["batch"] = batch,
+        };
+        if (result.Bundled is { Count: > 0 } pages)
+            data["pages"] = Intake.PagesToJournal(pages);
+
+        _host.Store.Record(kind, result.SourcePath, detail, data);
     }
 
     private bool CanSend(object? parameter) => _workspace is not null && Selected is not null;
@@ -1028,8 +1142,15 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
 
     private void UndoLastBatch()
     {
+        if (_undoable.Count == 0)
+            return;
+
+        var batch = _undoable[^1];
+        _undoable.RemoveAt(_undoable.Count - 1);
+
         var restored = 0;
-        foreach (var result in _lastBatch)
+        var elsewhere = 0;
+        foreach (var result in batch.Results)
         {
             if (!Intake.Undo(result))
                 continue;
@@ -1040,21 +1161,41 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
                 ? bundled.Select(b => b.Path).ToList()
                 : [result.SourcePath];
 
-            Restore(paths);
-            restored += paths.Count;
+            _host.Store.Record("undone", result.SourcePath, _host.Text.Format("kibble.journal.undone", batch.Group),
+                new Dictionary<string, string> { ["group"] = batch.Group, ["destination"] = result.Destination ?? "" });
+
+            // Only what belongs to the folder on screen goes back into the grid. A send from
+            // before the restart may have come from somewhere else entirely, and it is put back
+            // there, not here.
+            var here = paths.Where(IsInSourceFolder).ToList();
+            if (here.Count > 0)
+                Restore(here);
+            restored += here.Count;
+            elsewhere += paths.Count - here.Count;
         }
 
-        _lastBatch.Clear();
-        UndoCommand.RaiseCanExecuteChanged();
+        RaiseUndoState();
 
         foreach (var destination in Destinations)
             destination.Refresh();
 
-        StatusMessage = restored > 0
-            ? _host.Text.Format("kibble.status.undone", restored)
-            : _host.Text["kibble.status.nothingtoundo"];
+        StatusMessage = (restored, elsewhere) switch
+        {
+            (0, 0) => _host.Text["kibble.status.nothingtoundo"],
+            (_, 0) => _host.Text.Format("kibble.status.undone", restored),
+            (0, _) => _host.Text.Format("kibble.status.undone.elsewhere", elsewhere,
+                Path.GetDirectoryName(batch.Results[0].SourcePath)),
+            _ => _host.Text.Format("kibble.status.undone.mixed", restored, elsewhere),
+        };
         RaiseGridState();
     }
+
+    private bool IsInSourceFolder(string path) =>
+        SourceFolder.Length > 0 &&
+        string.Equals(
+            Path.GetDirectoryName(path)?.TrimEnd(Path.DirectorySeparatorChar),
+            SourceFolder.TrimEnd(Path.DirectorySeparatorChar),
+            StringComparison.OrdinalIgnoreCase);
 
     private void Reload()
     {

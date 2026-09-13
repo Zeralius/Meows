@@ -98,7 +98,9 @@
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                     <Button Name="OpenFolderButton" Content="{m:Tr kibble.openfolder}" />
                     <Button Content="{m:Tr kibble.refresh}" Command="{Binding RefreshCommand}" />
-                    <Button Content="{m:Tr kibble.undo}" Command="{Binding UndoCommand}" />
+                    <Button Content="{Binding UndoLabel}"
+                            Command="{Binding UndoCommand}"
+                            ToolTip.Tip="{Binding UndoHint}" />
                     <Button Name="ChooseBotButton" Content="{m:Tr kibble.botfolder}" />
                 </StackPanel>
             </Grid>

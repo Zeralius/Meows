@@ -1,6 +1,8 @@
-using Meows.Plugins.Abstractions;
+using System.Globalization;
 using System.IO.Compression;
+using System.Text.Json;
 using Meows.Bot;
+using Meows.Plugins.Abstractions;
 
 namespace Meows.Plugins.Kibble.Services;
 
@@ -367,6 +369,84 @@ public static class Intake
         }
 
         return results;
+    }
+
+    /// <summary>
+    /// Whether <see cref="Undo"/> would have anything to do: the file is still where it was
+    /// sent, and nothing has reappeared where it came from. False once the bot has posted it,
+    /// since the queue copy has moved on to the archive by then.
+    /// </summary>
+    public static bool CanUndo(IntakeResult result)
+    {
+        if (!result.Moved || result.Destination is null)
+            return false;
+
+        try
+        {
+            if (!File.Exists(result.Destination))
+                return false;
+
+            return result.Bundled is { Count: > 0 } pages
+                ? pages.Any(p => !File.Exists(p.Path))
+                : !File.Exists(result.SourcePath);
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// A result read back out of the journal, so a send from before the window closed can still
+    /// be undone. Null when the record is not one of Kibble's sends or lacks the destination.
+    /// </summary>
+    public static IntakeResult? FromJournal(string kind, string subject, IReadOnlyDictionary<string, string> data)
+    {
+        var outcome = kind switch
+        {
+            "sent" => IntakeOutcome.Sent,
+            "set-aside" => IntakeOutcome.MovedToDuplicates,
+            _ => (IntakeOutcome?)null,
+        };
+        if (outcome is null)
+            return null;
+
+        var destination = data.GetValueOrDefault("destination");
+        if (string.IsNullOrEmpty(destination) || string.IsNullOrEmpty(subject))
+            return null;
+
+        IReadOnlyList<BundledPage>? pages = null;
+        if (data.TryGetValue("pages", out var json) && json.Length > 0)
+        {
+            pages = PagesFromJournal(json);
+            if (pages is null)
+                return null;
+        }
+
+        return new IntakeResult(outcome.Value, subject, destination, null, pages);
+    }
+
+    /// <summary>The pages of a comic as one string for the journal: each path and the time it had.</summary>
+    public static string PagesToJournal(IReadOnlyList<BundledPage> pages) =>
+        JsonSerializer.Serialize(pages.Select(p => new[] { p.Path, p.Modified.ToString("O") }));
+
+    private static IReadOnlyList<BundledPage>? PagesFromJournal(string json)
+    {
+        try
+        {
+            var raw = JsonSerializer.Deserialize<string[][]>(json);
+            if (raw is null)
+                return null;
+
+            return raw
+                .Where(pair => pair.Length == 2)
+                .Select(pair => new BundledPage(pair[0], DateTime.Parse(pair[1], null, DateTimeStyles.RoundtripKind)))
+                .ToList();
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     /// <summary>Puts a file, or a whole bundled comic, back where it came from.</summary>
