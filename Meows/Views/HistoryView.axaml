@@ -59,10 +59,18 @@
                 Padding="14,6">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
                 <TextBlock Grid.Column="0" Classes="label" TextTrimming="CharacterEllipsis" Text="{Binding StorePath}" VerticalAlignment="Center" />
-                <Button Grid.Column="1"
-                        Content="{m:Tr history.reveal}"
-                        Command="{Binding RevealCommand}"
-                        FontSize="11" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Classes="label" Text="{Binding Notice}" VerticalAlignment="Center" IsVisible="{Binding HasNotice}" />
+                    <!-- Only where pressing it would do something: the plugin is open and says
+                         this line is still reversible. -->
+                    <Button Content="{m:Tr history.putback}"
+                            Command="{Binding PutBackCommand}"
+                            IsVisible="{Binding CanPutBack}"
+                            FontSize="11" />
+                    <Button Content="{m:Tr history.reveal}"
+                            Command="{Binding RevealCommand}"
+                            FontSize="11" />
+                </StackPanel>
             </Grid>
         </Border>
 

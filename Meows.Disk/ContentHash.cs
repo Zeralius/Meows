@@ -40,7 +40,13 @@ public static class ContentHash
         return fa == fb;
     }
 
-    private static string? Of(string path, int? maxBytes)
+    /// <summary>
+    /// Hashing opens the file, and opening a file moves its last-access stamp. The stamp is put
+    /// back afterwards: a duplicate sweep is not the file being used, and Catnip needs the truth.
+    /// </summary>
+    private static string? Of(string path, int? maxBytes) => AccessTime.Preserving(path, () => Read(path, maxBytes));
+
+    private static string? Read(string path, int? maxBytes)
     {
         try
         {

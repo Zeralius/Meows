@@ -11,6 +11,9 @@
   "history.count": "{0} shown of {1} recorded",
   "history.empty": "Nothing recorded yet. Kibble writes a line when it sends a file, Purrge when it recycles one, Scruff when it posts, Portion when it shrinks. It all lands here, and it survives the window closing.",
   "history.filter": "filter by word or path",
+  "history.putback": "Put back",
+  "history.putback.done": "{0} put back.",
+  "history.putback.failed": "Not put back: {0}",
   "history.refresh": "Refresh",
   "history.reveal": "Show in Explorer",
   "history.title": "What the plugins did",
@@ -96,5 +99,7 @@
   "tray.open": "Open Meows",
   "tray.quit": "Quit Meows",
   "tray.tip.many": "Meows · {0} notifications",
-  "tray.tip.one": "Meows · one notification"
+  "tray.tip.one": "Meows · one notification",
+  "tray.tip.working.many": "Meows · {0} tasks running",
+  "tray.tip.working.one": "Meows · one task running"
 }

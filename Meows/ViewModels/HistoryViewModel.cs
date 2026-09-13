@@ -39,17 +39,88 @@ public sealed class HistoryViewModel : ObservableObject
 {
     private readonly MeowsStore _store;
     private readonly Func<string, string> _pluginName;
+    private readonly Func<string, IUndoTarget?> _undoTargetFor;
+    private readonly Action<string> _showPlugin;
     private string _filter = "";
     private string? _plugin;
     private HistoryLineViewModel? _selected;
+    private string? _notice;
 
     public HistoryViewModel(MeowsStore store, Func<string, string> pluginName)
+        : this(store, pluginName, _ => null, _ => { })
+    {
+    }
+
+    /// <param name="undoTargetFor">The open plugin's view model as an <see cref="IUndoTarget"/>, or null when it is not open or does not reverse anything.</param>
+    /// <param name="showPlugin">Brings that plugin's tab to the front before a line is put back.</param>
+    public HistoryViewModel(MeowsStore store, Func<string, string> pluginName,
+        Func<string, IUndoTarget?> undoTargetFor, Action<string> showPlugin)
     {
         _store = store;
         _pluginName = pluginName;
+        _undoTargetFor = undoTargetFor;
+        _showPlugin = showPlugin;
         RefreshCommand = new RelayCommand(Refresh);
         RevealCommand = new RelayCommand(Reveal, () => Selected is { IsPath: true });
+        PutBackCommand = new RelayCommand(PutBack, () => CanPutBack);
         Refresh();
+    }
+
+    public RelayCommand PutBackCommand { get; }
+
+    /// <summary>
+    /// Whether the selected line can be reversed from here: its plugin is open, says it can
+    /// undo lines of this kind, and says this one is still undoable. Asked of the plugin rather
+    /// than guessed from the kind, since only Kibble knows whether the file is still in the queue.
+    /// </summary>
+    public bool CanPutBack =>
+        Selected is { } line && _undoTargetFor(line.Event.Plugin) is { } target && Safely(() => target.CanUndo(line.Event));
+
+    /// <summary>What the last put-back said, or nothing.</summary>
+    public string? Notice
+    {
+        get => _notice;
+        private set
+        {
+            if (SetField(ref _notice, value))
+                OnPropertyChanged(nameof(HasNotice));
+        }
+    }
+
+    public bool HasNotice => !string.IsNullOrEmpty(_notice);
+
+    private void PutBack()
+    {
+        if (Selected is not { } line || _undoTargetFor(line.Event.Plugin) is not { } target)
+            return;
+
+        _showPlugin(line.Event.Plugin);
+        string? failure;
+        try
+        {
+            failure = target.Undo(line.Event);
+        }
+        catch (Exception ex)
+        {
+            failure = ex.Message;
+        }
+
+        Notice = failure is null
+            ? MeowsText.Current.Format("history.putback.done", line.ShortSubject)
+            : MeowsText.Current.Format("history.putback.failed", failure);
+        Refresh();
+    }
+
+    private static bool Safely(Func<bool> ask)
+    {
+        try
+        {
+            return ask();
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     public ObservableCollection<HistoryLineViewModel> Lines { get; } = [];
@@ -95,7 +166,9 @@ public sealed class HistoryViewModel : ObservableObject
             if (SetField(ref _selected, value))
             {
                 OnPropertyChanged(nameof(HasSelection));
+                OnPropertyChanged(nameof(CanPutBack));
                 RevealCommand.RaiseCanExecuteChanged();
+                PutBackCommand.RaiseCanExecuteChanged();
             }
         }
     }

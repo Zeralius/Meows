@@ -25,7 +25,8 @@ public static class ShellLink
     {
         try
         {
-            return TargetIn(File.ReadAllBytes(path));
+            // Reading a shortcut to see where it points is not using it; the stamp goes back.
+            return Meows.Disk.AccessTime.Preserving(path, () => TargetIn(File.ReadAllBytes(path)));
         }
         catch (Exception)
         {

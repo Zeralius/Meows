@@ -383,7 +383,9 @@ public static class FolderInspector
     /// Whether a program has this file open. Opening it with FileShare.None is the cheap test:
     /// a sharing violation is a yes, anything else means we could not tell, which is not a no.
     /// </summary>
-    private static bool IsLocked(FileInfo file)
+    private static bool IsLocked(FileInfo file) => AccessTime.Preserving(file.FullName, () => TryOpen(file));
+
+    private static bool TryOpen(FileInfo file)
     {
         try
         {

@@ -23,11 +23,13 @@ public sealed class TrayPresence : IDisposable
     private readonly Func<Window> _window;
     private readonly ShellPreferences _preferences;
     private readonly NotificationCenter _notifications;
+    private readonly BackgroundTaskService? _background;
     private readonly Action _quit;
     private readonly IMeowsText _text;
 
     private readonly WindowIcon _plain;
     private readonly WindowIcon _news;
+    private readonly WindowIcon _busy;
     private readonly TrayIcon _tray;
     private readonly NativeMenuItem _open;
     private readonly NativeMenuItem _quitItem;
@@ -40,17 +42,20 @@ public sealed class TrayPresence : IDisposable
         ShellPreferences preferences,
         NotificationCenter notifications,
         IMeowsText text,
-        Action quit)
+        Action quit,
+        BackgroundTaskService? background = null)
     {
         _desktop = desktop;
         _window = window;
         _preferences = preferences;
         _notifications = notifications;
+        _background = background;
         _text = text;
         _quit = quit;
 
         _plain = new WindowIcon(AssetLoader.Open(new Uri("avares://Meows/Assets/tray.png")));
         _news = new WindowIcon(AssetLoader.Open(new Uri("avares://Meows/Assets/tray-news.png")));
+        _busy = new WindowIcon(AssetLoader.Open(new Uri("avares://Meows/Assets/tray-busy.png")));
 
         _open = new NativeMenuItem();
         _open.Click += (_, _) => Show();
@@ -68,6 +73,8 @@ public sealed class TrayPresence : IDisposable
         Refresh();
 
         _notifications.Changed += Refresh;
+        if (_background is not null)
+            _background.Changed += Refresh;
         _text.PropertyChanged += (_, _) => Relabel();
 
         TrayIcon.SetIcons(Application.Current!, [_tray]);
@@ -114,17 +121,32 @@ public sealed class TrayPresence : IDisposable
         _desktop.Shutdown();
     }
 
-    /// <summary>The icon says whether there is anything to read, and the tooltip says how much.</summary>
+    /// <summary>
+    /// The icon says whether there is anything to read, or failing that whether something is
+    /// still working, and the tooltip says how much of each. A scan running while the window is
+    /// closed used to look exactly like nothing happening.
+    /// </summary>
     private void Refresh()
     {
         var count = _notifications.Count;
-        _tray.Icon = count > 0 ? _news : _plain;
-        _tray.ToolTipText = count switch
+        var running = _background?.RunningCount ?? 0;
+        _tray.Icon = count > 0 ? _news : running > 0 ? _busy : _plain;
+
+        var news = count switch
         {
-            0 => "Meows",
+            0 => "",
             1 => _text["tray.tip.one"],
             _ => _text.Format("tray.tip.many", count),
         };
+        var work = running switch
+        {
+            0 => "",
+            1 => _text["tray.tip.working.one"],
+            _ => _text.Format("tray.tip.working.many", running),
+        };
+
+        var lines = new[] { news, work }.Where(l => l.Length > 0).ToList();
+        _tray.ToolTipText = lines.Count == 0 ? "Meows" : string.Join(Environment.NewLine, lines);
     }
 
     private void Relabel()
@@ -137,6 +159,8 @@ public sealed class TrayPresence : IDisposable
     public void Dispose()
     {
         _notifications.Changed -= Refresh;
+        if (_background is not null)
+            _background.Changed -= Refresh;
         _tray.IsVisible = false;
         _tray.Dispose();
     }

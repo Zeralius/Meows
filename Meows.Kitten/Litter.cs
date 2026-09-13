@@ -55,13 +55,16 @@ public sealed class Litter(Repo repo, Options options)
 
     public IEnumerable<string> FilesToWrite() => Files().Select(f => repo.Relative(f.Path));
 
-    public IEnumerable<string> FilesToEdit() =>
-    [
-        repo.Relative(repo.Solution),
-        repo.Relative(repo.TestsProject),
-        repo.Relative(repo.ShippedPlugins),
-        repo.Relative(repo.Readme),
-    ];
+    public IEnumerable<string> FilesToEdit()
+    {
+        yield return repo.Relative(repo.Solution);
+        yield return repo.Relative(repo.TestsProject);
+        yield return repo.Relative(repo.ShippedPlugins);
+        yield return repo.Relative(repo.Readme);
+        yield return repo.Relative(repo.ShellProject);
+        if (File.Exists(repo.Changelog))
+            yield return repo.Relative(repo.Changelog);
+    }
 
     public IReadOnlyList<string> Write()
     {
@@ -155,7 +158,51 @@ public sealed class Litter(Repo repo, Options options)
         File.WriteAllText(repo.Readme, readme, Utf8NoBom);
         edited.Add(repo.Relative(repo.Readme));
 
+        // The version. A new plugin is a minor bump by the README's own rule, and leaving it for
+        // later is how it gets forgotten.
+        var (before, after) = BumpMinor();
+        edited.Add($"{repo.Relative(repo.ShellProject)} ({before} -> {after})");
+
+        // The changelog, when this checkout keeps one. A stub with the right heading and the
+        // plugin's one sentence; the rest is for whoever makes the plugin do something.
+        if (File.Exists(repo.Changelog))
+        {
+            var changelog = File.ReadAllText(repo.Changelog);
+            var first = changelog.IndexOf("\n## [", StringComparison.Ordinal);
+            if (first >= 0)
+            {
+                var stub = string.Join("\n",
+                    "",
+                    $"## [{after}] - {DateTime.Today:yyyy-MM-dd}",
+                    "",
+                    "Minor: a new plugin.",
+                    "",
+                    "### Added",
+                    "",
+                    $"- **{options.Name}.** {options.Description} Plain name *{options.Plain}*. Written by Kitten; what it actually does is still to come.",
+                    "");
+                changelog = changelog.Insert(first, stub);
+                File.WriteAllText(repo.Changelog, changelog, Utf8NoBom);
+                edited.Add(repo.Relative(repo.Changelog));
+            }
+        }
+
         return edited;
+    }
+
+    /// <summary>major.minor.patch to major.(minor+1).0 in the shell's csproj.</summary>
+    private (string Before, string After) BumpMinor()
+    {
+        var csproj = File.ReadAllText(repo.ShellProject);
+        var match = System.Text.RegularExpressions.Regex.Match(csproj, @"<Version>(\d+)\.(\d+)\.(\d+)</Version>");
+        if (!match.Success)
+            throw new InvalidOperationException($"{repo.Relative(repo.ShellProject)} has no <Version>major.minor.patch</Version> to bump.");
+
+        var before = $"{match.Groups[1].Value}.{match.Groups[2].Value}.{match.Groups[3].Value}";
+        var after = $"{match.Groups[1].Value}.{int.Parse(match.Groups[2].Value) + 1}.0";
+        csproj = csproj.Replace(match.Value, $"<Version>{after}</Version>");
+        File.WriteAllText(repo.ShellProject, csproj, Utf8NoBom);
+        return (before, after);
     }
 
     public string WhatToOpenFirst() =>
@@ -166,6 +213,6 @@ public sealed class Litter(Repo repo, Options options)
           {options.Project}/Views/{options.Name}View.axaml           the header is done, the middle says "nothing here yet"
           {options.Project}/Strings/Strings.de.json                  the German reads as the English until someone writes it
           {options.Project}/README.md                                what it does and why it fits, in the voice of the others
-        Then: a line in CHANGELOG.md, the version in Meows/Meows.csproj, and IDEAS.md if it came from there.
+        The version is bumped and the CHANGELOG has a stub; IDEAS.md is yours if it came from there.
         """;
 }

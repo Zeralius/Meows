@@ -18,7 +18,7 @@ two tests that pass on day one.
 
 ## What it edits
 
-Four places, which is every place a plugin has to be known:
+Six places, which is every place a plugin has to be known, plus the two the house rules ask for:
 
 | | |
 |---|---|
@@ -26,6 +26,8 @@ Four places, which is every place a plugin has to be known:
 | `Meows.Tests/Meows.Tests.csproj` | a project reference, so the assembly lands beside the tests |
 | `Meows.Tests/ShippedPlugins.cs` | one `typeof` line at the `// kitten:` marker; every plugin-wide test walks that list |
 | `README.md` | a row in the table, above the four bot plugins so the sentence under the table stays true |
+| `Meows/Meows.csproj` | the version, minor bumped, since a new plugin is a minor by the README's own rule |
+| `CHANGELOG.md` | a stub under a heading for that version, when the checkout keeps one; it is gitignored, so a fresh clone has none and Kitten says nothing |
 
 The release workflow needs nothing: it finds `Meows.Plugins.*` on disk, and the packaged app is
 asked to load what was staged.

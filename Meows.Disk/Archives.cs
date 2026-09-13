@@ -126,6 +126,11 @@ public static class Archives
         if (!CanRead(path))
             return null;
 
+        return AccessTime.Preserving(path, () => Read(path));
+    }
+
+    private static ArchiveSummary? Read(string path)
+    {
         try
         {
             using var zip = ZipFile.OpenRead(path);
@@ -170,6 +175,11 @@ public static class Archives
         if (!CanRead(archivePath))
             return Unreadable(archivePath, folderPath, archiveSize);
 
+        return AccessTime.Preserving(archivePath, () => Hold(archivePath, folderPath, archiveSize, token));
+    }
+
+    private static TwinReport Hold(string archivePath, string folderPath, long archiveSize, CancellationToken token)
+    {
         try
         {
             using var zip = ZipFile.OpenRead(archivePath);

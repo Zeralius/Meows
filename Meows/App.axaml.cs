@@ -55,7 +55,8 @@ public partial class App : Application
                 preferences,
                 notifications,
                 text,
-                viewModel.Shutdown);
+                viewModel.Shutdown,
+                background);
 
             desktop.ShutdownRequested += (_, _) => tray.Dispose();
 

@@ -11,6 +11,11 @@ public sealed record Repo(string Root)
 
     public string Readme => Path.Combine(Root, "README.md");
 
+    public string ShellProject => Path.Combine(Root, "Meows", "Meows.csproj");
+
+    /// <summary>Gitignored, and present only in a checkout that keeps one. Kitten writes to it when it is there.</summary>
+    public string Changelog => Path.Combine(Root, "CHANGELOG.md");
+
     public static Repo? Find(string from)
     {
         for (var dir = new DirectoryInfo(from); dir is not null; dir = dir.Parent)

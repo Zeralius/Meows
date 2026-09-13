@@ -62,7 +62,7 @@ The **Settings** tab has two choices, and both take effect as you make them:
 - **In the background**: Meows sits in the notification area, and closing the window hides it
   rather than quitting. Everything that watches or waits, Collar's dates, Birdwatch's refresh, a
   scan you started, carries on while the window is hidden, and the icon shows a dot when there is
-  something to read. *Quit* is in the icon's menu. Untick the setting and the close button quits,
+  something to read and a ring while something is still working. *Quit* is in the icon's menu. Untick the setting and the close button quits,
   as it did before 2.0.
 - **Starting up**: whether Meows starts when you log in, and whether it starts in the tray or
   with the window open. It writes one entry to the per-user startup list, which needs no admin
@@ -77,7 +77,10 @@ the tabs and cards: Purrge or Duplicates, Chonk or Disk usage, Kibble or Sorting
 The **History** tab is what the plugins did, all of them in one list: what Kibble queued where,
 what Purrge recycled, what Scruff posted, what Portion shrank, which date Collar dealt with. It
 is kept in a small database beside the settings and survives the window closing, the plugin
-being switched off, and the undo list being emptied.
+being switched off, and the undo list being emptied. A line the plugin that wrote it can still
+reverse, a Kibble send whose file is still in the queue, carries a **Put back** button while that
+plugin is open; the shell asks the plugin first, so the button is only there when pressing it
+would do something.
 
 Settings, logs and that history live in `%APPDATA%\Meows`, never inside the folder you unzipped,
 so deleting that folder resets Meows completely. `meows.log` there is also where a crash gets written, stack

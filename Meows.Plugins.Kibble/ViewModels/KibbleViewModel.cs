@@ -92,7 +92,7 @@ public sealed record PageOrderOption(PageOrder Value, string Key) : ILabelledOpt
     public override string ToString() => Label.Value;
 }
 
-public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable
+public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable, IUndoTarget
 {
     private const int ThumbnailWidth = 150;
     private const int PreviewWidth = 720;
@@ -1348,6 +1348,45 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
             _ => _host.Text.Format("kibble.status.undone.mixed", restored, elsewhere),
         };
         RaiseGridState();
+    }
+
+    /// <summary>
+    /// The History tab asking whether one of Kibble's lines can be reversed: a send, a set-aside
+    /// or a hold whose file is still where Kibble put it.
+    /// </summary>
+    public bool CanUndo(StoredEvent stored) =>
+        Intake.FromJournal(stored.Kind, stored.Subject, stored.Data) is { } result && Intake.CanUndo(result);
+
+    /// <summary>The History tab reversing one line. The same put-back Undo does, for exactly that file.</summary>
+    public string? Undo(StoredEvent stored)
+    {
+        if (Intake.FromJournal(stored.Kind, stored.Subject, stored.Data) is not { } result)
+            return _host.Text["kibble.putback.notmine"];
+        if (!Intake.CanUndo(result))
+            return _host.Text["kibble.putback.gone"];
+        if (!Intake.Undo(result))
+            return _host.Text["kibble.putback.failed"];
+
+        var group = stored.Data.GetValueOrDefault("group") ?? "";
+        _host.Store.Record("undone", result.SourcePath, _host.Text.Format("kibble.journal.undone", group),
+            new Dictionary<string, string> { ["group"] = group, ["destination"] = result.Destination ?? "" });
+
+        // The same send may be sitting on Undo's own stack; it has nothing to reverse now.
+        foreach (var batch in _undoable.ToList())
+        {
+            if (batch.Results.Any(r => string.Equals(r.Destination, result.Destination, StringComparison.OrdinalIgnoreCase)))
+                _undoable.Remove(batch);
+        }
+        RaiseUndoState();
+
+        var paths = result.Bundled is { Count: > 0 } bundled ? bundled.Select(b => b.Path).ToList() : [result.SourcePath];
+        var here = paths.Where(IsInSourceFolder).ToList();
+        if (here.Count > 0)
+            Restore(here);
+        foreach (var destination in Destinations)
+            destination.Refresh();
+        RaiseGridState();
+        return null;
     }
 
     private bool IsInSourceFolder(string path) =>

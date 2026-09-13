@@ -11,6 +11,9 @@
   "history.count": "{0} gezeigt von {1} aufgezeichneten",
   "history.empty": "Noch nichts aufgezeichnet. Kibble schreibt eine Zeile, wenn es eine Datei schickt, Purrge, wenn es eine in den Papierkorb legt, Scruff, wenn es postet, Portion, wenn es verkleinert. Alles landet hier und überlebt das Schließen des Fensters.",
   "history.filter": "nach Wort oder Pfad filtern",
+  "history.putback": "Zurücklegen",
+  "history.putback.done": "{0} zurückgelegt.",
+  "history.putback.failed": "Nicht zurückgelegt: {0}",
   "history.refresh": "Aktualisieren",
   "history.reveal": "Im Explorer zeigen",
   "history.title": "Was die Plugins getan haben",
@@ -96,5 +99,7 @@
   "tray.open": "Meows öffnen",
   "tray.quit": "Meows beenden",
   "tray.tip.many": "Meows · {0} Benachrichtigungen",
-  "tray.tip.one": "Meows · eine Benachrichtigung"
+  "tray.tip.one": "Meows · eine Benachrichtigung",
+  "tray.tip.working.many": "Meows · {0} Aufgaben laufen",
+  "tray.tip.working.one": "Meows · eine Aufgabe läuft"
 }

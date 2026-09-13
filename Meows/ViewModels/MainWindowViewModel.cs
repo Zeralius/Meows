@@ -397,7 +397,7 @@ public sealed class MainWindowViewModel : ObservableObject
         Tabs.Add(_settingsTab);
         if (_store is not null)
         {
-            _history = new HistoryViewModel(_store, PluginName);
+            _history = new HistoryViewModel(_store, PluginName, UndoTargetFor, ShowPlugin);
             _historyTab = new TabViewModel("shell.tab.history", "≡", new HistoryView { DataContext = _history });
             Tabs.Add(_historyTab);
         }
@@ -523,6 +523,20 @@ public sealed class MainWindowViewModel : ObservableObject
             : "a file";
 
         return MeowsText.Current.Format("plugins.missingfile", name);
+    }
+
+    /// <summary>The open plugin's view model, if it reverses its own history lines. Not opened for the asking.</summary>
+    private IUndoTarget? UndoTargetFor(string pluginId)
+    {
+        if (!_pluginTabs.TryGetValue(pluginId, out var tab))
+            return null;
+        return (tab.Content as Avalonia.Controls.Control)?.DataContext as IUndoTarget ?? tab.Content as IUndoTarget;
+    }
+
+    private void ShowPlugin(string pluginId)
+    {
+        if (_pluginTabs.TryGetValue(pluginId, out var tab))
+            SelectedTab = tab;
     }
 
     /// <summary>A plugin's name for its id, for the History tab; the id itself when it is not installed any more.</summary>
