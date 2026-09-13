@@ -11,6 +11,8 @@ public sealed class ScruffPlugin : IMeowsPlugin
 
     public string DisplayName => "Scruff";
 
+    public string PlainName => "scruff.name.plain";
+
     public string Description => "scruff.description";
 
     public string Icon => "🧹";

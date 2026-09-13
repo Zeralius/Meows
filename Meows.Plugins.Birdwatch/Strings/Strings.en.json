@@ -25,6 +25,7 @@
   "birdwatch.intake.hint": "Saved pictures land here, which is the same folder Saucer uses, so Kibble sorts them with everything else.",
   "birdwatch.labels": "Labels",
   "birdwatch.loadmore": "Read further back",
+  "birdwatch.name.plain": "Bluesky feeds",
   "birdwatch.noaccounts": "No accounts yet.",
   "birdwatch.nothingselected": "Nothing selected",
   "birdwatch.open": "Open",

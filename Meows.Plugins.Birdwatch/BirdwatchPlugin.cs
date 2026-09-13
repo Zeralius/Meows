@@ -11,6 +11,8 @@ public sealed class BirdwatchPlugin : IMeowsPlugin
 
     public string DisplayName => "Birdwatch";
 
+    public string PlainName => "birdwatch.name.plain";
+
     public string Description => "birdwatch.description";
 
     public string Icon => "🐦";

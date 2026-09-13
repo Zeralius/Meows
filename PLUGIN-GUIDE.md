@@ -292,6 +292,7 @@ public sealed class MyPlugin : IMeowsPlugin
 {
     public string Id => "meows.my-plugin";   // stable forever: it is the settings key
     public string DisplayName => "My Plugin";
+    public string PlainName => "myplugin.name.plain";   // what it is, in plain words; optional
     public string Description => "One sentence, shown on the Plugins tab.";
     public string? Icon => "🎲";            // shown on the tab header
     public string? Category => "Everyday";  // heading on the Plugins tab, optional
@@ -303,6 +304,11 @@ public sealed class MyPlugin : IMeowsPlugin
 
 Public, with a parameterless constructor, since the shell instantiates it by reflection. `Id` is
 the identity for stored settings and activation state, so changing it later orphans both.
+
+`PlainName` is what the plugin is when the feline name is switched off on the Settings tab:
+Purrge is Duplicates, Chonk is Disk usage. Return a key from your catalogue so it is translated.
+It is optional; a plugin that does not say reads the same in both modes. The feline `DisplayName`
+stays the identity underneath, in the log and as the source of notifications and tasks.
 
 `Category` is optional and has a default, so leaving it out compiles and loads exactly as before;
 the plugin simply appears under **Everything else**. The shell does not interpret the text and

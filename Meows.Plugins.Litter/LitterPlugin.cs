@@ -11,6 +11,8 @@ public sealed class LitterPlugin : IMeowsPlugin
 
     public string DisplayName => "Litter";
 
+    public string PlainName => "litter.name.plain";
+
     public string Description => "litter.description";
 
     public string Icon => "🧺";

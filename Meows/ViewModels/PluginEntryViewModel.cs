@@ -20,7 +20,20 @@ public sealed class PluginEntryViewModel : ObservableObject
 
     public string Id => Descriptor.Id;
 
-    public string DisplayName => Descriptor.DisplayName;
+    /// <summary>The name showing now. The feline one stays the identity in the log and the notification sources.</summary>
+    public string DisplayName => Descriptor.Name;
+
+    public string OtherName => Descriptor.OtherName;
+
+    public bool HasOtherName => Descriptor.OtherName.Length > 0;
+
+    /// <summary>The names read differently now: the switch flipped, or the language did.</summary>
+    public void Rename()
+    {
+        OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(OtherName));
+        OnPropertyChanged(nameof(HasOtherName));
+    }
 
     /// <summary>
     /// Translated if the plugin returned a key, and left alone if it returned a sentence. A

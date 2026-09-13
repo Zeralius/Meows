@@ -35,6 +35,17 @@ public sealed class SettingsViewModel : ObservableObject
     /// </summary>
     private StartupRegistration Startup => StartWithWindows.Read();
 
+    /// <summary>Feline or plain plugin names. The static switch is the source; the main window saves it.</summary>
+    public bool FelineNames
+    {
+        get => PluginNames.Feline;
+        set
+        {
+            PluginNames.Feline = value;
+            OnPropertyChanged();
+        }
+    }
+
     /// <summary>
     /// Whether the close button hides the window or quits. Read by the tray at the moment of
     /// closing, so a change here takes effect on the very next close.
@@ -188,7 +199,7 @@ public sealed class SettingsViewModel : ObservableObject
     public string FollowingText =>
         _text.Format("settings.language.following", _text[$"language.name.{_text.Language}"]);
 
-    private void SetTheme(string choice)
+    public void SetTheme(string choice)
     {
         if (_preferences.Theme == choice)
             return;
@@ -202,7 +213,7 @@ public sealed class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsThemeDark));
     }
 
-    private void SetLanguage(string choice)
+    public void SetLanguage(string choice)
     {
         if (_preferences.Language == choice)
             return;

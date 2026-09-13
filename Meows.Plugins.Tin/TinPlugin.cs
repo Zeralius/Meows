@@ -11,6 +11,8 @@ public sealed class TinPlugin : IMeowsPlugin
 
     public string DisplayName => "Tin";
 
+    public string PlainName => "tin.name.plain";
+
     public string Description => "tin.description";
 
     public string Icon => "🥫";

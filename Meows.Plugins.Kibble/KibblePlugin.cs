@@ -11,6 +11,8 @@ public sealed class KibblePlugin : IMeowsPlugin
 
     public string DisplayName => "Kibble";
 
+    public string PlainName => "kibble.name.plain";
+
     public string Description => "kibble.description";
 
     public string? Icon => "🍽";

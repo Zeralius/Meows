@@ -199,7 +199,9 @@ public sealed class PluginCatalog
             PluginDescriptor descriptor;
             try
             {
-                descriptor = PluginDescriptor.Loaded((IMeowsPlugin)Activator.CreateInstance(type)!, assemblyPath);
+                var plugin = (IMeowsPlugin)Activator.CreateInstance(type)!;
+                PluginNames.Register(plugin);
+                descriptor = PluginDescriptor.Loaded(plugin, assemblyPath);
             }
             catch (Exception ex)
             {

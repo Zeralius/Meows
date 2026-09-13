@@ -24,6 +24,8 @@
         </Style>
     </Window.Styles>
 
+    <Panel>
+
     <DockPanel>
 
         <Border DockPanel.Dock="Bottom"
@@ -44,6 +46,16 @@
                            TextTrimming="CharacterEllipsis"
                            Text="{Binding PluginsDirectoryText}" />
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                    <Button Content="{m:Tr shell.palette}"
+                            Padding="10,2"
+                            Command="{Binding OpenPaletteCommand}"
+                            ToolTip.Tip="Ctrl+K" />
+                    <!-- Feline names or plain ones. The same switch is on the Settings tab. -->
+                    <ToggleButton Content="🐾"
+                                  FontFamily="Segoe UI Emoji"
+                                  Padding="10,2"
+                                  IsChecked="{Binding FelineNames}"
+                                  ToolTip.Tip="{m:Tr shell.names.tip}" />
                     <ToggleButton Content="{Binding TaskBadge}"
                                   Padding="10,2"
                                   IsChecked="{Binding IsTasksOpen}" />
@@ -103,7 +115,7 @@
                                                        TextWrapping="Wrap"
                                                        IsVisible="{Binding HasMessage}" />
                                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <TextBlock Text="{Binding Source}" Opacity="0.4" FontSize="10" />
+                                                <TextBlock Text="{Binding SourceName}" Opacity="0.4" FontSize="10" />
                                                 <TextBlock Text="{Binding TimeText}" Opacity="0.4" FontSize="10" />
                                             </StackPanel>
                                         </StackPanel>
@@ -162,7 +174,7 @@
                                         <StackPanel Grid.Column="0" Spacing="2">
                                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
                                             <TextBlock Text="{Binding Status}" Opacity="0.65" FontSize="11" TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding Source}" Opacity="0.4" FontSize="10" />
+                                            <TextBlock Text="{Binding SourceName}" Opacity="0.4" FontSize="10" />
                                         </StackPanel>
                                         <ProgressBar Grid.Column="1"
                                                      Width="140"
@@ -233,5 +245,73 @@
         </TabControl>
 
     </DockPanel>
+
+    <!-- The command palette, over everything, Ctrl+K. A veil that closes it on a click, and a
+         card near the top with the box and whatever matches. -->
+    <Panel IsVisible="{Binding Palette.IsOpen}">
+        <Border Background="{DynamicResource MeowsVeil}" PointerPressed="OnPaletteVeilPressed" />
+        <Border Name="PaletteCard"
+                Width="620"
+                MaxHeight="520"
+                VerticalAlignment="Top"
+                HorizontalAlignment="Center"
+                Margin="0,70,0,0"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLine}"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="10">
+            <DockPanel>
+                <TextBox Name="PaletteBox"
+                         DockPanel.Dock="Top"
+                         Text="{Binding Palette.Query}"
+                         Watermark="{m:Tr palette.hint}"
+                         FontSize="15"
+                         Margin="0,0,0,8" />
+                <TextBlock DockPanel.Dock="Top"
+                           Classes="label"
+                           Opacity="0.45"
+                           Margin="6,0,6,8"
+                           IsVisible="{Binding Palette.IsEmpty}"
+                           Text="{m:Tr palette.nothing}" />
+                <ListBox ItemsSource="{Binding Palette.Items}"
+                         SelectedItem="{Binding Palette.Selected}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         DoubleTapped="OnPaletteRun">
+                    <ListBox.Styles>
+                        <Style Selector="ListBoxItem">
+                            <Setter Property="Padding" Value="10,6" />
+                            <Setter Property="CornerRadius" Value="6" />
+                        </Style>
+                        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+                        </Style>
+                    </ListBox.Styles>
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PaletteItem">
+                            <Grid ColumnDefinitions="28,*" ColumnSpacing="10">
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding Glyph}"
+                                           FontFamily="Segoe UI Emoji"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1" Spacing="1">
+                                    <TextBlock Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Subtitle}"
+                                               Opacity="0.5"
+                                               FontSize="11"
+                                               TextTrimming="CharacterEllipsis"
+                                               IsVisible="{Binding HasSubtitle}" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+        </Border>
+    </Panel>
+
+    </Panel>
 
 </Window>

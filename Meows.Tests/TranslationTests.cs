@@ -149,7 +149,8 @@ public class TranslationTests
 /// </summary>
 public class CatalogueTests
 {
-    private static readonly Assembly[] Carriers =
+    /// <summary>Also what <see cref="TestStrings"/> loads, so the two lists cannot drift apart.</summary>
+    internal static readonly Assembly[] Carriers =
     [
         typeof(Translations).Assembly,
         typeof(Disk.FolderInspector).Assembly,

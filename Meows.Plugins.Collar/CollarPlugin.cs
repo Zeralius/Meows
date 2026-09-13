@@ -11,6 +11,8 @@ public sealed class CollarPlugin : IMeowsPlugin
 
     public string DisplayName => "Collar";
 
+    public string PlainName => "collar.name.plain";
+
     public string Description => "collar.description";
 
     public string Icon => "🏷";

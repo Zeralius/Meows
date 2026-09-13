@@ -7,7 +7,11 @@ namespace Meows.Services;
 /// <summary>One row in the notification list, raised by a plugin or by the shell.</summary>
 public sealed class NotificationItem
 {
+    /// <summary>The plugin's feline name, which is the key everything else is cleared by.</summary>
     public required string Source { get; init; }
+
+    /// <summary>The name to show, which follows the feline switch.</summary>
+    public string SourceName => PluginNames.Display(Source);
 
     public required NotificationSeverity Severity { get; init; }
 

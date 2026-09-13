@@ -25,6 +25,7 @@
   "birdwatch.intake.hint": "Gespeicherte Bilder landen hier, im selben Ordner, den auch Saucer benutzt, damit Kibble sie zusammen mit allem anderen sortiert.",
   "birdwatch.labels": "Kennzeichnungen",
   "birdwatch.loadmore": "Weiter zurück lesen",
+  "birdwatch.name.plain": "Bluesky-Feeds",
   "birdwatch.noaccounts": "Noch keine Konten.",
   "birdwatch.nothingselected": "Nichts ausgewählt",
   "birdwatch.open": "Öffnen",

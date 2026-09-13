@@ -11,6 +11,8 @@ public sealed class SaucerPlugin : IMeowsPlugin
 
     public string DisplayName => "Saucer";
 
+    public string PlainName => "saucer.name.plain";
+
     public string Description => "saucer.description";
 
     public string Icon => "🥛";

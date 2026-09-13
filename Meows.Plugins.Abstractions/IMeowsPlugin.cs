@@ -14,6 +14,14 @@ public interface IMeowsPlugin
     string DisplayName { get; }
 
     /// <summary>
+    /// What the plugin is, in plain words, for people who would rather read "Duplicates" than
+    /// "Purrge". Return a key from your strings catalogue to have it translated. The switch that
+    /// picks between the two is the shell's; the default is the feline name, so a plugin that
+    /// does not say has the same name in both modes.
+    /// </summary>
+    string PlainName => DisplayName;
+
+    /// <summary>
     /// One sentence, shown on the Plugins tab. Return a key from your strings catalogue to have
     /// it translated; anything that is not a key is shown exactly as written, which is what a
     /// plugin with no catalogue does.

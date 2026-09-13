@@ -22,6 +22,7 @@
   "mouser.kind.emptyfolder": "Empty folders",
   "mouser.kind.leftover": "Leftovers",
   "mouser.lookagain": "Look again",
+  "mouser.name.plain": "Dead files",
   "mouser.recycle": "Send to Recycle Bin",
   "mouser.selected": "{0} picked",
   "mouser.showall": "Show everything",

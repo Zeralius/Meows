@@ -290,4 +290,7 @@ public sealed class ShellPreferences
 
     /// <summary>When Windows starts Meows at login, start in the tray rather than with the window open.</summary>
     public bool StartInTray { get; set; }
+
+    /// <summary>Purrge and Chonk, or Duplicates and Disk usage. On, because it is the app's character.</summary>
+    public bool FelineNames { get; set; } = true;
 }

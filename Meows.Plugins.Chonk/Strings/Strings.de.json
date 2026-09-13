@@ -24,6 +24,7 @@
   "chonk.handoff.kibble": "Mit Kibble sortieren",
   "chonk.handoff.purrge": "Duplikate darin finden (Purrge)",
   "chonk.identifying": "Wird gerade eingeordnet…",
+  "chonk.name.plain": "Speicherplatz",
   "chonk.nothingselected": "Nichts ausgewählt",
   "chonk.notify.detail": "{0}, {1} frei geworden. Weiterhin wiederherstellbar.",
   "chonk.notify.recycled": "In den Papierkorb verschoben",

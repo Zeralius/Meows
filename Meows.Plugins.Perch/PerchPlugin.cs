@@ -11,6 +11,8 @@ public sealed class PerchPlugin : IMeowsPlugin
 
     public string DisplayName => "Perch";
 
+    public string PlainName => "perch.name.plain";
+
     public string Description => "perch.description";
 
     public string? Icon => "🪶";

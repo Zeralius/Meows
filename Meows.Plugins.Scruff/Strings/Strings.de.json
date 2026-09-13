@@ -45,6 +45,7 @@
   "scruff.mastodon.hint": "Ein persönlicher Zugriffstoken vom eigenen Server: Einstellungen, Entwicklung, Neue Anwendung, mit Schreibrecht. Den Zugriffstoken kopieren, nicht den Client-Schlüssel.",
   "scruff.mastodon.server": "Server, etwa mastodon.social",
   "scruff.mastodon.token": "Zugriffstoken",
+  "scruff.name.plain": "Bereinigen und posten",
   "scruff.note.gifstill": "{0} geht als Standbild hinaus, weil diese Seite kein GIF annimmt",
   "scruff.note.shrink": "{0} wird verkleinert, um unter {1} zu bleiben",
   "scruff.nothingselected": "Nichts ausgewählt",

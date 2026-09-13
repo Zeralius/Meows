@@ -24,6 +24,7 @@
   "chonk.handoff.kibble": "Sort it with Kibble",
   "chonk.handoff.purrge": "Find duplicates in it (Purrge)",
   "chonk.identifying": "Working out what this is…",
+  "chonk.name.plain": "Disk usage",
   "chonk.nothingselected": "Nothing selected",
   "chonk.notify.detail": "{0}, {1} freed. It is still recoverable.",
   "chonk.notify.recycled": "Sent to the Recycle Bin",

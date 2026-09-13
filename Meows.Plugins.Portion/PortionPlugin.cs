@@ -11,6 +11,8 @@ public sealed class PortionPlugin : IMeowsPlugin
 
     public string DisplayName => "Portion";
 
+    public string PlainName => "portion.name.plain";
+
     public string Description => "portion.description";
 
     public string? Icon => "⚖️";

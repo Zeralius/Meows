@@ -11,6 +11,8 @@ public sealed class MoltPlugin : IMeowsPlugin
 
     public string DisplayName => "Molt";
 
+    public string PlainName => "molt.name.plain";
+
     public string Description => "molt.description";
 
     public string Icon => "🍂";

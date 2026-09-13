@@ -20,6 +20,9 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly Dictionary<string, string> _sourceById = new(StringComparer.OrdinalIgnoreCase);
     private readonly MeowsStore? _store;
     private HistoryViewModel? _history;
+    private SettingsViewModel? _settingsViewModel;
+    private TabViewModel? _historyTab;
+    private TabViewModel? _settingsTab;
 
     private TabViewModel? _selectedTab;
     private bool _isLogVisible;
@@ -58,6 +61,116 @@ public sealed class MainWindowViewModel : ObservableObject
         _notifications.Changed += RaiseNotificationState;
         _background.Changed += RaiseTaskState;
         _text.PropertyChanged += (_, _) => Retranslate();
+
+        PluginNames.Feline = preferences.FelineNames;
+        PluginNames.Changed += OnNamesChanged;
+
+        Palette = new CommandPaletteViewModel(PaletteItems, PaletteSearch);
+        OpenPaletteCommand = new RelayCommand(Palette.Open);
+    }
+
+    /// <summary>Ctrl+K. Everything the window can do, from one box.</summary>
+    public CommandPaletteViewModel Palette { get; }
+
+    public RelayCommand OpenPaletteCommand { get; }
+
+    /// <summary>
+    /// What the palette offers before anything is typed: every plugin under both its names,
+    /// the shell's own tabs, and the settings that are one word to flip. Built fresh each time
+    /// the palette opens, so it always reflects what is installed and what is on.
+    /// </summary>
+    private IEnumerable<PaletteItem> PaletteItems()
+    {
+        var text = MeowsText.Current;
+
+        foreach (var entry in Plugins.Where(p => p.IsCompatible))
+        {
+            var captured = entry;
+            var active = _pluginTabs.ContainsKey(entry.Id);
+            var title = text.Format(active ? "palette.goto" : "palette.open", entry.DisplayName);
+            var other = entry.HasOtherName ? entry.OtherName + " · " : "";
+            yield return new PaletteItem(entry.Icon, title, other + entry.Description, () => OpenPlugin(captured), weight: active ? 3 : 2);
+        }
+
+        yield return new PaletteItem("⛭", text.Format("palette.goto", text["shell.tab.plugins"]), "", () => SelectedTab = Tabs[0], weight: 1);
+        if (_settingsTab is { } settings)
+            yield return new PaletteItem("⚙", text.Format("palette.goto", text["shell.tab.settings"]), "", () => SelectedTab = settings, weight: 1);
+        if (_historyTab is { } history)
+            yield return new PaletteItem("≡", text.Format("palette.goto", text["shell.tab.history"]), "", () => SelectedTab = history, weight: 1);
+
+        if (_settingsViewModel is { } sv)
+        {
+            yield return new PaletteItem("◐", text["palette.theme.dark"], text["settings.theme"], () => sv.SetTheme(Appearance.Dark));
+            yield return new PaletteItem("◑", text["palette.theme.light"], text["settings.theme"], () => sv.SetTheme(Appearance.Light));
+            yield return new PaletteItem("◎", text["palette.theme.system"], text["settings.theme"], () => sv.SetTheme(Appearance.System));
+            yield return new PaletteItem("Aa", text["palette.language.en"], text["settings.language"], () => sv.SetLanguage("en"));
+            yield return new PaletteItem("Aa", text["palette.language.de"], text["settings.language"], () => sv.SetLanguage("de"));
+            yield return new PaletteItem("Aa", text["palette.language.system"], text["settings.language"], () => sv.SetLanguage("system"));
+        }
+
+        yield return new PaletteItem("🐾", text[PluginNames.Feline ? "palette.names.plain" : "palette.names.feline"], text["settings.names"],
+            () => PluginNames.Feline = !PluginNames.Feline);
+        yield return new PaletteItem("🔔", text["palette.notifications"], "", () => IsNotificationsOpen = !IsNotificationsOpen);
+        yield return new PaletteItem("⏳", text["palette.tasks"], "", () => IsTasksOpen = !IsTasksOpen);
+        yield return new PaletteItem("≣", text["palette.log"], "", () => IsLogVisible = !IsLogVisible);
+    }
+
+    /// <summary>History lines matching what was typed, each one a jump to the file.</summary>
+    private IEnumerable<PaletteItem> PaletteSearch(string query)
+    {
+        if (_store is null)
+            yield break;
+
+        foreach (var line in _store.Events(null, null, query, 8))
+        {
+            var subject = line.Subject;
+            var name = Path.GetFileName(subject) is { Length: > 0 } file ? file : subject;
+            yield return new PaletteItem("≡", name, $"{PluginName(line.Plugin)} · {line.Kind} · {line.At:ddd HH:mm}", () =>
+            {
+                try
+                {
+                    if (File.Exists(subject))
+                        Explorer.Reveal(subject);
+                    else if (Directory.Exists(subject))
+                        Explorer.Open(subject);
+                }
+                catch (Exception)
+                {
+                }
+            }, weight: -1);
+        }
+    }
+
+    private void OpenPlugin(PluginEntryViewModel entry)
+    {
+        if (!_pluginTabs.ContainsKey(entry.Id))
+        {
+            Activate(entry);
+            if (!_pluginTabs.ContainsKey(entry.Id))
+                return;
+            entry.SetActivatedSilently(true);
+            PersistActivations();
+        }
+
+        SelectedTab = _pluginTabs[entry.Id];
+    }
+
+    /// <summary>
+    /// Feline or plain names, everywhere at once. Bound from the Settings tab and the bottom bar
+    /// alike; the static switch is the single source and this is its handle.
+    /// </summary>
+    public bool FelineNames
+    {
+        get => PluginNames.Feline;
+        set => PluginNames.Feline = value;
+    }
+
+    private void OnNamesChanged()
+    {
+        _preferences.FelineNames = PluginNames.Feline;
+        _settings.SavePreferences(_preferences);
+        OnPropertyChanged(nameof(FelineNames));
+        Retranslate();
     }
 
     /// <summary>
@@ -71,6 +184,9 @@ public sealed class MainWindowViewModel : ObservableObject
     private void Retranslate()
     {
         _history?.Retranslate();
+        foreach (var entry in Plugins)
+            entry.Rename();
+        Regroup();
         foreach (var tab in Tabs)
             tab.Retranslate();
 
@@ -231,14 +347,14 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         // Always tab zero, so an empty plugins folder still opens on something useful.
         Tabs.Add(new TabViewModel("shell.tab.plugins", "⛭", new PluginsView { DataContext = this }));
-        Tabs.Add(new TabViewModel("shell.tab.settings", "⚙", new SettingsView
-        {
-            DataContext = new SettingsViewModel(_settings, _text, _log, _preferences),
-        }));
+        _settingsViewModel = new SettingsViewModel(_settings, _text, _log, _preferences);
+        _settingsTab = new TabViewModel("shell.tab.settings", "⚙", new SettingsView { DataContext = _settingsViewModel });
+        Tabs.Add(_settingsTab);
         if (_store is not null)
         {
             _history = new HistoryViewModel(_store, PluginName);
-            Tabs.Add(new TabViewModel("shell.tab.history", "≡", new HistoryView { DataContext = _history }));
+            _historyTab = new TabViewModel("shell.tab.history", "≡", new HistoryView { DataContext = _history });
+            Tabs.Add(_historyTab);
         }
         SelectedTab = Tabs[0];
         Rescan();
@@ -328,7 +444,7 @@ public sealed class MainWindowViewModel : ObservableObject
                 new HandoffService(entry.Id, CanReach, SendHandoff), _store?.For(entry.Id));
             _sourceById[entry.Id] = entry.DisplayName;
             var view = entry.Descriptor.Plugin!.CreateView(host);
-            var tab = new TabViewModel(entry.DisplayName, entry.Icon, view);
+            var tab = new TabViewModel(() => entry.DisplayName, entry.Icon, view);
             _pluginTabs[entry.Id] = tab;
             Tabs.Add(tab);
             SelectedTab = tab;

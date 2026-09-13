@@ -11,6 +11,8 @@ public sealed class MouserPlugin : IMeowsPlugin
 
     public string DisplayName => "Mouser";
 
+    public string PlainName => "mouser.name.plain";
+
     public string Description => "mouser.description";
 
     public string Icon => "🐁";

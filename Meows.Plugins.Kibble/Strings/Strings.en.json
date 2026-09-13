@@ -35,6 +35,7 @@
   "kibble.menu.reveal": "Show in Explorer",
   "kibble.menu.scruff": "Clean with Scruff",
   "kibble.movenote": "Files move rather than copy. Undo puts the last one back where it came from.",
+  "kibble.name.plain": "Sorting",
   "kibble.namefrom": "Name from",
   "kibble.naming.folder": "The folder name",
   "kibble.naming.randomtag": "Folder name plus a random tag",

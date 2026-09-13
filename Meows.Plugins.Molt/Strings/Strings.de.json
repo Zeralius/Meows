@@ -20,6 +20,7 @@
   "molt.lots.one": "1 Posten",
   "molt.mode.bin": "Geht in den Papierkorb. Wiederherstellbar, aber der Platz ist erst frei, wenn der Papierkorb geleert wird.",
   "molt.mode.permanent": "Wird endgültig gelöscht. Der Platz ist sofort wieder da und nichts lässt sich rückgängig machen.",
+  "molt.name.plain": "Caches",
   "molt.nofolder": "noch kein Ordner gewählt",
   "molt.note.excluded": "Browser-Caches bleiben absichtlich außen vor: sie sind gesperrt, solange der Browser läuft, und lassen sich deshalb nicht verlässlich leeren. Der JetBrains-Ordner bleibt ebenfalls außen vor, weil dort neben Caches auch Einstellungen und Plugins liegen und das sauber zu trennen mehr wäre, als hier geraten werden sollte.",
   "molt.note.pickroot": "Oben einen Projektordner wählen, dann werden auch die bin- und obj-Ordner darunter gemessen.",

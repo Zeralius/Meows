@@ -11,6 +11,8 @@ public sealed class ChonkPlugin : IMeowsPlugin
 
     public string DisplayName => "Chonk";
 
+    public string PlainName => "chonk.name.plain";
+
     public string Description => "chonk.description";
 
     public string Icon => "🐈";

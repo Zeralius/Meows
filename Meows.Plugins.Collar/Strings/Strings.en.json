@@ -5,6 +5,8 @@
   "collar.detach": "Forget the file",
   "collar.dialog.file": "Which receipt, policy or invoice",
   "collar.empty": "Nothing in here yet. Drop a receipt on this tab and most of an entry fills itself in, or add a date by hand.",
+  "collar.error.gone": "{0} is not there any more.",
+  "collar.error.open": "Could not open {0}: {1}",
   "collar.every.half": "Every six months",
   "collar.every.month": "Every month",
   "collar.every.once": "Just once",
@@ -29,6 +31,7 @@
   "collar.kind.subscription": "Subscription",
   "collar.kind.warranty": "Warranty",
   "collar.lead": "Tell me this many days ahead",
+  "collar.name.plain": "Dates",
   "collar.nofile": "No file attached. Drop one on this tab, or use From a file.",
   "collar.notify.more": "{0} and {1} more",
   "collar.notify.overdue": "{0} of your dates have passed",
@@ -54,7 +57,5 @@
   "collar.when.late": "{0}, {1} days ago",
   "collar.when.left": "{0}, in {1} days",
   "collar.when.today": "{0}, today",
-  "collar.when.tomorrow": "{0}, tomorrow",
-  "collar.error.gone": "{0} is not there any more.",
-  "collar.error.open": "Could not open {0}: {1}"
+  "collar.when.tomorrow": "{0}, tomorrow"
 }

@@ -11,6 +11,8 @@ public sealed class PurrgePlugin : IMeowsPlugin
 
     public string DisplayName => "Purrge";
 
+    public string PlainName => "purrge.name.plain";
+
     public string Description => "purrge.description";
 
     public string Icon => "🐾";

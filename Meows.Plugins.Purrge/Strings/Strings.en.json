@@ -40,6 +40,7 @@
   "purrge.mode.compare": "Compare",
   "purrge.mode.duplicates": "Duplicates",
   "purrge.modified": "modified",
+  "purrge.name.plain": "Duplicates",
   "purrge.nopreview": "No inline preview for this file type",
   "purrge.notify.compared": "Compare finished",
   "purrge.notify.finished": "Duplicate scan finished",

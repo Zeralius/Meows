@@ -45,6 +45,7 @@
   "scruff.mastodon.hint": "A personal access token from your server: Preferences, Development, New application, with write scope. Copy the access token, not the client key.",
   "scruff.mastodon.server": "server, like mastodon.social",
   "scruff.mastodon.token": "access token",
+  "scruff.name.plain": "Clean and post",
   "scruff.note.gifstill": "{0} will go as a still, since this place does not take GIF",
   "scruff.note.shrink": "{0} will be shrunk to fit under {1}",
   "scruff.nothingselected": "Nothing selected",

@@ -50,6 +50,7 @@
   "tin.folder": "Folder…",
   "tin.hide": "Not a subscription",
   "tin.lapsed": "Was due {0}, never came",
+  "tin.name.plain": "Bank statements",
   "tin.nofolder": "No folder picked yet",
   "tin.open": "Open",
   "tin.outlook.caveat": "This is what the last few months did rather than a promise. Rhythms are counted at their own cadence, so a yearly premium counts once a year rather than a twelfth of it every month, and everything else is the middle month rather than the average, so one enormous month does not raise every month after it.",

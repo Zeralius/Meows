@@ -40,6 +40,7 @@
   "purrge.mode.compare": "Vergleichen",
   "purrge.mode.duplicates": "Duplikate",
   "purrge.modified": "geändert",
+  "purrge.name.plain": "Duplikate",
   "purrge.nopreview": "Für diesen Dateityp gibt es keine Vorschau",
   "purrge.notify.compared": "Vergleich abgeschlossen",
   "purrge.notify.finished": "Duplikatsuche abgeschlossen",

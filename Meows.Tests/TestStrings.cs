@@ -22,25 +22,11 @@ namespace Meows.Tests;
 internal static class TestStrings
 {
     /// <summary>
-    /// Named explicitly rather than walked off the test assembly's references. The compiler drops
-    /// a reference no code in the assembly actually uses, so a plugin only exercised through the
-    /// shell would quietly go missing.
+    /// The shell's own strings plus every plugin's, from the one list the catalogue tests guard,
+    /// so a plugin added there is loaded here too.
     /// </summary>
     private static IEnumerable<Assembly> Everything =>
-    [
-        typeof(Translations).Assembly,
-        typeof(Plugins.Chonk.ChonkPlugin).Assembly,
-        typeof(Plugins.Kibble.KibblePlugin).Assembly,
-        typeof(Plugins.Litter.LitterPlugin).Assembly,
-        typeof(Plugins.Molt.MoltPlugin).Assembly,
-        typeof(Plugins.Mouser.MouserPlugin).Assembly,
-        typeof(Plugins.Purrge.PurrgePlugin).Assembly,
-        typeof(Plugins.Saucer.SaucerPlugin).Assembly,
-        typeof(Plugins.TelegramPoster.TelegramPosterPlugin).Assembly,
-        typeof(Plugins.Birdwatch.BirdwatchPlugin).Assembly,
-        typeof(Plugins.Tin.TinPlugin).Assembly,
-        typeof(Plugins.Collar.CollarPlugin).Assembly,
-    ];
+        [typeof(Translations).Assembly, .. CatalogueTests.Carriers];
 
     /// <summary>A fresh table holding everything, for tests that want to poke at it directly.</summary>
     internal static Translations Load()

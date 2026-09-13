@@ -20,6 +20,7 @@
   "molt.lots.one": "1 lot",
   "molt.mode.bin": "Sent to the Recycle Bin. Recoverable, but the room is not back until the bin is emptied.",
   "molt.mode.permanent": "Deleted outright. The room comes back immediately and nothing can be undone.",
+  "molt.name.plain": "Caches",
   "molt.nofolder": "no folder chosen yet",
   "molt.note.excluded": "Browser caches are left out on purpose: they are locked while the browser is running, so clearing them is unreliable. The JetBrains folder is left out too, because it holds settings and plugins as well as caches and telling them apart reliably is more than this should guess at.",
   "molt.note.pickroot": "Pick a projects folder above and bin and obj folders under it will be measured too.",

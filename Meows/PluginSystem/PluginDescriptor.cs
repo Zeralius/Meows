@@ -19,6 +19,12 @@ public sealed record PluginDescriptor
 
     public string DisplayName { get; private init; } = "";
 
+    /// <summary>The feline or the plain name, whichever the switch says. The feline one is the identity.</summary>
+    public string Name => Plugin is null ? DisplayName : PluginNames.For(Plugin);
+
+    /// <summary>The name that is not showing, or empty when the plugin has only the one.</summary>
+    public string OtherName => Plugin is null || Plugin.PlainName == Plugin.DisplayName ? "" : PluginNames.Other(Plugin);
+
     public string Description { get; private init; } = "";
 
     public string Icon { get; private init; } = "●";

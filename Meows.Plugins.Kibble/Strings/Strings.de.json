@@ -35,6 +35,7 @@
   "kibble.menu.reveal": "Im Explorer zeigen",
   "kibble.menu.scruff": "Mit Scruff bereinigen",
   "kibble.movenote": "Dateien werden verschoben, nicht kopiert. Rückgängig legt die letzte dorthin zurück, wo sie herkam.",
+  "kibble.name.plain": "Sortieren",
   "kibble.namefrom": "Name aus",
   "kibble.naming.folder": "Der Ordnername",
   "kibble.naming.randomtag": "Ordnername plus zufälliges Kürzel",

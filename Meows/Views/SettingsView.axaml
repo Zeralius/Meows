@@ -74,6 +74,17 @@
 
             <Border Classes="section">
                 <StackPanel Spacing="10">
+                    <TextBlock Classes="heading" Text="{m:Tr settings.names}" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.names.hint}" />
+                    <ToggleSwitch IsChecked="{Binding FelineNames}"
+                                  OnContent="{m:Tr settings.names.feline}"
+                                  OffContent="{m:Tr settings.names.plain}"
+                                  Margin="0,4,0,0" />
+                </StackPanel>
+            </Border>
+
+            <Border Classes="section">
+                <StackPanel Spacing="10">
                     <TextBlock Classes="heading" Text="{m:Tr settings.tray}" />
                     <TextBlock Classes="hint" Text="{m:Tr settings.tray.hint}" />
 

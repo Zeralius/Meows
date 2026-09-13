@@ -28,6 +28,9 @@ public sealed class BackgroundTaskItem : INotifyPropertyChanged, IBackgroundTask
 
     public string Source { get; }
 
+    /// <summary>The name to show, which follows the feline switch.</summary>
+    public string SourceName => PluginNames.Display(Source);
+
     public string Title { get; }
 
     public CancellationToken Token => _cts.Token;
