@@ -331,10 +331,11 @@ public interface IMeowsHost
     IMeowsText Text { get; }
     IMeowsSecrets Secrets { get; }      // 0.5.0
     IMeowsHandoff Handoff { get; }      // 0.5.0
+    IMeowsStore Store { get; }          // 0.5.0
 }
 ```
 
-The last three have defaults, so a plugin built against an older contract still compiles and
+The last four have defaults, so a plugin built against an older contract still compiles and
 loads; the defaults hand back the key, hold no secrets, and reach no other plugin.
 
 ### `DataDirectory`
@@ -412,6 +413,27 @@ Two verbs are agreed on, `HandoffVerbs.Folder` and `HandoffVerbs.Files`; two plu
 third between themselves. The receiver is switched on if it is installed but off, because "open
 this in Purrge" means open Purrge. `Receive` is called on the UI thread after the tab has come to
 the front. Hide the button when `CanReach` is false, so a plugin that is not there is not offered.
+
+### `Store`
+
+The shared store: one SQLite file under `%APPDATA%\Meows`, owned and versioned by the shell. A
+plugin gets three things through it.
+
+**A journal.** `Record(kind, subject, detail, data)` writes one line: a short kind you will filter
+on (`"sent"`, `"recycled"`, `"posted"`), the path or name it happened to, a sentence for a person,
+and a small dictionary for code. Kibble writes one per file it queues, Purrge per file it recycles,
+Scruff per post, Portion per shrink, Collar per date dealt with. The shell's **History** tab shows
+every plugin's lines together; `Recent` and `Search` show you your own.
+
+**A notebook.** `Get`, `Set`, `Remove` for small durable facts scoped to your plugin: things
+learned rather than chosen, which is what separates them from settings.
+
+**One shared table.** `MarkSeen(hash)` and `Seen(hash)` say whether any plugin has seen this
+content before, by hash. Shared on purpose: a picture Birdwatch saved and a picture Kibble queued
+are the same picture if the bytes agree. First sighting wins.
+
+It is a journal and a notebook, not a database to design tables in. A plugin that needs its own
+tables keeps its own file in `DataDirectory`.
 
 ### `Explorer`
 

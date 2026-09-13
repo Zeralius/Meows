@@ -26,6 +26,8 @@
   "kibble.error.read": "Konnte {0} nicht lesen: {1}",
   "kibble.inbatches": "In Häppchen",
   "kibble.inbatches.tip": "Baut immer nur einen Teil der Kacheln. Bei einem Ordner mit Tausenden Dateien viel schneller.",
+  "kibble.journal.duplicate": "als Duplikat für {0} beiseitegelegt",
+  "kibble.journal.sent": "eingereiht für {0}",
   "kibble.keys": "1 bis 9 zum Senden, Leertaste zum Überspringen. Mit Strg- oder Umschalt-Klick mehrere auswählen.",
   "kibble.loadmore": "{0} weitere laden, {1} warten noch",
   "kibble.menu.open": "Öffnen",

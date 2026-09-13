@@ -39,8 +39,9 @@ public partial class App : Application
             var notifications = new NotificationCenter();
             var background = new BackgroundTaskService(notifications, log);
             var catalog = new PluginCatalog(log);
+            var store = new MeowsStore(settings.Root, message => log.Write("store", message));
             var viewModel = new MainWindowViewModel(
-                catalog, settings, log, notifications, background, text, preferences);
+                catalog, settings, log, notifications, background, text, preferences, store);
 
             viewModel.Initialize();
 

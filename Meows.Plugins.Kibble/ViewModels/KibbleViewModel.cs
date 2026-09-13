@@ -806,6 +806,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         _lastBatch.Clear();
         _lastBatch.Add(result);
         UndoCommand.RaiseCanExecuteChanged();
+        Journal(result, destination.Name);
 
         var next = NextAfter(file);
         Take([file]);
@@ -854,6 +855,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         _lastBatch.Clear();
         _lastBatch.Add(result);
         UndoCommand.RaiseCanExecuteChanged();
+        Journal(result, destination.Name);
 
         var next = NextAfterAll(files);
         Take(files);
@@ -900,6 +902,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         _lastBatch.Clear();
         _lastBatch.AddRange(results.Where(r => r.Moved));
         UndoCommand.RaiseCanExecuteChanged();
+        foreach (var moved in results.Where(r => r.Moved))
+            Journal(moved, destination.Name);
 
         var next = NextAfterAll(sent);
         Take(sent);
@@ -915,6 +919,24 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         _host.Log($"Queued {sent.Count} file(s) into {destination.Name}" +
                   (refused.Count > 0 ? $", {refused.Count} refused" : ""));
         RaiseGridState();
+    }
+
+    /// <summary>
+    /// What went where, written to the shared store. This is the record IDEAS.md said nothing
+    /// kept: it outlives the undo list, the tab, and the window.
+    /// </summary>
+    private void Journal(IntakeResult result, string group)
+    {
+        var kind = result.Outcome == IntakeOutcome.MovedToDuplicates ? "set-aside" : "sent";
+        var detail = result.Outcome == IntakeOutcome.MovedToDuplicates
+            ? _host.Text.Format("kibble.journal.duplicate", group)
+            : _host.Text.Format("kibble.journal.sent", group);
+
+        _host.Store.Record(kind, result.SourcePath, detail, new Dictionary<string, string>
+        {
+            ["group"] = group,
+            ["destination"] = result.Destination ?? "",
+        });
     }
 
     private bool CanSend(object? parameter) => _workspace is not null && Selected is not null;

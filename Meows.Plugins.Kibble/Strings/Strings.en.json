@@ -26,6 +26,8 @@
   "kibble.error.read": "Could not read {0}: {1}",
   "kibble.inbatches": "In batches",
   "kibble.inbatches.tip": "Build only a batch of tiles at a time. Much faster on a folder of thousands.",
+  "kibble.journal.duplicate": "set aside as a duplicate for {0}",
+  "kibble.journal.sent": "queued for {0}",
   "kibble.keys": "Press 1 to 9 to send, space to skip. Ctrl click or shift click to pick several.",
   "kibble.loadmore": "Load {0} more, {1} still waiting",
   "kibble.menu.open": "Open",

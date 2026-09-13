@@ -395,6 +395,12 @@ public sealed class PortionViewModel : ObservableObject, IDisposable
                     row.Outcome = _host.Text.Format("portion.outcome.done",
                         HeavyViewModel.Humanise(outcome.Before), HeavyViewModel.Humanise(outcome.After));
                     _host.Log($"Portion shrank {row.Heavy.Path}: {outcome.Before} -> {outcome.After} bytes");
+                    _host.Store.Record("shrunk", outcome.Path ?? row.Heavy.Path, row.Outcome, new Dictionary<string, string>
+                    {
+                        ["before"] = outcome.Before.ToString(),
+                        ["after"] = outcome.After.ToString(),
+                        ["group"] = row.GroupName,
+                    });
                 }
                 else
                 {

@@ -728,6 +728,12 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
                             target.Outcome = _host.Text["scruff.outcome.posted"];
                             target.OutcomeUrl = result.Url;
                             _host.Log($"Scruff posted to {target.Name}: {result.Url ?? "(no link)"}");
+                            _host.Store.Record("posted", target.Name, result.Url ?? draft.Title, new Dictionary<string, string>
+                            {
+                                ["url"] = result.Url ?? "",
+                                ["files"] = fitted.Count.ToString(),
+                                ["title"] = draft.Title,
+                            });
                         }
                         else
                         {

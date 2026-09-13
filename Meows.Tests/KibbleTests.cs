@@ -679,7 +679,7 @@ public sealed class KibbleSelectionTests
     [Fact]
     public void Sending_a_pick_of_three_queues_one_comic_and_empties_the_grid()
     {
-        var (model, _, temp, _) = Open("page1.png", "page2.png", "page10.png");
+        var (model, host, temp, _) = Open("page1.png", "page2.png", "page10.png");
         using var _t = temp;
 
         model.SetSelection([.. model.Incoming]);
@@ -692,6 +692,12 @@ public sealed class KibbleSelectionTests
         Assert.Equal(3, MediaRules.ComicPages(queued[0]).Count);
         Assert.Empty(model.Incoming);
         Assert.False(model.IsBundle);
+
+        // And it is written down where it outlives the undo list: one line, the comic, the group.
+        var line = Assert.Single(host.Store.Events);
+        Assert.Equal("sent", line.Kind);
+        Assert.Equal("Alpha", line.Data["group"]);
+        Assert.Equal(queued[0], line.Data["destination"]);
     }
 
     [Fact]

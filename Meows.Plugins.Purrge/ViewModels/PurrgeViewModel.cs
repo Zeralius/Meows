@@ -456,6 +456,9 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
 
         StatusMessage = _host.Text.Format("purrge.status.removed", what, outcome.Deleted);
         _host.Log($"Purrge {what}: {outcome.Deleted} deleted, {outcome.Failed} failed");
+
+        foreach (var file in gone)
+            _host.Store.Record("recycled", file.FullPath, what, new Dictionary<string, string> { ["size"] = file.File.Size.ToString() });
     }
 
     private async Task LoadThumbnailsAsync()

@@ -20,6 +20,9 @@
       <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
       <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
       <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.1" />
+      <!-- The shared store. The shell carries SQLite once, for every plugin, and plugins reach it
+           through the host rather than shipping a second copy. -->
+      <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
     </ItemGroup>
 
     <!-- One file per language, merged into the string table at startup. Plugins ship their own

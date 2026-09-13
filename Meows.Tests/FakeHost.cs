@@ -38,6 +38,43 @@ public sealed class FakeHost : IMeowsHost
 
     IMeowsHandoff IMeowsHost.Handoff => Handoffs;
 
+    /// <summary>Everything a plugin recorded, in memory, in order.</summary>
+    public FakeStore Store { get; } = new();
+
+    IMeowsStore IMeowsHost.Store => Store;
+
+    public sealed class FakeStore : IMeowsStore
+    {
+        private readonly Dictionary<string, string> _facts = new(StringComparer.Ordinal);
+        private readonly Dictionary<string, SeenRecord> _seen = new(StringComparer.Ordinal);
+        private long _next = 1;
+
+        public List<StoredEvent> Events { get; } = [];
+
+        public void Record(string kind, string subject, string? detail = null, IReadOnlyDictionary<string, string>? data = null) =>
+            Events.Add(new StoredEvent(_next++, DateTime.Now, "meows.test", kind, subject, detail,
+                data ?? new Dictionary<string, string>()));
+
+        public IReadOnlyList<StoredEvent> Recent(int limit = 100, string? kind = null) =>
+            Events.Where(e => kind is null || e.Kind == kind).Reverse().Take(limit).ToList();
+
+        public IReadOnlyList<StoredEvent> Search(string text, int limit = 100) =>
+            Events.Where(e => e.Subject.Contains(text, StringComparison.OrdinalIgnoreCase) ||
+                              (e.Detail?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false))
+                .Reverse().Take(limit).ToList();
+
+        public string? Get(string key) => _facts.GetValueOrDefault(key);
+
+        public void Set(string key, string value) => _facts[key] = value;
+
+        public void Remove(string key) => _facts.Remove(key);
+
+        public void MarkSeen(string hash, string? note = null) =>
+            _seen.TryAdd(hash, new SeenRecord(hash, "meows.test", DateTime.Now, note));
+
+        public SeenRecord? Seen(string hash) => _seen.GetValueOrDefault(hash);
+    }
+
     public sealed class FakeSecrets : IMeowsSecrets
     {
         private readonly Dictionary<string, string> _held = new(StringComparer.Ordinal);

@@ -1,0 +1,100 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Views.HistoryView"
+             x:DataType="vm:HistoryViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+        <Style Selector="Border.kind">
+            <Setter Property="Background" Value="{DynamicResource MeowsInset}" />
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="6,1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{m:Tr history.title}" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding CountText}" Classes="label" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <TextBox Text="{Binding Filter}"
+                             Watermark="{m:Tr history.filter}"
+                             Width="220"
+                             FontSize="11" />
+                    <ComboBox ItemsSource="{Binding PluginChoices}"
+                              SelectedItem="{Binding SelectedPluginChoice}"
+                              MinWidth="140"
+                              FontSize="11"
+                              VerticalAlignment="Center" />
+                    <Button Content="{m:Tr history.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource MeowsBar}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,1,0,0"
+                Padding="14,6">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <TextBlock Grid.Column="0" Classes="label" TextTrimming="CharacterEllipsis" Text="{Binding StorePath}" VerticalAlignment="Center" />
+                <Button Grid.Column="1"
+                        Content="{m:Tr history.reveal}"
+                        Command="{Binding RevealCommand}"
+                        FontSize="11" />
+            </Grid>
+        </Border>
+
+        <TextBlock DockPanel.Dock="Top"
+                   Margin="14,14,14,10"
+                   Opacity="0.45"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding IsEmpty}"
+                   Text="{m:Tr history.empty}" />
+
+        <ListBox ItemsSource="{Binding Lines}"
+                 SelectedItem="{Binding Selected}"
+                 Background="Transparent"
+                 BorderThickness="0"
+                 Margin="8">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:HistoryLineViewModel">
+                    <Grid ColumnDefinitions="110,110,Auto,*" ColumnSpacing="10" ToolTip.Tip="{Binding Subject}">
+                        <TextBlock Grid.Column="0" Text="{Binding When}" Classes="label" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" Text="{Binding Plugin}" FontSize="12" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                        <Border Grid.Column="2" Classes="kind">
+                            <TextBlock Text="{Binding Kind}" FontSize="10" FontWeight="SemiBold" />
+                        </Border>
+                        <StackPanel Grid.Column="3" Spacing="1" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding ShortSubject}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding Detail}" Classes="label" TextTrimming="CharacterEllipsis" IsVisible="{Binding HasDetail}" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+    </DockPanel>
+
+</UserControl>

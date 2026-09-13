@@ -63,8 +63,13 @@ The **Settings** tab has two choices, and both take effect as you make them:
   with the window open. It writes one entry to the per-user startup list, which needs no admin
   rights and shows up in the Task Manager's Startup tab like anything else.
 
-Settings and logs live in `%APPDATA%\Meows`, never inside the folder you unzipped, so deleting
-that folder resets Meows completely. `meows.log` there is also where a crash gets written, stack
+The **History** tab is what the plugins did, all of them in one list: what Kibble queued where,
+what Purrge recycled, what Scruff posted, what Portion shrank, which date Collar dealt with. It
+is kept in a small database beside the settings and survives the window closing, the plugin
+being switched off, and the undo list being emptied.
+
+Settings, logs and that history live in `%APPDATA%\Meows`, never inside the folder you unzipped,
+so deleting that folder resets Meows completely. `meows.log` there is also where a crash gets written, stack
 trace and all, which is worth attaching to a bug report. The log stays in English whatever the
 window is set to, because it is the thing that gets pasted into a bug report.
 

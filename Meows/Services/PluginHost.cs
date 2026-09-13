@@ -15,7 +15,8 @@ public sealed class PluginHost : IMeowsHost
         ShellLog log,
         NotificationCenter notifications,
         BackgroundTaskService background,
-        IMeowsHandoff? handoff = null)
+        IMeowsHandoff? handoff = null,
+        IMeowsStore? store = null)
     {
         PluginId = pluginId;
         _settings = settings;
@@ -26,11 +27,14 @@ public sealed class PluginHost : IMeowsHost
         Background = new PluginBackgroundWork(background, pluginId, displayName);
         Secrets = new SecretStore(DataDirectory);
         Handoff = handoff ?? NoHandoff.Instance;
+        Store = store ?? NoStore.Instance;
     }
 
     public IMeowsSecrets Secrets { get; }
 
     public IMeowsHandoff Handoff { get; }
+
+    public IMeowsStore Store { get; }
 
     public string PluginId { get; }
 

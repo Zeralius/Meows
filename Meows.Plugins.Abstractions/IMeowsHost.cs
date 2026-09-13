@@ -43,6 +43,12 @@ public interface IMeowsHost
 
     /// <summary>Hands work to another plugin. The default reaches nobody.</summary>
     IMeowsHandoff Handoff => NoHandoff.Instance;
+
+    /// <summary>
+    /// The shared store: a journal of what this plugin did, a notebook of small facts, and the
+    /// one table every plugin shares, the hashes anything has seen. The default keeps nothing.
+    /// </summary>
+    IMeowsStore Store => NoStore.Instance;
 }
 
 /// <summary>What a shell built against an older contract answers. Nothing is kept.</summary>

@@ -404,6 +404,7 @@ public sealed class CollarViewModel : ObservableObject, IDisposable
         var repeats = selected.Entry.RepeatMonths > 0;
 
         Dates.Handle(selected.Entry, DateTime.Today);
+        _host.Store.Record("handled", name, repeats ? selected.Entry.Due.ToString("yyyy-MM-dd") : null);
         Save();
         Rebuild();
         Selected = Entries.FirstOrDefault(e => e.Id == selected.Id);

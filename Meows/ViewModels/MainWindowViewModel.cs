@@ -18,6 +18,8 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly ShellPreferences _preferences;
     private readonly Dictionary<string, TabViewModel> _pluginTabs = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _sourceById = new(StringComparer.OrdinalIgnoreCase);
+    private readonly MeowsStore? _store;
+    private HistoryViewModel? _history;
 
     private TabViewModel? _selectedTab;
     private bool _isLogVisible;
@@ -31,8 +33,10 @@ public sealed class MainWindowViewModel : ObservableObject
         NotificationCenter notifications,
         BackgroundTaskService background,
         Translations text,
-        ShellPreferences preferences)
+        ShellPreferences preferences,
+        MeowsStore? store = null)
     {
+        _store = store;
         _catalog = catalog;
         _settings = settings;
         _log = log;
@@ -66,6 +70,7 @@ public sealed class MainWindowViewModel : ObservableObject
     /// </summary>
     private void Retranslate()
     {
+        _history?.Retranslate();
         foreach (var tab in Tabs)
             tab.Retranslate();
 
@@ -230,6 +235,11 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             DataContext = new SettingsViewModel(_settings, _text, _log, _preferences),
         }));
+        if (_store is not null)
+        {
+            _history = new HistoryViewModel(_store, PluginName);
+            Tabs.Add(new TabViewModel("shell.tab.history", "≡", new HistoryView { DataContext = _history }));
+        }
         SelectedTab = Tabs[0];
         Rescan();
     }
@@ -315,7 +325,7 @@ public sealed class MainWindowViewModel : ObservableObject
         try
         {
             var host = new PluginHost(entry.Id, entry.DisplayName, _settings, _log, _notifications, _background,
-                new HandoffService(entry.Id, CanReach, SendHandoff));
+                new HandoffService(entry.Id, CanReach, SendHandoff), _store?.For(entry.Id));
             _sourceById[entry.Id] = entry.DisplayName;
             var view = entry.Descriptor.Plugin!.CreateView(host);
             var tab = new TabViewModel(entry.DisplayName, entry.Icon, view);
@@ -353,6 +363,10 @@ public sealed class MainWindowViewModel : ObservableObject
 
         return MeowsText.Current.Format("plugins.missingfile", name);
     }
+
+    /// <summary>A plugin's name for its id, for the History tab; the id itself when it is not installed any more.</summary>
+    private string PluginName(string pluginId) =>
+        Plugins.FirstOrDefault(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? pluginId;
 
     /// <summary>Installed and loadable. Whether it takes a particular handoff is only known once it is open.</summary>
     private bool CanReach(string pluginId) =>
