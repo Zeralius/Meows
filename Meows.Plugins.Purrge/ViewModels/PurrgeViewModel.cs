@@ -28,7 +28,7 @@ public sealed class PurrgeSettings
     public bool TrustTimestamps { get; set; }
 }
 
-public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTarget
+public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable
 {
     private const int ThumbnailWidth = 96;
     private const int PreviewWidth = 720;
@@ -556,6 +556,53 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
     /// <summary>A folder, from Chonk usually: find the duplicates in it, now.</summary>
     public bool Accepts(Handoff handoff) =>
         handoff.Verb == HandoffVerbs.Folder && handoff.Paths.Count == 1 && Directory.Exists(handoff.Paths[0]);
+
+    /// <summary>
+    /// Ctrl+K reaching into the results: every copy in every set by name or folder, and every
+    /// finding of the last compare. Landing on one switches to that mode and selects it.
+    /// </summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var words = SearchWords.Split(query);
+        var hits = new List<SearchHit>();
+
+        foreach (var set in Sets)
+        {
+            foreach (var file in set.Files)
+            {
+                if (hits.Count >= limit)
+                    return hits;
+                if (!SearchWords.Match(words, file.FileName, file.Folder))
+                    continue;
+
+                var chosenSet = set;
+                var chosenFile = file;
+                hits.Add(new SearchHit(file.FileName, $"{set.Header} · {file.Folder}", () =>
+                {
+                    IsCompareMode = false;
+                    SelectedSet = chosenSet;
+                    SelectedFile = chosenFile;
+                }));
+            }
+        }
+
+        foreach (var finding in Compare.Findings)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!SearchWords.Match(words, finding.RelativePath))
+                continue;
+
+            var chosen = finding;
+            hits.Add(new SearchHit(finding.FileName, $"{finding.KindText} · {finding.RelativePath}", () =>
+            {
+                IsCompareMode = true;
+                Compare.Selected = chosen;
+            }));
+        }
+
+        return hits;
+    }
 
     public void Receive(Handoff handoff)
     {

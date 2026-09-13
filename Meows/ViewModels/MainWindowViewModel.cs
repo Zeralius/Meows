@@ -115,9 +115,54 @@ public sealed class MainWindowViewModel : ObservableObject
         yield return new PaletteItem("≣", text["palette.log"], "", () => IsLogVisible = !IsLogVisible);
     }
 
-    /// <summary>History lines matching what was typed, each one a jump to the file.</summary>
+    /// <summary>
+    /// What was typed, looked for inside every open plugin and then in the history. A plugin's
+    /// own hits come first: a file in Kibble's grid is more likely what is wanted than the line
+    /// saying it was queued last week. Each hit brings that tab to the front and lets the plugin
+    /// put the thing on screen.
+    /// </summary>
     private IEnumerable<PaletteItem> PaletteSearch(string query)
     {
+        foreach (var (id, tab) in _pluginTabs)
+        {
+            var searchable = (tab.Content as Avalonia.Controls.Control)?.DataContext as ISearchable
+                             ?? tab.Content as ISearchable;
+            if (searchable is null)
+                continue;
+
+            var entry = Plugins.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
+            var name = entry?.DisplayName ?? PluginName(id);
+            var glyph = entry?.Icon ?? "•";
+
+            IReadOnlyList<SearchHit> hits;
+            try
+            {
+                hits = searchable.Search(query, 6);
+            }
+            catch (Exception ex)
+            {
+                _log.Write("shell", $"'{name}' failed to search: {ex.Message}");
+                continue;
+            }
+
+            foreach (var hit in hits)
+            {
+                var open = hit.Open;
+                yield return new PaletteItem(glyph, hit.Title, hit.Detail.Length > 0 ? $"{name} · {hit.Detail}" : name, () =>
+                {
+                    SelectedTab = tab;
+                    try
+                    {
+                        open();
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Write("shell", $"'{name}' failed to open a search hit: {ex.Message}");
+                    }
+                });
+            }
+        }
+
         if (_store is null)
             yield break;
 

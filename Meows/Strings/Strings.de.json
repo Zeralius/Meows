@@ -17,7 +17,7 @@
   "language.name.de": "Deutsch",
   "language.name.en": "Englisch",
   "palette.goto": "Zu {0}",
-  "palette.hint": "Ein Plugin, eine Einstellung oder etwas aus dem Verlauf eintippen",
+  "palette.hint": "Tippe ein Plugin, eine Einstellung, etwas, das ein offenes Plugin gerade zeigt, oder eine Zeile aus dem Verlauf",
   "palette.language.de": "Deutsch",
   "palette.language.en": "English",
   "palette.language.system": "Sprache dem System folgen",

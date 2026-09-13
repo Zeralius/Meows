@@ -441,6 +441,31 @@ are the same picture if the bytes agree. First sighting wins.
 It is a journal and a notebook, not a database to design tables in. A plugin that needs its own
 tables keeps its own file in `DataDirectory`.
 
+### Being searched from Ctrl+K
+
+The command palette finds tabs, settings and history lines by itself. To let it reach into what
+your tab is showing, have your view model implement `ISearchable` (0.6.0):
+
+```csharp
+public IReadOnlyList<SearchHit> Search(string query, int limit)
+{
+    var words = SearchWords.Split(query);
+    return Items
+        .Where(i => SearchWords.Match(words, i.Name, i.Folder))
+        .Take(limit)
+        .Select(i => new SearchHit(i.Name, i.Folder, () => Selected = i))
+        .ToList();
+}
+```
+
+A hit is a title, a line of detail and what to do when Enter lands on it. The shell brings your
+tab to the front first, so `Open` only has to select or reveal the thing. It is called on the UI
+thread on every keystroke while the palette is open: answer from what is already in memory, never
+from the disk or the network, and use `SearchWords.Match` so every plugin answers to the same
+rule the palette ranks by. Only plugins that are switched on are asked, and a hit must never do
+anything but show: Kibble deliberately does not offer its destinations, because the one thing to
+do with a destination is send.
+
 ### `Explorer`
 
 Not on the host, since it needs nothing from the shell, but in the same assembly:

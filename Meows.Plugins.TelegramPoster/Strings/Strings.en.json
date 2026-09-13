@@ -95,6 +95,8 @@
   "tp.saved": "Saved config.json. Restart the bot for it to take effect",
   "tp.schedule.daily": "daily at {0} ± {1} min",
   "tp.schedule.interval": "every {0} min ± {1}",
+  "tp.search.group": "group, scheduled",
+  "tp.search.group.off": "group, not scheduled",
   "tp.setup.browse": "Browse…",
   "tp.setup.check": "Check",
   "tp.setup.clone": "Clone",

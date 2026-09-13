@@ -57,7 +57,7 @@ public sealed class KindViewModel(DeadKind kind, int count) : ObservableObject
     }
 }
 
-public sealed class MouserViewModel : ObservableObject, IDisposable
+public sealed class MouserViewModel : ObservableObject, IDisposable, ISearchable
 {
     private readonly IMeowsHost _host;
     private MouserSettings _settings;
@@ -414,6 +414,32 @@ public sealed class MouserViewModel : ObservableObject, IDisposable
         {
             _host.Log($"Could not save Mouser settings: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Raised when something outside the list wants one finding selected in it. The list is
+    /// multi-select and owns its selection, so the view listens and does the selecting.
+    /// </summary>
+    public event Action<FindingViewModel>? RevealRequested;
+
+    /// <summary>Ctrl+K reaching into the findings on screen, by name or folder.</summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var words = SearchWords.Split(query);
+        var hits = new List<SearchHit>();
+
+        foreach (var finding in Findings)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!SearchWords.Match(words, finding.Name, finding.Folder))
+                continue;
+
+            var chosen = finding;
+            hits.Add(new SearchHit(finding.Name, $"{finding.Detail} · {finding.Folder}", () => RevealRequested?.Invoke(chosen)));
+        }
+
+        return hits;
     }
 
     public void Dispose()

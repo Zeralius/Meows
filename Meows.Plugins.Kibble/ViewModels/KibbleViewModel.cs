@@ -92,7 +92,7 @@ public sealed record PageOrderOption(PageOrder Value, string Key) : ILabelledOpt
     public override string ToString() => Label.Value;
 }
 
-public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTarget
+public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable
 {
     private const int ThumbnailWidth = 150;
     private const int PreviewWidth = 720;
@@ -725,6 +725,51 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
     /// <summary>A folder to go through, from Chonk usually. Files are not taken: Kibble sorts a folder.</summary>
     public bool Accepts(Handoff handoff) =>
         handoff.Verb == HandoffVerbs.Folder && handoff.Paths.Count == 1 && Directory.Exists(handoff.Paths[0]);
+
+    /// <summary>
+    /// Ctrl+K reaching into the grid: everything waiting in the folder, not only the tiles built
+    /// so far. Landing on a file builds the window down to it. The destinations are not offered,
+    /// because the only thing to do with one is send, and a search must never send.
+    /// </summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var words = SearchWords.Split(query);
+        var hits = new List<SearchHit>();
+
+        foreach (var file in _pending)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!SearchWords.Match(words, file.Name))
+                continue;
+
+            var path = file.Path;
+            hits.Add(new SearchHit(file.Name, _folderName, () => ShowFile(path)));
+        }
+
+        return hits;
+    }
+
+    /// <summary>Selects a waiting file, building tiles down to it first if it is past the window.</summary>
+    private void ShowFile(string path)
+    {
+        var index = _pending.FindIndex(f => string.Equals(f.Path, path, StringComparison.OrdinalIgnoreCase));
+        if (index < 0)
+            return;
+
+        if (index >= Incoming.Count)
+        {
+            _loadedTarget = ClampTarget(index + 1);
+            Rebuild();
+        }
+
+        var tile = Incoming.FirstOrDefault(f => string.Equals(f.Path, path, StringComparison.OrdinalIgnoreCase));
+        if (tile is null)
+            return;
+
+        SetSelection([tile]);
+        Selected = tile;
+    }
 
     public void Receive(Handoff handoff)
     {

@@ -147,7 +147,7 @@ public sealed class HeavyViewModel : ObservableObject, IDisposable
     public void Dispose() => Thumbnail = null;
 }
 
-public sealed class PortionViewModel : ObservableObject, IDisposable
+public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchable
 {
     private const int ThumbnailWidth = 56;
     private const int PreviewWidth = 720;
@@ -517,6 +517,26 @@ public sealed class PortionViewModel : ObservableObject, IDisposable
         {
             _host.Log($"Could not save Portion settings: {ex.Message}");
         }
+    }
+
+    /// <summary>Ctrl+K reaching into the findings: a file the bot would fail on, by name or group.</summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var words = SearchWords.Split(query);
+        var hits = new List<SearchHit>();
+
+        foreach (var heavy in Heavies)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!SearchWords.Match(words, heavy.FileName, heavy.GroupName))
+                continue;
+
+            var chosen = heavy;
+            hits.Add(new SearchHit(heavy.FileName, $"{heavy.GroupName} · {heavy.SizeText}", () => Selected = chosen));
+        }
+
+        return hits;
     }
 
     public void Dispose()

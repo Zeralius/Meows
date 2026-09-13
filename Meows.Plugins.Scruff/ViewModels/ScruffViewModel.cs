@@ -55,7 +55,7 @@ public sealed class Choice(string key, string tag)
     public TranslatedString Label { get; } = MeowsText.Entry(key);
 }
 
-public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTarget
+public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable
 {
     private static string DefaultOutput() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Scruffed");
@@ -1122,6 +1122,26 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
     /// disposes its DataContext itself. The second call has to be a no-op rather than a throw
     /// from a token source that is already gone.
     /// </summary>
+    /// <summary>Ctrl+K reaching into the pile: a picture by name. Landing on one selects it.</summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var words = SearchWords.Split(query);
+        var hits = new List<SearchHit>();
+
+        foreach (var file in Files)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!SearchWords.Match(words, file.Name))
+                continue;
+
+            var chosen = file;
+            hits.Add(new SearchHit(file.Name, System.IO.Path.GetDirectoryName(file.Path) ?? "", () => Selected = chosen));
+        }
+
+        return hits;
+    }
+
     public void Dispose()
     {
         if (_disposed)

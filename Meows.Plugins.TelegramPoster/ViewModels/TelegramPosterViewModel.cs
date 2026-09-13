@@ -9,7 +9,7 @@ using Meows.Bot;
 
 namespace Meows.Plugins.TelegramPoster.ViewModels;
 
-public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
+public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISearchable
 {
     private const int ThumbnailWidth = 150;
     private const int PreviewWidth = 720;
@@ -740,6 +740,40 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(MediaCountText));
         OnPropertyChanged(nameof(NextUpMessage));
         OnPropertyChanged(nameof(HasNextUpMessage));
+    }
+
+    /// <summary>
+    /// Ctrl+K reaching into the bot: a group by name, and the files in whichever queue is open.
+    /// Landing on a group selects it; landing on a file selects it in the list.
+    /// </summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var words = SearchWords.Split(query);
+        var hits = new List<SearchHit>();
+
+        foreach (var group in Groups)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!SearchWords.Match(words, group.Name))
+                continue;
+
+            var chosen = group;
+            hits.Add(new SearchHit(group.Name, group.IsEnabled ? _host.Text["tp.search.group"] : _host.Text["tp.search.group.off"], () => SelectedGroup = chosen));
+        }
+
+        foreach (var item in MediaItems)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!SearchWords.Match(words, item.FileName))
+                continue;
+
+            var chosen = item;
+            hits.Add(new SearchHit(item.FileName, SelectedGroup?.Name ?? "", () => SelectedMedia = chosen));
+        }
+
+        return hits;
     }
 
     public void Dispose()

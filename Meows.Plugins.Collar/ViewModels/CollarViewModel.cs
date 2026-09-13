@@ -207,7 +207,7 @@ public sealed class EntryViewModel : ObservableObject
     internal void Reread() => OnEverythingChanged();
 }
 
-public sealed class CollarViewModel : ObservableObject, IDisposable
+public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable
 {
     /// <summary>The condition key. One per plugin scope, so it replaces rather than stacks.</summary>
     private const string DueKey = "due";
@@ -575,6 +575,26 @@ public sealed class CollarViewModel : ObservableObject, IDisposable
         {
             _host.Log($"Could not save Collar settings: {ex.Message}");
         }
+    }
+
+    /// <summary>Ctrl+K reaching into the dates: by title, kind or the file attached. Landing on one selects it.</summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var words = SearchWords.Split(query);
+        var hits = new List<SearchHit>();
+
+        foreach (var entry in Entries)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!SearchWords.Match(words, entry.Shown, entry.KindText, entry.FileName))
+                continue;
+
+            var chosen = entry;
+            hits.Add(new SearchHit(entry.Shown, $"{entry.KindText} · {entry.DueText}", () => Selected = chosen));
+        }
+
+        return hits;
     }
 
     public void Dispose()

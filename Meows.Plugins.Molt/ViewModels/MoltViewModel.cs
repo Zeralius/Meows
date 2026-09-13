@@ -49,7 +49,7 @@ public sealed class SheddableViewModel(Sheddable item) : ObservableObject
     }
 }
 
-public sealed class MoltViewModel : ObservableObject, IDisposable
+public sealed class MoltViewModel : ObservableObject, IDisposable, ISearchable
 {
     private readonly IMeowsHost _host;
     private MoltSettings _settings;
@@ -340,6 +340,29 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
         {
             _host.Log($"Could not save Molt settings: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Ctrl+K reaching into what can be shed, by name or by what it is. Nothing in Molt is
+    /// selected, so landing on one opens its folder, which is what the row's own button does.
+    /// </summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var words = SearchWords.Split(query);
+        var hits = new List<SearchHit>();
+
+        foreach (var item in Items)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!SearchWords.Match(words, item.Name, item.What, item.Where))
+                continue;
+
+            var chosen = item;
+            hits.Add(new SearchHit(item.Name, $"{item.What} · {item.SizeText}", () => ExploreCommand.Execute(chosen)));
+        }
+
+        return hits;
     }
 
     public void Dispose()

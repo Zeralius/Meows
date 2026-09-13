@@ -173,7 +173,7 @@ public sealed class GroupSummaryViewModel(GroupConfig group, int queued, DateTim
     public bool IsLow { get; } = QueueRunway.Days(group, queued) is { } days && days < QueueRunway.LowDays;
 }
 
-public sealed class PerchViewModel : ObservableObject, IDisposable
+public sealed class PerchViewModel : ObservableObject, IDisposable, ISearchable
 {
     private const int ThumbnailWidth = 56;
     private const int PreviewWidth = 720;
@@ -583,6 +583,26 @@ public sealed class PerchViewModel : ObservableObject, IDisposable
     /// disposes its DataContext itself. The second call has to be a no-op rather than a throw
     /// from a token source that is already gone.
     /// </summary>
+    /// <summary>Ctrl+K reaching into the timeline: a slot by the file going out or the group it goes to.</summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var words = SearchWords.Split(query);
+        var hits = new List<SearchHit>();
+
+        foreach (var slot in Days.SelectMany(day => day.Slots))
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!slot.IsPost || !SearchWords.Match(words, slot.WhatText, slot.GroupName))
+                continue;
+
+            var chosen = slot;
+            hits.Add(new SearchHit(slot.WhatText, $"{slot.GroupName} · {slot.Slot.At:ddd HH:mm}", () => Selected = chosen));
+        }
+
+        return hits;
+    }
+
     public void Dispose()
     {
         if (_disposed)

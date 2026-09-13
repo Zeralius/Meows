@@ -67,8 +67,9 @@ The **Settings** tab has two choices, and both take effect as you make them:
   with the window open. It writes one entry to the per-user startup list, which needs no admin
   rights and shows up in the Task Manager's Startup tab like anything else.
 
-**Ctrl+K** opens the command palette: type a plugin under either of its names, a setting, or a
-word from the history, and Enter does it. Every plugin is named after the cat; each also says what
+**Ctrl+K** opens the command palette: type a plugin under either of its names, a setting, a
+word from the history, or anything an open plugin is showing, a file in Kibble's grid, a folder
+Chonk measured, a date in Collar, a payee in Tin, and Enter lands on it. Every plugin is named after the cat; each also says what
 it is in plain words, and the paw in the bottom bar, or the Settings tab, picks which name is on
 the tabs and cards: Purrge or Duplicates, Chonk or Disk usage, Kibble or Sorting.
 

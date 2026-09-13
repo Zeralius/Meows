@@ -17,7 +17,7 @@
   "language.name.de": "German",
   "language.name.en": "English",
   "palette.goto": "Go to {0}",
-  "palette.hint": "Type a plugin, a setting, or something from the history",
+  "palette.hint": "Type a plugin, a setting, something an open plugin is showing, or a line from the history",
   "palette.language.de": "Deutsch",
   "palette.language.en": "English",
   "palette.language.system": "Follow the system language",

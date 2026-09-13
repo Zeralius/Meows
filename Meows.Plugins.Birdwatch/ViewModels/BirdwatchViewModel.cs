@@ -148,7 +148,7 @@ public sealed class MediaViewModel : ObservableObject, IDisposable
     public void Dispose() => Thumbnail = null;
 }
 
-public sealed class BirdwatchViewModel : ObservableObject, IDisposable
+public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearchable
 {
     /// <summary>
     /// Shared with Saucer on purpose. Both end their job by dropping a file where Kibble will
@@ -801,6 +801,27 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
         {
             _host.Log($"Could not save Birdwatch settings: {ex.Message}");
         }
+    }
+
+    /// <summary>Ctrl+K reaching into the pictures loaded: by handle, alt text or the post's words.</summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var words = SearchWords.Split(query);
+        var hits = new List<SearchHit>();
+
+        foreach (var media in Shown)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!SearchWords.Match(words, media.AuthorHandle, media.Alt, media.Post.Text))
+                continue;
+
+            var chosen = media;
+            var title = media.HasAlt ? media.Alt : media.Post.Text.Length > 0 ? media.Post.Text : media.AuthorHandle;
+            hits.Add(new SearchHit(title, $"@{media.AuthorHandle} · {media.WhenText}", () => Selected = chosen));
+        }
+
+        return hits;
     }
 
     public void Dispose()

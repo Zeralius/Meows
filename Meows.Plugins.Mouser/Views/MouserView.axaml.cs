@@ -16,7 +16,19 @@ public partial class MouserView : UserControl, IDisposable
     {
         InitializeComponent();
         this.FindControl<Button>("PickFolderButton")!.Click += OnPickFolder;
-        this.FindControl<ListBox>("FindingList")!.SelectionChanged += OnSelectionChanged;
+        var list = this.FindControl<ListBox>("FindingList")!;
+        list.SelectionChanged += OnSelectionChanged;
+
+        // The palette landing on a finding: select just that one and bring it into view.
+        DataContextChanged += (_, _) =>
+        {
+            if (Model is { } model)
+                model.RevealRequested += finding =>
+                {
+                    list.SelectedItem = finding;
+                    list.ScrollIntoView(finding);
+                };
+        };
 
         // The visual tree, not the logical one: TopLevel is still null when the logical tree
         // attaches, so hooking there gets you a handler on nothing.

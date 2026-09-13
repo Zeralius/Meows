@@ -74,7 +74,7 @@ public sealed class BucketViewModel(string name, string key, int count, long siz
     }
 }
 
-public sealed class LitterViewModel : ObservableObject, IDisposable
+public sealed class LitterViewModel : ObservableObject, IDisposable, ISearchable
 {
     private readonly IMeowsHost _host;
     private LitterSettings _settings;
@@ -395,6 +395,32 @@ public sealed class LitterViewModel : ObservableObject, IDisposable
         {
             _host.Log($"Could not save Litter settings: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Raised when something outside the list wants one item selected in it. The list is
+    /// multi-select and owns its selection, so the view listens and does the selecting.
+    /// </summary>
+    public event Action<ItemViewModel>? RevealRequested;
+
+    /// <summary>Ctrl+K reaching into the downloads on screen, by name or kind.</summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var words = SearchWords.Split(query);
+        var hits = new List<SearchHit>();
+
+        foreach (var item in Items)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!SearchWords.Match(words, item.Name, item.KindText))
+                continue;
+
+            var chosen = item;
+            hits.Add(new SearchHit(item.Name, $"{item.KindText} · {item.SizeText} · {item.AgeText}", () => RevealRequested?.Invoke(chosen)));
+        }
+
+        return hits;
     }
 
     public void Dispose()

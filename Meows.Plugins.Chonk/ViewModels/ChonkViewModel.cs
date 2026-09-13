@@ -103,7 +103,7 @@ public sealed class CrumbViewModel(DiskEntry entry, bool isLast) : ObservableObj
     public bool IsLast { get; } = isLast;
 }
 
-public sealed class ChonkViewModel : ObservableObject, IDisposable
+public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable
 {
     private readonly IMeowsHost _host;
     private ChonkSettings _settings;
@@ -650,6 +650,53 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(CurrentSizeText));
         OnPropertyChanged(nameof(CurrentPath));
         OnPropertyChanged(nameof(HasResults));
+    }
+
+    /// <summary>
+    /// Ctrl+K reaching into the last measurement: every folder and listed file under the scanned
+    /// root, wherever it sits, biggest first among the matches. Landing on one shows the level it
+    /// is in and selects it, so the card says what it is.
+    /// </summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var root = Current;
+        while (root?.Parent is not null)
+            root = root.Parent;
+        if (root is null)
+            return [];
+
+        var words = SearchWords.Split(query);
+        var matches = new List<DiskEntry>();
+        var stack = new Stack<DiskEntry>();
+        stack.Push(root);
+
+        while (stack.Count > 0)
+        {
+            var entry = stack.Pop();
+            foreach (var child in entry.Children)
+            {
+                if (child.Kind != DiskEntryKind.SmallFiles && SearchWords.Match(words, child.Name))
+                    matches.Add(child);
+                if (child.IsFolder)
+                    stack.Push(child);
+            }
+        }
+
+        return matches
+            .OrderByDescending(e => e.Size)
+            .Take(limit)
+            .Select(e => new SearchHit(e.Name, $"{DiskScan.Humanise(e.Size)} · {e.Parent?.Path}", () => Reveal(e)))
+            .ToList();
+    }
+
+    /// <summary>Shows the level an entry sits in and selects it there.</summary>
+    private void Reveal(DiskEntry entry)
+    {
+        if (entry.Parent is not { } parent)
+            return;
+
+        Show(parent);
+        Selected = Entries.FirstOrDefault(row => ReferenceEquals(row.Entry, entry));
     }
 
     private void Drill(DiskEntry? entry)

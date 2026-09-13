@@ -95,6 +95,8 @@
   "tp.saved": "config.json gespeichert. Damit es greift, den Bot neu starten",
   "tp.schedule.daily": "täglich um {0} ± {1} Min",
   "tp.schedule.interval": "alle {0} Min ± {1}",
+  "tp.search.group": "Gruppe, eingeplant",
+  "tp.search.group.off": "Gruppe, nicht eingeplant",
   "tp.setup.browse": "Durchsuchen…",
   "tp.setup.check": "Prüfen",
   "tp.setup.clone": "Klonen",

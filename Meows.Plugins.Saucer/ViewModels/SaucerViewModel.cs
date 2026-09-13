@@ -98,7 +98,7 @@ public sealed class ClipViewModel : ObservableObject, IDisposable
     public void Dispose() => Thumbnail = null;
 }
 
-public sealed class SaucerViewModel : ObservableObject, IDisposable
+public sealed class SaucerViewModel : ObservableObject, IDisposable, ISearchable
 {
     /// <summary>How many clippings to keep. Enough to scroll back through, not enough to hoard.</summary>
     private const int Keep = 40;
@@ -415,6 +415,26 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable
         {
             _host.Log($"Could not save Saucer settings: {ex.Message}");
         }
+    }
+
+    /// <summary>Ctrl+K reaching into the clips: anything copied as text, by what it says.</summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var words = SearchWords.Split(query);
+        var hits = new List<SearchHit>();
+
+        foreach (var clip in Clips)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (clip.IsImage || !SearchWords.Match(words, clip.Clipping.Text))
+                continue;
+
+            var chosen = clip;
+            hits.Add(new SearchHit(clip.Summary, clip.TimeText, () => Selected = chosen));
+        }
+
+        return hits;
     }
 
     public void Dispose()

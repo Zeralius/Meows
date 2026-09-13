@@ -342,7 +342,7 @@ public sealed class BucketViewModel(string nameKey, string key, int count, strin
     internal void Reread() => OnEverythingChanged();
 }
 
-public sealed class TinViewModel : ObservableObject, IDisposable
+public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable
 {
     public const string BucketAll = "all";
     public const string BucketUp = "up";
@@ -1133,6 +1133,26 @@ public sealed class TinViewModel : ObservableObject, IDisposable
         {
             _host.Log($"Could not save Tin settings: {ex.Message}");
         }
+    }
+
+    /// <summary>Ctrl+K reaching into the rows on screen: a payee by name. Landing on one selects it.</summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit)
+    {
+        var words = SearchWords.Split(query);
+        var hits = new List<SearchHit>();
+
+        foreach (var row in Rows)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!SearchWords.Match(words, row.Name))
+                continue;
+
+            var chosen = row;
+            hits.Add(new SearchHit(row.Name, row.RiseText, () => Selected = chosen));
+        }
+
+        return hits;
     }
 
     public void Dispose() => _language.Dispose();

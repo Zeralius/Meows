@@ -16,7 +16,19 @@ public partial class LitterView : UserControl, IDisposable
     {
         InitializeComponent();
         this.FindControl<Button>("PickFolderButton")!.Click += OnPickFolder;
-        this.FindControl<ListBox>("ItemList")!.SelectionChanged += OnSelectionChanged;
+        var list = this.FindControl<ListBox>("ItemList")!;
+        list.SelectionChanged += OnSelectionChanged;
+
+        // The palette landing on an item: select just that one and bring it into view.
+        DataContextChanged += (_, _) =>
+        {
+            if (Model is { } model)
+                model.RevealRequested += item =>
+                {
+                    list.SelectedItem = item;
+                    list.ScrollIntoView(item);
+                };
+        };
 
         AttachedToVisualTree += (_, _) => HookKeys();
         DetachedFromVisualTree += (_, _) => UnhookKeys();
