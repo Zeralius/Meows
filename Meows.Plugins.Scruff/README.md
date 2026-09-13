@@ -2,9 +2,9 @@
 
 *Takes it by the scruff and tidies it up.*
 
-Pictures go in, the metadata comes out, and what is left goes where you say: posted to Bluesky
-and Mastodon from the tab, or handed to FurAffinity, X, Instagram and Reddit with the files in a
-folder and every field on a sheet with a copy button beside it.
+Pictures go in, the metadata comes out, and what is left goes where you say: posted to Bluesky,
+Mastodon, Discord, DeviantArt and Tumblr from the tab, or handed to FurAffinity, X, Instagram and
+Reddit with the files in a folder and every field on a sheet with a copy button beside it.
 
 Plugin id `meows.scruff`.
 
@@ -52,6 +52,9 @@ Write the post once. A title, the text, the tags, and a rating. Each place gets 
 |---|---|---|---|---|
 | **Bluesky** | first line | body | `#Hashtags`, as facets | self label: `sexual` or `porn` |
 | **Mastodon** | first line | body | `#Hashtags` | the sensitive flag |
+| **Discord** | first line | message | – | pictures marked as spoilers |
+| **DeviantArt** | title box, 50 at most | artist's comments | `under_scored`, letters and digits only | mature level: moderate nudity, or strict sexual |
+| **Tumblr** | a heading block | a text block | as written, commas apart | a community label; explicit is refused |
 | **FurAffinity** | title box | description box | `under_scored keywords` | a reminder on the sheet |
 | **X** | first line | body | `#Hashtags` | a reminder on the sheet |
 | **Instagram** | first line | caption | `#Hashtags`, thirty at most | adult is refused outright |
@@ -59,8 +62,8 @@ Write the post once. A title, the text, the tags, and a rating. Each place gets 
 
 Tags are comma separated, or space separated when none of them have spaces. "big cat" becomes
 `#BigCat` where hashtags are used, because a space ends a hashtag and a capital at each word is
-what screen readers can still read, and `big_cat` on FurAffinity, because that is how its search
-spells them.
+what screen readers can still read, `big_cat` on FurAffinity and DeviantArt, because that is how
+their search spells them, and stays `big cat` on Tumblr, which is the one place that lets it.
 
 Every ticked place shows what it would be sent as you type, with a count against its limit and,
 when something is in the way, why. Too many pictures for Bluesky is said rather than quietly cut
@@ -86,6 +89,36 @@ write scope. The tab reads how long a post may be on that server when you sign i
 raise it well past 500. Each picture is uploaded, waited for if the server is still processing
 it, and attached with its alt text. The visibility is one dropdown, and every post carries an
 idempotency key, so a retry after a timeout cannot post twice.
+
+**Discord** wants a webhook URL, made under the channel's Integrations. That URL is the whole
+key to the channel, so it is sealed like a password and the card shows the webhook's name. The
+message is the title and text; Discord has no hashtags, so the tags stay off it. Each picture is
+an attachment with its alt text as the description, ten at most, and a rated post has them go up
+as spoilers, which is the only cover Discord has outside an age-gated channel.
+
+**DeviantArt** and **Tumblr** both sign in through the browser. Neither hands out tokens the way
+Mastodon does; each wants an app of your own, registered under your account in a minute, and the
+card takes that app's id and secret. *Sign in* opens the browser on the service, you say yes
+there, and the browser comes back to Meows on `http://localhost:41597/callback`, which is the
+address to register the app with, spelled exactly like that. What comes back is a token pair, and
+the short one is renewed from the long one without asking again. Every renewal is sealed away as
+it arrives, because DeviantArt hands out a new long token with each renewal and the old one stops
+working.
+
+- DeviantArt goes through Sta.sh: the file goes up with its title, comments and tags, and the
+  Sta.sh item is published as a deviation. Each picture is its own deviation, as on FurAffinity,
+  titled *(1/3)* onward when there are several. The rating becomes the mature level, moderate
+  with nudity for Mature and strict with sexual for Adult, and every deviation goes up with
+  *noai* set, which can be changed on the site. Register the app under
+  [deviantart.com/developers/apps](https://www.deviantart.com/developers/apps) with the grant
+  type *Authorization Code* and the redirect URL in the whitelist.
+- Tumblr gets one post in its block format: the pictures first, each with its alt text, then the
+  title as a heading and the text under it. Tags go as written; a rated post gets a community
+  label for sexual themes; explicit work is refused, since Tumblr does not allow it and the label
+  does not cover it. An account can have several blogs and the card has a chooser for them once
+  signed in, starting on the primary. Register the app under
+  [tumblr.com/oauth/apps](https://www.tumblr.com/oauth/apps); the consumer key is the client id,
+  the consumer secret the secret, and the redirect URL goes in *OAuth2 redirect URLs*.
 
 Signing in checks the credential against the service there and then, so a typo is found at the
 moment it is typed rather than at the first post.
@@ -116,7 +149,9 @@ the service offers something revocable instead.
 Each credential is a file of its own under `%APPDATA%\Meows\plugins\meows.scruff\secrets\`,
 sealed with Windows data protection for the current user. It opens on this machine, for this
 account, and is noise anywhere else. **Forget** on the card deletes it. Only the account name is
-kept in the ordinary settings, because it is shown on the card and is not a secret.
+kept in the ordinary settings, because it is shown on the card and is not a secret. For
+DeviantArt and Tumblr the sealed file holds the app's id and secret together with the tokens,
+since neither half is any use without the other.
 
 ## What it does not do
 

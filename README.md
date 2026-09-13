@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="Meows/Assets/meows.png" width="128" alt="The Meows cat">
+</p>
+
 # Meows
 
 [![CI](https://github.com/Zeralius/Meows/actions/workflows/ci.yml/badge.svg)](https://github.com/Zeralius/Meows/actions/workflows/ci.yml)
@@ -22,7 +26,7 @@ to install.
 | **[Birdwatch](Meows.Plugins.Birdwatch/README.md)** | Watches Bluesky accounts and saves their pictures into that same folder, with no login needed |
 | **[Tin](Meows.Plugins.Tin/README.md)** | Reads the exports and statements your bank hands out, CSV or PDF, and says what is recurring, what quietly went up, and what is still going out for something you stopped using |
 | **[Collar](Meows.Plugins.Collar/README.md)** | Keeps the dates that matter and the paper behind them, and says so on the notification surface when one comes round |
-| **[Scruff](Meows.Plugins.Scruff/README.md)** | Takes the metadata out of pictures, posts them to Bluesky and Mastodon, and hands them to FurAffinity, X, Instagram and Reddit with every field spelled that site's way |
+| **[Scruff](Meows.Plugins.Scruff/README.md)** | Takes the metadata out of pictures, posts them to Bluesky, Mastodon, Discord, DeviantArt and Tumblr, and hands them to FurAffinity, X, Instagram and Reddit with every field spelled that site's way |
 | **[Kibble](Meows.Plugins.Kibble/README.md)** | Sorts a folder of new material into queues, one key press at a time, and can bundle a pick into a comic |
 | **[Perch](Meows.Plugins.Perch/README.md)** | One timeline of what the posting bot will send and when, every group merged, out as far as the queues last |
 | **[Portion](Meows.Plugins.Portion/README.md)** | Finds what the bot will fail on in every queue before it fails at night, and shrinks the pictures that can be shrunk |

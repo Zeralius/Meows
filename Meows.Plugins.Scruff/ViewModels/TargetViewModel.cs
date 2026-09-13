@@ -63,6 +63,13 @@ public sealed class TargetViewModel : ObservableObject
 
     public bool IsReddit => Target is RedditTarget;
 
+    public bool IsDiscord => Target is DiscordTarget;
+
+    /// <summary>DeviantArt and Tumblr: an app id and secret, and the browser does the rest.</summary>
+    public bool IsOAuth => Target is OAuthTarget;
+
+    public bool IsTumblr => Target is TumblrTarget;
+
     public bool IsEnabled
     {
         get => _isEnabled;

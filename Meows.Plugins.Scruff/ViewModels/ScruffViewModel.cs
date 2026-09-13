@@ -32,6 +32,15 @@ public sealed class ScruffSettings
 
     public string? MastodonAccount { get; set; }
 
+    public string? DeviantArtAccount { get; set; }
+
+    public string? TumblrAccount { get; set; }
+
+    /// <summary>The blogs the Tumblr account had at sign in, primary first, and which gets the post.</summary>
+    public List<string> TumblrBlogs { get; set; } = [];
+
+    public string TumblrBlog { get; set; } = "";
+
     public string RedditSubreddit { get; set; } = "";
 }
 
@@ -57,6 +66,9 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
     private readonly ScruffSettings _settings;
     private readonly BlueskyTarget _bluesky;
     private readonly MastodonTarget _mastodon;
+    private readonly DiscordTarget _discord;
+    private readonly DeviantArtTarget _deviantart;
+    private readonly TumblrTarget _tumblr;
     private readonly RedditTarget _reddit;
     private readonly LanguageWatch _language;
     private readonly CancellationTokenSource _closing = new();
@@ -94,9 +106,23 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
             MaxCharacters = _settings.MastodonMaxCharacters,
             Visibility = _settings.MastodonVisibility,
         };
+        _discord = new DiscordTarget(_http) { Webhook = LoadDiscord() };
+        _deviantart = new DeviantArtTarget(_http) { Account = _settings.DeviantArtAccount };
+        _tumblr = new TumblrTarget(_http)
+        {
+            Account = _settings.TumblrAccount,
+            Blogs = _settings.TumblrBlogs,
+            Blog = _settings.TumblrBlog,
+        };
+        LoadOAuth(_deviantart);
+        LoadOAuth(_tumblr);
         _reddit = new RedditTarget { Subreddit = _settings.RedditSubreddit };
 
-        IPostTarget[] all = [_bluesky, _mastodon, new FurAffinityTarget(), new XTarget(), new InstagramTarget(), _reddit];
+        IPostTarget[] all =
+        [
+            _bluesky, _mastodon, _discord, _deviantart, _tumblr,
+            new FurAffinityTarget(), new XTarget(), new InstagramTarget(), _reddit,
+        ];
         foreach (var target in all)
             Targets.Add(new TargetViewModel(target, _settings.EnabledTargets.Contains(target.Id), OnTargetsChanged));
 
@@ -248,6 +274,22 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
                 return;
             _settings.MastodonVisibility = value.Tag;
             _mastodon.Visibility = value.Tag;
+            Save();
+            OnPropertyChanged();
+        }
+    }
+
+    public IReadOnlyList<string> TumblrBlogs => _tumblr.Blogs;
+
+    public string TumblrBlog
+    {
+        get => _tumblr.Blog;
+        set
+        {
+            if (value is null || _tumblr.Blog == value)
+                return;
+            _tumblr.Blog = value;
+            _settings.TumblrBlog = value;
             Save();
             OnPropertyChanged();
         }
@@ -817,6 +859,62 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
         public string Token { get; set; } = "";
     }
 
+    private sealed class StoredDiscord
+    {
+        public string Url { get; set; } = "";
+
+        public string Name { get; set; } = "";
+
+        public string GuildId { get; set; } = "";
+
+        public string ChannelId { get; set; } = "";
+    }
+
+    /// <summary>The app and the tokens together, since neither is any use without the other.</summary>
+    private sealed class StoredOAuth
+    {
+        public string ClientId { get; set; } = "";
+
+        public string ClientSecret { get; set; } = "";
+
+        public string AccessToken { get; set; } = "";
+
+        public string? RefreshToken { get; set; }
+
+        public DateTimeOffset ExpiresAt { get; set; }
+    }
+
+    private DiscordWebhook? LoadDiscord()
+    {
+        var stored = Read<StoredDiscord>("discord");
+        return stored is { Url.Length: > 0 }
+            ? new DiscordWebhook(stored.Url, stored.Name, stored.GuildId, stored.ChannelId)
+            : null;
+    }
+
+    /// <summary>
+    /// Gives an OAuth place its app and tokens back, and the pen to write them again with,
+    /// since a renewed token has to be sealed away the moment it arrives.
+    /// </summary>
+    private void LoadOAuth(OAuthTarget target)
+    {
+        target.Persist = (app, tokens) => _secrets.Set(target.Id, JsonSerializer.Serialize(new StoredOAuth
+        {
+            ClientId = app.ClientId,
+            ClientSecret = app.ClientSecret,
+            AccessToken = tokens.AccessToken,
+            RefreshToken = tokens.RefreshToken,
+            ExpiresAt = tokens.ExpiresAt,
+        }));
+
+        var stored = Read<StoredOAuth>(target.Id);
+        if (stored is { ClientId.Length: > 0, ClientSecret.Length: > 0 })
+        {
+            target.App = new OAuthApp(stored.ClientId, stored.ClientSecret);
+            target.Tokens = new OAuthTokens(stored.AccessToken, stored.RefreshToken, stored.ExpiresAt);
+        }
+    }
+
     private BlueskyLogin? LoadBluesky()
     {
         var stored = Read<StoredBluesky>("bluesky");
@@ -853,7 +951,9 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
     /// </summary>
     public async Task SignInAsync(TargetViewModel? card)
     {
-        if (card is null || card.LoginA.Trim().Length == 0 || card.LoginB.Trim().Length == 0)
+        if (card is null || card.LoginA.Trim().Length == 0)
+            return;
+        if (!card.IsDiscord && card.LoginB.Trim().Length == 0)
             return;
 
         card.IsBusy = true;
@@ -881,6 +981,38 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
                 _mastodon.MaxCharacters = max;
                 _settings.MastodonAccount = account;
                 _settings.MastodonMaxCharacters = max;
+                card.Account = account;
+            }
+            else if (card.Target is DiscordTarget)
+            {
+                var webhook = await _discord.VerifyAsync(card.LoginA, _closing.Token);
+
+                _secrets.Set("discord", JsonSerializer.Serialize(new StoredDiscord
+                {
+                    Url = webhook.Url, Name = webhook.Name, GuildId = webhook.GuildId, ChannelId = webhook.ChannelId,
+                }));
+                _discord.Webhook = webhook;
+                card.LoginA = "";
+                card.Account = webhook.Name;
+            }
+            else if (card.Target is OAuthTarget oauth)
+            {
+                // The browser is about to open; say so, because the tab looks idle until it comes back.
+                Status = _host.Text.Format("scruff.status.browser", card.Name);
+                var app = new OAuthApp(card.LoginA.Trim(), card.LoginB.Trim());
+                var account = await oauth.SignInAsync(app, url => Explorer.Open(url), _closing.Token);
+
+                if (oauth is DeviantArtTarget)
+                    _settings.DeviantArtAccount = account;
+                else if (oauth is TumblrTarget tumblr)
+                {
+                    _settings.TumblrAccount = account;
+                    _settings.TumblrBlogs = tumblr.Blogs.ToList();
+                    _settings.TumblrBlog = tumblr.Blog;
+                    OnPropertyChanged(nameof(TumblrBlogs));
+                    OnPropertyChanged(nameof(TumblrBlog));
+                }
+
                 card.Account = account;
             }
 
@@ -922,6 +1054,28 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
             _mastodon.Login = null;
             _mastodon.Account = null;
             _settings.MastodonAccount = null;
+        }
+        else if (card.Target is DiscordTarget)
+        {
+            _secrets.Forget("discord");
+            _discord.Webhook = null;
+        }
+        else if (card.Target is OAuthTarget oauth)
+        {
+            _secrets.Forget(oauth.Id);
+            oauth.SignOut();
+            if (oauth is DeviantArtTarget)
+                _settings.DeviantArtAccount = null;
+            else if (oauth is TumblrTarget tumblr)
+            {
+                _settings.TumblrAccount = null;
+                _settings.TumblrBlogs = [];
+                _settings.TumblrBlog = "";
+                tumblr.Blogs = [];
+                tumblr.Blog = "";
+                OnPropertyChanged(nameof(TumblrBlogs));
+                OnPropertyChanged(nameof(TumblrBlog));
+            }
         }
 
         Save();

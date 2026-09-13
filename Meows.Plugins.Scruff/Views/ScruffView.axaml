@@ -387,6 +387,25 @@
                                                                  PlaceholderText="{m:Tr scruff.mastodon.token}" />
                                                         <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr scruff.mastodon.hint}" />
                                                     </StackPanel>
+                                                    <StackPanel Spacing="4" IsVisible="{Binding IsDiscord}">
+                                                        <TextBox Classes="small"
+                                                                 Text="{Binding LoginA}"
+                                                                 PasswordChar="•"
+                                                                 PlaceholderText="{m:Tr scruff.discord.webhook}" />
+                                                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr scruff.discord.hint}" />
+                                                    </StackPanel>
+                                                    <StackPanel Spacing="4" IsVisible="{Binding IsOAuth}">
+                                                        <TextBox Classes="small"
+                                                                 Text="{Binding LoginA}"
+                                                                 PlaceholderText="{m:Tr scruff.oauth.clientid}" />
+                                                        <TextBox Classes="small"
+                                                                 Text="{Binding LoginB}"
+                                                                 PasswordChar="•"
+                                                                 PlaceholderText="{m:Tr scruff.oauth.secret}" />
+                                                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr scruff.oauth.hint}" />
+                                                        <TextBlock Classes="label" TextWrapping="Wrap" IsVisible="{Binding !IsTumblr}" Text="{m:Tr scruff.deviantart.hint}" />
+                                                        <TextBlock Classes="label" TextWrapping="Wrap" IsVisible="{Binding IsTumblr}" Text="{m:Tr scruff.tumblr.hint}" />
+                                                    </StackPanel>
                                                     <Button Classes="small"
                                                             Content="{m:Tr scruff.signin}"
                                                             IsEnabled="{Binding !IsBusy}"
@@ -407,6 +426,15 @@
                                                             </DataTemplate>
                                                         </ComboBox.ItemTemplate>
                                                     </ComboBox>
+                                                </StackPanel>
+
+                                                <StackPanel Spacing="2" IsVisible="{Binding IsTumblr}">
+                                                    <TextBlock Classes="field" Text="{m:Tr scruff.field.blog}" />
+                                                    <ComboBox ItemsSource="{Binding $parent[UserControl].((vm:ScruffViewModel)DataContext).TumblrBlogs}"
+                                                              SelectedItem="{Binding $parent[UserControl].((vm:ScruffViewModel)DataContext).TumblrBlog}"
+                                                              IsVisible="{Binding IsSignedIn}"
+                                                              FontSize="11"
+                                                              HorizontalAlignment="Stretch" />
                                                 </StackPanel>
 
                                                 <StackPanel Spacing="2" IsVisible="{Binding IsReddit}">

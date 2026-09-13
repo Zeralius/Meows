@@ -40,12 +40,12 @@ public class ScruffViewModelTests : IDisposable
     }
 
     [Fact]
-    public void Six_places_are_offered_and_only_bluesky_starts_ticked()
+    public void Nine_places_are_offered_and_only_bluesky_starts_ticked()
     {
         var (_, model) = Fresh();
         using var _ = model;
 
-        Assert.Equal(["bluesky", "mastodon", "furaffinity", "x", "instagram", "reddit"], model.Targets.Select(t => t.Id));
+        Assert.Equal(["bluesky", "mastodon", "discord", "deviantart", "tumblr", "furaffinity", "x", "instagram", "reddit"], model.Targets.Select(t => t.Id));
         Assert.Equal(["bluesky"], model.Targets.Where(t => t.IsEnabled).Select(t => t.Id));
     }
 
