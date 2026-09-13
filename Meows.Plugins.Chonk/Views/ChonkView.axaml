@@ -276,6 +276,20 @@
                                                    TextWrapping="Wrap" />
                                     </Border>
 
+                                    <!-- The one finding that is good news: the other half of the
+                                         pair holds the same files, so either side can go. -->
+                                    <Border Background="{DynamicResource MeowsInfo}"
+                                            BorderBrush="{DynamicResource MeowsInfoLine}"
+                                            BorderThickness="1"
+                                            CornerRadius="4"
+                                            Padding="7,4"
+                                            IsVisible="{Binding IdentityIsTwin}">
+                                        <TextBlock Text="{m:Tr chonk.twin}"
+                                                   Foreground="{DynamicResource MeowsInfoText}"
+                                                   FontSize="11"
+                                                   TextWrapping="Wrap" />
+                                    </Border>
+
                                     <ItemsControl ItemsSource="{Binding Evidence}">
                                         <ItemsControl.ItemTemplate>
                                             <DataTemplate x:DataType="x:String">

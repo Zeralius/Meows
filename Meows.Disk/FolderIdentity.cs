@@ -19,6 +19,15 @@ public enum FolderVerdict
 
     /// <summary>Looks like the user's own files rather than something a program made.</summary>
     Yours,
+
+    /// <summary>An archive. What it holds is known; whether it is held anywhere else is not.</summary>
+    Archive,
+
+    /// <summary>
+    /// An archive and a folder beside it holding the same files, so the room is paid for twice.
+    /// Either side can go and the other keeps everything.
+    /// </summary>
+    Twin,
 }
 
 public sealed record FolderIdentity(
@@ -28,6 +37,9 @@ public sealed record FolderIdentity(
     IReadOnlyList<string> Evidence,
     bool InUse)
 {
+    /// <summary>The archive and folder pair this is one half of, when the verdict is Twin.</summary>
+    public TwinReport? Twin { get; init; }
+
     /// <summary>
     /// Built fresh each time rather than held as one instance, because the language can change
     /// between two people asking for it and a cached one would still be in the old one.
@@ -103,6 +115,17 @@ public static class FolderInspector
 
         var facts = Sample(directory, token);
         var evidence = new List<string>();
+
+        // An archive of the same name beside it, holding the same files, beats any guess from
+        // the contents: the answer to "what is this" is then "the room paid for twice".
+        if (Archives.SiblingArchiveOf(directory.FullName) is { } archive)
+        {
+            var twin = Archives.Compare(archive, directory.FullName, token);
+            if (twin.IsTwin)
+                return ArchiveInspector.ForFolder(twin, facts.InUse);
+
+            evidence.Add(ArchiveInspector.NotTwin(twin));
+        }
 
         if (facts.FileCount == 0)
             evidence.Add(Say("disk.evidence.nofiles"));
@@ -290,7 +313,7 @@ public static class FolderInspector
     private static string? Rebuildable(DirectoryInfo directory) =>
         KnownRebuildable.TryGetValue(directory.Name, out var what) ? what : null;
 
-    private sealed record Facts(int FileCount, DateTime? NewestWrite, string TopKind, int TopCount, bool InUse, bool Truncated)
+    internal sealed record Facts(int FileCount, DateTime? NewestWrite, string TopKind, int TopCount, bool InUse, bool Truncated)
     {
         /// <summary>
         /// Documents and media rather than the small files a program writes for itself. A guess,
@@ -406,7 +429,7 @@ public static class FolderInspector
         return Say(truncated ? "disk.evidence.newest.sampled" : "disk.evidence.newest", Ago(newest));
     }
 
-    private static string Ago(DateTime when)
+    internal static string Ago(DateTime when)
     {
         var days = (DateTime.Now - when).TotalDays;
 

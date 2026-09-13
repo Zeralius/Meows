@@ -1,4 +1,7 @@
 {
+  "chonk.archive": "archive",
+  "chonk.beside.archive": "an archive of the same name beside it",
+  "chonk.beside.folder": "a folder of the same name beside it",
   "chonk.cancel": "Cancel",
   "chonk.confirm.file": "{0}. It can be brought back from the Recycle Bin.",
   "chonk.confirm.folder.many": "{0}, with {1} files inside it. It can be brought back from the Recycle Bin.",
@@ -41,8 +44,11 @@
   "chonk.status.removed": "Sent {0} to the Recycle Bin, {1} freed",
   "chonk.status.start": "Pick a drive, or a folder inside one, then Scan.",
   "chonk.stop": "Stop",
+  "chonk.twin": "Paid for twice. Whichever side you remove, the other keeps all of it.",
   "chonk.up": "Up",
   "chonk.warn.game": "This is a Steam game, and deleting the folder leaves Steam still believing it is installed. Uninstall it through Steam instead.",
   "chonk.warn.inuse": "Something has a file in here open right now.",
+  "chonk.warn.twin": "The same files are in {0} beside it, so nothing is lost.",
+  "chonk.warn.twin.extras": "{0} files in here are not in {1} beside it, and those would be gone. Remove the archive instead to lose nothing.",
   "chonk.wholefolder": "A folder goes whole, with everything inside it. Everything goes to the Recycle Bin, so it can be brought back."
 }

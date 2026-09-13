@@ -1,4 +1,7 @@
 {
+  "chonk.archive": "Archiv",
+  "chonk.beside.archive": "daneben ein Archiv mit demselben Namen",
+  "chonk.beside.folder": "daneben ein Ordner mit demselben Namen",
   "chonk.cancel": "Abbrechen",
   "chonk.confirm.file": "{0}. Aus dem Papierkorb wiederherstellbar.",
   "chonk.confirm.folder.many": "{0}, mit {1} Dateien darin. Aus dem Papierkorb wiederherstellbar.",
@@ -41,8 +44,11 @@
   "chonk.status.removed": "{0} in den Papierkorb verschoben, {1} frei geworden",
   "chonk.status.start": "Ein Laufwerk wählen, oder einen Ordner darin, dann Messen.",
   "chonk.stop": "Anhalten",
+  "chonk.twin": "Doppelt bezahlt. Egal welche Seite du entfernst, die andere behält alles.",
   "chonk.up": "Hoch",
   "chonk.warn.game": "Das ist ein Steam-Spiel, und den Ordner zu löschen lässt Steam in dem Glauben, es sei noch installiert. Besser über Steam deinstallieren.",
   "chonk.warn.inuse": "Irgendetwas hat gerade eine Datei hier offen.",
+  "chonk.warn.twin": "Dieselben Dateien liegen in {0} daneben, es geht also nichts verloren.",
+  "chonk.warn.twin.extras": "{0} Dateien hier drin sind nicht in {1} daneben, und die wären weg. Entferne stattdessen das Archiv, dann geht nichts verloren.",
   "chonk.wholefolder": "Ein Ordner geht ganz, mit allem darin. Alles geht in den Papierkorb und lässt sich von dort zurückholen."
 }

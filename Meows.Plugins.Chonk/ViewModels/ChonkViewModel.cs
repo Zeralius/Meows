@@ -36,19 +36,60 @@ public sealed class EntryViewModel(DiskEntry entry, long parentSize) : Observabl
 
     public string PercentText => parentSize <= 0 ? "" : $"{Fraction * 100:0.#}%";
 
-    public string Detail => Entry.Kind switch
+    public bool IsArchive { get; } = entry.Kind == DiskEntryKind.File && Archives.IsArchive(entry.Name);
+
+    /// <summary>
+    /// Whether the other half of an archive and folder pair is in the same listing. Read off the
+    /// tree the scan already built rather than the disk, so it costs nothing per row; whether the
+    /// two really hold the same thing is worked out when the row is selected.
+    /// </summary>
+    public bool HasSibling { get; } = SiblingIn(entry);
+
+    private static bool SiblingIn(DiskEntry entry)
     {
-        DiskEntryKind.Folder => Entry.FileCount == 1
-            ? MeowsText.Current["chonk.files.one"]
-            : MeowsText.Current.Format("chonk.files.many", Entry.FileCount),
-        DiskEntryKind.SmallFiles => MeowsText.Current["chonk.notlisted"],
-        _ => "",
-    };
+        if (entry.Parent is not { } parent)
+            return false;
+
+        return entry.Kind switch
+        {
+            DiskEntryKind.Folder => parent.Children.Any(c =>
+                c.Kind == DiskEntryKind.File && Archives.IsArchive(c.Name) &&
+                string.Equals(Archives.Stem(c.Name), entry.Name, StringComparison.OrdinalIgnoreCase)),
+            DiskEntryKind.File when Archives.IsArchive(entry.Name) => parent.Children.Any(c =>
+                c.Kind == DiskEntryKind.Folder &&
+                string.Equals(c.Name, Archives.Stem(entry.Name), StringComparison.OrdinalIgnoreCase)),
+            _ => false,
+        };
+    }
+
+    public string Detail
+    {
+        get
+        {
+            var text = MeowsText.Current;
+            var line = Entry.Kind switch
+            {
+                DiskEntryKind.Folder => Entry.FileCount == 1
+                    ? text["chonk.files.one"]
+                    : text.Format("chonk.files.many", Entry.FileCount),
+                DiskEntryKind.SmallFiles => text["chonk.notlisted"],
+                _ when IsArchive => text["chonk.archive"],
+                _ => "",
+            };
+
+            if (!HasSibling)
+                return line;
+
+            var beside = text[IsArchive ? "chonk.beside.folder" : "chonk.beside.archive"];
+            return line.Length == 0 ? beside : $"{line} · {beside}";
+        }
+    }
 
     public string Glyph => Entry.Kind switch
     {
         DiskEntryKind.Folder => "📁",
         DiskEntryKind.SmallFiles => "···",
+        _ when IsArchive => "📦",
         _ => "📄",
     };
 }
@@ -301,6 +342,20 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
 
     public bool IsAsking => PendingDelete is not null;
 
+    /// <summary>
+    /// The one case where the confirmation can be reassuring: the same files are on the other
+    /// side of the pair. Unless the folder holds more than the archive, in which case removing
+    /// the folder loses exactly those, and that is the thing to say.
+    /// </summary>
+    private string TwinWarning(TwinReport twin, bool removingFolder)
+    {
+        var other = System.IO.Path.GetFileName(removingFolder ? twin.ArchivePath : twin.FolderPath);
+
+        return removingFolder && twin.Extra > 0
+            ? _host.Text.Format("chonk.warn.twin.extras", twin.Extra, other)
+            : _host.Text.Format("chonk.warn.twin", other);
+    }
+
     public string ConfirmPrompt => PendingDelete is null
         ? ""
         : _host.Text.Format("chonk.confirm.prompt", PendingDelete.Name);
@@ -332,6 +387,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
             {
                 { Verdict: FolderVerdict.Game } => _host.Text["chonk.warn.game"],
                 { InUse: true } => _host.Text["chonk.warn.inuse"],
+                { Twin: { } twin } => TwinWarning(twin, pending.Entry.IsFolder),
                 _ => "",
             };
 
@@ -388,8 +444,8 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
     }
 
     /// <summary>
-    /// What the selected folder is. Null until it has been worked out, and for anything that
-    /// is not a folder.
+    /// What the selected folder or archive is. Null until it has been worked out, and for a
+    /// plain file, which is what it says it is.
     /// </summary>
     public FolderIdentity? Identity
     {
@@ -404,6 +460,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
             OnPropertyChanged(nameof(IdentityAdvice));
             OnPropertyChanged(nameof(IdentityInUse));
             OnPropertyChanged(nameof(IdentityIsWarning));
+            OnPropertyChanged(nameof(IdentityIsTwin));
             OnPropertyChanged(nameof(ConfirmDetail));
 
             Evidence.Clear();
@@ -431,6 +488,9 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
     public bool IdentityIsWarning =>
         Identity is { Verdict: FolderVerdict.Game } || IdentityInUse;
 
+    /// <summary>The good news case: the same files are beside it, so either side can go.</summary>
+    public bool IdentityIsTwin => Identity is { Verdict: FolderVerdict.Twin };
+
     public bool IsIdentifying
     {
         get => _isIdentifying;
@@ -447,7 +507,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
         _identifying = null;
         Identity = null;
 
-        if (entry is not { Entry.IsFolder: true })
+        if (entry is not ({ Entry.IsFolder: true } or { IsArchive: true }))
         {
             IsIdentifying = false;
             return;
@@ -460,7 +520,10 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
         try
         {
             var path = entry.Path;
-            var found = await Task.Run(() => FolderInspector.Of(path, source.Token), source.Token);
+            var archive = entry.IsArchive;
+            var found = await Task.Run(
+                () => archive ? ArchiveInspector.Of(path, source.Token) : FolderInspector.Of(path, source.Token),
+                source.Token);
 
             // A newer selection may have started while this ran, and its answer wins.
             if (ReferenceEquals(_identifying, source))

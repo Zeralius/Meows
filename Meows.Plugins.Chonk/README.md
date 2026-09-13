@@ -82,6 +82,29 @@ Anything held open by a running program, and anything belonging to a launcher, i
 a second look. Where nothing can be established it says so: a confident wrong answer here gets
 something deleted.
 
+## An archive beside what it unpacks to
+
+`photos.zip` sitting next to `photos\` is one of the ways a drive quietly fills up: the same
+material, paid for twice, and nothing on the drive says so. An archive in the list shows as one,
+and when a folder of the same name is beside it, or an archive of the same name is beside a folder,
+the row says that too. That much is read off the scan and costs nothing.
+
+**Whether the two really hold the same thing is a content check, never a name match.** Select
+either half and the archive is opened and held up against the folder: every entry has to be there,
+the same size, the same first 64 KB, and then the same all the way through for whatever still
+agrees. Only when all of that holds does the panel say the pair is paid for twice, with what the
+archive costs on disk and what the folder holds of the same. An archive extracted three months ago
+and edited since is not a twin, and the panel says what does not match instead.
+
+When the folder holds more than the archive, the folder is still what the archive unpacks to, but
+the confirmation says how many files would be lost with it and suggests removing the archive
+instead. When the pair is exact, the confirmation says so, because that is the one time removing
+a folder loses nothing.
+
+Only zip archives, `.cbz` included, are opened. A `.rar` or `.7z` is still shown as an archive and
+still pairs by name, but the panel says plainly that it cannot be compared here; 7-Zip can. There
+is no extract and no repack: 7-Zip does both, and a Chonk that produces files is a different tool.
+
 ## Removing things
 
 **It asks first.** The confirmation says what is about to go, how big it is, and for a folder how
