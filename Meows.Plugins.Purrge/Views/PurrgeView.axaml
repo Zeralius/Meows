@@ -30,16 +30,62 @@
             <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
             <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
         </Style>
+        <!-- The mode switch reads as two tabs rather than two radio circles. -->
+        <Style Selector="RadioButton.mode">
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <Border Name="PART_Tab"
+                            Padding="12,6"
+                            BorderThickness="0,0,0,2"
+                            BorderBrush="Transparent">
+                        <ContentPresenter Content="{TemplateBinding Content}" FontSize="12" Opacity="0.6" />
+                    </Border>
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="RadioButton.mode:checked /template/ Border#PART_Tab">
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsSelectionLine}" />
+        </Style>
+        <Style Selector="RadioButton.mode:checked /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="RadioButton.mode:pointerover /template/ ContentPresenter">
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+        <Style Selector="Border.mark">
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="5,1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.mark TextBlock">
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
     </UserControl.Styles>
 
     <DockPanel>
+
+        <!-- Which job: the two questions share the tree and nothing else -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8,14,0">
+            <StackPanel Orientation="Horizontal" Spacing="4">
+                <RadioButton Classes="mode" GroupName="purrge-mode" Content="{m:Tr purrge.mode.duplicates}" IsChecked="{Binding IsDuplicatesMode}" />
+                <RadioButton Classes="mode" GroupName="purrge-mode" Content="{m:Tr purrge.mode.compare}" IsChecked="{Binding IsCompareMode}" />
+            </StackPanel>
+        </Border>
 
         <!-- Scan controls -->
         <Border DockPanel.Dock="Top"
                 Background="{DynamicResource MeowsCard}"
                 BorderBrush="{DynamicResource MeowsLineSoft}"
                 BorderThickness="0,0,0,1"
-                Padding="14,10">
+                Padding="14,10"
+                IsVisible="{Binding IsDuplicatesMode}">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
                 <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{Binding ScanRoot}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
@@ -50,6 +96,44 @@
                     <Button Content="{m:Tr purrge.scan}" Command="{Binding ScanCommand}" />
                     <Button Content="{m:Tr purrge.cancel}" Command="{Binding CancelScanCommand}" />
                 </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Compare controls: a source, a copy, and one question -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10"
+                IsVisible="{Binding IsCompareMode}">
+            <Grid ColumnDefinitions="Auto,*,Auto,Auto" RowDefinitions="Auto,Auto,Auto" ColumnSpacing="10" RowSpacing="4">
+                <TextBlock Grid.Row="0" Grid.Column="0" Classes="label" VerticalAlignment="Center" Text="{m:Tr purrge.source}" />
+                <TextBlock Grid.Row="0" Grid.Column="1" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           Text="{Binding Compare.Source}" IsVisible="{Binding Compare.HasSource}" />
+                <TextBlock Grid.Row="0" Grid.Column="1" Classes="label" VerticalAlignment="Center"
+                           Text="{m:Tr purrge.source.hint}" IsVisible="{Binding !Compare.HasSource}" />
+                <Button Grid.Row="0" Grid.Column="2" FontSize="11" Padding="8,3" Content="{m:Tr purrge.useselected}" Command="{Binding UseAsSourceCommand}" />
+
+                <TextBlock Grid.Row="1" Grid.Column="0" Classes="label" VerticalAlignment="Center" Text="{m:Tr purrge.copy}" />
+                <TextBlock Grid.Row="1" Grid.Column="1" FontWeight="SemiBold" VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
+                           Text="{Binding Compare.Copy}" IsVisible="{Binding Compare.HasCopy}" />
+                <TextBlock Grid.Row="1" Grid.Column="1" Classes="label" VerticalAlignment="Center"
+                           Text="{m:Tr purrge.copy.hint}" IsVisible="{Binding !Compare.HasCopy}" />
+                <Button Grid.Row="1" Grid.Column="2" FontSize="11" Padding="8,3" Content="{m:Tr purrge.useselected}" Command="{Binding UseAsCopyCommand}" />
+
+                <StackPanel Grid.Row="0" Grid.Column="3" Grid.RowSpan="2" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <Button Content="{m:Tr purrge.compare}" Command="{Binding Compare.CompareCommand}" FontWeight="SemiBold" />
+                    <Button Content="{m:Tr purrge.cancel}" Command="{Binding Compare.CancelCommand}" />
+                </StackPanel>
+
+                <Grid Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="4" ColumnDefinitions="*,Auto" ColumnSpacing="14" Margin="0,4,0,0">
+                    <TextBlock Grid.Column="0" Classes="label" Text="{Binding Compare.Status}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <CheckBox Grid.Column="1"
+                              Content="{m:Tr purrge.trust}"
+                              IsChecked="{Binding Compare.TrustTimestamps}"
+                              ToolTip.Tip="{m:Tr purrge.trust.hint}"
+                              FontSize="11" />
+                </Grid>
             </Grid>
         </Border>
 
@@ -67,7 +151,8 @@
             <!-- Folder tree -->
             <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.foldertoscan}" />
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.foldertoscan}" IsVisible="{Binding IsDuplicatesMode}" />
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.folderpick}" IsVisible="{Binding IsCompareMode}" />
                     <TreeView ItemsSource="{Binding Roots}"
                               SelectedItem="{Binding SelectedFolder}"
                               Background="Transparent"
@@ -91,8 +176,91 @@
 
             <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
 
+            <!-- What the copy gets wrong -->
+            <DockPanel Grid.Column="2" IsVisible="{Binding IsCompareMode}">
+                <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.findings}" />
+
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,0,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding !Compare.HasReport}"
+                           Text="{m:Tr purrge.compare.empty}" />
+
+                <Border DockPanel.Dock="Top"
+                        Margin="10,0,10,10"
+                        Background="{DynamicResource MeowsInfo}"
+                        BorderBrush="{DynamicResource MeowsInfoLine}"
+                        BorderThickness="1"
+                        CornerRadius="6"
+                        Padding="12,10"
+                        IsVisible="{Binding Compare.CopyIsGood}">
+                    <StackPanel Spacing="2">
+                        <TextBlock Text="{m:Tr purrge.compare.good}" Foreground="{DynamicResource MeowsGoodText}" FontWeight="SemiBold" />
+                        <TextBlock Text="{Binding Compare.Summary}" Classes="label" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Compare.DepthText}" Classes="label" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <StackPanel DockPanel.Dock="Top" Margin="14,0,14,8" Spacing="1" IsVisible="{Binding Compare.HasFindings}">
+                    <TextBlock Text="{Binding Compare.Summary}" Classes="label" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Compare.DepthText}" Classes="label" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding Compare.Findings}" Margin="10,0,10,10">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FindingViewModel">
+                                <Button Classes="row"
+                                        Classes.selected="{Binding IsSelected}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        BorderThickness="1"
+                                        CornerRadius="4"
+                                        Padding="8,5"
+                                        Margin="0,0,0,2"
+                                        Command="{Binding $parent[UserControl].((vm:PurrgeViewModel)DataContext).Compare.SelectCommand}"
+                                        CommandParameter="{Binding}">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
+                                        <Panel Grid.Column="0" Width="78">
+                                            <Border Classes="mark" Background="{DynamicResource MeowsDangerStrong}" IsVisible="{Binding IsMissing}">
+                                                <TextBlock Text="{Binding KindText}" />
+                                            </Border>
+                                            <Border Classes="mark" Background="{DynamicResource MeowsWarnLine}" IsVisible="{Binding IsStale}">
+                                                <TextBlock Text="{Binding KindText}" />
+                                            </Border>
+                                            <Border Classes="mark" Background="{DynamicResource MeowsDangerLine}" IsVisible="{Binding IsDifferent}">
+                                                <TextBlock Text="{Binding KindText}" />
+                                            </Border>
+                                            <Border Classes="mark" Background="{DynamicResource MeowsBadge}" IsVisible="{Binding IsExtra}">
+                                                <TextBlock Text="{Binding KindText}" />
+                                            </Border>
+                                            <Border Classes="mark" Background="{DynamicResource MeowsVeil}" IsVisible="{Binding IsUnreadable}">
+                                                <TextBlock Text="{Binding KindText}" />
+                                            </Border>
+                                        </Panel>
+                                        <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding Folder}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <TextBlock Classes="label" Text="{m:Tr purrge.source.short}" />
+                                            <TextBlock Text="{Binding SourceText}" FontSize="11" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                                            <TextBlock Classes="label" Text="{m:Tr purrge.copy.short}" />
+                                            <TextBlock Text="{Binding CopyText}" FontSize="11" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+
             <!-- Duplicate sets -->
-            <DockPanel Grid.Column="2">
+            <DockPanel Grid.Column="2" IsVisible="{Binding IsDuplicatesMode}">
                 <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.grouped}" />
 
                 <TextBlock DockPanel.Dock="Top"
@@ -170,8 +338,66 @@
 
             <GridSplitter Grid.Column="3" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
 
+            <!-- The compare side: a look, and two ways into Explorer. Nothing that writes. -->
+            <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0" IsVisible="{Binding IsCompareMode}">
+                <ScrollViewer Padding="16,12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{m:Tr purrge.preview}" FontWeight="SemiBold" FontSize="13" />
+
+                        <Border Background="{DynamicResource MeowsSunken}"
+                                CornerRadius="6"
+                                MinHeight="220"
+                                Padding="6"
+                                IsVisible="{Binding Compare.HasSelection}">
+                            <Panel>
+                                <Image Source="{Binding Compare.Preview}"
+                                       Stretch="Uniform"
+                                       MaxHeight="430"
+                                       IsVisible="{Binding Compare.HasPreview}" />
+                                <TextBlock Text="{m:Tr purrge.nopreview}"
+                                           Opacity="0.35"
+                                           FontSize="11"
+                                           HorizontalAlignment="Center"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding !Compare.HasPreview}" />
+                            </Panel>
+                        </Border>
+
+                        <StackPanel Spacing="6" IsVisible="{Binding Compare.HasSelection}">
+                            <TextBlock Text="{Binding Compare.Selected.RelativePath}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Compare.Selected.KindText}" FontWeight="SemiBold" FontSize="11" />
+
+                            <StackPanel Spacing="1">
+                                <TextBlock Classes="label" Text="{m:Tr purrge.source}" />
+                                <TextBlock Text="{Binding Compare.Selected.SourceText}" FontSize="11" />
+                            </StackPanel>
+                            <StackPanel Spacing="1">
+                                <TextBlock Classes="label" Text="{m:Tr purrge.copy}" />
+                                <TextBlock Text="{Binding Compare.Selected.CopyText}" FontSize="11" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <Border Background="{DynamicResource MeowsInset}" CornerRadius="6" Padding="10,8">
+                            <TextBlock Text="{m:Tr purrge.compare.readonly}"
+                                       TextWrapping="Wrap"
+                                       FontSize="11"
+                                       Opacity="0.7" />
+                        </Border>
+
+                        <Button Content="{m:Tr purrge.explore.source}"
+                                Command="{Binding Compare.RevealSourceCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                        <Button Content="{m:Tr purrge.explore.copy}"
+                                Command="{Binding Compare.RevealCopyCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
             <!-- Preview and actions -->
-            <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0">
+            <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0" IsVisible="{Binding IsDuplicatesMode}">
                 <ScrollViewer Padding="16,12">
                     <StackPanel Spacing="8">
 

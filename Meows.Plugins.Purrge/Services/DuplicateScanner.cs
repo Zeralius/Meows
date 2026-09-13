@@ -1,6 +1,5 @@
 using Meows.Plugins.Abstractions;
 using Meows.Disk;
-using System.Security.Cryptography;
 
 namespace Meows.Plugins.Purrge.Services;
 
@@ -34,8 +33,6 @@ public sealed record DuplicateSet(long Size, IReadOnlyList<DuplicateFile> Files)
 /// </summary>
 public sealed class DuplicateScanner
 {
-    private const int PartialBytes = 64 * 1024;
-
     public async Task<IReadOnlyList<DuplicateSet>> ScanAsync(
         string root,
         ScanOptions options,
@@ -92,12 +89,12 @@ public sealed class DuplicateScanner
         {
             token.ThrowIfCancellationRequested();
 
-            foreach (var partialGroup in GroupBy(paths, p => HashOf(p, PartialBytes), token))
+            foreach (var partialGroup in GroupBy(paths, ContentHash.Partial, token))
             {
                 if (partialGroup.Count < 2)
                     continue;
 
-                foreach (var fullGroup in GroupBy(partialGroup, p => HashOf(p, null), token))
+                foreach (var fullGroup in GroupBy(partialGroup, ContentHash.Full, token))
                 {
                     if (fullGroup.Count < 2)
                         continue;
@@ -142,27 +139,6 @@ public sealed class DuplicateScanner
         return groups.Values.ToList();
     }
 
-    private static string? HashOf(string path, int? maxBytes)
-    {
-        try
-        {
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 64 * 1024);
-            using var sha = SHA256.Create();
-
-            if (maxBytes is null)
-                return Convert.ToHexString(sha.ComputeHash(stream));
-
-            var buffer = new byte[maxBytes.Value];
-            var read = stream.ReadAtLeast(buffer, buffer.Length, throwOnEndOfStream: false);
-            return Convert.ToHexString(SHA256.HashData(buffer.AsSpan(0, read)));
-        }
-        catch (Exception)
-        {
-            // Locked, gone, or unreadable. It just does not take part.
-            return null;
-        }
-    }
-
     private static DuplicateFile? Describe(string path)
     {
         try
@@ -181,7 +157,7 @@ public sealed class DuplicateScanner
     /// should not kill the whole scan, and reparse points need skipping or a junction pointing
     /// at a parent sends this round forever.
     /// </summary>
-    private static IEnumerable<string> EnumerateFiles(string root, ScanOptions options, CancellationToken token)
+    internal static IEnumerable<string> EnumerateFiles(string root, ScanOptions options, CancellationToken token)
     {
         // DirectoryInfo objects rather than path strings, because a string has to be turned back
         // into one to walk it and that round trip is where Windows quietly drops a trailing space.

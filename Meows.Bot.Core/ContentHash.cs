@@ -1,48 +1,19 @@
-using System.Security.Cryptography;
-
 namespace Meows.Bot;
 
 /// <summary>
 /// Content hashing for "have I got this already" checks.
 ///
-/// Same staged idea Purrge uses, for the same reason: comparing sizes first means most files
-/// never get opened. Here it matters because the check runs on every click, against a group
-/// queue that can hold several hundred files.
+/// The hashing itself lives in <see cref="Disk.ContentHash"/>, shared with Purrge. What is here
+/// is the one question Kibble asks of it, on every click, against a group queue that can hold
+/// several hundred files: comparing sizes first means most of them never get opened.
 /// </summary>
 public static class ContentHash
 {
-    private const int PartialBytes = 64 * 1024;
-
     /// <summary>Full SHA-256, or null if the file cannot be read.</summary>
-    public static string? Of(string path)
-    {
-        try
-        {
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 64 * 1024);
-            using var sha = SHA256.Create();
-            return Convert.ToHexString(sha.ComputeHash(stream));
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
+    public static string? Of(string path) => Disk.ContentHash.Full(path);
 
     /// <summary>Hash of the first block only, used to rule files out cheaply.</summary>
-    public static string? Partial(string path)
-    {
-        try
-        {
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, 64 * 1024);
-            var buffer = new byte[PartialBytes];
-            var read = stream.ReadAtLeast(buffer, buffer.Length, throwOnEndOfStream: false);
-            return Convert.ToHexString(SHA256.HashData(buffer.AsSpan(0, read)));
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
+    public static string? Partial(string path) => Disk.ContentHash.Partial(path);
 
     /// <summary>
     /// Is this file already somewhere in <paramref name="candidates"/>? Size first, then the

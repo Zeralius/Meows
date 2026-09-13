@@ -17,6 +17,16 @@ public sealed class PurrgeSettings
     public bool SkipSystemFolders { get; set; } = true;
 
     public AgeBasis AgeBasis { get; set; } = AgeBasis.Modified;
+
+    /// <summary>Which of the two jobs the tab was last doing.</summary>
+    public bool CompareMode { get; set; }
+
+    public string? CompareSource { get; set; }
+
+    public string? CompareCopy { get; set; }
+
+    /// <summary>Whether a copy with the same size and date is taken as identical without being read.</summary>
+    public bool TrustTimestamps { get; set; }
 }
 
 public sealed class PurrgeViewModel : ObservableObject, IDisposable
@@ -60,7 +70,46 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
         DeleteSelectedCommand = new RelayCommand(() => _ = DeleteSelectedAsync(), CanDeleteSelected);
         RevealCommand = new RelayCommand(RevealSelected, () => SelectedFile is not null);
         SelectFileCommand = new RelayCommand(SelectFile);
-        _language = new LanguageWatch(OnEverythingChanged);
+        Compare = new CompareViewModel(host, () => _settings, SaveSettings);
+        UseAsSourceCommand = new RelayCommand(() => Compare.Source = ScanRoot, () => ScanRoot.Length > 0);
+        UseAsCopyCommand = new RelayCommand(() => Compare.Copy = ScanRoot, () => ScanRoot.Length > 0);
+
+        _language = new LanguageWatch(() =>
+        {
+            OnEverythingChanged();
+            Compare.Reread();
+        });
+    }
+
+    /// <summary>The other thing this tab does: check that a copy is really a copy.</summary>
+    public CompareViewModel Compare { get; }
+
+    public RelayCommand UseAsSourceCommand { get; }
+
+    public RelayCommand UseAsCopyCommand { get; }
+
+    /// <summary>
+    /// Duplicates or Compare. One tab, two questions about the same kind of tree, and the mode
+    /// is remembered so the tab opens on whichever was in use.
+    /// </summary>
+    public bool IsCompareMode
+    {
+        get => _settings.CompareMode;
+        set
+        {
+            if (_settings.CompareMode == value)
+                return;
+            _settings.CompareMode = value;
+            SaveSettings();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(IsDuplicatesMode));
+        }
+    }
+
+    public bool IsDuplicatesMode
+    {
+        get => !IsCompareMode;
+        set => IsCompareMode = !value;
     }
 
     public ObservableCollection<FolderNodeViewModel> Roots { get; }
@@ -134,8 +183,11 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
         get => _scanRoot;
         private set
         {
-            if (SetField(ref _scanRoot, value))
-                ScanCommand.RaiseCanExecuteChanged();
+            if (!SetField(ref _scanRoot, value))
+                return;
+            ScanCommand.RaiseCanExecuteChanged();
+            UseAsSourceCommand.RaiseCanExecuteChanged();
+            UseAsCopyCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -517,6 +569,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
     public void Dispose()
     {
         _language.Dispose();
+        Compare.Dispose();
         _scanTask?.Dispose();
         CancelThumbnails();
         PreviewImage = null;

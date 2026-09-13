@@ -76,7 +76,7 @@ jobs:
         run: |
           # Copy the whole build output rather than just the plugin dll. A plugin may bring
           # libraries of its own: Telegram Poster and Kibble need Meows.Bot.Core.dll, and
-          # Purrge and Chonk need Meows.Disk.dll,
+          # Purrge, Chonk, Scruff and Meows.Bot.Core itself need Meows.Disk.dll,
           # which is loaded from the plugin's own folder. Avalonia and the contract are not
           # here to be copied: the csproj files keep them out so the shell stays the one
           # source of both.

@@ -219,7 +219,7 @@ Stage each one into the folder the deployed shell scans. Copy the **whole** buil
 than just the plugin DLL. A plugin's own libraries are loaded from its folder, so a plugin with
 any dependency fails at activation if you cherry-pick, and it fails long after the build looked
 fine. Telegram Poster and Kibble need `Meows.Bot.Core.dll` this way, and Purrge, Chonk and
-Scruff need `Meows.Disk.dll`:
+Scruff need `Meows.Disk.dll`, as does `Meows.Bot.Core` itself, so it lands beside all five:
 
 ```bash
 for p in Meows.Plugins.TelegramPoster Meows.Plugins.Purrge Meows.Plugins.Kibble Meows.Plugins.Chonk; do mkdir -p "artifacts/Meows-win-x64/plugins/$p" && cp "$p"/bin/Release/*.dll "$p"/bin/Release/*.deps.json "artifacts/Meows-win-x64/plugins/$p/"; done
