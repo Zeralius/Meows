@@ -1,0 +1,529 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Scruff.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Scruff.Views.ScruffView"
+             x:DataType="vm:ScruffViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="14,12,14,6" />
+        </Style>
+        <Style Selector="TextBlock.field">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="10" />
+            <Setter Property="Margin" Value="0,6,0,2" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
+        </Style>
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource MeowsCard}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+        <Style Selector="Border.badge">
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="4,1" />
+            <Setter Property="Margin" Value="3" />
+        </Style>
+        <Style Selector="Border.badge TextBlock">
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="6" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+        <Style Selector="TextBox.small">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="MinHeight" Value="26" />
+            <Setter Property="Padding" Value="6,3" />
+        </Style>
+        <Style Selector="Button.small">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="8,3" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <!-- Header: where cleaned files go, and what is happening -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding OutputFolder}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Status}" Classes="label" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Name="PickOutputButton" Content="{m:Tr scruff.output}" />
+                    <Button Content="{m:Tr scruff.open}" Command="{Binding OpenOutputCommand}" />
+                    <Button Name="AddFilesButton" Content="{m:Tr scruff.add}" />
+                    <Button Name="AddFolderButton" Content="{m:Tr scruff.addfolder}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="{DynamicResource MeowsDangerText}"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <!-- Bottom bar: the two things this tab does -->
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource MeowsBar}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,1,0,0"
+                Padding="14,8">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <TextBlock Grid.Column="0"
+                           Classes="label"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           Text="{m:Tr scruff.bar.hint}" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="{m:Tr scruff.clean.folder}"
+                            Command="{Binding CleanToFolderCommand}"
+                            ToolTip.Tip="{m:Tr scruff.clean.folder.hint}" />
+                    <Button Content="{m:Tr scruff.clean.inplace}"
+                            Command="{Binding CleanInPlaceCommand}"
+                            ToolTip.Tip="{m:Tr scruff.clean.inplace.hint}" />
+                    <Button Content="{m:Tr scruff.post}"
+                            Command="{Binding PostCommand}"
+                            FontWeight="SemiBold"
+                            ToolTip.Tip="{m:Tr scruff.post.hint}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid ColumnDefinitions="260,4,*,4,400">
+
+            <!-- The pile -->
+            <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="14,12,10,6">
+                        <TextBlock Grid.Column="0" Classes="section" Margin="0" Text="{Binding CountText}" VerticalAlignment="Center" />
+                        <Button Grid.Column="1"
+                                Classes="small"
+                                Content="{m:Tr scruff.clear}"
+                                Command="{Binding ClearFilesCommand}" />
+                    </Grid>
+
+                    <TextBlock DockPanel.Dock="Top"
+                               Margin="14,8,14,10"
+                               Opacity="0.45"
+                               TextWrapping="Wrap"
+                               IsVisible="{Binding IsEmpty}"
+                               Text="{m:Tr scruff.empty}" />
+
+                    <ListBox ItemsSource="{Binding Files}"
+                             SelectedItem="{Binding Selected}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Margin="8,0,8,8">
+                        <ListBox.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel />
+                            </ItemsPanelTemplate>
+                        </ListBox.ItemsPanel>
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FileViewModel">
+                                <StackPanel Width="108" Spacing="3" ToolTip.Tip="{Binding Path}">
+                                    <Border Width="108" Height="108"
+                                            Background="{DynamicResource MeowsSunken}"
+                                            CornerRadius="4"
+                                            ClipToBounds="True">
+                                        <Panel>
+                                            <Image Source="{Binding Thumbnail}"
+                                                   Stretch="UniformToFill"
+                                                   IsVisible="{Binding HasThumbnail}" />
+
+                                            <Border Classes="badge"
+                                                    Background="{DynamicResource MeowsDangerBadge}"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Top"
+                                                    IsVisible="{Binding HasGps}">
+                                                <TextBlock Text="GPS" />
+                                            </Border>
+
+                                            <Border Classes="badge"
+                                                    Background="{DynamicResource MeowsBadge}"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Top"
+                                                    IsVisible="{Binding CarriesAnything}">
+                                                <TextBlock Text="{Binding CarriedText}" />
+                                            </Border>
+
+                                            <Border Classes="badge"
+                                                    Background="{DynamicResource MeowsVeil}"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Bottom"
+                                                    IsVisible="{Binding NeedsTurning}">
+                                                <TextBlock Text="{m:Tr scruff.badge.turned}" />
+                                            </Border>
+
+                                            <Border Classes="badge"
+                                                    Background="{DynamicResource MeowsDangerBadge}"
+                                                    HorizontalAlignment="Left"
+                                                    VerticalAlignment="Bottom"
+                                                    IsVisible="{Binding IsUnknown}">
+                                                <TextBlock Text="{m:Tr scruff.badge.notapicture}" />
+                                            </Border>
+
+                                            <Button Content="✕"
+                                                    FontSize="9"
+                                                    Padding="5,1"
+                                                    Margin="3"
+                                                    HorizontalAlignment="Right"
+                                                    VerticalAlignment="Bottom"
+                                                    ToolTip.Tip="{m:Tr scruff.remove}"
+                                                    Command="{Binding $parent[UserControl].((vm:ScruffViewModel)DataContext).RemoveFileCommand}"
+                                                    CommandParameter="{Binding}" />
+                                        </Panel>
+                                    </Border>
+                                    <TextBlock Text="{Binding Name}" FontSize="10" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <!-- The post, written once -->
+            <ScrollViewer Grid.Column="2" Padding="16,4,16,12">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="section" Margin="0,8,0,2" Text="{m:Tr scruff.compose}" />
+
+                    <TextBlock Classes="field" Text="{m:Tr scruff.field.title}" />
+                    <TextBox Text="{Binding Title}" PlaceholderText="{m:Tr scruff.title.hint}" />
+
+                    <TextBlock Classes="field" Text="{m:Tr scruff.field.text}" />
+                    <TextBox Text="{Binding Text}"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             MinHeight="110"
+                             PlaceholderText="{m:Tr scruff.text.hint}" />
+
+                    <TextBlock Classes="field" Text="{m:Tr scruff.field.tags}" />
+                    <TextBox Text="{Binding TagsText}" PlaceholderText="{m:Tr scruff.tags.hint}" />
+                    <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr scruff.tags.note}" />
+
+                    <TextBlock Classes="field" Text="{m:Tr scruff.field.rating}" />
+                    <ComboBox ItemsSource="{Binding Ratings}"
+                              SelectedItem="{Binding SelectedRating}"
+                              MinWidth="180"
+                              HorizontalAlignment="Left">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:Choice">
+                                <TextBlock Text="{Binding Label.Value}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr scruff.rating.note}" />
+
+                    <!-- The picture that is selected -->
+                    <TextBlock Classes="section" Margin="0,18,0,2" Text="{m:Tr scruff.selected}" />
+                    <TextBlock Classes="label" Text="{m:Tr scruff.nothingselected}" IsVisible="{Binding !HasSelection}" />
+
+                    <StackPanel Spacing="6" IsVisible="{Binding HasSelection}">
+                        <Border Background="{DynamicResource MeowsSunken}"
+                                CornerRadius="6"
+                                MinHeight="120"
+                                Padding="6">
+                            <Image Source="{Binding Preview}"
+                                   Stretch="Uniform"
+                                   MaxHeight="360"
+                                   IsVisible="{Binding HasPreview}" />
+                        </Border>
+
+                        <TextBlock Text="{Binding Selected.Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Selected.Summary}" Classes="label" />
+
+                        <Border Background="{DynamicResource MeowsWarn}"
+                                BorderBrush="{DynamicResource MeowsWarnLine}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="8,6"
+                                IsVisible="{Binding Selected.CarriesAnything}">
+                            <StackPanel Spacing="2">
+                                <TextBlock Foreground="{DynamicResource MeowsWarnText}"
+                                           FontSize="11"
+                                           TextWrapping="Wrap"
+                                           Text="{m:Tr scruff.carries}" />
+                                <TextBlock Foreground="{DynamicResource MeowsWarnText}"
+                                           FontSize="11"
+                                           FontWeight="SemiBold"
+                                           Text="{Binding Selected.CarriedText}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Border Background="{DynamicResource MeowsInfo}"
+                                BorderBrush="{DynamicResource MeowsInfoLine}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="8,6"
+                                IsVisible="{Binding Selected.NeedsTurning}">
+                            <TextBlock Foreground="{DynamicResource MeowsInfoText}"
+                                       FontSize="11"
+                                       TextWrapping="Wrap"
+                                       Text="{m:Tr scruff.turned.note}" />
+                        </Border>
+
+                        <TextBlock Foreground="{DynamicResource MeowsDangerText}"
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding Selected.HasFailure}"
+                                   Text="{Binding Selected.Failure}" />
+
+                        <TextBlock Classes="field" Text="{m:Tr scruff.field.alt}" />
+                        <TextBox Text="{Binding Selected.Alt}"
+                                 AcceptsReturn="True"
+                                 TextWrapping="Wrap"
+                                 MinHeight="56"
+                                 PlaceholderText="{m:Tr scruff.alt.hint}" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <GridSplitter Grid.Column="3" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <!-- Where it goes -->
+            <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr scruff.where}" />
+
+                    <ScrollViewer Padding="10,0,10,10">
+                        <ItemsControl ItemsSource="{Binding Targets}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:TargetViewModel">
+                                    <Border Classes="card">
+                                        <StackPanel Spacing="4">
+
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsEnabled}" Padding="0" MinWidth="0" />
+                                                <StackPanel Grid.Column="1" Spacing="0" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                    <TextBlock Classes="label"
+                                                               IsVisible="{Binding PostsItself}"
+                                                               Text="{m:Tr scruff.kind.api}" />
+                                                    <TextBlock Classes="label"
+                                                               IsVisible="{Binding !PostsItself}"
+                                                               Text="{m:Tr scruff.kind.handoff}" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2"
+                                                           Classes="label"
+                                                           VerticalAlignment="Center"
+                                                           IsVisible="{Binding HasLength}"
+                                                           Text="{Binding LengthText}">
+                                                    <TextBlock.Styles>
+                                                        <Style Selector="TextBlock">
+                                                            <Setter Property="Opacity" Value="0.5" />
+                                                        </Style>
+                                                    </TextBlock.Styles>
+                                                </TextBlock>
+                                            </Grid>
+
+                                            <StackPanel Spacing="4" IsVisible="{Binding IsEnabled}">
+
+                                                <!-- Signed in, or how to be -->
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding IsSignedIn}">
+                                                    <TextBlock Grid.Column="0"
+                                                               FontSize="11"
+                                                               VerticalAlignment="Center"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               Text="{Binding Account}" />
+                                                    <Button Grid.Column="1"
+                                                            Classes="small"
+                                                            Content="{m:Tr scruff.forget}"
+                                                            Command="{Binding $parent[UserControl].((vm:ScruffViewModel)DataContext).ForgetCommand}"
+                                                            CommandParameter="{Binding}" />
+                                                </Grid>
+
+                                                <StackPanel Spacing="4" IsVisible="{Binding NeedsSignIn}">
+                                                    <StackPanel Spacing="4" IsVisible="{Binding IsBluesky}">
+                                                        <TextBox Classes="small"
+                                                                 Text="{Binding LoginA}"
+                                                                 PlaceholderText="{m:Tr scruff.bluesky.handle}" />
+                                                        <TextBox Classes="small"
+                                                                 Text="{Binding LoginB}"
+                                                                 PasswordChar="•"
+                                                                 PlaceholderText="{m:Tr scruff.bluesky.password}" />
+                                                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr scruff.bluesky.hint}" />
+                                                    </StackPanel>
+                                                    <StackPanel Spacing="4" IsVisible="{Binding IsMastodon}">
+                                                        <TextBox Classes="small"
+                                                                 Text="{Binding LoginA}"
+                                                                 PlaceholderText="{m:Tr scruff.mastodon.server}" />
+                                                        <TextBox Classes="small"
+                                                                 Text="{Binding LoginB}"
+                                                                 PasswordChar="•"
+                                                                 PlaceholderText="{m:Tr scruff.mastodon.token}" />
+                                                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr scruff.mastodon.hint}" />
+                                                    </StackPanel>
+                                                    <Button Classes="small"
+                                                            Content="{m:Tr scruff.signin}"
+                                                            IsEnabled="{Binding !IsBusy}"
+                                                            Command="{Binding $parent[UserControl].((vm:ScruffViewModel)DataContext).SignInCommand}"
+                                                            CommandParameter="{Binding}" />
+                                                </StackPanel>
+
+                                                <!-- The one or two settings a place has -->
+                                                <StackPanel Spacing="2" IsVisible="{Binding IsMastodon}">
+                                                    <TextBlock Classes="field" Text="{m:Tr scruff.field.visibility}" />
+                                                    <ComboBox ItemsSource="{Binding $parent[UserControl].((vm:ScruffViewModel)DataContext).Visibilities}"
+                                                              SelectedItem="{Binding $parent[UserControl].((vm:ScruffViewModel)DataContext).SelectedVisibility}"
+                                                              FontSize="11"
+                                                              HorizontalAlignment="Stretch">
+                                                        <ComboBox.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:Choice">
+                                                                <TextBlock Text="{Binding Label.Value}" />
+                                                            </DataTemplate>
+                                                        </ComboBox.ItemTemplate>
+                                                    </ComboBox>
+                                                </StackPanel>
+
+                                                <StackPanel Spacing="2" IsVisible="{Binding IsReddit}">
+                                                    <TextBlock Classes="field" Text="{m:Tr scruff.field.subreddit}" />
+                                                    <TextBox Classes="small"
+                                                             Text="{Binding $parent[UserControl].((vm:ScruffViewModel)DataContext).Subreddit}"
+                                                             PlaceholderText="{m:Tr scruff.subreddit.hint}" />
+                                                </StackPanel>
+
+                                                <!-- What would be sent -->
+                                                <Border Background="{DynamicResource MeowsInset}"
+                                                        CornerRadius="4"
+                                                        Padding="8,6"
+                                                        IsVisible="{Binding HasPreview}">
+                                                    <TextBlock Text="{Binding Preview}"
+                                                               FontSize="11"
+                                                               TextWrapping="Wrap"
+                                                               MaxLines="8"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </Border>
+
+                                                <TextBlock Foreground="{DynamicResource MeowsWarnText}"
+                                                           FontSize="11"
+                                                           TextWrapping="Wrap"
+                                                           IsVisible="{Binding HasProblems}"
+                                                           Text="{Binding ProblemsText}" />
+
+                                                <TextBlock Classes="label"
+                                                           TextWrapping="Wrap"
+                                                           IsVisible="{Binding HasNotes}"
+                                                           Text="{Binding NotesText}" />
+
+                                                <!-- How it went -->
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" IsVisible="{Binding HasOutcome}">
+                                                    <TextBlock Grid.Column="0"
+                                                               FontSize="11"
+                                                               TextWrapping="Wrap"
+                                                               VerticalAlignment="Center"
+                                                               Text="{Binding Outcome}"
+                                                               Foreground="{DynamicResource MeowsGoodText}"
+                                                               IsVisible="{Binding !Failed}" />
+                                                    <TextBlock Grid.Column="0"
+                                                               FontSize="11"
+                                                               TextWrapping="Wrap"
+                                                               VerticalAlignment="Center"
+                                                               Text="{Binding Outcome}"
+                                                               Foreground="{DynamicResource MeowsDangerText}"
+                                                               IsVisible="{Binding Failed}" />
+                                                    <Button Grid.Column="1"
+                                                            Classes="small"
+                                                            Content="{m:Tr scruff.openpost}"
+                                                            IsVisible="{Binding HasOutcomeUrl}"
+                                                            Command="{Binding $parent[UserControl].((vm:ScruffViewModel)DataContext).OpenOutcomeCommand}"
+                                                            CommandParameter="{Binding}" />
+                                                </Grid>
+
+                                                <!-- The sheet, for a place done by hand -->
+                                                <StackPanel Spacing="4" IsVisible="{Binding HasHandoff}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Button Classes="small"
+                                                                Content="{m:Tr scruff.handoff.page}"
+                                                                Command="{Binding $parent[UserControl].((vm:ScruffViewModel)DataContext).OpenHandoffPageCommand}"
+                                                                CommandParameter="{Binding}" />
+                                                        <Button Classes="small"
+                                                                Content="{m:Tr scruff.handoff.folder}"
+                                                                Command="{Binding $parent[UserControl].((vm:ScruffViewModel)DataContext).OpenHandoffFolderCommand}"
+                                                                CommandParameter="{Binding}" />
+                                                    </StackPanel>
+
+                                                    <ItemsControl ItemsSource="{Binding Sheet}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:SheetFieldViewModel">
+                                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="0,2" IsVisible="{Binding HasValue}">
+                                                                    <StackPanel Grid.Column="0" Spacing="1">
+                                                                        <TextBlock Classes="field" Margin="0" Text="{Binding Label}" />
+                                                                        <TextBlock Text="{Binding Value}"
+                                                                                   FontSize="11"
+                                                                                   TextWrapping="Wrap"
+                                                                                   MaxLines="4"
+                                                                                   TextTrimming="CharacterEllipsis" />
+                                                                    </StackPanel>
+                                                                    <Button Grid.Column="1"
+                                                                            Classes="small"
+                                                                            VerticalAlignment="Center"
+                                                                            Content="{m:Tr scruff.copy}"
+                                                                            Command="{Binding $parent[UserControl].((vm:ScruffViewModel)DataContext).CopyCommand}"
+                                                                            CommandParameter="{Binding}" />
+                                                                </Grid>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+
+                                                    <ItemsControl ItemsSource="{Binding Reminders}" IsVisible="{Binding HasReminders}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="x:String">
+                                                                <TextBlock Text="{Binding}"
+                                                                           Foreground="{DynamicResource MeowsWarnText}"
+                                                                           FontSize="11"
+                                                                           TextWrapping="Wrap"
+                                                                           Margin="0,2,0,0" />
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

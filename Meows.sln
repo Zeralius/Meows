@@ -32,6 +32,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Plugins.Tin", "Meows.
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Plugins.Collar", "Meows.Plugins.Collar\Meows.Plugins.Collar.csproj", "{09355FA2-102A-4B3A-A451-BC7F06A667C5}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Plugins.Scruff", "Meows.Plugins.Scruff\Meows.Plugins.Scruff.csproj", "{16926341-3B56-4502-B94A-538BCBCA9EEC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -234,6 +236,18 @@ Global
 		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Release|x64.Build.0 = Release|Any CPU
 		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Release|x86.ActiveCfg = Release|Any CPU
 		{09355FA2-102A-4B3A-A451-BC7F06A667C5}.Release|x86.Build.0 = Release|Any CPU
+		{16926341-3B56-4502-B94A-538BCBCA9EEC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{16926341-3B56-4502-B94A-538BCBCA9EEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{16926341-3B56-4502-B94A-538BCBCA9EEC}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{16926341-3B56-4502-B94A-538BCBCA9EEC}.Debug|x64.Build.0 = Debug|Any CPU
+		{16926341-3B56-4502-B94A-538BCBCA9EEC}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{16926341-3B56-4502-B94A-538BCBCA9EEC}.Debug|x86.Build.0 = Debug|Any CPU
+		{16926341-3B56-4502-B94A-538BCBCA9EEC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{16926341-3B56-4502-B94A-538BCBCA9EEC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{16926341-3B56-4502-B94A-538BCBCA9EEC}.Release|x64.ActiveCfg = Release|Any CPU
+		{16926341-3B56-4502-B94A-538BCBCA9EEC}.Release|x64.Build.0 = Release|Any CPU
+		{16926341-3B56-4502-B94A-538BCBCA9EEC}.Release|x86.ActiveCfg = Release|Any CPU
+		{16926341-3B56-4502-B94A-538BCBCA9EEC}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

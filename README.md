@@ -22,6 +22,7 @@ to install.
 | **[Birdwatch](Meows.Plugins.Birdwatch/README.md)** | Watches Bluesky accounts and saves their pictures into that same folder, with no login needed |
 | **[Tin](Meows.Plugins.Tin/README.md)** | Reads the exports and statements your bank hands out, CSV or PDF, and says what is recurring, what quietly went up, and what is still going out for something you stopped using |
 | **[Collar](Meows.Plugins.Collar/README.md)** | Keeps the dates that matter and the paper behind them, and says so on the notification surface when one comes round |
+| **[Scruff](Meows.Plugins.Scruff/README.md)** | Takes the metadata out of pictures, posts them to Bluesky and Mastodon, and hands them to FurAffinity, X, Instagram and Reddit with every field spelled that site's way |
 | **[Kibble](Meows.Plugins.Kibble/README.md)** | Sorts a folder of new material into queues, one key press at a time, and can bundle a pick into a comic |
 | **[Telegram Poster](Meows.Plugins.TelegramPoster/README.md)** | Drives a [Telegram posting bot](https://github.com/Zeralius/telegram-posting-bot): its groups, queues and schedule, including slowing a group down so a short queue lasts |
 
@@ -90,7 +91,8 @@ dotnet test
 
 The suite covers the filesystem and logic layers: duplicate scanning, disk measuring, queue
 maths, file intake and its refusals, comic page ordering, clipboard conversion, cache
-cataloguing, shortcut parsing, and the plugin contract rules. Anything needing a render backend is
+cataloguing, shortcut parsing, metadata stripping and post composition, and the plugin contract
+rules. Anything needing a render backend is
 out of scope, so it stays headless and runs on CI.
 
 ## Writing a plugin

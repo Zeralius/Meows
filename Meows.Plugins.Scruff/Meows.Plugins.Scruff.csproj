@@ -1,0 +1,41 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+        <OutputPath Condition="'$(Configuration)' == 'Debug'">$(MSBuildThisFileDirectory)..\plugins\Meows.Plugins.Scruff\</OutputPath>
+        <OutputPath Condition="'$(Configuration)' != 'Debug'">$(MSBuildThisFileDirectory)bin\$(Configuration)\</OutputPath>
+    </PropertyGroup>
+
+    <!-- One file per language. WithCulture and LogicalName are both load bearing: MSBuild reads
+         the middle of Strings.de.json as a culture and would otherwise file it under a de
+         satellite assembly, where the shell never looks. -->
+    <ItemGroup>
+      <EmbeddedResource Include="Strings\Strings.*.json">
+        <WithCulture>false</WithCulture>
+        <LogicalName>$(AssemblyName).Strings.%(Filename)%(Extension)</LogicalName>
+      </EmbeddedResource>
+    </ItemGroup>
+
+    <ItemGroup>
+      <!-- Skia does the decoding, turning and re-encoding. The shell already carries it, because
+           Avalonia draws with it, so it is borrowed rather than shipped: a second copy would mean a
+           second native library loaded beside the first for no gain. The version has to be the
+           one Avalonia 12.1.1 brings. -->
+      <PackageReference Include="SkiaSharp" Version="3.119.4" ExcludeAssets="runtime;native" />
+
+      <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
+      <ProjectReference Include="..\Meows.Plugins.Abstractions\Meows.Plugins.Abstractions.csproj"
+                        Private="false"
+                        ExcludeAssets="runtime" />
+      <!-- For putting an original in the Recycle Bin when a file is cleaned in place. Shared with
+           Purrge and Chonk for the same reason it was shared between those two: the call is
+           destructive, and two copies of it is how one gets a fix and the other does not. -->
+      <ProjectReference Include="..\Meows.Disk\Meows.Disk.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -218,15 +218,19 @@ for p in Meows.Plugins.TelegramPoster Meows.Plugins.Purrge Meows.Plugins.Kibble 
 Stage each one into the folder the deployed shell scans. Copy the **whole** build output rather
 than just the plugin DLL. A plugin's own libraries are loaded from its folder, so a plugin with
 any dependency fails at activation if you cherry-pick, and it fails long after the build looked
-fine. Telegram Poster and Kibble need `Meows.Bot.Core.dll` this way, and Purrge and Chonk
-need `Meows.Disk.dll`:
+fine. Telegram Poster and Kibble need `Meows.Bot.Core.dll` this way, and Purrge, Chonk and
+Scruff need `Meows.Disk.dll`:
 
 ```bash
 for p in Meows.Plugins.TelegramPoster Meows.Plugins.Purrge Meows.Plugins.Kibble Meows.Plugins.Chonk; do mkdir -p "artifacts/Meows-win-x64/plugins/$p" && cp "$p"/bin/Release/*.dll "$p"/bin/Release/*.deps.json "artifacts/Meows-win-x64/plugins/$p/"; done
 ```
 
 Avalonia and `Meows.Plugins.Abstractions` are not in that output to be copied, because the csproj
-files keep them out. That is on purpose: the shell has to be the only source of both.
+files keep them out. That is on purpose: the shell has to be the only source of both. The same
+trick works for anything else the shell already carries: Scruff draws with SkiaSharp, which
+Avalonia loads anyway, so it references the package with `ExcludeAssets="runtime;native"` at the
+exact version Avalonia brings and picks up the shell's copy at run time. A name that is not on the
+shared list still resolves from the shell when the plugin folder has nothing by that name.
 
 Finally drop the third-party native symbols. This matters more than it sounds. `libSkiaSharp.pdb`
 and `libHarfBuzzSharp.pdb` are about 100 MB of a 206 MB output. Meows' own PDBs stay, so stack

@@ -165,6 +165,7 @@ public class CatalogueTests
         typeof(Plugins.Birdwatch.BirdwatchPlugin).Assembly,
         typeof(Plugins.Tin.TinPlugin).Assembly,
         typeof(Plugins.Collar.CollarPlugin).Assembly,
+        typeof(Plugins.Scruff.ScruffPlugin).Assembly,
     ];
 
     private static Dictionary<string, string> Read(Assembly assembly, string language)
