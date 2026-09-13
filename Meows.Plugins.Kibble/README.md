@@ -195,6 +195,25 @@ the same file being queued elsewhere is not a reason to refuse it here.
 
 A name clash never overwrites what is already queued. The incoming file gets a suffix.
 
+## What the bot would fail on has two ways out
+
+A file over the Bot API's limit, one the bot does not recognise, or a comic with nothing postable
+inside is refused at the click, because the alternative is the post failing at three in the
+morning. It used to be refused and left in the grid with a note that Portion could shrink it.
+The note now has buttons.
+
+**Shrink it and send**, for a picture that is merely too big: it is made to fit where it sits,
+the way Portion does it in a queue, with the original going to the Recycle Bin only once the
+smaller file has been proven to decode, and then it is sent to the group that refused it. The
+send is undoable like any other; the shrink is a Recycle Bin trip.
+
+**Hold it back**, for anything the bot would fail on: the file moves into the group's
+`Held_Back` folder, a sibling of `To_Send` like `Duplicates`, where the bot never looks. Nothing
+is deleted. Undo brings it back into the grid. A video over the limit lands here, since a video
+needs ffmpeg to shrink and that is a different tool.
+
+A duplicate gets neither button. It has a folder of its own, below.
+
 ## Duplicates get their own folder
 
 **Set duplicates aside**, on by default, changes what happens to the second of those. Instead of

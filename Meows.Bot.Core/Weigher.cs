@@ -1,8 +1,11 @@
 using System.IO.Compression;
-using Meows.Bot;
 using Meows.Media;
 
-namespace Meows.Plugins.Portion.Services;
+namespace Meows.Bot;
+
+// Lived in Portion until 2.7.0. Moved here because Kibble wants the same verdict at the click
+// and Telegram Poster wants it on a queue row, and three copies of what the Bot API refuses is
+// how one of them gets a fix and the others do not.
 
 /// <summary>Why the bot would refuse it.</summary>
 public enum Trouble
@@ -283,7 +286,7 @@ public static class Slimmer
     /// </summary>
     public static Func<string, string?> RemoveOriginal { get; set; } = path =>
     {
-        var outcome = Disk.RecycleBin.Send([path]);
+        var outcome = Meows.Disk.RecycleBin.Send([path]);
         return outcome.Failed > 0 ? outcome.FailureReason ?? "The original could not be sent to the Recycle Bin." : null;
     };
 

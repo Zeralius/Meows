@@ -3,7 +3,6 @@ using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Meows.Bot;
 using Meows.Plugins.Abstractions;
-using Meows.Plugins.Portion.Services;
 
 namespace Meows.Plugins.Portion.ViewModels;
 
@@ -147,7 +146,7 @@ public sealed class HeavyViewModel : ObservableObject, IDisposable
     public void Dispose() => Thumbnail = null;
 }
 
-public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget
 {
     private const int ThumbnailWidth = 56;
     private const int PreviewWidth = 720;
@@ -178,6 +177,7 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
         ShrinkAllCommand = new RelayCommand(() => _ = ShrinkAsync(Heavies.Where(h => h.CanShrink).ToList()), () => !IsBusy && Heavies.Any(h => h.CanShrink));
         SelectCommand = new RelayCommand(p => Selected = p as HeavyViewModel);
         RevealCommand = new RelayCommand(Reveal, () => Selected is not null);
+        HoldCommand = new RelayCommand(HoldSelected, () => !IsBusy && Selected is { WillFail: true });
 
         _language = new LanguageWatch(() =>
         {
@@ -202,6 +202,100 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
     public RelayCommand SelectCommand { get; }
 
     public RelayCommand RevealCommand { get; }
+
+    /// <summary>
+    /// The way out for what cannot be shrunk: into the group's Held_Back folder, beside the
+    /// queue, where the bot never looks. Not a delete. The file is a decision for later.
+    /// </summary>
+    public RelayCommand HoldCommand { get; }
+
+    private void HoldSelected()
+    {
+        if (Selected is not { WillFail: true } row || _workspace is null)
+            return;
+
+        var outcome = HeldBack.SetAside(_workspace, row.Heavy.Group, row.Heavy.Path);
+        if (!outcome.Ok)
+        {
+            ErrorMessage = _host.Text.Format("portion.error.hold", outcome.Error);
+            return;
+        }
+
+        _host.Store.Record("held", row.Heavy.Path, _host.Text.Format("portion.journal.held", row.GroupName),
+            new Dictionary<string, string> { ["destination"] = outcome.Destination ?? "", ["group"] = row.GroupName });
+        _host.Log($"Portion held back {row.Heavy.Path} -> {outcome.Destination}");
+
+        var index = Heavies.IndexOf(row);
+        Heavies.Remove(row);
+        row.Dispose();
+        Selected = Heavies.ElementAtOrDefault(Math.Min(index, Heavies.Count - 1));
+        Status = _host.Text.Format("portion.status.held", row.FileName, row.GroupName);
+        OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(AllClear));
+        RaiseCommands();
+    }
+
+    /// <summary>
+    /// Files handed over from another tab, Telegram Poster's queue rows usually. Each is
+    /// weighed on its own and shown if the bot would object; one already in the list is just
+    /// selected.
+    /// </summary>
+    public bool Accepts(Handoff handoff) =>
+        handoff.Verb == HandoffVerbs.Files && handoff.Paths.Count > 0 && _workspace is { LooksValid: true };
+
+    public void Receive(Handoff handoff)
+    {
+        // A walk in progress does not stop a handoff: the rows are added now, and Apply skips
+        // what is already listed when the walk lands.
+        if (!Accepts(handoff) || _workspace is not { } workspace || _isShrinking)
+            return;
+
+        BotConfig config;
+        try
+        {
+            config = workspace.LoadConfig();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = _host.Text.Format("portion.error.read", ex.Message);
+            return;
+        }
+
+        HeavyViewModel? first = null;
+        var fine = 0;
+        foreach (var path in handoff.Paths)
+        {
+            var known = Heavies.FirstOrDefault(h => string.Equals(h.Heavy.Path, path, StringComparison.OrdinalIgnoreCase));
+            if (known is not null)
+            {
+                first ??= known;
+                continue;
+            }
+
+            var group = HeldBack.GroupOf(workspace, config, path);
+            if (group is null)
+                continue;
+
+            if (Weigher.Inspect(group, path) is not { } heavy)
+            {
+                fine++;
+                continue;
+            }
+
+            var row = new HeavyViewModel(heavy);
+            Heavies.Insert(0, row);
+            first ??= row;
+        }
+
+        _scanned = true;
+        Selected = first;
+        Status = first is null
+            ? _host.Text.Format("portion.status.handoff.fine", fine)
+            : _host.Text.Format("portion.status.handoff", handoff.Paths.Count - fine, fine);
+        OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(AllClear));
+        RaiseCommands();
+    }
 
     public string BotRootText => _workspace?.Root ?? MeowsText.Current["portion.nobot"];
 
@@ -284,10 +378,17 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
     }
 
     /// <summary>Through the shell: it opens every comic in every queue, which is real work.</summary>
+    /// <summary>Which walk is the current one, so a cancelled one landing late changes nothing.</summary>
+    private int _scanGeneration;
+
     private void StartScan()
     {
-        if (IsBusy)
+        // A walk in progress is abandoned rather than blocking a new one: picking a different
+        // bot folder mid-walk used to be silently ignored, which read as the button being broken.
+        if (_isShrinking)
             return;
+        _scan?.Cancel();
+        var generation = ++_scanGeneration;
 
         ErrorMessage = null;
         Clear();
@@ -315,7 +416,11 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
                     group => context.Report(_host.Text.Format("portion.progress", group)),
                     context.Token);
 
-                await Dispatcher.UIThread.InvokeAsync(() => Apply(found));
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (generation == _scanGeneration)
+                        Apply(found);
+                });
             }
             catch (OperationCanceledException)
             {
@@ -331,6 +436,8 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
             {
                 await Dispatcher.UIThread.InvokeAsync(() =>
                 {
+                    if (generation != _scanGeneration)
+                        return;
                     _scanned = true;
                     IsScanning = false;
                     OnPropertyChanged(nameof(AllClear));
@@ -342,7 +449,11 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
     private void Apply(IReadOnlyList<Heavy> found)
     {
         foreach (var heavy in found)
+        {
+            if (Heavies.Any(h => string.Equals(h.Heavy.Path, heavy.Path, StringComparison.OrdinalIgnoreCase)))
+                continue;
             Heavies.Add(new HeavyViewModel(heavy));
+        }
 
         var failing = found.Count(h => h.WillFail);
         var fixable = found.Count(h => h.CanShrink);
@@ -505,6 +616,7 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
         ShrinkSelectedCommand.RaiseCanExecuteChanged();
         ShrinkAllCommand.RaiseCanExecuteChanged();
         RevealCommand.RaiseCanExecuteChanged();
+        HoldCommand.RaiseCanExecuteChanged();
     }
 
     private void Save()

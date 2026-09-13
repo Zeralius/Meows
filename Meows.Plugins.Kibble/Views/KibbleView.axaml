@@ -371,10 +371,30 @@
                                 CornerRadius="6"
                                 Padding="10,8"
                                 IsVisible="{Binding IsBlocked}">
-                            <TextBlock Text="{Binding BlockedReason}"
-                                       Foreground="{DynamicResource MeowsWarnText}"
-                                       TextWrapping="Wrap"
-                                       FontSize="11" />
+                            <StackPanel Spacing="6">
+                                <TextBlock Text="{Binding BlockedReason}"
+                                           Foreground="{DynamicResource MeowsWarnText}"
+                                           TextWrapping="Wrap"
+                                           FontSize="11" />
+                                <!-- The two ways out of a refusal the bot would fail on. A
+                                     duplicate has neither; it has its own folder already. -->
+                                <Button Content="{m:Tr kibble.shrinksend}"
+                                        Command="{Binding ShrinkAndSendCommand}"
+                                        IsVisible="{Binding CanShrinkBlocked}"
+                                        FontSize="11"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center" />
+                                <Button Content="{m:Tr kibble.hold}"
+                                        Command="{Binding HoldCommand}"
+                                        IsVisible="{Binding CanHoldBlocked}"
+                                        FontSize="11"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center" />
+                                <TextBlock Text="{m:Tr kibble.hold.note}"
+                                           Classes="label"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding CanHoldBlocked}" />
+                            </StackPanel>
                         </Border>
 
                         <Border Background="{DynamicResource MeowsInfo}"

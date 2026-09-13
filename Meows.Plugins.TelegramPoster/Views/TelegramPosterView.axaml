@@ -283,6 +283,29 @@
                                                 IsVisible="{Binding IsComic}">
                                             <TextBlock Text="{m:Tr tp.comic}" FontSize="9" />
                                         </Border>
+                                        <!-- What Portion would say, on the tile, before the night it fails. -->
+                                        <Border Background="{DynamicResource MeowsDanger}"
+                                                BorderBrush="{DynamicResource MeowsDangerLine}"
+                                                BorderThickness="1"
+                                                CornerRadius="3"
+                                                Padding="4,1"
+                                                Margin="4"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Top"
+                                                IsVisible="{Binding WillFail}">
+                                            <TextBlock Text="{m:Tr tp.willfail}" FontSize="9" Foreground="{DynamicResource MeowsDangerText}" />
+                                        </Border>
+                                        <Border Background="{DynamicResource MeowsWarn}"
+                                                BorderBrush="{DynamicResource MeowsWarnLine}"
+                                                BorderThickness="1"
+                                                CornerRadius="3"
+                                                Padding="4,1"
+                                                Margin="4"
+                                                HorizontalAlignment="Right"
+                                                VerticalAlignment="Top"
+                                                IsVisible="{Binding HasNote}">
+                                            <TextBlock Text="{m:Tr tp.note}" FontSize="9" Foreground="{DynamicResource MeowsWarnText}" />
+                                        </Border>
                                     </Panel>
                                 </Border>
                                 <TextBlock Text="{Binding FileName}"
@@ -352,6 +375,33 @@
                                        FontSize="11"
                                        TextWrapping="Wrap"
                                        IsVisible="{Binding HasDetailComicText}" />
+
+                            <Border Background="{DynamicResource MeowsWarn}"
+                                    BorderBrush="{DynamicResource MeowsWarnLine}"
+                                    BorderThickness="1"
+                                    CornerRadius="6"
+                                    Padding="10,8"
+                                    Margin="0,6,0,0"
+                                    IsVisible="{Binding DetailItem.Trouble, Converter={x:Static ObjectConverters.IsNotNull}}">
+                                <StackPanel Spacing="6">
+                                    <TextBlock Text="{Binding DetailItem.TroubleText}"
+                                               Foreground="{DynamicResource MeowsWarnText}"
+                                               TextWrapping="Wrap"
+                                               FontSize="11" />
+                                    <Button Content="{m:Tr tp.shrinkwithportion}"
+                                            Command="{Binding ShrinkWithPortionCommand}"
+                                            IsVisible="{Binding CanReachPortion}"
+                                            FontSize="11"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Center" />
+                                    <Button Content="{m:Tr tp.hold}"
+                                            Command="{Binding HoldCommand}"
+                                            IsVisible="{Binding DetailItem.WillFail}"
+                                            FontSize="11"
+                                            HorizontalAlignment="Stretch"
+                                            HorizontalContentAlignment="Center" />
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
 
                         <Border Background="{DynamicResource MeowsInset}"

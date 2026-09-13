@@ -59,6 +59,8 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISe
         StartBotCommand = new RelayCommand(StartBot, () => !IsBotRunning && _workspace?.LooksValid == true);
         StopBotCommand = new RelayCommand(StopBot, () => IsBotRunning);
         ClearSelectionCommand = new RelayCommand(() => SelectedMedia = null);
+        ShrinkWithPortionCommand = new RelayCommand(ShrinkWithPortion, () => CanReachPortion && DetailItem is { Trouble: not null } && !ShowArchive);
+        HoldCommand = new RelayCommand(HoldDetailItem, () => DetailItem is { WillFail: true } && !ShowArchive);
         RecheckToolsCommand = new RelayCommand(CheckTools);
 
         Setup = new BotSetupViewModel(
@@ -101,6 +103,48 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISe
     public RelayCommand ReloadCommand { get; }
 
     public RelayCommand RefreshMediaCommand { get; }
+
+    /// <summary>The queue row's way to Portion: the file is weighed there and can be shrunk there.</summary>
+    public RelayCommand ShrinkWithPortionCommand { get; }
+
+    /// <summary>The queue row's other way out: into Held_Back, beside the queue, where the bot never looks.</summary>
+    public RelayCommand HoldCommand { get; }
+
+    public bool CanReachPortion => _host.Handoff.CanReach(KnownPlugins.Portion);
+
+    private void ShrinkWithPortion()
+    {
+        if (DetailItem is not { } item)
+            return;
+        if (!_host.Handoff.Send(KnownPlugins.Portion, Handoff.Files([item.Path])))
+            ErrorMessage = _host.Text["tp.error.portion"];
+    }
+
+    private void HoldDetailItem()
+    {
+        if (DetailItem is not { WillFail: true } item || _workspace is null || SelectedGroup is null)
+            return;
+
+        var group = SelectedGroup.ToConfig();
+        var outcome = HeldBack.SetAside(_workspace, group, item.Path);
+        if (!outcome.Ok)
+        {
+            ErrorMessage = _host.Text.Format("tp.error.hold", outcome.Error);
+            return;
+        }
+
+        _host.Store.Record("held", item.Path, _host.Text.Format("tp.journal.held", SelectedGroup.Name),
+            new Dictionary<string, string> { ["destination"] = outcome.Destination ?? "", ["group"] = SelectedGroup.Name });
+        _host.Log($"Held back {item.Path} -> {outcome.Destination}");
+        _host.Notifications.Post(NotificationSeverity.Info, _host.Text["tp.hold"], _host.Text.Format("tp.status.held", item.FileName));
+        RefreshMedia();
+    }
+
+    private void RaiseWaysOut()
+    {
+        ShrinkWithPortionCommand.RaiseCanExecuteChanged();
+        HoldCommand.RaiseCanExecuteChanged();
+    }
 
     public RelayCommand SaveGroupCommand { get; }
 
@@ -488,6 +532,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISe
 
         // Next-up first, since that is the thumbnail someone is actually waiting on.
         var queue = NextUpItems.Concat(MediaItems.Take(ThumbnailBudget)).ToList();
+        var group = ShowArchive ? null : SelectedGroup?.ToConfig();
 
         try
         {
@@ -496,6 +541,15 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISe
                 if (token.IsCancellationRequested)
                     return;
                 await item.LoadThumbnailAsync(ThumbnailWidth, token).ConfigureAwait(true);
+
+                // Weighed in the same pass, one file at a time, so the badge appears with the
+                // thumbnail rather than after a second walk of the queue.
+                if (group is not null)
+                {
+                    await item.WeighAsync(group, token).ConfigureAwait(true);
+                    if (ReferenceEquals(item, DetailItem))
+                        RaiseWaysOut();
+                }
             }
         }
         catch (OperationCanceledException)
@@ -514,6 +568,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISe
     private void UpdateDetail()
     {
         DetailItem = SelectedMedia ?? NextUpItems.FirstOrDefault();
+        RaiseWaysOut();
         OnPropertyChanged(nameof(DetailHeader));
         _ = LoadPreviewAsync(DetailItem);
     }

@@ -1,7 +1,6 @@
 using System.IO.Compression;
 using Meows.Bot;
 using Meows.Media;
-using Meows.Plugins.Portion.Services;
 using SkiaSharp;
 
 namespace Meows.Tests;

@@ -115,6 +115,14 @@ public sealed class BotWorkspace
     /// </summary>
     public string DuplicatesFolder(GroupConfig group) => Path.Combine(GroupFolder(group), "Duplicates");
 
+    /// <summary>
+    /// Where a file the bot would fail on is put when it cannot, or should not, be shrunk:
+    /// a video over the limit, a picture with an odd ratio, a comic with bad pages. A sibling of
+    /// To_Send for the same reason Duplicates is, so the bot never sees it, and a folder rather
+    /// than the bin because the file is not rubbish, it is a decision for later.
+    /// </summary>
+    public string HeldBackFolder(GroupConfig group) => Path.Combine(GroupFolder(group), "Held_Back");
+
     public IReadOnlyList<string> Scan(string folder, bool recursive = false)
     {
         if (!Directory.Exists(folder))

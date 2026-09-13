@@ -185,6 +185,15 @@
                                     Command="{Binding ShrinkSelectedCommand}"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center" />
+                            <Button Content="{m:Tr portion.hold}"
+                                    Command="{Binding HoldCommand}"
+                                    IsVisible="{Binding Selected.WillFail}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
+                            <TextBlock Text="{m:Tr portion.hold.note}"
+                                       Classes="label"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding Selected.WillFail}" />
                             <Button Content="{m:Tr portion.explore}"
                                     Command="{Binding RevealCommand}"
                                     HorizontalAlignment="Stretch"

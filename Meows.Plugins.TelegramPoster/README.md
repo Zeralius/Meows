@@ -109,6 +109,16 @@ silently never posts.
 `bot.py` does the same required-key check itself at startup and skips unusable groups instead of
 crashing, so hand-editing `config.json` outside Meows is covered too.
 
+## What will fail, on the tile
+
+Every tile in the queue is weighed the way Portion weighs it, one file at a time as the
+thumbnails load, and a tile the bot would fail on carries a **WILL FAIL** badge; one the bot
+would post but not as expected, a long comic or one with files it skips, carries **NOTE**. The
+panel on the right says why, in the same words Portion uses, with two buttons under it: **Shrink
+with Portion** hands the file to Portion's tab, which is where shrinking lives, and **Hold it
+back** moves it into the group's `Held_Back` folder beside `To_Send`, where the bot never looks.
+Nothing on this tab shrinks or deletes; it says, and it hands over.
+
 ## Stretching a short queue
 
 Left alone, a group posts at its configured rate until `To_Send` is empty and then starts

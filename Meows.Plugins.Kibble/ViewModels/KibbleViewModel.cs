@@ -155,6 +155,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         SkipCommand = new RelayCommand(SkipSelected, () => Selected is not null);
         RefreshCommand = new RelayCommand(() => LoadFolder(SourceFolder), () => SourceFolder.Length > 0);
         UndoCommand = new RelayCommand(UndoLastBatch, () => _undoable.Count > 0);
+        ShrinkAndSendCommand = new RelayCommand(() => _ = ShrinkAndSendAsync(), () => CanShrinkBlocked);
+        HoldCommand = new RelayCommand(HoldBlocked, () => CanHoldBlocked);
         OpenSourceCommand = new RelayCommand(() => OpenInExplorer(SourceFolder), () => SourceFolder.Length > 0);
 
         Reload();
@@ -220,6 +222,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         {
             recorded = _host.Store.Recent(UndoDepth * 4, "sent")
                 .Concat(_host.Store.Recent(UndoDepth * 4, "set-aside"))
+                .Concat(_host.Store.Recent(UndoDepth * 4, "held"))
                 .OrderByDescending(e => e.At)
                 .ThenByDescending(e => e.Id)
                 .ToList();
@@ -279,6 +282,103 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
     public RelayCommand RefreshCommand { get; }
 
     public RelayCommand UndoCommand { get; }
+
+    /// <summary>The way out of a refusal for a picture that is merely too big.</summary>
+    public RelayCommand ShrinkAndSendCommand { get; }
+
+    /// <summary>The way out of any refusal the bot would fail on: into Held_Back, to decide later.</summary>
+    public RelayCommand HoldCommand { get; }
+
+    /// <summary>The refusal behind <see cref="BlockedReason"/>, and the group it was for, so the ways out know where to go.</summary>
+    private (IntakeResult Result, DestinationViewModel Destination, IncomingFileViewModel File)? _blocked;
+
+    public bool CanShrinkBlocked => _blocked is { Result.Outcome: IntakeOutcome.TooBig, File.Path: var p } && MediaRules.KindOf(p) == MediaKind.Photo;
+
+    public bool CanHoldBlocked => _blocked is { Result.WouldFail: true };
+
+    private void RaiseBlockedWays()
+    {
+        OnPropertyChanged(nameof(CanShrinkBlocked));
+        OnPropertyChanged(nameof(CanHoldBlocked));
+        ShrinkAndSendCommand.RaiseCanExecuteChanged();
+        HoldCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// Shrinks the refused picture where it sits, then sends the result to the group that
+    /// refused it. The original goes to the Recycle Bin once the smaller file is proven, which
+    /// is Portion's rule and the same code.
+    /// </summary>
+    private async Task ShrinkAndSendAsync()
+    {
+        if (_blocked is not { } blocked || _workspace is null || !CanShrinkBlocked)
+            return;
+
+        var (result, destination, file) = blocked;
+        StatusMessage = _host.Text.Format("kibble.status.shrinking", file.FileName);
+
+        var (shrunk, error) = await Task.Run(() => Intake.ShrinkInPlace(file.Path, destination.Group));
+        if (shrunk is null)
+        {
+            BlockedReason = _host.Text.Format("kibble.error.shrink", error);
+            return;
+        }
+
+        _host.Store.Record("shrunk", file.Path, _host.Text.Format("kibble.journal.shrunk", destination.Name),
+            new Dictionary<string, string> { ["result"] = shrunk, ["group"] = destination.Name });
+
+        var sent = Intake.Send(shrunk, _workspace, destination.Group, Stamp, Duplicates);
+        if (!sent.Moved)
+        {
+            // Smaller, but still refused: the shrunk file stays in the folder and the reason says why.
+            BlockedReason = sent.Detail;
+            Restore([shrunk]);
+            Take([file]);
+            return;
+        }
+
+        _blocked = null;
+        BlockedReason = null;
+        Remember([sent], destination.Name);
+        Journal(sent, destination.Name, Guid.NewGuid().ToString("N"));
+
+        var next = NextAfter(file);
+        Take([file]);
+        Selected = next;
+        destination.Refresh();
+
+        StatusMessage = _host.Text.Format("kibble.status.shrunk", destination.Name, destination.RunwayText);
+        _host.Log($"Shrunk {file.FileName} and queued it into {destination.Name} as {Path.GetFileName(shrunk)}");
+        RaiseGridState();
+    }
+
+    /// <summary>Moves the refused file into the group's Held_Back folder. Undo brings it back.</summary>
+    private void HoldBlocked()
+    {
+        if (_blocked is not { } blocked || _workspace is null || !CanHoldBlocked)
+            return;
+
+        var (_, destination, file) = blocked;
+        var held = Intake.Hold(file.Path, _workspace, destination.Group);
+        if (!held.Moved)
+        {
+            BlockedReason = held.Detail;
+            return;
+        }
+
+        _blocked = null;
+        BlockedReason = null;
+        Remember([held], destination.Name);
+        Journal(held, destination.Name, Guid.NewGuid().ToString("N"));
+
+        var next = NextAfter(file);
+        Take([file]);
+        Selected = next;
+
+        StatusMessage = _host.Text.Format("kibble.status.held", destination.Name);
+        _host.Log($"Held back {file.FileName} for {destination.Name}: {Path.GetFileName(held.Destination!)}");
+        RaiseGridState();
+    }
 
     public RelayCommand OpenSourceCommand { get; }
 
@@ -354,8 +454,12 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         get => _blockedReason;
         private set
         {
-            if (SetField(ref _blockedReason, value))
-                OnPropertyChanged(nameof(IsBlocked));
+            if (!SetField(ref _blockedReason, value))
+                return;
+            if (value is null)
+                _blocked = null;
+            OnPropertyChanged(nameof(IsBlocked));
+            RaiseBlockedWays();
         }
     }
 
@@ -954,8 +1058,11 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
 
         if (!result.Moved)
         {
-            // Leave it in the grid. It is still yours to deal with.
+            // Leave it in the grid. It is still yours to deal with, and for a refusal the bot
+            // would fail on there are two ways to deal with it right here.
+            _blocked = (result, destination, file);
             BlockedReason = result.Detail;
+            RaiseBlockedWays();
             _host.Log($"Not sent: {file.FileName} to {destination.Name}: {result.Detail}");
             return;
         }
@@ -1079,10 +1186,18 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
     /// </summary>
     private void Journal(IntakeResult result, string group, string batch)
     {
-        var kind = result.Outcome == IntakeOutcome.MovedToDuplicates ? "set-aside" : "sent";
-        var detail = result.Outcome == IntakeOutcome.MovedToDuplicates
-            ? _host.Text.Format("kibble.journal.duplicate", group)
-            : _host.Text.Format("kibble.journal.sent", group);
+        var kind = result.Outcome switch
+        {
+            IntakeOutcome.MovedToDuplicates => "set-aside",
+            IntakeOutcome.MovedToHeld => "held",
+            _ => "sent",
+        };
+        var detail = result.Outcome switch
+        {
+            IntakeOutcome.MovedToDuplicates => _host.Text.Format("kibble.journal.duplicate", group),
+            IntakeOutcome.MovedToHeld => _host.Text.Format("kibble.journal.held", group),
+            _ => _host.Text.Format("kibble.journal.sent", group),
+        };
 
         // Enough for the record to be turned back into a result after a restart: the batch it
         // went in, and for a comic the pages it was built from with the times they had.

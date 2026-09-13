@@ -59,4 +59,5 @@ public static class KnownPlugins
     public const string Kibble = "meows.kibble";
     public const string Scruff = "meows.scruff";
     public const string Chonk = "meows.chonk";
+    public const string Portion = "meows.portion";
 }

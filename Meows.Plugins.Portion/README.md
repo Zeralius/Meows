@@ -63,6 +63,18 @@ oversized file was.
 - A comic with **no postable pages** or a **page that is not a picture** needs a person to open
   it. Portion will not guess which page to drop.
 
+## Holding back
+
+What Portion cannot shrink still cannot stay in the queue, or the bot will fail on it at night.
+**Hold it back** moves the selected file into the group's `Held_Back` folder, a sibling of
+`To_Send` that the bot never reads, and the row leaves the list. Nothing is deleted; the folder is
+where decisions wait. Kibble puts files there at the click for the same reason, and Telegram
+Poster's queue rows can do it too.
+
+Portion also takes files handed over from another tab, Telegram Poster's queue rows in
+particular: each is weighed on its own and listed if the bot would object, and the status line
+says how many were fine as they were.
+
 ## Settings
 
 `%APPDATA%\Meows\plugins\meows.portion\settings.json` holds the bot folder if it was chosen by

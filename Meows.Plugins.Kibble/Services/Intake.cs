@@ -24,6 +24,9 @@ public enum IntakeOutcome
     /// <summary>A duplicate, set aside in the group's Duplicates folder rather than refused.</summary>
     MovedToDuplicates,
 
+    /// <summary>Something the bot would fail on, put in the group's Held_Back folder to decide about later.</summary>
+    MovedToHeld,
+
     NotPostable,
     EmptyComic,
 
@@ -66,7 +69,13 @@ public sealed record IntakeResult(
     /// True if the file left the source folder, so a send or a duplicate set aside. Both clear
     /// the tile from the grid and both can be undone.
     /// </summary>
-    public bool Moved => Outcome is IntakeOutcome.Sent or IntakeOutcome.MovedToDuplicates;
+    public bool Moved => Outcome is IntakeOutcome.Sent or IntakeOutcome.MovedToDuplicates or IntakeOutcome.MovedToHeld;
+
+    /// <summary>
+    /// A refusal the bot would turn into a failed post: too big, not a picture, an empty comic.
+    /// These are the ones with a way out, shrinking or holding; a duplicate has its own folder.
+    /// </summary>
+    public bool WouldFail => Outcome is IntakeOutcome.TooBig or IntakeOutcome.NotPostable or IntakeOutcome.EmptyComic;
 
     /// <summary>
     /// True only if it went into the queue. Duplicates do not, so they get no queue timestamp
@@ -193,6 +202,35 @@ public static class Intake
         {
             return new IntakeResult(IntakeOutcome.Failed, source, null, ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Puts a file the bot would fail on into the group's Held_Back folder. Undoable like a
+    /// send, and never a delete: the file is a decision for later, not rubbish.
+    /// </summary>
+    public static IntakeResult Hold(string source, BotWorkspace workspace, GroupConfig group)
+    {
+        var outcome = HeldBack.SetAside(workspace, group, source);
+        return outcome.Ok
+            ? new IntakeResult(IntakeOutcome.MovedToHeld, source, outcome.Destination, MeowsText.Current["kibble.held.moved"])
+            : new IntakeResult(IntakeOutcome.Failed, source, null, outcome.Error);
+    }
+
+    /// <summary>
+    /// Makes a picture fit the Bot API where it sits, the way Portion does it in a queue: the
+    /// original goes to the Recycle Bin once the smaller one has been proven to decode. Returns
+    /// the file to send, which may carry a different extension, or null with the reason.
+    /// </summary>
+    public static (string? Path, string? Error) ShrinkInPlace(string source, GroupConfig group)
+    {
+        var heavy = Weigher.Inspect(group, source);
+        if (heavy is null)
+            return (source, null);
+        if (!heavy.CanShrink)
+            return (null, MeowsText.Current["kibble.shrink.cannot"]);
+
+        var slim = Slimmer.Shrink(heavy);
+        return slim.Ok ? (slim.Path, null) : (null, slim.Error);
     }
 
     /// <summary>Files to pick before bundling is worth doing at all.</summary>
@@ -406,6 +444,7 @@ public static class Intake
         {
             "sent" => IntakeOutcome.Sent,
             "set-aside" => IntakeOutcome.MovedToDuplicates,
+            "held" => IntakeOutcome.MovedToHeld,
             _ => (IntakeOutcome?)null,
         };
         if (outcome is null)
