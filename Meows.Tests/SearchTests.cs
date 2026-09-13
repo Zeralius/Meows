@@ -32,18 +32,10 @@ public sealed class SearchTests : IDisposable
     {
         // The palette only reaches into plugins that say so. One that stops saying so drops out
         // of Ctrl+K silently, which is what this is here to catch.
-        foreach (var type in new[]
-                 {
-                     typeof(Plugins.Purrge.ViewModels.PurrgeViewModel), typeof(ChonkViewModel), typeof(KibbleViewModel),
-                     typeof(Plugins.Litter.ViewModels.LitterViewModel), typeof(Plugins.Molt.ViewModels.MoltViewModel),
-                     typeof(Plugins.Mouser.ViewModels.MouserViewModel), typeof(Plugins.Saucer.ViewModels.SaucerViewModel),
-                     typeof(Plugins.Birdwatch.ViewModels.BirdwatchViewModel), typeof(Plugins.Tin.ViewModels.TinViewModel),
-                     typeof(Plugins.Collar.ViewModels.CollarViewModel), typeof(Plugins.Scruff.ViewModels.ScruffViewModel),
-                     typeof(Plugins.Perch.ViewModels.PerchViewModel), typeof(Plugins.Portion.ViewModels.PortionViewModel),
-                     typeof(Plugins.TelegramPoster.ViewModels.TelegramPosterViewModel),
-                 })
+        foreach (var plugin in ShippedPlugins.Types)
         {
-            Assert.True(typeof(ISearchable).IsAssignableFrom(type), $"{type.Name} is not searchable");
+            var searchable = plugin.Assembly.GetTypes().Any(t => typeof(ISearchable).IsAssignableFrom(t) && !t.IsInterface);
+            Assert.True(searchable, $"{plugin.Assembly.GetName().Name} has nothing searchable");
         }
     }
 

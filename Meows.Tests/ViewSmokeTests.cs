@@ -115,27 +115,7 @@ public class ViewSmokeTests : IDisposable
         return data;
     }
 
-    /// <summary>
-    /// Named rather than discovered, for the same reason the catalogue tests name theirs: the
-    /// compiler drops a reference nothing uses. The guard below asks whether the list is whole.
-    /// </summary>
-    private static readonly Type[] PluginTypes =
-    [
-        typeof(Plugins.Birdwatch.BirdwatchPlugin),
-        typeof(Plugins.Chonk.ChonkPlugin),
-        typeof(Plugins.Collar.CollarPlugin),
-        typeof(Plugins.Kibble.KibblePlugin),
-        typeof(Plugins.Litter.LitterPlugin),
-        typeof(Plugins.Molt.MoltPlugin),
-        typeof(Plugins.Mouser.MouserPlugin),
-        typeof(Plugins.Perch.PerchPlugin),
-        typeof(Plugins.Portion.PortionPlugin),
-        typeof(Plugins.Purrge.PurrgePlugin),
-        typeof(Plugins.Saucer.SaucerPlugin),
-        typeof(Plugins.Scruff.ScruffPlugin),
-        typeof(Plugins.TelegramPoster.TelegramPosterPlugin),
-        typeof(Plugins.Tin.TinPlugin),
-    ];
+    private static Type[] PluginTypes => ShippedPlugins.Types;
 
     [Fact]
     public void Every_plugin_that_ships_is_on_the_list()

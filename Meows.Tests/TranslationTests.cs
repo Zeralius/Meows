@@ -155,20 +155,7 @@ public class CatalogueTests
         typeof(Translations).Assembly,
         typeof(Disk.FolderInspector).Assembly,
         typeof(Bot.QueueRunway).Assembly,
-        typeof(Plugins.Chonk.ChonkPlugin).Assembly,
-        typeof(Plugins.Kibble.KibblePlugin).Assembly,
-        typeof(Plugins.Litter.LitterPlugin).Assembly,
-        typeof(Plugins.Molt.MoltPlugin).Assembly,
-        typeof(Plugins.Mouser.MouserPlugin).Assembly,
-        typeof(Plugins.Purrge.PurrgePlugin).Assembly,
-        typeof(Plugins.Saucer.SaucerPlugin).Assembly,
-        typeof(Plugins.TelegramPoster.TelegramPosterPlugin).Assembly,
-        typeof(Plugins.Birdwatch.BirdwatchPlugin).Assembly,
-        typeof(Plugins.Tin.TinPlugin).Assembly,
-        typeof(Plugins.Collar.CollarPlugin).Assembly,
-        typeof(Plugins.Scruff.ScruffPlugin).Assembly,
-        typeof(Plugins.Perch.PerchPlugin).Assembly,
-        typeof(Plugins.Portion.PortionPlugin).Assembly,
+        .. ShippedPlugins.Types.Select(t => t.Assembly),
     ];
 
     private static Dictionary<string, string> Read(Assembly assembly, string language)

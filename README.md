@@ -155,6 +155,11 @@ this repository, or even clone it: reference the
 [`Meows.Plugins.Abstractions`](https://www.nuget.org/packages/Meows.Plugins.Abstractions) package,
 and set `MEOWS_PLUGINS_DIR` to your own folder to load your plugin alongside the built in ones.
 
+For a plugin that lives in this repository and ships with the release, **Kitten** writes it
+instead: `dotnet run --project Meows.Kitten -- Whiskers --plain "Print queue"` makes the project,
+adds it to the solution, the test project, the shipped list and the table above, then builds it
+and runs the tests that know every plugin. See [Meows.Kitten/README.md](Meows.Kitten/README.md).
+
 **[PLUGIN-GUIDE.md](PLUGIN-GUIDE.md)** is the full contract: project setup, every member of
 `IMeowsHost`, notifications, background work, threading, lifetime, packaging and the assembly
 isolation rules.
@@ -183,6 +188,7 @@ Duplicate plugin ids are ignored, and a plugin that throws while starting up is 
 | `Meows.Disk/` | Shared: Recycle Bin deletion, folder walking, content hashing and what a folder is |
 | `Meows.Media/` | Shared: metadata stripping and fitting a picture to a limit, on the shell's Skia |
 | `template/` | The `dotnet new` template, published as `Meows.Plugins.Template` |
+| `Meows.Kitten/` | Developer tool: writes a new in-tree plugin from a name and proves it builds. [README](Meows.Kitten/README.md) |
 | `Meows.Tests/` | The test suite |
 
 ## Versioning
