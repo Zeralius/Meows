@@ -314,7 +314,8 @@ public sealed class MainWindowViewModel : ObservableObject
 
         try
         {
-            var host = new PluginHost(entry.Id, entry.DisplayName, _settings, _log, _notifications, _background);
+            var host = new PluginHost(entry.Id, entry.DisplayName, _settings, _log, _notifications, _background,
+                new HandoffService(entry.Id, CanReach, SendHandoff));
             _sourceById[entry.Id] = entry.DisplayName;
             var view = entry.Descriptor.Plugin!.CreateView(host);
             var tab = new TabViewModel(entry.DisplayName, entry.Icon, view);
@@ -351,6 +352,54 @@ public sealed class MainWindowViewModel : ObservableObject
             : "a file";
 
         return MeowsText.Current.Format("plugins.missingfile", name);
+    }
+
+    /// <summary>Installed and loadable. Whether it takes a particular handoff is only known once it is open.</summary>
+    private bool CanReach(string pluginId) =>
+        Plugins.Any(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase) && p.IsCompatible);
+
+    /// <summary>
+    /// One plugin handing work to another. The receiver is switched on if it is not already,
+    /// because "find duplicates here" from Chonk means open Purrge; its tab comes to the front;
+    /// and its view model is asked whether it takes this before it is given it.
+    /// </summary>
+    private bool SendHandoff(string fromId, string toId, Handoff handoff)
+    {
+        var entry = Plugins.FirstOrDefault(p => string.Equals(p.Id, toId, StringComparison.OrdinalIgnoreCase));
+        if (entry is null || !entry.IsCompatible)
+            return false;
+
+        if (!_pluginTabs.ContainsKey(entry.Id))
+        {
+            Activate(entry);
+            if (!_pluginTabs.ContainsKey(entry.Id))
+                return false;
+            entry.SetActivatedSilently(true);
+            PersistActivations();
+        }
+
+        var tab = _pluginTabs[entry.Id];
+        var target = (tab.Content as Avalonia.Controls.Control)?.DataContext as IHandoffTarget
+                     ?? tab.Content as IHandoffTarget;
+
+        if (target is null || !target.Accepts(handoff))
+        {
+            _log.Write("shell", $"'{entry.DisplayName}' does not take a {handoff.Verb} handoff from {fromId}.");
+            return false;
+        }
+
+        SelectedTab = tab;
+        try
+        {
+            target.Receive(handoff);
+            _log.Write("shell", $"{fromId} handed {handoff.Paths.Count} path(s) to '{entry.DisplayName}'.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _log.Write("shell", $"'{entry.DisplayName}' failed to take a handoff: {ex}");
+            return false;
+        }
     }
 
     private void Deactivate(PluginEntryViewModel entry)

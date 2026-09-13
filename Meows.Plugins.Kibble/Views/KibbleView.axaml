@@ -252,6 +252,20 @@
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:IncomingFileViewModel">
                             <StackPanel Width="150" Spacing="4" ToolTip.Tip="{Binding FileName}">
+                                <!-- Handled in the code behind rather than bound, because a menu
+                                     sits in its own popup and a tile's DataContext is the
+                                     surest thing to reach from there. -->
+                                <StackPanel.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{m:Tr kibble.menu.open}" Click="OnOpenFile" />
+                                        <MenuItem Header="{m:Tr kibble.menu.openwith}" Click="OnOpenFileWith" />
+                                        <Separator />
+                                        <MenuItem Header="{m:Tr kibble.menu.reveal}" Click="OnRevealFile" />
+                                        <MenuItem Header="{m:Tr kibble.menu.scruff}"
+                                                  Click="OnCleanWithScruff"
+                                                  IsVisible="{Binding $parent[UserControl].((vm:KibbleViewModel)DataContext).CanReachScruff}" />
+                                    </ContextMenu>
+                                </StackPanel.ContextMenu>
                                 <Border Width="150" Height="150"
                                         Background="{DynamicResource MeowsSunken}"
                                         CornerRadius="4"

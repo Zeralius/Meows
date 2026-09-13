@@ -26,6 +26,8 @@
 
     <ItemGroup>
       <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
+      <!-- Thumbnails and previews, decoded the same way everywhere. -->
+      <ProjectReference Include="..\Meows.Media\Meows.Media.csproj" />
       <ProjectReference Include="..\Meows.Disk\Meows.Disk.csproj" />
       <ProjectReference Include="..\Meows.Plugins.Abstractions\Meows.Plugins.Abstractions.csproj"
                         Private="false"

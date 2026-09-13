@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using Avalonia.Threading;
 using Meows.Disk;
 using Meows.Plugins.Abstractions;
@@ -323,7 +322,7 @@ public sealed class MoltViewModel : ObservableObject, IDisposable
 
         try
         {
-            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+            Explorer.Open(path);
         }
         catch (Exception ex)
         {

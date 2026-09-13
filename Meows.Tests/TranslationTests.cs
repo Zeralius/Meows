@@ -166,6 +166,8 @@ public class CatalogueTests
         typeof(Plugins.Tin.TinPlugin).Assembly,
         typeof(Plugins.Collar.CollarPlugin).Assembly,
         typeof(Plugins.Scruff.ScruffPlugin).Assembly,
+        typeof(Plugins.Perch.PerchPlugin).Assembly,
+        typeof(Plugins.Portion.PortionPlugin).Assembly,
     ];
 
     private static Dictionary<string, string> Read(Assembly assembly, string language)

@@ -30,6 +30,44 @@ public sealed class FakeHost : IMeowsHost
 
     public IMeowsBackgroundWork Background { get; } = new FakeBackgroundWork();
 
+    /// <summary>In memory, so a test never touches the Windows data protection API.</summary>
+    public IMeowsSecrets Secrets { get; } = new FakeSecrets();
+
+    /// <summary>Records what a plugin tried to hand to whom. Reaches whoever the test says.</summary>
+    public FakeHandoff Handoffs { get; } = new();
+
+    IMeowsHandoff IMeowsHost.Handoff => Handoffs;
+
+    public sealed class FakeSecrets : IMeowsSecrets
+    {
+        private readonly Dictionary<string, string> _held = new(StringComparer.Ordinal);
+
+        public bool Has(string name) => _held.ContainsKey(name);
+
+        public string? Get(string name) => _held.GetValueOrDefault(name);
+
+        public void Set(string name, string value) => _held[name] = value;
+
+        public void Forget(string name) => _held.Remove(name);
+    }
+
+    public sealed class FakeHandoff : IMeowsHandoff
+    {
+        public HashSet<string> Reachable { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public List<(string To, Handoff What)> Sent { get; } = [];
+
+        public bool CanReach(string pluginId) => Reachable.Contains(pluginId);
+
+        public bool Send(string pluginId, Handoff handoff)
+        {
+            if (!Reachable.Contains(pluginId))
+                return false;
+            Sent.Add((pluginId, handoff));
+            return true;
+        }
+    }
+
     /// <summary>The same thing, typed, so a test can read what was asked for.</summary>
     public FakeBackgroundWork Work => (FakeBackgroundWork)Background;
 

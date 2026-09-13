@@ -1,6 +1,5 @@
 using Meows.Disk;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Meows.Plugins.Abstractions;
@@ -29,7 +28,7 @@ public sealed class PurrgeSettings
     public bool TrustTimestamps { get; set; }
 }
 
-public sealed class PurrgeViewModel : ObservableObject, IDisposable
+public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTarget
 {
     private const int ThumbnailWidth = 96;
     private const int PreviewWidth = 720;
@@ -507,12 +506,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
 
         try
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                ArgumentList = { "/select,", SelectedFile.FullPath },
-                UseShellExecute = true,
-            });
+            Explorer.Reveal(SelectedFile.FullPath);
         }
         catch (Exception ex)
         {
@@ -552,6 +546,22 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable
         KeepNewestCommand.RaiseCanExecuteChanged();
         DeleteSelectedCommand.RaiseCanExecuteChanged();
         RevealCommand.RaiseCanExecuteChanged();
+    }
+
+    // ---- Handed a folder by another plugin ------------------------------------------------------
+
+    /// <summary>A folder, from Chonk usually: find the duplicates in it, now.</summary>
+    public bool Accepts(Handoff handoff) =>
+        handoff.Verb == HandoffVerbs.Folder && handoff.Paths.Count == 1 && Directory.Exists(handoff.Paths[0]);
+
+    public void Receive(Handoff handoff)
+    {
+        if (!Accepts(handoff) || IsScanning)
+            return;
+
+        IsCompareMode = false;
+        ScanRoot = handoff.Paths[0];
+        StartScan();
     }
 
     private void SaveSettings()

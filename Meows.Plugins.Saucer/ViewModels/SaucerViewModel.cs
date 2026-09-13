@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Meows.Plugins.Abstractions;
@@ -398,7 +397,7 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable
         try
         {
             Directory.CreateDirectory(path);
-            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+            Explorer.Open(path);
         }
         catch (Exception ex)
         {

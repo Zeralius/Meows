@@ -23,6 +23,8 @@
 
     <ItemGroup>
       <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
+      <!-- Decoding what came off the network, the same way every other tab decodes. -->
+      <ProjectReference Include="..\Meows.Media\Meows.Media.csproj" />
       <ProjectReference Include="..\Meows.Plugins.Abstractions\Meows.Plugins.Abstractions.csproj"
                         Private="false"
                         ExcludeAssets="runtime" />

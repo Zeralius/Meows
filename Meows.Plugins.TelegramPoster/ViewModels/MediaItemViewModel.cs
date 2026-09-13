@@ -107,31 +107,7 @@ public sealed class MediaItemViewModel : ObservableObject, IDisposable
         Thumbnail = bitmap;
     }
 
-    private Bitmap? Decode(int width)
-    {
-        try
-        {
-            if (IsComic)
-            {
-                var cover = MediaRules.ComicCover(Path);
-                if (cover is null)
-                    return null;
-                using var coverStream = new MemoryStream(cover);
-                return Bitmap.DecodeToWidth(coverStream, width);
-            }
-
-            if (!MediaRules.IsRenderableImage(Path))
-                return null;
-
-            using var stream = MediaRules.OpenShared(Path);
-            return Bitmap.DecodeToWidth(stream, width);
-        }
-        catch (Exception)
-        {
-            // Avalonia cannot read every codec. That is a display problem, not a posting one.
-            return null;
-        }
-    }
+    private Bitmap? Decode(int width) => MediaRules.Thumbnail(Path, width);
 
     public void Dispose()
     {

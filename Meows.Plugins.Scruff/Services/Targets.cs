@@ -1,3 +1,4 @@
+using Meows.Media;
 namespace Meows.Plugins.Scruff.Services;
 
 /// <summary>One picture ready to go, with the words that go with it.</summary>
@@ -85,7 +86,7 @@ public interface IApiTarget : IPostTarget
 }
 
 /// <summary>A place that has to be opened in a browser and filled in by hand.</summary>
-public interface IHandoffTarget : IPostTarget
+public interface IManualTarget : IPostTarget
 {
     HandoffSheet Sheet(Draft draft, IReadOnlyList<Outgoing> images);
 }

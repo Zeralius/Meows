@@ -160,24 +160,7 @@ public sealed class DuplicateSetViewModel : ObservableObject, IDisposable
 
 internal static class PreviewSupport
 {
-    private static readonly string[] Renderable =
-        [".jpg", ".jpeg", ".png", ".webp", ".jfif", ".bmp", ".gif"];
+    public static bool IsRenderable(string path) => Meows.Media.Thumbnails.IsRenderable(path);
 
-    public static bool IsRenderable(string path) =>
-        Renderable.Contains(Path.GetExtension(path), StringComparer.OrdinalIgnoreCase);
-
-    public static Bitmap? Decode(string path, int width)
-    {
-        try
-        {
-            // Shared, so previewing a file cannot stop it being sent to the Recycle Bin.
-            using var stream = new System.IO.FileStream(path, System.IO.FileMode.Open,
-                System.IO.FileAccess.Read, System.IO.FileShare.ReadWrite | System.IO.FileShare.Delete);
-            return Bitmap.DecodeToWidth(stream, width);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
+    public static Bitmap? Decode(string path, int width) => Meows.Media.Thumbnails.FromFile(path, width);
 }

@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Meows.Bot;
@@ -93,7 +92,7 @@ public sealed record PageOrderOption(PageOrder Value, string Key) : ILabelledOpt
     public override string ToString() => Label.Value;
 }
 
-public sealed class KibbleViewModel : ObservableObject, IDisposable
+public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTarget
 {
     private const int ThumbnailWidth = 150;
     private const int PreviewWidth = 720;
@@ -604,8 +603,21 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     public void SetBotRoot(string path)
     {
         _settings.BotRoot = path;
+        BotLocation.Remember(path);
         SaveSettings();
         Reload();
+    }
+
+    // ---- Handed a folder by another plugin ------------------------------------------------------
+
+    /// <summary>A folder to go through, from Chonk usually. Files are not taken: Kibble sorts a folder.</summary>
+    public bool Accepts(Handoff handoff) =>
+        handoff.Verb == HandoffVerbs.Folder && handoff.Paths.Count == 1 && Directory.Exists(handoff.Paths[0]);
+
+    public void Receive(Handoff handoff)
+    {
+        if (Accepts(handoff))
+            LoadFolder(handoff.Paths[0]);
     }
 
     public void LoadFolder(string folder)
@@ -1029,7 +1041,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
             d.Refresh();
         Destinations.Clear();
 
-        var root = BotWorkspace.Probe(_settings.BotRoot);
+        var root = BotLocation.Resolve(_settings.BotRoot);
         if (root is null)
         {
             _workspace = null;
@@ -1124,30 +1136,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
         }
 
         var path = file.Path;
-        var bitmap = await Task.Run(() =>
-        {
-            try
-            {
-                if (MediaRules.IsComic(path))
-                {
-                    var cover = MediaRules.ComicCover(path);
-                    if (cover is null)
-                        return null;
-                    using var coverStream = new MemoryStream(cover);
-                    return Bitmap.DecodeToWidth(coverStream, PreviewWidth);
-                }
-
-                if (!MediaRules.IsRenderableImage(path))
-                    return null;
-
-                using var stream = MediaRules.OpenShared(path);
-                return Bitmap.DecodeToWidth(stream, PreviewWidth);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }).ConfigureAwait(true);
+        var bitmap = await Task.Run(() => MediaRules.Thumbnail(path, PreviewWidth)).ConfigureAwait(true);
 
         if (Selected?.Path != path)
         {
@@ -1162,11 +1151,91 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable
     {
         try
         {
-            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+            Explorer.Open(path);
         }
         catch (Exception ex)
         {
             ErrorMessage = _host.Text.Format("kibble.error.open", path, ex.Message);
+        }
+    }
+
+    // ---- Looking at a file properly -------------------------------------------------------
+
+    /// <summary>
+    /// The tile, or whatever is selected when the request came from a key rather than a
+    /// click. A right click on a tile that is not selected is about that tile, not the one that
+    /// happened to be selected before.
+    /// </summary>
+    private IncomingFileViewModel? FileFor(object? parameter) =>
+        parameter as IncomingFileViewModel ?? Selected;
+
+    /// <summary>Opens the file in whatever Windows opens it with: the photo app, a PDF reader, a player.</summary>
+    public void Open(object? parameter)
+    {
+        if (FileFor(parameter) is not { } file)
+            return;
+
+        try
+        {
+            Explorer.Open(file.Path);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = _host.Text.Format("kibble.error.open", file.FileName, ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// Windows' own "Open with" dialog for the file. The shell exposes it through rundll32,
+    /// which is how Explorer's own menu entry reaches it too.
+    /// </summary>
+    public void OpenWith(object? parameter)
+    {
+        if (FileFor(parameter) is not { } file)
+            return;
+
+        try
+        {
+            Explorer.OpenWith(file.Path);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = _host.Text.Format("kibble.error.open", file.FileName, ex.Message);
+        }
+    }
+
+    public bool CanReachScruff => _host.Handoff.CanReach(KnownPlugins.Scruff);
+
+    /// <summary>
+    /// The whole selection to Scruff, or the tile under the menu when it is not part of one. A
+    /// phone photo with GPS in it should be cleaned before it is queued, and Scruff is the tool.
+    /// </summary>
+    public void CleanWithScruff(object? parameter)
+    {
+        var files = _selection.Count > 1 && parameter is IncomingFileViewModel clicked && _selection.Contains(clicked)
+            ? _selection.Select(f => f.Path).ToList()
+            : FileFor(parameter) is { } one ? [one.Path] : [];
+
+        if (files.Count == 0)
+            return;
+
+        if (!_host.Handoff.Send(KnownPlugins.Scruff, Handoff.Files(files)))
+            ErrorMessage = _host.Text.Format("kibble.error.handoff", "Scruff");
+    }
+
+    /// <summary>Explorer, with the file selected rather than merely its folder open.</summary>
+    public void Reveal(object? parameter)
+    {
+        if (FileFor(parameter) is not { } file)
+            return;
+
+        try
+        {
+            Explorer.Reveal(file.Path);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = _host.Text.Format("kibble.error.open", file.FileName, ex.Message);
         }
     }
 

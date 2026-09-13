@@ -1,3 +1,4 @@
+using Meows.Media;
 namespace Meows.Plugins.Scruff.Services;
 
 /// <summary>
@@ -15,7 +16,7 @@ namespace Meows.Plugins.Scruff.Services;
 /// a sheet with a copy button beside it, spelled the way that site spells it. The typing is
 /// gone, the metadata is gone, and what is left is clicking the file and pasting.
 /// </summary>
-public abstract class HandoffTarget : IHandoffTarget
+public abstract class ManualTarget : IManualTarget
 {
     public abstract string Id { get; }
 
@@ -53,7 +54,7 @@ public abstract class HandoffTarget : IHandoffTarget
 /// spaces with underscores inside a tag, and each picture is its own submission, so the sheet
 /// says so when there is more than one.
 /// </summary>
-public sealed class FurAffinityTarget : HandoffTarget
+public sealed class FurAffinityTarget : ManualTarget
 {
     public override string Id => "furaffinity";
 
@@ -93,7 +94,7 @@ public sealed class FurAffinityTarget : HandoffTarget
 /// attaching the pictures. The 280 is characters as X counts them, roughly: a link is always
 /// 23 and some scripts count double, and neither refinement is worth carrying here.
 /// </summary>
-public sealed class XTarget : HandoffTarget
+public sealed class XTarget : ManualTarget
 {
     public const int MaxCharacters = 280;
 
@@ -129,7 +130,7 @@ public sealed class XTarget : HandoffTarget
 /// Thirty hashtags is the ceiling, and the site crops anything taller than 4:5 or wider than
 /// 1.91:1, which is worth knowing before rather than after.
 /// </summary>
-public sealed class InstagramTarget : HandoffTarget
+public sealed class InstagramTarget : ManualTarget
 {
     public const int MaxCharacters = 2200;
 
@@ -182,7 +183,7 @@ public sealed class InstagramTarget : HandoffTarget
 /// is remembered, because it decides which page opens. Doing this through the API is on the
 /// list; until then the page opens and the title is a paste away.
 /// </summary>
-public sealed class RedditTarget : HandoffTarget
+public sealed class RedditTarget : ManualTarget
 {
     public const int MaxTitle = 300;
 

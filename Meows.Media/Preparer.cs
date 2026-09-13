@@ -1,6 +1,6 @@
 using SkiaSharp;
 
-namespace Meows.Plugins.Scruff.Services;
+namespace Meows.Media;
 
 /// <summary>What a place will take. Zero means no limit on that axis.</summary>
 public sealed record MediaLimits(int MaxImages, long MaxBytes, int MaxSide, IReadOnlyList<ImageFormat> Accepts)

@@ -1,5 +1,6 @@
 using Avalonia.Media.Imaging;
 using Meows.Plugins.Abstractions;
+using Meows.Media;
 using Meows.Plugins.Scruff.Services;
 
 namespace Meows.Plugins.Scruff.ViewModels;

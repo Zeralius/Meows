@@ -52,5 +52,13 @@ internal static class TestStrings
     }
 
     [ModuleInitializer]
-    internal static void Install() => MeowsText.Use(Load());
+    internal static void Install()
+    {
+        MeowsText.Use(Load());
+
+        // The shared bot location lives under the real %APPDATA% by default. A test that picks
+        // a bot folder must not write that into the file the running app reads.
+        Meows.Bot.BotLocation.SettingsFolder =
+            Path.Combine(Path.GetTempPath(), "meows-tests-shared-" + Guid.NewGuid().ToString("N"));
+    }
 }

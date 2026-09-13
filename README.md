@@ -24,9 +24,11 @@ to install.
 | **[Collar](Meows.Plugins.Collar/README.md)** | Keeps the dates that matter and the paper behind them, and says so on the notification surface when one comes round |
 | **[Scruff](Meows.Plugins.Scruff/README.md)** | Takes the metadata out of pictures, posts them to Bluesky and Mastodon, and hands them to FurAffinity, X, Instagram and Reddit with every field spelled that site's way |
 | **[Kibble](Meows.Plugins.Kibble/README.md)** | Sorts a folder of new material into queues, one key press at a time, and can bundle a pick into a comic |
+| **[Perch](Meows.Plugins.Perch/README.md)** | One timeline of what the posting bot will send and when, every group merged, out as far as the queues last |
+| **[Portion](Meows.Plugins.Portion/README.md)** | Finds what the bot will fail on in every queue before it fails at night, and shrinks the pictures that can be shrunk |
 | **[Telegram Poster](Meows.Plugins.TelegramPoster/README.md)** | Drives a [Telegram posting bot](https://github.com/Zeralius/telegram-posting-bot): its groups, queues and schedule, including slowing a group down so a short queue lasts |
 
-The last two are built around a specific posting bot. The rest are general purpose.
+The last four are built around a specific posting bot. The rest are general purpose.
 
 ## Getting it
 
@@ -92,8 +94,9 @@ dotnet test
 The suite covers the filesystem and logic layers: duplicate scanning, disk measuring, queue
 maths, file intake and its refusals, comic page ordering, clipboard conversion, cache
 cataloguing, shortcut parsing, metadata stripping and post composition, and the plugin contract
-rules. Anything needing a render backend is
-out of scope, so it stays headless and runs on CI.
+rules. Every plugin's view is also built for real, headless, in both themes and both languages,
+and anything Avalonia complains about fails the test, so a binding to a property that is not
+there or a template that does not resolve is caught before it is a blank spot on screen.
 
 ## Writing a plugin
 
@@ -157,7 +160,8 @@ Duplicate plugin ids are ignored, and a plugin that throws while starting up is 
 | `Meows.Plugins.Abstractions/` | The contract a plugin implements, published as a NuGet package |
 | `Meows.Plugins.*/` | The plugins listed above |
 | `Meows.Bot.Core/` | Shared: the posting bot's config and media rules |
-| `Meows.Disk/` | Shared: Recycle Bin deletion, folder walking and what a folder is |
+| `Meows.Disk/` | Shared: Recycle Bin deletion, folder walking, content hashing and what a folder is |
+| `Meows.Media/` | Shared: metadata stripping and fitting a picture to a limit, on the shell's Skia |
 | `template/` | The `dotnet new` template, published as `Meows.Plugins.Template` |
 | `Meows.Tests/` | The test suite |
 

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using Meows.Plugins.Abstractions;
+using Meows.Media;
 using Meows.Plugins.Scruff.Services;
 
 namespace Meows.Plugins.Scruff.ViewModels;

@@ -24,6 +24,9 @@ public enum IntakeOutcome
 
     NotPostable,
     EmptyComic,
+
+    /// <summary>Heavier than the Bot API will take, so the post would fail the moment it fired.</summary>
+    TooBig,
     Failed,
 }
 
@@ -93,6 +96,12 @@ public static class Intake
         if (MediaRules.IsComic(source) && MediaRules.ComicPages(source, group.ComicOrder ?? "name").Count == 0)
             return new IntakeResult(IntakeOutcome.EmptyComic, source, null,
                 MeowsText.Current["kibble.refuse.emptycomic"]);
+
+        // Refused here, at the click, because the alternative is the post failing at three in
+        // the morning. Portion is the tool for what is already sitting in a queue.
+        if (MediaRules.ByteLimit(MediaRules.KindOf(source)) is { } limit && SafeSize(source) > limit)
+            return new IntakeResult(IntakeOutcome.TooBig, source, null,
+                MeowsText.Current.Format("kibble.refuse.toobig", limit / 1_000_000));
 
         // Against the queue and the archive both: re-sending something already posted is the
         // mistake that actually shows.
@@ -186,6 +195,18 @@ public static class Intake
 
     /// <summary>Files to pick before bundling is worth doing at all.</summary>
     public const int MinBundle = 2;
+
+    private static long SafeSize(string path)
+    {
+        try
+        {
+            return new FileInfo(path).Length;
+        }
+        catch (Exception)
+        {
+            return 0;
+        }
+    }
 
     /// <summary>
     /// Checks a set of files that would become one comic. Null means it is fine to send.

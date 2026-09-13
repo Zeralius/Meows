@@ -32,4 +32,42 @@ public interface IMeowsHost
     /// the key it was given, which is what a plugin with no catalogue would get anyway.
     /// </summary>
     IMeowsText Text => MeowsText.Current;
+
+    /// <summary>
+    /// Sealed storage for credentials, scoped to this plugin. Never put those in settings.
+    ///
+    /// Has a default so a plugin written against 0.4.x keeps compiling; the default holds
+    /// nothing and refuses to hold anything, which is what a plugin that never asked would get.
+    /// </summary>
+    IMeowsSecrets Secrets => NoSecrets.Instance;
+
+    /// <summary>Hands work to another plugin. The default reaches nobody.</summary>
+    IMeowsHandoff Handoff => NoHandoff.Instance;
+}
+
+/// <summary>What a shell built against an older contract answers. Nothing is kept.</summary>
+public sealed class NoSecrets : IMeowsSecrets
+{
+    public static NoSecrets Instance { get; } = new();
+
+    public bool Has(string name) => false;
+
+    public string? Get(string name) => null;
+
+    public void Set(string name, string value) =>
+        throw new NotSupportedException("This shell does not keep secrets. Update Meows.");
+
+    public void Forget(string name)
+    {
+    }
+}
+
+/// <summary>What a shell built against an older contract answers. Nobody is reachable.</summary>
+public sealed class NoHandoff : IMeowsHandoff
+{
+    public static NoHandoff Instance { get; } = new();
+
+    public bool CanReach(string pluginId) => false;
+
+    public bool Send(string pluginId, Handoff handoff) => false;
 }

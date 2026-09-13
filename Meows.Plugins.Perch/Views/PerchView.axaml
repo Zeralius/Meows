@@ -1,0 +1,280 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Perch.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Perch.Views.PerchView"
+             x:DataType="vm:PerchViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="14,12,14,6" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
+        </Style>
+        <Style Selector="Button.row">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.row:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsHeader}" />
+        </Style>
+        <Style Selector="Button.row.selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsSelectionLine}" />
+        </Style>
+        <Style Selector="Border.mark">
+            <Setter Property="CornerRadius" Value="3" />
+            <Setter Property="Padding" Value="5,1" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="Border.mark TextBlock">
+            <Setter Property="FontSize" Value="9" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Foreground" Value="White" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <!-- Where the bot is, when it started, how far to look -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding BotRootText}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Text="{Binding Status}" Classes="label" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Classes="label" VerticalAlignment="Center" Text="{m:Tr perch.started}" />
+                    <TextBox Text="{Binding StartText}"
+                             Watermark="{m:Tr perch.started.hint}"
+                             ToolTip.Tip="{m:Tr perch.started.why}"
+                             Width="150"
+                             FontSize="11" />
+                    <Button Content="{m:Tr perch.started.now}"
+                            Command="{Binding StartNowCommand}"
+                            ToolTip.Tip="{m:Tr perch.started.now.hint}"
+                            FontSize="11" />
+                    <ComboBox ItemsSource="{Binding Horizons}"
+                              SelectedItem="{Binding SelectedHorizon}"
+                              FontSize="11"
+                              MinWidth="110"
+                              VerticalAlignment="Center">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:HorizonOption">
+                                <TextBlock Text="{Binding Label.Value}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Button Name="ChooseBotButton" Content="{m:Tr perch.botfolder}" />
+                    <Button Content="{m:Tr perch.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsWarn}"
+                BorderBrush="{DynamicResource MeowsWarnLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,6"
+                IsVisible="{Binding StartIsUnreadable}">
+            <TextBlock Text="{m:Tr perch.started.unreadable}" Foreground="{DynamicResource MeowsWarnText}" FontSize="11" />
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="270,4,*,4,360">
+
+            <!-- Each group and where it runs out -->
+            <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr perch.groups}" />
+                    <TextBlock DockPanel.Dock="Bottom"
+                               Classes="label"
+                               Margin="14,6,14,12"
+                               TextWrapping="Wrap"
+                               Text="{m:Tr perch.projection.note}" />
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding Groups}" Margin="10,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:GroupSummaryViewModel">
+                                    <Border Background="{DynamicResource MeowsCard}"
+                                            BorderBrush="{DynamicResource MeowsLine}"
+                                            BorderThickness="1"
+                                            CornerRadius="6"
+                                            Padding="9,6"
+                                            Margin="0,0,0,5">
+                                        <StackPanel Spacing="1">
+                                            <TextBlock Text="{m:Tr perch.group.disabled}"
+                                                       Classes="label"
+                                                       IsVisible="{Binding IsDisabled}" />
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Text="{Binding Queued}" Classes="label" />
+                                            </Grid>
+                                            <TextBlock Text="{Binding ScheduleText}" Classes="label" />
+                                            <TextBlock Text="{Binding RunwayText}"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource MeowsGoodText}"
+                                                       IsVisible="{Binding !IsLow}" />
+                                            <TextBlock Text="{Binding RunwayText}"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource MeowsDangerText}"
+                                                       IsVisible="{Binding IsLow}" />
+                                            <TextBlock Text="{Binding DryText}"
+                                                       FontSize="11"
+                                                       Foreground="{DynamicResource MeowsDangerText}"
+                                                       IsVisible="{Binding RunsDryInView}" />
+                                            <TextBlock Text="{m:Tr perch.group.stretched}"
+                                                       Classes="label"
+                                                       IsVisible="{Binding IsStretched}" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <!-- The timeline -->
+            <DockPanel Grid.Column="2">
+                <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr perch.timeline}" />
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,0,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsEmpty}"
+                           Text="{m:Tr perch.empty}" />
+
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding Days}" Margin="10,0,10,10">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DayViewModel">
+                                <StackPanel Spacing="2" Margin="0,0,0,10">
+                                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="12" Margin="4,4,4,4" />
+                                    <ItemsControl ItemsSource="{Binding Slots}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:SlotViewModel">
+                                                <Button Classes="row"
+                                                        Classes.selected="{Binding IsSelected}"
+                                                        HorizontalAlignment="Stretch"
+                                                        HorizontalContentAlignment="Left"
+                                                        BorderThickness="1"
+                                                        CornerRadius="4"
+                                                        Padding="8,5"
+                                                        Margin="0,0,0,2"
+                                                        Command="{Binding $parent[UserControl].((vm:PerchViewModel)DataContext).SelectCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <Grid ColumnDefinitions="52,Auto,140,*" ColumnSpacing="10">
+                                                        <StackPanel Grid.Column="0" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding TimeText}" FontWeight="SemiBold" />
+                                                            <TextBlock Text="{Binding JitterText}" Classes="label" IsVisible="{Binding HasJitter}" />
+                                                        </StackPanel>
+                                                        <Border Grid.Column="1"
+                                                                Width="40" Height="40"
+                                                                Background="{DynamicResource MeowsSunken}"
+                                                                CornerRadius="3"
+                                                                ClipToBounds="True">
+                                                            <Image Source="{Binding Thumbnail}"
+                                                                   Stretch="UniformToFill"
+                                                                   IsVisible="{Binding HasThumbnail}" />
+                                                        </Border>
+                                                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Spacing="2">
+                                                            <TextBlock Text="{Binding GroupName}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                                            <StackPanel Orientation="Horizontal" Spacing="4">
+                                                                <Border Classes="mark" Background="{DynamicResource MeowsDangerStrong}" IsVisible="{Binding IsRunsDry}">
+                                                                    <TextBlock Text="{m:Tr perch.mark.dry}" />
+                                                                </Border>
+                                                                <Border Classes="mark" Background="{DynamicResource MeowsDangerStrong}" IsVisible="{Binding IsNothing}">
+                                                                    <TextBlock Text="{m:Tr perch.mark.nothing}" />
+                                                                </Border>
+                                                                <Border Classes="mark" Background="{DynamicResource MeowsBadge}" IsVisible="{Binding IsRandom}">
+                                                                    <TextBlock Text="{m:Tr perch.mark.random}" />
+                                                                </Border>
+                                                                <Border Classes="mark" Background="{DynamicResource MeowsWarnLine}" IsVisible="{Binding IsStretched}">
+                                                                    <TextBlock Text="{m:Tr perch.mark.stretched}" />
+                                                                </Border>
+                                                                <Border Classes="mark" Background="{DynamicResource MeowsBadge}" IsVisible="{Binding IsComic}">
+                                                                    <TextBlock Text="{m:Tr perch.mark.comic}" />
+                                                                </Border>
+                                                            </StackPanel>
+                                                        </StackPanel>
+                                                        <StackPanel Grid.Column="3" VerticalAlignment="Center" Spacing="1">
+                                                            <TextBlock Text="{Binding WhatText}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Text="{Binding DetailText}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                                        </StackPanel>
+                                                    </Grid>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="3" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <!-- The one picked -->
+            <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0">
+                <ScrollViewer Padding="16,12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{m:Tr perch.selected}" FontWeight="SemiBold" FontSize="13" />
+                        <TextBlock Text="{m:Tr perch.nothingselected}" Classes="label" IsVisible="{Binding !HasSelection}" />
+
+                        <StackPanel Spacing="8" IsVisible="{Binding HasSelection}">
+                            <Border Background="{DynamicResource MeowsSunken}"
+                                    CornerRadius="6"
+                                    MinHeight="160"
+                                    Padding="6">
+                                <Panel>
+                                    <Image Source="{Binding Preview}" Stretch="Uniform" MaxHeight="420" IsVisible="{Binding HasPreview}" />
+                                    <TextBlock Text="{m:Tr perch.nopreview}"
+                                               Opacity="0.35"
+                                               FontSize="11"
+                                               HorizontalAlignment="Center"
+                                               VerticalAlignment="Center"
+                                               IsVisible="{Binding !HasPreview}" />
+                                </Panel>
+                            </Border>
+                            <TextBlock Text="{Binding Selected.GroupName}" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding Selected.TimeText}" Classes="label" />
+                            <TextBlock Text="{Binding Selected.WhatText}" FontSize="12" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Selected.DetailText}" Classes="label" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <Border Background="{DynamicResource MeowsInset}" CornerRadius="6" Padding="10,8">
+                            <TextBlock Text="{m:Tr perch.howitworks}" TextWrapping="Wrap" FontSize="11" Opacity="0.7" />
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

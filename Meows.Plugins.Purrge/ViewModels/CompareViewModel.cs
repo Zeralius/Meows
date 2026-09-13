@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Meows.Plugins.Abstractions;
@@ -386,12 +385,7 @@ public sealed class CompareViewModel : ObservableObject, IDisposable
 
         try
         {
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = "explorer.exe",
-                ArgumentList = { "/select,", path },
-                UseShellExecute = true,
-            });
+            Explorer.Reveal(path);
         }
         catch (Exception ex)
         {

@@ -1,6 +1,5 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
-using System.Diagnostics;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Meows.Plugins.Abstractions;
@@ -382,6 +381,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
     public void SetBotRoot(string path)
     {
         _settings.BotRoot = path;
+        BotLocation.Remember(path);
         _host.SaveSettings(_settings);
         Reload();
     }
@@ -390,7 +390,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
     {
         ErrorMessage = null;
 
-        var root = BotWorkspace.Probe(_settings.BotRoot);
+        var root = BotLocation.Resolve(_settings.BotRoot);
         if (root is null)
         {
             _workspace = null;
@@ -530,30 +530,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
         var isComic = item.IsComic;
         var comicOrder = SelectedGroup?.ComicOrder ?? "name";
 
-        var bitmap = await Task.Run(() =>
-        {
-            try
-            {
-                if (isComic)
-                {
-                    var cover = MediaRules.ComicCover(path, comicOrder);
-                    if (cover is null)
-                        return null;
-                    using var coverStream = new MemoryStream(cover);
-                    return Bitmap.DecodeToWidth(coverStream, PreviewWidth);
-                }
-
-                if (!MediaRules.IsRenderableImage(path))
-                    return null;
-
-                using var stream = MediaRules.OpenShared(path);
-                return Bitmap.DecodeToWidth(stream, PreviewWidth);
-            }
-            catch (Exception)
-            {
-                return null;
-            }
-        }).ConfigureAwait(true);
+        var bitmap = await Task.Run(() => MediaRules.Thumbnail(path, PreviewWidth, comicOrder)).ConfigureAwait(true);
 
         // Do not let a slow decode stomp on a newer selection.
         if (DetailItem?.Path != path)
@@ -738,7 +715,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable
         try
         {
             Directory.CreateDirectory(path);
-            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+            Explorer.Open(path);
         }
         catch (Exception ex)
         {

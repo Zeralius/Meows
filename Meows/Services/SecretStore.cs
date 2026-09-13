@@ -1,40 +1,36 @@
 using System.Runtime.InteropServices;
 using System.Text;
+using Meows.Plugins.Abstractions;
 
-namespace Meows.Plugins.Scruff.Services;
+namespace Meows.Services;
 
 /// <summary>
-/// Where an app password or a token lives.
+/// A plugin's credentials, each a file of its own under <c>secrets\</c> in the plugin's data
+/// folder, sealed with Windows data protection for the current user.
 ///
-/// This is the first plugin that has to hold a real credential itself, with no separate program
-/// to keep it in, and the rules were settled before it was written: never in settings.json,
-/// never in clear text, and never an account password when the service offers something
-/// revocable instead. Each one is a file of its own in the plugin's data folder, sealed with
-/// Windows' data protection for the current user, so it opens on this machine for this account
-/// and is noise anywhere else.
+/// Started life inside Scruff, the first plugin to hold a real credential, and moved here the
+/// moment a second one needed it: one sealing routine, one folder layout, one place to audit.
+/// The files Scruff wrote are exactly where this looks, so nothing had to move.
 ///
 /// The call is made directly rather than through the ProtectedData package, because that
-/// package is named System.Security.Cryptography.ProtectedData and the shell shares everything
-/// beginning with System. with itself. A copy in the plugin folder would be ignored and the
-/// shell does not carry one.
+/// package is named System.Security.Cryptography.ProtectedData and the shell would have to
+/// carry it for every plugin. Two P/Invokes are cheaper than a dependency.
 /// </summary>
-public sealed class Secrets
+public sealed class SecretStore : IMeowsSecrets
 {
     private readonly string _directory;
 
-    public Secrets(string directory) => _directory = directory;
+    public SecretStore(string pluginDataDirectory) => _directory = Path.Combine(pluginDataDirectory, "secrets");
 
-    private string PathFor(string name) => Path.Combine(_directory, name + ".secret");
+    private string PathFor(string name)
+    {
+        var safe = string.Concat(name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+        return Path.Combine(_directory, safe + ".secret");
+    }
 
     public bool Has(string name) => File.Exists(PathFor(name));
 
-    public void Save(string name, string value)
-    {
-        Directory.CreateDirectory(_directory);
-        File.WriteAllBytes(PathFor(name), Protect(Encoding.UTF8.GetBytes(value)));
-    }
-
-    public string? Load(string name)
+    public string? Get(string name)
     {
         var path = PathFor(name);
         if (!File.Exists(path))
@@ -47,9 +43,15 @@ public sealed class Secrets
         catch (Exception)
         {
             // Another user's file, or a machine this was copied to. Unreadable is the right
-            // answer; it is not the plugin's to recover.
+            // answer; it is not the shell's to recover.
             return null;
         }
+    }
+
+    public void Set(string name, string value)
+    {
+        Directory.CreateDirectory(_directory);
+        File.WriteAllBytes(PathFor(name), Protect(Encoding.UTF8.GetBytes(value)));
     }
 
     public void Forget(string name)
@@ -83,7 +85,7 @@ public sealed class Secrets
 
     public static byte[] Protect(byte[] clear) => Call(clear, protect: true);
 
-    public static byte[] Unprotect(byte[] sealed_) => Call(sealed_, protect: false);
+    public static byte[] Unprotect(byte[] sealedBytes) => Call(sealedBytes, protect: false);
 
     private static byte[] Call(byte[] bytes, bool protect)
     {
@@ -95,7 +97,7 @@ public sealed class Secrets
         {
             var input = new DataBlob { Length = bytes.Length, Data = handle.AddrOfPinnedObject() };
             var ok = protect
-                ? CryptProtectData(ref input, "Meows Scruff", nint.Zero, nint.Zero, nint.Zero, UiForbidden, out var output)
+                ? CryptProtectData(ref input, "Meows", nint.Zero, nint.Zero, nint.Zero, UiForbidden, out var output)
                 : CryptUnprotectData(ref input, nint.Zero, nint.Zero, nint.Zero, nint.Zero, UiForbidden, out output);
 
             if (!ok)

@@ -16,7 +16,13 @@ public partial class KibbleView : UserControl, IDisposable
         InitializeComponent();
         this.FindControl<Button>("OpenFolderButton")!.Click += OnOpenFolder;
         this.FindControl<Button>("ChooseBotButton")!.Click += OnChooseBotRoot;
-        this.FindControl<ListBox>("FileGrid")!.SelectionChanged += OnSelectionChanged;
+        var grid = this.FindControl<ListBox>("FileGrid")!;
+        grid.SelectionChanged += OnSelectionChanged;
+        grid.DoubleTapped += OnGridDoubleTapped;
+
+        // Tunnelled, so the tile under a right click is selected before its menu opens and the
+        // menu is about the thing that was clicked rather than whatever was selected before.
+        grid.AddHandler(PointerPressedEvent, OnGridPointerPressed, RoutingStrategies.Tunnel);
 
         // Lambdas rather than overrides, because the visual tree is what matters here. The
         // logical tree attaches first and TopLevel is still null at that point.
@@ -58,6 +64,58 @@ public partial class KibbleView : UserControl, IDisposable
         _keySource?.RemoveHandler(KeyDownEvent, OnKeyDown);
         _keySource = null;
     }
+
+    /// <summary>The tile a pointer or menu event happened on, if it happened on one.</summary>
+    private static IncomingFileViewModel? TileUnder(object? source)
+    {
+        var control = source as Control;
+        while (control is not null)
+        {
+            if (control.DataContext is IncomingFileViewModel file)
+                return file;
+            if (control is ListBox)
+                break;
+            control = control.Parent as Control;
+        }
+
+        return null;
+    }
+
+    private void OnGridPointerPressed(object? sender, PointerPressedEventArgs e)
+    {
+        if (Grid is not { } grid || !e.GetCurrentPoint(grid).Properties.IsRightButtonPressed)
+            return;
+
+        if (TileUnder(e.Source) is not { } file)
+            return;
+
+        // Part of a multi selection already: leave the selection alone. Otherwise this tile
+        // becomes the selection, so the menu and the preview agree about what is meant.
+        if (grid.SelectedItems?.Contains(file) != true)
+            grid.SelectedItem = file;
+    }
+
+    /// <summary>A double click opens the file the way Explorer would.</summary>
+    private void OnGridDoubleTapped(object? sender, TappedEventArgs e)
+    {
+        if (Model is not { } model || TileUnder(e.Source) is not { } file)
+            return;
+
+        model.Open(file);
+        e.Handled = true;
+    }
+
+    private void OnOpenFile(object? sender, RoutedEventArgs e) =>
+        Model?.Open((sender as Control)?.DataContext);
+
+    private void OnOpenFileWith(object? sender, RoutedEventArgs e) =>
+        Model?.OpenWith((sender as Control)?.DataContext);
+
+    private void OnRevealFile(object? sender, RoutedEventArgs e) =>
+        Model?.Reveal((sender as Control)?.DataContext);
+
+    private void OnCleanWithScruff(object? sender, RoutedEventArgs e) =>
+        Model?.CleanWithScruff((sender as Control)?.DataContext);
 
     /// <summary>
     /// Ctrl and shift ranges are the list control's job, so the view model is simply told what
@@ -109,6 +167,14 @@ public partial class KibbleView : UserControl, IDisposable
         {
             model.SkipCommand.Execute(null);
             KeepFocusOnGrid();
+            e.Handled = true;
+            return;
+        }
+
+        // Enter opens the selected file, as it does in Explorer.
+        if (e.Key == Key.Enter && model.Selected is not null)
+        {
+            model.Open(null);
             e.Handled = true;
         }
     }

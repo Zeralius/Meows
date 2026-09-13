@@ -1,7 +1,7 @@
 using System.Buffers.Binary;
 using System.Text;
 
-namespace Meows.Plugins.Scruff.Services;
+namespace Meows.Media;
 
 public enum ImageFormat
 {

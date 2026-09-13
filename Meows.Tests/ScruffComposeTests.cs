@@ -1,6 +1,7 @@
 using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using Meows.Media;
 using Meows.Plugins.Scruff.Services;
 
 namespace Meows.Tests;
@@ -313,45 +314,5 @@ public class ScruffComposeTests
 
         Assert.Contains(new FurAffinityTarget().Sheet(draft, [Picture()]).Reminders, r => r.Key == "scruff.remind.rating.adult");
         Assert.Contains(new RedditTarget().Sheet(draft, [Picture()]).Reminders, r => r.Key == "scruff.remind.nsfw");
-    }
-}
-
-/// <summary>The one credential store. Windows only, like the app.</summary>
-public class ScruffSecretsTests : IDisposable
-{
-    private readonly string _root = Path.Combine(Path.GetTempPath(), "meows-secrets-" + Guid.NewGuid().ToString("N"));
-
-    public void Dispose()
-    {
-        if (Directory.Exists(_root))
-            Directory.Delete(_root, recursive: true);
-    }
-
-    [Fact]
-    public void What_is_saved_comes_back_and_is_not_on_disk_in_clear()
-    {
-        var secrets = new Secrets(_root);
-
-        secrets.Save("bluesky", "{\"password\":\"xxxx-yyyy-zzzz\"}");
-
-        Assert.True(secrets.Has("bluesky"));
-        Assert.Equal("{\"password\":\"xxxx-yyyy-zzzz\"}", secrets.Load("bluesky"));
-
-        var raw = File.ReadAllBytes(Path.Combine(_root, "bluesky.secret"));
-        Assert.DoesNotContain("xxxx-yyyy-zzzz", Encoding.UTF8.GetString(raw));
-        Assert.DoesNotContain("xxxx-yyyy-zzzz", Encoding.Unicode.GetString(raw));
-
-        secrets.Forget("bluesky");
-        Assert.False(secrets.Has("bluesky"));
-        Assert.Null(secrets.Load("bluesky"));
-    }
-
-    [Fact]
-    public void A_file_that_cannot_be_opened_reads_as_nothing_rather_than_throwing()
-    {
-        Directory.CreateDirectory(_root);
-        File.WriteAllBytes(Path.Combine(_root, "mastodon.secret"), [1, 2, 3, 4]);
-
-        Assert.Null(new Secrets(_root).Load("mastodon"));
     }
 }

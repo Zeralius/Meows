@@ -153,30 +153,7 @@ public sealed class IncomingFileViewModel : ObservableObject, IDisposable
         Thumbnail = bitmap;
     }
 
-    private Bitmap? Decode(int width)
-    {
-        try
-        {
-            if (MediaRules.IsComic(Path))
-            {
-                var cover = MediaRules.ComicCover(Path);
-                if (cover is null)
-                    return null;
-                using var coverStream = new MemoryStream(cover);
-                return Bitmap.DecodeToWidth(coverStream, width);
-            }
-
-            if (!MediaRules.IsRenderableImage(Path))
-                return null;
-
-            using var stream = MediaRules.OpenShared(Path);
-            return Bitmap.DecodeToWidth(stream, width);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
+    private Bitmap? Decode(int width) => MediaRules.Thumbnail(Path, width);
 
     public void Dispose()
     {

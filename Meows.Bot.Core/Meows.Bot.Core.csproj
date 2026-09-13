@@ -20,6 +20,9 @@
     <ItemGroup>
       <!-- The staged content hash is shared with Purrge rather than kept twice. -->
       <ProjectReference Include="..\Meows.Disk\Meows.Disk.csproj" />
+      <!-- Thumbnails of what is queued, comic covers included, in one place. -->
+      <ProjectReference Include="..\Meows.Media\Meows.Media.csproj" />
+      <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
       <ProjectReference Include="..\Meows.Plugins.Abstractions\Meows.Plugins.Abstractions.csproj"
                         Private="false"
                         ExcludeAssets="runtime" />

@@ -218,8 +218,9 @@ for p in Meows.Plugins.TelegramPoster Meows.Plugins.Purrge Meows.Plugins.Kibble 
 Stage each one into the folder the deployed shell scans. Copy the **whole** build output rather
 than just the plugin DLL. A plugin's own libraries are loaded from its folder, so a plugin with
 any dependency fails at activation if you cherry-pick, and it fails long after the build looked
-fine. Telegram Poster and Kibble need `Meows.Bot.Core.dll` this way, and Purrge, Chonk and
-Scruff need `Meows.Disk.dll`, as does `Meows.Bot.Core` itself, so it lands beside all five:
+fine. Telegram Poster, Kibble, Perch and Portion need `Meows.Bot.Core.dll` this way; Purrge,
+Chonk, Scruff and Portion need `Meows.Disk.dll`, as does `Meows.Bot.Core` itself; and Scruff and
+Portion need `Meows.Media.dll`:
 
 ```bash
 for p in Meows.Plugins.TelegramPoster Meows.Plugins.Purrge Meows.Plugins.Kibble Meows.Plugins.Chonk; do mkdir -p "artifacts/Meows-win-x64/plugins/$p" && cp "$p"/bin/Release/*.dll "$p"/bin/Release/*.deps.json "artifacts/Meows-win-x64/plugins/$p/"; done
@@ -227,9 +228,9 @@ for p in Meows.Plugins.TelegramPoster Meows.Plugins.Purrge Meows.Plugins.Kibble 
 
 Avalonia and `Meows.Plugins.Abstractions` are not in that output to be copied, because the csproj
 files keep them out. That is on purpose: the shell has to be the only source of both. The same
-trick works for anything else the shell already carries: Scruff draws with SkiaSharp, which
-Avalonia loads anyway, so it references the package with `ExcludeAssets="runtime;native"` at the
-exact version Avalonia brings and picks up the shell's copy at run time. A name that is not on the
+trick works for anything else the shell already carries: `Meows.Media` draws with SkiaSharp,
+which Avalonia loads anyway, so it references the package with `ExcludeAssets="runtime;native"`
+at the exact version Avalonia brings and picks up the shell's copy at run time. A name that is not on the
 shared list still resolves from the shell when the plugin folder has nothing by that name.
 
 Finally drop the third-party native symbols. This matters more than it sounds. `libSkiaSharp.pdb`
@@ -328,8 +329,13 @@ public interface IMeowsHost
     IMeowsNotifications Notifications { get; }
     IMeowsBackgroundWork Background { get; }
     IMeowsText Text { get; }
+    IMeowsSecrets Secrets { get; }      // 0.5.0
+    IMeowsHandoff Handoff { get; }      // 0.5.0
 }
 ```
+
+The last three have defaults, so a plugin built against an older contract still compiles and
+loads; the defaults hand back the key, hold no secrets, and reach no other plugin.
 
 ### `DataDirectory`
 
@@ -363,7 +369,57 @@ Returns `null` when nothing was saved yet, **and also when the file is unreadabl
 
 Never store secrets here. Tokens and passwords belong wherever the tool they belong to keeps
 them; the Telegram plugin writes `BOT_TOKEN` to the bot's own `.env` and only ever reports
-*whether* one exists.
+*whether* one exists. When the credential has nowhere else to live, use `Secrets`, below.
+
+### `Secrets`
+
+For an app password or an access token that your plugin itself has to hold. Each one is a file
+under `secrets\` in your data folder, sealed with Windows data protection for the current user, so
+it opens on this machine for this account and is noise anywhere else.
+
+```csharp
+host.Secrets.Set("bluesky", json);
+var json = host.Secrets.Get("bluesky");   // null if absent, or unreadable
+host.Secrets.Forget("bluesky");
+```
+
+Prefer something revocable: an app password over the account password, a token over a login.
+Show the account name on your card, which is not a secret, and keep the credential itself off
+the screen once it is saved. Scruff is the worked example.
+
+### `Handoff`
+
+One plugin handing work to another. Chonk finds a fat folder and offers *Find duplicates in it*;
+pressing it opens Purrge, if it is installed, brings its tab to the front and starts the scan
+there. Kibble's right-click offers *Clean with Scruff* the same way.
+
+```csharp
+// The sender. CanReach says whether the plugin is installed; Send says whether it took it.
+if (host.Handoff.CanReach(KnownPlugins.Purrge))
+    host.Handoff.Send(KnownPlugins.Purrge, Handoff.Folder(path));
+```
+
+```csharp
+// The receiver: the view model implements IHandoffTarget. Accepts is asked first, so a sender
+// is told no rather than having its handoff dropped.
+public bool Accepts(Handoff handoff) =>
+    handoff.Verb == HandoffVerbs.Folder && handoff.Paths.Count == 1;
+
+public void Receive(Handoff handoff) => LoadFolder(handoff.Paths[0]);
+```
+
+Two verbs are agreed on, `HandoffVerbs.Folder` and `HandoffVerbs.Files`; two plugins may invent a
+third between themselves. The receiver is switched on if it is installed but off, because "open
+this in Purrge" means open Purrge. `Receive` is called on the UI thread after the tab has come to
+the front. Hide the button when `CanReach` is false, so a plugin that is not there is not offered.
+
+### `Explorer`
+
+Not on the host, since it needs nothing from the shell, but in the same assembly:
+`Explorer.Open(target)` opens a file, folder or URL the way Windows would, `Explorer.Reveal(path)`
+opens Explorer with the file selected, and `Explorer.OpenWith(path)` shows the *Open with* dialog.
+Each throws on failure the way `Process.Start` does, so wrap it in the try/catch that sets your
+error line.
 
 ### `Text`
 
@@ -720,6 +776,10 @@ Private dependencies are fine. Ship them in your folder and the resolver finds t
 - [ ] Strings come from a catalogue, with `WithCulture` and `LogicalName` set on the resource
 - [ ] A `LanguageWatch` is held and disposed, so an open tab follows a language change
 - [ ] No translated text captured into a field at construction
+- [ ] `Dispose` can be called twice: the shell disposes the view and then its `DataContext`, and
+      most views dispose their `DataContext` themselves
+- [ ] Added to `ViewSmokeTests` in `Meows.Tests`, which builds every plugin's view headless in
+      both themes and both languages and fails on anything Avalonia complains about
 
 ## 12. Debugging
 

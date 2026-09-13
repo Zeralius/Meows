@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Net.Http;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
@@ -671,8 +670,7 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
             try
             {
                 var bytes = await _http.GetByteArrayAsync(tile.Media.ThumbnailUrl, token);
-                using var stream = new MemoryStream(bytes);
-                var bitmap = new Bitmap(stream);
+                var bitmap = Meows.Media.Thumbnails.FromBytes(bytes, null);
                 await Dispatcher.UIThread.InvokeAsync(() => tile.Thumbnail = bitmap);
             }
             catch (OperationCanceledException)
@@ -707,8 +705,9 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
         try
         {
             var bytes = await _http.GetByteArrayAsync(url, CancellationToken.None);
-            using var stream = new MemoryStream(bytes);
-            var bitmap = new Bitmap(stream);
+            var bitmap = Meows.Media.Thumbnails.FromBytes(bytes, null);
+            if (bitmap is null)
+                return;
 
             // Still the one being looked at? Clicking through a grid quickly means several of
             // these are in flight, and the last to arrive is not necessarily the right one.
@@ -784,7 +783,7 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable
             if (!target.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                 Directory.CreateDirectory(target);
 
-            Process.Start(new ProcessStartInfo { FileName = target, UseShellExecute = true });
+            Explorer.Open(target);
         }
         catch (Exception ex)
         {

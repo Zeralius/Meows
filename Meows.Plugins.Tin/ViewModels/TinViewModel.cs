@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
@@ -1116,7 +1115,7 @@ public sealed class TinViewModel : ObservableObject, IDisposable
 
         try
         {
-            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+            Explorer.Open(path);
         }
         catch (Exception ex)
         {

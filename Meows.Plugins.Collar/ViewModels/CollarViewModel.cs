@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Globalization;
 using Avalonia.Threading;
 using Meows.Plugins.Abstractions;
@@ -557,7 +556,7 @@ public sealed class CollarViewModel : ObservableObject, IDisposable
 
         try
         {
-            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+            Explorer.Open(path);
         }
         catch (Exception ex)
         {

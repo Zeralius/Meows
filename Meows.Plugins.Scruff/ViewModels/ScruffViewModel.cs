@@ -1,11 +1,11 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Net.Http;
 using System.Text.Json;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 using Meows.Disk;
 using Meows.Plugins.Abstractions;
+using Meows.Media;
 using Meows.Plugins.Scruff.Services;
 
 namespace Meows.Plugins.Scruff.ViewModels;
@@ -46,14 +46,14 @@ public sealed class Choice(string key, string tag)
     public TranslatedString Label { get; } = MeowsText.Entry(key);
 }
 
-public sealed class ScruffViewModel : ObservableObject, IDisposable
+public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTarget
 {
     private static string DefaultOutput() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Scruffed");
 
     private readonly IMeowsHost _host;
     private readonly HttpClient _http;
-    private readonly Secrets _secrets;
+    private readonly IMeowsSecrets _secrets;
     private readonly ScruffSettings _settings;
     private readonly BlueskyTarget _bluesky;
     private readonly MastodonTarget _mastodon;
@@ -82,7 +82,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable
     {
         _host = host;
         _http = http ?? NewClient();
-        _secrets = new Secrets(Path.Combine(host.DataDirectory, "secrets"));
+        _secrets = host.Secrets;
         _settings = host.LoadSettings<ScruffSettings>() ?? new ScruffSettings();
         _settings.OutputFolder ??= DefaultOutput();
 
@@ -342,6 +342,18 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(OutputFolder));
     }
 
+    // ---- Handed files by another plugin ---------------------------------------------------------
+
+    /// <summary>Files or a folder, from Kibble usually: onto the pile, the same as a drop.</summary>
+    public bool Accepts(Handoff handoff) =>
+        handoff.Verb is HandoffVerbs.Files or HandoffVerbs.Folder && handoff.Paths.Count > 0;
+
+    public void Receive(Handoff handoff)
+    {
+        if (Accepts(handoff))
+            AddPaths(handoff.Paths);
+    }
+
     /// <summary>Puts files on the pile and starts reading them. A folder means everything in it, one level.</summary>
     public void AddPaths(IEnumerable<string> paths)
     {
@@ -438,19 +450,8 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable
                     var bytes = File.ReadAllBytes(file.Path);
                     var report = Metadata.Inspect(bytes);
                     var clean = Preparer.Clean(bytes);
-                    Bitmap? thumbnail = null;
-                    if (clean.Format != ImageFormat.Unknown)
-                    {
-                        try
-                        {
-                            using var stream = new MemoryStream(clean.Bytes);
-                            thumbnail = Bitmap.DecodeToWidth(stream, 160);
-                        }
-                        catch (Exception)
-                        {
-                            // A tile with no picture on it still says what the file carries.
-                        }
-                    }
+                    // A tile with no picture on it still says what the file carries.
+                    var thumbnail = clean.Format != ImageFormat.Unknown ? Thumbnails.FromBytes(clean.Bytes, 160) : null;
 
                     return (report, clean, thumbnail);
                 }, token);
@@ -486,16 +487,12 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable
 
         try
         {
-            var bitmap = await Task.Run(() =>
-            {
-                using var stream = new MemoryStream(clean.Bytes);
-                return Bitmap.DecodeToWidth(stream, 900);
-            });
+            var bitmap = await Task.Run(() => Thumbnails.FromBytes(clean.Bytes, 900));
 
             if (ReferenceEquals(_selected, file))
                 Preview = bitmap;
             else
-                bitmap.Dispose();
+                bitmap?.Dispose();
         }
         catch (Exception)
         {
@@ -740,7 +737,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable
                             _host.Log($"Scruff could not post to {target.Name}: {result.Error}");
                         }
                     }
-                    else if (target.Target is IHandoffTarget hand)
+                    else if (target.Target is IManualTarget hand)
                     {
                         var folder = await Task.Run(() => WriteHandoff(target.Id, fitted), token);
                         var sheet = hand.Sheet(draft, fitted);
@@ -834,7 +831,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable
     {
         try
         {
-            var json = _secrets.Load(name);
+            var json = _secrets.Get(name);
             return json is null ? null : JsonSerializer.Deserialize<T>(json);
         }
         catch (Exception ex)
@@ -862,7 +859,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable
                 var login = new BlueskyLogin(card.LoginA.Trim().TrimStart('@'), card.LoginB.Trim());
                 var handle = await _bluesky.VerifyAsync(login, _closing.Token);
 
-                _secrets.Save("bluesky", JsonSerializer.Serialize(new StoredBluesky { Identifier = login.Identifier, Password = login.Password }));
+                _secrets.Set("bluesky", JsonSerializer.Serialize(new StoredBluesky { Identifier = login.Identifier, Password = login.Password }));
                 _bluesky.Login = login;
                 _settings.BlueskyAccount = handle;
                 card.Account = "@" + handle;
@@ -872,7 +869,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable
                 var login = new MastodonLogin(card.LoginA.Trim(), card.LoginB.Trim());
                 var (account, max) = await _mastodon.VerifyAsync(login, _closing.Token);
 
-                _secrets.Save("mastodon", JsonSerializer.Serialize(new StoredMastodon { Instance = login.Instance, Token = login.Token }));
+                _secrets.Set("mastodon", JsonSerializer.Serialize(new StoredMastodon { Instance = login.Instance, Token = login.Token }));
                 _mastodon.Login = login;
                 _mastodon.Account = account;
                 _mastodon.MaxCharacters = max;
@@ -938,7 +935,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable
             if (!target.StartsWith("http", StringComparison.OrdinalIgnoreCase))
                 Directory.CreateDirectory(target);
 
-            Process.Start(new ProcessStartInfo { FileName = target, UseShellExecute = true });
+            Explorer.Open(target);
         }
         catch (Exception ex)
         {
@@ -958,8 +955,19 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable
         }
     }
 
+    private bool _disposed;
+
+    /// <summary>
+    /// Twice, in practice: the shell disposes the view and then its DataContext, and the view
+    /// disposes its DataContext itself. The second call has to be a no-op rather than a throw
+    /// from a token source that is already gone.
+    /// </summary>
     public void Dispose()
     {
+        if (_disposed)
+            return;
+        _disposed = true;
+
         _language.Dispose();
         _closing.Cancel();
 

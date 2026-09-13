@@ -22,11 +22,9 @@
     </ItemGroup>
 
     <ItemGroup>
-      <!-- Skia does the decoding, turning and re-encoding. The shell already carries it, because
-           Avalonia draws with it, so it is borrowed rather than shipped: a second copy would mean a
-           second native library loaded beside the first for no gain. The version has to be the
-           one Avalonia 12.1.1 brings. -->
-      <PackageReference Include="SkiaSharp" Version="3.119.4" ExcludeAssets="runtime;native" />
+      <!-- The cleaning and fitting live in Meows.Media, shared with Portion. Skia comes with it,
+           borrowed from the shell rather than shipped. -->
+      <ProjectReference Include="..\Meows.Media\Meows.Media.csproj" />
 
       <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
       <ProjectReference Include="..\Meows.Plugins.Abstractions\Meows.Plugins.Abstractions.csproj"

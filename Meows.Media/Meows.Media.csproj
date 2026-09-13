@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+    </PropertyGroup>
+
+    <ItemGroup>
+      <!-- Skia does the decoding, turning and re-encoding. The shell already carries it, because
+           Avalonia draws with it, so it is borrowed rather than shipped: a plugin folder holding
+           this library must not hold a second SkiaSharp beside it. The version has to be the one
+           Avalonia 12.1.1 brings. -->
+      <PackageReference Include="SkiaSharp" Version="3.119.4" ExcludeAssets="runtime;native" />
+      <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
+    </ItemGroup>
+
+</Project>

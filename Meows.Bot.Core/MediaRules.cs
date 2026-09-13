@@ -43,6 +43,44 @@ public static partial class MediaRules
     public const int MediaGroupLimit = 10;
 
     /// <summary>
+    /// What the Bot API will take from a bot, in decimal megabytes as Telegram writes them.
+    ///
+    /// A photo over the line does not get skipped politely: the post fails at the moment it
+    /// fires, which is three in the morning. sendPhoto stops at 10 MB and also refuses a
+    /// picture whose width plus height passes 10000 or whose sides differ by more than twenty
+    /// to one; everything else stops at 50 MB. Checked against the Bot API reference for
+    /// sendPhoto and sendDocument on 2026-09-13; Telegram moves these occasionally.
+    /// </summary>
+    public const long PhotoLimitBytes = 10_000_000;
+
+    public const long FileLimitBytes = 50_000_000;
+
+    public const int PhotoMaxDimensionSum = 10_000;
+
+    public const int PhotoMaxRatio = 20;
+
+    /// <summary>
+    /// The byte limit for a file of this kind, or null when there is not one that applies to
+    /// the file itself: a comic is unpacked and its pages are what get sent.
+    /// </summary>
+    public static long? ByteLimit(MediaKind kind) => kind switch
+    {
+        MediaKind.Photo => PhotoLimitBytes,
+        MediaKind.Video or MediaKind.Animation or MediaKind.Document => FileLimitBytes,
+        _ => null,
+    };
+
+    /// <summary>Whether the file itself weighs more than the bot may send. Comics are not judged here.</summary>
+    public static bool IsOverByteLimit(string path, long size) =>
+        ByteLimit(KindOf(path)) is { } limit && size > limit;
+
+    /// <summary>Whether a picture of this shape would be refused by sendPhoto regardless of its weight.</summary>
+    public static bool IsPhotoTooLarge(int width, int height) =>
+        width > 0 && height > 0 &&
+        (width + height > PhotoMaxDimensionSum ||
+         Math.Max(width, height) > PhotoMaxRatio * Math.Min(width, height));
+
+    /// <summary>
     /// Opens a file for reading without stopping anyone else moving or deleting it.
     /// Thumbnails and previews load in the background while the very same files are being
     /// queued or posted, and a plain File.OpenRead holds enough of a lock to make that move
@@ -67,6 +105,27 @@ public static partial class MediaRules
     /// <summary>Something Avalonia can decode. Video and pdf just get a glyph.</summary>
     public static bool IsRenderableImage(string path) =>
         KindOf(path) is MediaKind.Photo or MediaKind.Animation;
+
+    /// <summary>
+    /// A picture of a queued file for the screen: the file itself for a photo, the first page
+    /// for a comic, nothing for a video or a document. Null on anything that cannot be read,
+    /// because that is a display problem and not a posting one. Every tab that shows a queue
+    /// used to carry its own copy of this.
+    /// </summary>
+    public static Avalonia.Media.Imaging.Bitmap? Thumbnail(string path, int? width, string orderMode = "name")
+    {
+        try
+        {
+            if (IsComic(path))
+                return Media.Thumbnails.FromBytes(ComicCover(path, orderMode), width);
+
+            return IsRenderableImage(path) ? Media.Thumbnails.FromFile(path, width) : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
 
     [GeneratedRegex(@"(\d+)")]
     private static partial Regex DigitRuns();

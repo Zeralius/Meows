@@ -1,5 +1,4 @@
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using Avalonia.Threading;
 using Meows.Disk;
 using Meows.Plugins.Abstractions;
@@ -98,6 +97,8 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
         GoToCommand = new RelayCommand(p => Show((p as CrumbViewModel)?.Entry));
         DeleteCommand = new RelayCommand(DeleteSelected, () => Selected is { CanDelete: true } && !IsScanning);
         ExploreCommand = new RelayCommand(() => OpenInExplorer(Selected?.Path), () => Selected is not null);
+        FindDuplicatesCommand = new RelayCommand(() => HandTo(KnownPlugins.Purrge), () => Selected is { CanDrillInto: true });
+        SortWithKibbleCommand = new RelayCommand(() => HandTo(KnownPlugins.Kibble), () => Selected is { CanDrillInto: true });
         ConfirmDeleteCommand = new RelayCommand(() => Remove(PendingDelete), () => PendingDelete is not null);
         CancelDeleteCommand = new RelayCommand(() => PendingDelete = null, () => PendingDelete is not null);
 
@@ -130,6 +131,25 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
     public RelayCommand DeleteCommand { get; }
 
     public RelayCommand ExploreCommand { get; }
+
+    /// <summary>The README's argument made real: a fat folder of near duplicates is Purrge's problem.</summary>
+    public RelayCommand FindDuplicatesCommand { get; }
+
+    /// <summary>And a fat folder of unsorted material is Kibble's.</summary>
+    public RelayCommand SortWithKibbleCommand { get; }
+
+    public bool CanReachPurrge => _host.Handoff.CanReach(KnownPlugins.Purrge);
+
+    public bool CanReachKibble => _host.Handoff.CanReach(KnownPlugins.Kibble);
+
+    private void HandTo(string pluginId)
+    {
+        if (Selected is not { CanDrillInto: true } folder)
+            return;
+
+        if (!_host.Handoff.Send(pluginId, Handoff.Folder(folder.Path)))
+            ErrorMessage = _host.Text.Format("chonk.error.handoff", pluginId);
+    }
 
     public RelayCommand ConfirmDeleteCommand { get; }
 
@@ -361,6 +381,8 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
                 return;
             DeleteCommand.RaiseCanExecuteChanged();
             ExploreCommand.RaiseCanExecuteChanged();
+        FindDuplicatesCommand.RaiseCanExecuteChanged();
+        SortWithKibbleCommand.RaiseCanExecuteChanged();
             Identify(value);
         }
     }
@@ -631,7 +653,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable
 
         try
         {
-            Process.Start(new ProcessStartInfo { FileName = path, UseShellExecute = true });
+            Explorer.Open(path);
         }
         catch (Exception ex)
         {

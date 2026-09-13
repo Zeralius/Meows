@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Text;
+using Meows.Media;
 using Meows.Plugins.Scruff.Services;
 using SkiaSharp;
 
