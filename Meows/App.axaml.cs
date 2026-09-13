@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Meows.Plugins;
@@ -41,10 +42,25 @@ public partial class App : Application
             var viewModel = new MainWindowViewModel(
                 catalog, settings, log, notifications, background, text, preferences);
 
-            desktop.MainWindow = new MainWindow { DataContext = viewModel };
-            desktop.ShutdownRequested += (_, _) => viewModel.Shutdown();
-
             viewModel.Initialize();
+
+            // Meows lives in the tray from here on. The window is a view of it, opened on demand,
+            // and closing the window hides it unless the Settings tab says a close is a quit. Started
+            // with --tray, as the login entry does when asked, there is no window until it is wanted.
+            desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
+            var tray = new TrayPresence(
+                desktop,
+                () => new MainWindow { DataContext = viewModel },
+                preferences,
+                notifications,
+                text,
+                viewModel.Shutdown);
+
+            desktop.ShutdownRequested += (_, _) => tray.Dispose();
+
+            var startHidden = desktop.Args?.Contains(StartWithWindows.TrayArgument, StringComparer.OrdinalIgnoreCase) == true;
+            if (!startHidden)
+                tray.Show();
         }
 
         base.OnFrameworkInitializationCompleted();

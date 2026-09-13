@@ -6,6 +6,7 @@
         x:Class="Meows.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="Meows"
+        Icon="/Assets/meows.ico"
         Width="1400" Height="880"
         MinWidth="900" MinHeight="560">
 

@@ -35,12 +35,49 @@ public sealed class SettingsViewModel : ObservableObject
     /// </summary>
     private StartupRegistration Startup => StartWithWindows.Read();
 
+    /// <summary>
+    /// Whether the close button hides the window or quits. Read by the tray at the moment of
+    /// closing, so a change here takes effect on the very next close.
+    /// </summary>
+    public bool CloseToTray
+    {
+        get => _preferences.CloseToTray;
+        set
+        {
+            if (_preferences.CloseToTray == value)
+                return;
+            _preferences.CloseToTray = value;
+            _settings.SavePreferences(_preferences);
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>
+    /// Rewrites the startup entry with or without --tray. Kept in the preferences too, so the tick
+    /// reads right even while startup itself is off.
+    /// </summary>
+    public bool StartInTray
+    {
+        get => _preferences.StartInTray;
+        set
+        {
+            if (_preferences.StartInTray == value)
+                return;
+            _preferences.StartInTray = value;
+            _settings.SavePreferences(_preferences);
+            OnPropertyChanged();
+
+            if (Startup.IsOn)
+                StartsWithWindows = true;
+        }
+    }
+
     public bool StartsWithWindows
     {
         get => Startup.IsOn;
         set
         {
-            if (StartWithWindows.Set(value) is { } problem)
+            if (StartWithWindows.Set(value, _preferences.StartInTray) is { } problem)
             {
                 _log.Write("shell", $"Could not change the startup list: {problem}");
                 StartupProblem = _text.Format("settings.startup.failed", problem);

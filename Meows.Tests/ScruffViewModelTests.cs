@@ -15,8 +15,20 @@ public class ScruffViewModelTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_root))
-            Directory.Delete(_root, recursive: true);
+        // A file added to the pile is read on a worker straight away, and the read can still be
+        // open when the test ends. Cancelling that is the model's job on Dispose; the folder
+        // only needs a moment for the handle to go.
+        for (var attempt = 0; attempt < 20 && Directory.Exists(_root); attempt++)
+        {
+            try
+            {
+                Directory.Delete(_root, recursive: true);
+            }
+            catch (IOException)
+            {
+                Thread.Sleep(50);
+            }
+        }
     }
 
     private (FakeHost Host, ScruffViewModel Model) Fresh(ScruffSettings? settings = null)

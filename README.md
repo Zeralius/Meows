@@ -54,9 +54,14 @@ The **Settings** tab has two choices, and both take effect as you make them:
 - **Language**: English, German, or follow the system. It applies to the shell and to every plugin
   that ships the language. Anything a plugin has not translated stays in English rather than
   disappearing.
-- **Starting up**: whether Meows opens when you log in. It writes one entry to the per-user
-  startup list, which needs no admin rights and shows up in the Task Manager's Startup tab like
-  anything else. There is no tray icon yet, so the window opens with it.
+- **In the background**: Meows sits in the notification area, and closing the window hides it
+  rather than quitting. Everything that watches or waits, Collar's dates, Birdwatch's refresh, a
+  scan you started, carries on while the window is hidden, and the icon shows a dot when there is
+  something to read. *Quit* is in the icon's menu. Untick the setting and the close button quits,
+  as it did before 2.0.
+- **Starting up**: whether Meows starts when you log in, and whether it starts in the tray or
+  with the window open. It writes one entry to the per-user startup list, which needs no admin
+  rights and shows up in the Task Manager's Startup tab like anything else.
 
 Settings and logs live in `%APPDATA%\Meows`, never inside the folder you unzipped, so deleting
 that folder resets Meows completely. `meows.log` there is also where a crash gets written, stack

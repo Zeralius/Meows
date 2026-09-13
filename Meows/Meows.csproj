@@ -8,10 +8,11 @@
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <ApplicationManifest>app.manifest</ApplicationManifest>
+        <ApplicationIcon>Assets\meows.ico</ApplicationIcon>
 
         <!-- The app version. Moves independently of the plugin contract version;
              see the versioning section in README.md. -->
-        <Version>1.9.0</Version>
+        <Version>2.0.0</Version>
     </PropertyGroup>
 
     <ItemGroup>
@@ -33,6 +34,13 @@
         <WithCulture>false</WithCulture>
         <LogicalName>$(AssemblyName).Strings.%(Filename)%(Extension)</LogicalName>
       </EmbeddedResource>
+    </ItemGroup>
+
+    <!-- The cat, drawn as a handful of shapes so it is ours, at the sizes Windows asks for. The
+         two tray icons are PNGs because the tray scales them itself; the exe and the window take
+         the multi-size ICO. -->
+    <ItemGroup>
+      <AvaloniaResource Include="Assets\**" />
     </ItemGroup>
 
     <ItemGroup>

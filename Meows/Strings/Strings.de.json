@@ -34,9 +34,10 @@
   "settings.startup.enabled": "Meows beim Anmelden starten",
   "settings.startup.failed": "Die Autostart-Liste konnte nicht geändert werden: {0}",
   "settings.startup.hint": "Trägt Meows in die Autostart-Liste dieses Benutzers ein, ein einzelner Eintrag, der auch im Task-Manager unter Autostart steht und dort abgeschaltet werden kann. Ohne Administratorrechte und ohne geplante Aufgabe.",
+  "settings.startup.intray": "Im Infobereich starten, ohne das Fenster zu öffnen",
+  "settings.startup.intray.hint": "Das Fenster ist einen Klick auf das Symbol entfernt.",
   "settings.startup.path": "Gestartet wird genau diese Kopie von Meows:",
   "settings.startup.unavailable": "Meows kann nicht feststellen, von wo es läuft, und sich deshalb nicht eintragen.",
-  "settings.startup.window": "Es gibt noch kein Symbol im Infobereich, das Fenster geht beim Anmelden also auf.",
   "settings.storage": "Wo das gespeichert wird",
   "settings.storage.hint": "Einstellungen, Plugin-Daten und das Protokoll liegen alle hier, nie im entpackten Ordner. Wer diesen Ordner löscht, setzt Meows vollständig zurück.",
   "settings.storage.open": "Einstellungsordner öffnen",
@@ -47,6 +48,10 @@
   "settings.theme.light": "Hell",
   "settings.theme.system": "Dem System folgen",
   "settings.title": "Einstellungen",
+  "settings.tray": "Im Hintergrund",
+  "settings.tray.close": "Beim Schließen des Fensters läuft Meows im Infobereich weiter",
+  "settings.tray.close.hint": "Beenden steht im Menü des Symbols. Ohne den Haken beendet der Schließen-Knopf wie früher.",
+  "settings.tray.hint": "Meows sitzt im Infobereich. Alles, was wacht oder wartet, Collars Termine, Birdwatchs Aktualisierung, ein angestoßener Scan, läuft weiter, während das Fenster versteckt ist, und das Symbol zeigt einen Punkt, wenn es etwas zu lesen gibt.",
   "shell.alerts": "Meldungen",
   "shell.cancel": "Abbrechen",
   "shell.log": "Protokoll",
@@ -58,5 +63,9 @@
   "shell.tasks": "Aufgaben",
   "shell.tasks.count": "Aufgaben {0}",
   "shell.tasks.empty": "Nichts läuft. Plugins melden hier ihre Überwachungen, Importe und geplanten Durchläufe an; sie enden, sobald das Plugin abgeschaltet wird.",
-  "shell.tasks.title": "Hintergrundaufgaben"
+  "shell.tasks.title": "Hintergrundaufgaben",
+  "tray.open": "Meows öffnen",
+  "tray.quit": "Meows beenden",
+  "tray.tip.many": "Meows · {0} Benachrichtigungen",
+  "tray.tip.one": "Meows · eine Benachrichtigung"
 }

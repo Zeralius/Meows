@@ -281,4 +281,13 @@ public sealed class ShellPreferences
 
     /// <summary>"system", or a two letter language code the shell ships.</summary>
     public string Language { get; set; } = "system";
+
+    /// <summary>
+    /// Closing the window hides it to the tray and Meows keeps running. On by default, since
+    /// that is the whole point of having a tray icon; off makes the close button a quit again.
+    /// </summary>
+    public bool CloseToTray { get; set; } = true;
+
+    /// <summary>When Windows starts Meows at login, start in the tray rather than with the window open.</summary>
+    public bool StartInTray { get; set; }
 }

@@ -31,6 +31,9 @@ public enum StartupState
 public sealed record StartupRegistration(StartupState State, string? RegisteredPath)
 {
     public bool IsOn => State is StartupState.On or StartupState.Elsewhere or StartupState.BlockedByWindows;
+
+    /// <summary>Whether the registered command line asks for the tray rather than the window.</summary>
+    public bool InTray => RegisteredPath?.Contains(StartWithWindows.TrayArgument, StringComparison.OrdinalIgnoreCase) == true;
 }
 
 /// <summary>
@@ -157,7 +160,12 @@ public static class StartWithWindows
     /// Switching it on always rewrites the value, so ticking it again after moving the folder is
     /// how you re-point it.
     /// </summary>
-    public static string? Set(bool on)
+    /// <summary>The switch that starts Meows hidden, so a login does not open a window over everything.</summary>
+    public const string TrayArgument = "--tray";
+
+    public static string? Set(bool on) => Set(on, inTray: false);
+
+    public static string? Set(bool on, bool inTray)
     {
         if (!OperatingSystem.IsWindows())
             return "This only works on Windows.";
@@ -179,7 +187,7 @@ public static class StartWithWindows
 
             // Quoted, because Windows splits an unquoted command line on spaces and Program
             // Files is where this will usually live.
-            run.SetValue(EntryName, $"\"{exe}\"", RegistryValueKind.String);
+            run.SetValue(EntryName, inTray ? $"\"{exe}\" {TrayArgument}" : $"\"{exe}\"", RegistryValueKind.String);
             return null;
         }
         catch (Exception ex)

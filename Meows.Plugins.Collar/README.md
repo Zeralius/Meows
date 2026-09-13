@@ -22,8 +22,9 @@ The calendar is also looked at every six hours while the tab is switched on. Not
 expensive; the point is that a tab left open across midnight would otherwise still be showing
 yesterday's arithmetic and would never raise the thing that fell due while it sat there.
 
-**Meows is an app you close**, so nothing is raised while it is shut. This tells you when you sit
-down, not while you are out.
+Since 2.0 Meows keeps running in the tray when the window is closed, so a date that falls due
+during the day is raised while you are at the desk, with a dot on the tray icon. Nothing is raised
+while you are logged out; Meows is a tray icon, not a service.
 
 ## Adding a date
 
