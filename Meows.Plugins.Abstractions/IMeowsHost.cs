@@ -49,6 +49,12 @@ public interface IMeowsHost
     /// one table every plugin shares, the hashes anything has seen. The default keeps nothing.
     /// </summary>
     IMeowsStore Store => NoStore.Instance;
+
+    /// <summary>
+    /// Every schedule every plugin is running, read-only. For the one plugin that wants to say
+    /// what Meows is watching. The default watches nothing.
+    /// </summary>
+    IMeowsWatches Watches => NoWatches.Instance;
 }
 
 /// <summary>What a shell built against an older contract answers. Nothing is kept.</summary>

@@ -1,0 +1,152 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Purr.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Purr.Views.PurrView"
+             x:DataType="vm:PurrViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,8" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding SummaryText}" FontWeight="SemiBold" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Classes="label" Text="{Binding SinceText}" />
+                        <TextBlock Classes="label" Text="{Binding Status}" />
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="{m:Tr purr.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
+        </Border>
+
+        <!-- A watch that stopped is the one thing on this tab worth a colour. -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsWarn}"
+                BorderBrush="{DynamicResource MeowsWarnLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasStopped}">
+            <TextBlock Text="{m:Tr purr.stopped.hint}"
+                       Foreground="{DynamicResource MeowsWarnText}"
+                       FontSize="11"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <TextBlock DockPanel.Dock="Top"
+                   Margin="14,12"
+                   Opacity="0.45"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding IsEmpty}"
+                   Text="{m:Tr purr.empty}" />
+
+        <Grid ColumnDefinitions="*,4,300">
+
+            <ListBox Grid.Column="0"
+                     ItemsSource="{Binding Watches}"
+                     SelectedItem="{Binding Selected}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Margin="8,8,8,8">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:WatchViewModel">
+                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding Glyph}"
+                                       Width="16"
+                                       TextAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource MeowsGoodText}"
+                                       IsVisible="{Binding !IsStopped}" />
+                            <TextBlock Grid.Column="0"
+                                       Text="{Binding Glyph}"
+                                       Width="16"
+                                       TextAlignment="Center"
+                                       VerticalAlignment="Center"
+                                       Foreground="{DynamicResource MeowsDangerText}"
+                                       IsVisible="{Binding IsStopped}" />
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Plugin}" Classes="label" VerticalAlignment="Center" />
+                                </StackPanel>
+                                <TextBlock Text="{Binding NextText}" Classes="label" TextTrimming="CharacterEllipsis" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding LastText}" FontSize="11" HorizontalAlignment="Right" />
+                                <TextBlock Text="{Binding EveryText}" Classes="label" HorizontalAlignment="Right" />
+                            </StackPanel>
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <Border Grid.Column="2"
+                    Background="{DynamicResource MeowsBase}"
+                    BorderBrush="{DynamicResource MeowsLineSoft}"
+                    BorderThickness="1,0,0,0">
+                <ScrollViewer Padding="16,12">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="{m:Tr purr.selected}" FontWeight="SemiBold" FontSize="13" />
+
+                        <TextBlock Text="{m:Tr purr.nothingselected}"
+                                   Classes="label"
+                                   IsVisible="{Binding !HasSelection}" />
+
+                        <StackPanel Spacing="6" IsVisible="{Binding HasSelection}">
+                            <TextBlock Text="{Binding Selected.Title}" TextWrapping="Wrap" FontWeight="SemiBold" />
+                            <TextBlock Text="{Binding Selected.Plugin}" Classes="label" />
+                            <TextBlock Text="{Binding Selected.EveryText}" TextWrapping="Wrap" Margin="0,6,0,0" />
+                            <TextBlock Text="{Binding Selected.LastText}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Selected.PassesText}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Selected.NextText}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Selected.Watch.Status}"
+                                       Classes="label"
+                                       TextWrapping="Wrap"
+                                       Margin="0,6,0,0" />
+                        </StackPanel>
+
+                        <TextBlock Classes="label"
+                                   TextWrapping="Wrap"
+                                   Margin="0,12,0,0"
+                                   Text="{m:Tr purr.about}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

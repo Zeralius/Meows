@@ -338,6 +338,7 @@ public interface IMeowsHost
     IMeowsSecrets Secrets { get; }      // 0.5.0
     IMeowsHandoff Handoff { get; }      // 0.5.0
     IMeowsStore Store { get; }          // 0.5.0
+    IMeowsWatches Watches { get; }      // 0.7.0
 }
 ```
 
@@ -465,6 +466,13 @@ from the disk or the network, and use `SearchWords.Match` so every plugin answer
 rule the palette ranks by. Only plugins that are switched on are asked, and a hit must never do
 anything but show: Kibble deliberately does not offer its destinations, because the one thing to
 do with a destination is send.
+
+### `Watches`
+
+Every schedule every plugin has running, read-only and deliberately not scoped, with the times
+the shell records as passes finish and the reason a schedule stopped. Purr is the one plugin
+that reads it; you will not usually need to. `Changed` fires on the UI thread whenever a watch
+starts, passes, fails or ends.
 
 ### `Explorer`
 

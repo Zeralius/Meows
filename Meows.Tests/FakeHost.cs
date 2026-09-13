@@ -30,6 +30,22 @@ public sealed class FakeHost : IMeowsHost
 
     public IMeowsBackgroundWork Background { get; } = new FakeBackgroundWork();
 
+    /// <summary>What the shell would say every plugin is watching. A test fills it in and raises Changed.</summary>
+    public FakeWatches Watches { get; } = new();
+
+    IMeowsWatches IMeowsHost.Watches => Watches;
+
+    public sealed class FakeWatches : IMeowsWatches
+    {
+        public List<WatchInfo> Items { get; } = [];
+
+        public IReadOnlyList<WatchInfo> All() => Items.ToList();
+
+        public event Action? Changed;
+
+        public void Raise() => Changed?.Invoke();
+    }
+
     /// <summary>In memory, so a test never touches the Windows data protection API.</summary>
     public IMeowsSecrets Secrets { get; } = new FakeSecrets();
 

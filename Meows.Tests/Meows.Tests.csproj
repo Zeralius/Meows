@@ -62,6 +62,7 @@
     <ProjectReference Include="..\Meows.Plugins.Scruff\Meows.Plugins.Scruff.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Perch\Meows.Plugins.Perch.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Portion\Meows.Plugins.Portion.csproj" />
+    <ProjectReference Include="..\Meows.Plugins.Purr\Meows.Plugins.Purr.csproj" />
   </ItemGroup>
 
 </Project>

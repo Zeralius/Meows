@@ -28,12 +28,56 @@ public sealed class BackgroundTaskItem : INotifyPropertyChanged, IBackgroundTask
 
     public string Source { get; }
 
+    /// <summary>The id of the plugin that started it, which is the key its watches are cleared by.</summary>
+    public string PluginId { get; internal init; } = "";
+
     /// <summary>The name to show, which follows the feline switch.</summary>
     public string SourceName => PluginNames.Display(Source);
 
     public string Title { get; }
 
     public CancellationToken Token => _cts.Token;
+
+    // ---- what a schedule keeps about itself, read by Purr through IMeowsWatches ----
+
+    /// <summary>Null for a one-off task. A schedule has one and is listed as a watch.</summary>
+    public TimeSpan? Interval { get; internal init; }
+
+    public DateTime StartedAt { get; } = DateTime.Now;
+
+    public DateTime? LastPassAt { get; private set; }
+
+    public int Passes { get; private set; }
+
+    public bool PassInProgress { get; private set; }
+
+    public DateTime? StoppedAt { get; private set; }
+
+    public string? LastFailure { get; private set; }
+
+    public DateTime? NextDueAt => Interval is { } every && StoppedAt is null && !PassInProgress
+        ? (LastPassAt ?? StartedAt) + every
+        : null;
+
+    internal void PassStarted() => PassInProgress = true;
+
+    internal void PassFinished()
+    {
+        PassInProgress = false;
+        LastPassAt = DateTime.Now;
+        Passes++;
+    }
+
+    internal void Stopped(string? failure)
+    {
+        PassInProgress = false;
+        StoppedAt = DateTime.Now;
+        LastFailure = failure;
+    }
+
+    public WatchInfo AsWatch() => new(
+        PluginId, SourceName, Title, Interval ?? TimeSpan.Zero, StartedAt, LastPassAt, NextDueAt,
+        Passes, PassInProgress, StoppedAt, LastFailure, Status);
 
     public string Status
     {
@@ -134,7 +178,24 @@ public sealed class BackgroundTaskService : IDisposable
 
     public ObservableCollection<BackgroundTaskItem> Running { get; } = new();
 
+    /// <summary>
+    /// Every schedule, kept after it ends so a watch that failed can still be seen to have
+    /// failed. Cleared for a plugin when it is switched off, since its watches went with it.
+    /// </summary>
+    private readonly List<BackgroundTaskItem> _watches = [];
+
     public event Action? Changed;
+
+    /// <summary>Raised on the UI thread whenever a watch starts, passes, fails or ends.</summary>
+    public event Action? WatchesChanged;
+
+    public IReadOnlyList<WatchInfo> Watches()
+    {
+        lock (_watches)
+            return _watches.Select(w => w.AsWatch()).ToList();
+    }
+
+    private void WatchesMoved() => OnUiThread(() => WatchesChanged?.Invoke());
 
     public int RunningCount => Running.Count;
 
@@ -151,6 +212,10 @@ public sealed class BackgroundTaskService : IDisposable
     /// <summary>Deactivation. Everything that plugin registered stops here.</summary>
     public void CancelAllFor(string pluginId)
     {
+        lock (_watches)
+            _watches.RemoveAll(w => string.Equals(w.PluginId, pluginId, StringComparison.OrdinalIgnoreCase));
+        WatchesMoved();
+
         CancellationTokenSource? cts;
         lock (_perPlugin)
         {
@@ -175,11 +240,22 @@ public sealed class BackgroundTaskService : IDisposable
     internal BackgroundTaskItem Start(string pluginId, string source, string title,
         Func<IBackgroundContext, Task> work, TimeSpan? interval, bool runImmediately)
     {
-        var item = new BackgroundTaskItem(source, title, TokenFor(pluginId), Remove);
+        var item = new BackgroundTaskItem(source, title, TokenFor(pluginId), Remove)
+        {
+            PluginId = pluginId,
+            Interval = interval,
+        };
         Add(item);
+        if (interval is not null)
+        {
+            lock (_watches)
+                _watches.Add(item);
+            WatchesMoved();
+        }
 
         _ = Task.Run(async () =>
         {
+            string? failure = null;
             try
             {
                 if (interval is null)
@@ -193,7 +269,11 @@ public sealed class BackgroundTaskService : IDisposable
 
                     while (!item.Token.IsCancellationRequested)
                     {
+                        item.PassStarted();
                         await work(item).ConfigureAwait(false);
+                        item.PassFinished();
+                        WatchesMoved();
+
                         // Delay after the pass, not on a fixed clock, so a slow run pushes
                         // the next one back instead of two running at once.
                         await Task.Delay(interval.Value, item.Token).ConfigureAwait(false);
@@ -206,12 +286,18 @@ public sealed class BackgroundTaskService : IDisposable
             }
             catch (Exception ex)
             {
+                failure = ex.Message;
                 _log.Write(source, $"Background task '{title}' failed: {ex}");
                 _notifications.Post(source, NotificationSeverity.Error,
                     $"{title} failed", ex.Message, action: null);
             }
             finally
             {
+                if (interval is not null)
+                {
+                    item.Stopped(failure);
+                    WatchesMoved();
+                }
                 item.MarkFinished();
             }
         });

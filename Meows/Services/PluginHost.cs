@@ -28,7 +28,10 @@ public sealed class PluginHost : IMeowsHost
         Secrets = new SecretStore(DataDirectory);
         Handoff = handoff ?? NoHandoff.Instance;
         Store = store ?? NoStore.Instance;
+        Watches = new WatchService(background);
     }
+
+    public IMeowsWatches Watches { get; }
 
     public IMeowsSecrets Secrets { get; }
 
