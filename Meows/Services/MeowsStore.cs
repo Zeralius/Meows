@@ -206,6 +206,85 @@ public sealed class MeowsStore
         }
     }
 
+    // ---- Keeping it small --------------------------------------------------------------------------
+    //
+    // The journal grows forever by design: nothing in the app deletes a line. That is right for a
+    // record and wrong for a file, so the History tab says how big the file is and offers the two
+    // things worth doing about it. Facts and the seen table are never touched here: the hashes are
+    // the point of the seen table, and a fact forgotten is a plugin misremembering.
+
+    /// <summary>The database file's size on disk, or 0 when it cannot be read.</summary>
+    public long FileSize
+    {
+        get
+        {
+            try
+            {
+                return new FileInfo(_path).Length;
+            }
+            catch (Exception)
+            {
+                return 0;
+            }
+        }
+    }
+
+    /// <summary>How many lines are older than a cutoff, which is what a confirmation has to say.</summary>
+    public long CountOlderThan(DateTime cutoffUtc)
+    {
+        try
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT COUNT(*) FROM events WHERE at < $cutoff";
+            command.Parameters.AddWithValue("$cutoff", Stamp(cutoffUtc));
+            return (long)(command.ExecuteScalar() ?? 0L);
+        }
+        catch (Exception)
+        {
+            return 0;
+        }
+    }
+
+    /// <summary>Removes lines older than a cutoff and says how many went. Not undoable, which is why it asks first.</summary>
+    public long Forget(DateTime cutoffUtc)
+    {
+        try
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "DELETE FROM events WHERE at < $cutoff";
+            command.Parameters.AddWithValue("$cutoff", Stamp(cutoffUtc));
+            var gone = command.ExecuteNonQuery();
+            _log($"Forgot {gone} history line(s) older than {cutoffUtc:yyyy-MM-dd}");
+            return gone;
+        }
+        catch (Exception ex)
+        {
+            _log($"Could not forget old history: {ex.Message}");
+            return 0;
+        }
+    }
+
+    /// <summary>
+    /// Gives the room back. SQLite keeps deleted pages for reuse rather than shrinking the file,
+    /// so forgetting on its own changes the count and not the size; this does the size.
+    /// </summary>
+    public bool Compact()
+    {
+        try
+        {
+            using var connection = Open();
+            Execute(connection, "VACUUM");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _log($"Could not compact the store: {ex.Message}");
+            return false;
+        }
+    }
+
     // ---- Facts -----------------------------------------------------------------------------------
 
     public string? Get(string plugin, string key)

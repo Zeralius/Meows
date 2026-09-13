@@ -63,8 +63,91 @@ public sealed class HistoryViewModel : ObservableObject
         RefreshCommand = new RelayCommand(Refresh);
         RevealCommand = new RelayCommand(Reveal, () => Selected is { IsPath: true });
         PutBackCommand = new RelayCommand(PutBack, () => CanPutBack);
+        AskToForgetCommand = new RelayCommand(p => AskToForget(p is int days ? days : p is string s && int.TryParse(s, out var d) ? d : 365));
+        ForgetCommand = new RelayCommand(Forget, () => _forgetCutoff is not null);
+        CancelForgetCommand = new RelayCommand(() => ForgetCutoff = null);
+        CompactCommand = new RelayCommand(Compact);
         Refresh();
     }
+
+    // ---- keeping the file small ----
+
+    private DateTime? _forgetCutoff;
+    private long _forgetCount;
+
+    /// <summary>Asks first. The parameter is a number of days; the confirmation says how many lines go.</summary>
+    public RelayCommand AskToForgetCommand { get; }
+
+    public RelayCommand ForgetCommand { get; }
+
+    public RelayCommand CancelForgetCommand { get; }
+
+    /// <summary>Gives the room back after forgetting. Safe to press any time; it only ever makes the file smaller.</summary>
+    public RelayCommand CompactCommand { get; }
+
+    /// <summary>The database file, in words: how big, how many lines.</summary>
+    public string StoreSizeText => MeowsText.Current.Format("history.store.size", Humanise(_store.FileSize), _store.Count());
+
+    private DateTime? ForgetCutoff
+    {
+        get => _forgetCutoff;
+        set
+        {
+            if (_forgetCutoff == value)
+                return;
+            _forgetCutoff = value;
+            OnPropertyChanged(nameof(IsAskingToForget));
+            OnPropertyChanged(nameof(ForgetPrompt));
+            ForgetCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool IsAskingToForget => _forgetCutoff is not null;
+
+    public string ForgetPrompt => _forgetCutoff is { } cutoff
+        ? MeowsText.Current.Format("history.forget.prompt", _forgetCount, cutoff.ToLocalTime().ToString("d MMM yyyy"))
+        : "";
+
+    private void AskToForget(int days)
+    {
+        var cutoff = DateTime.UtcNow.AddDays(-days);
+        _forgetCount = _store.CountOlderThan(cutoff);
+        if (_forgetCount == 0)
+        {
+            Notice = MeowsText.Current["history.forget.nothing"];
+            return;
+        }
+        ForgetCutoff = cutoff;
+    }
+
+    private void Forget()
+    {
+        if (_forgetCutoff is not { } cutoff)
+            return;
+
+        var gone = _store.Forget(cutoff);
+        _store.Compact();
+        ForgetCutoff = null;
+        Notice = MeowsText.Current.Format("history.forget.done", gone, Humanise(_store.FileSize));
+        Refresh();
+    }
+
+    private void Compact()
+    {
+        var before = _store.FileSize;
+        Notice = _store.Compact()
+            ? MeowsText.Current.Format("history.compact.done", Humanise(before), Humanise(_store.FileSize))
+            : MeowsText.Current["history.compact.failed"];
+        OnPropertyChanged(nameof(StoreSizeText));
+    }
+
+    private static string Humanise(long bytes) => bytes switch
+    {
+        >= 1024L * 1024 * 1024 => $"{bytes / 1024d / 1024 / 1024:0.##} GB",
+        >= 1024 * 1024 => $"{bytes / 1024d / 1024:0.#} MB",
+        >= 1024 => $"{bytes / 1024d:0} KB",
+        _ => $"{bytes} B",
+    };
 
     public RelayCommand PutBackCommand { get; }
 
@@ -196,6 +279,7 @@ public sealed class HistoryViewModel : ObservableObject
 
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(CountText));
+        OnPropertyChanged(nameof(StoreSizeText));
     }
 
     private void Reveal()

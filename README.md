@@ -80,7 +80,10 @@ is kept in a small database beside the settings and survives the window closing,
 being switched off, and the undo list being emptied. A line the plugin that wrote it can still
 reverse, a Kibble send whose file is still in the queue, carries a **Put back** button while that
 plugin is open; the shell asks the plugin first, so the button is only there when pressing it
-would do something.
+would do something. The tab's bottom bar says how big the database file is and how many lines it
+holds, with **Forget older than a year**, which asks first and says how many lines would go, and
+**Compact**, which gives the room back; nothing else ever makes that file smaller, and forgetting
+never touches the facts a plugin keeps or the hashes anything has seen.
 
 Settings, logs and that history live in `%APPDATA%\Meows`, never inside the folder you unzipped,
 so deleting that folder resets Meows completely. `meows.log` there is also where a crash gets written, stack

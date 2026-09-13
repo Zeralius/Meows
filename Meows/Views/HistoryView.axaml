@@ -58,9 +58,24 @@
                 BorderThickness="0,1,0,0"
                 Padding="14,6">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
-                <TextBlock Grid.Column="0" Classes="label" TextTrimming="CharacterEllipsis" Text="{Binding StorePath}" VerticalAlignment="Center" />
+                <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                    <TextBlock Classes="label" TextTrimming="CharacterEllipsis" Text="{Binding StorePath}" />
+                    <TextBlock Classes="label" Text="{Binding StoreSizeText}" />
+                </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                     <TextBlock Classes="label" Text="{Binding Notice}" VerticalAlignment="Center" IsVisible="{Binding HasNotice}" />
+                    <!-- Keeping the file small. The journal never deletes a line on its own, so
+                         these are the only two things that ever make it smaller, and the first
+                         one asks. -->
+                    <Button Content="{m:Tr history.forget.year}"
+                            Command="{Binding AskToForgetCommand}"
+                            CommandParameter="365"
+                            IsVisible="{Binding !IsAskingToForget}"
+                            FontSize="11" />
+                    <Button Content="{m:Tr history.compact}"
+                            Command="{Binding CompactCommand}"
+                            IsVisible="{Binding !IsAskingToForget}"
+                            FontSize="11" />
                     <!-- Only where pressing it would do something: the plugin is open and says
                          this line is still reversible. -->
                     <Button Content="{m:Tr history.putback}"
@@ -71,6 +86,21 @@
                             Command="{Binding RevealCommand}"
                             FontSize="11" />
                 </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- The question, over the list, since forgetting cannot be undone. -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding IsAskingToForget}">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                <TextBlock Grid.Column="0" Text="{Binding ForgetPrompt}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" />
+                <Button Grid.Column="1" Content="{m:Tr history.forget.cancel}" Command="{Binding CancelForgetCommand}" FontSize="11" />
+                <Button Grid.Column="2" Content="{m:Tr history.forget.confirm}" Command="{Binding ForgetCommand}" FontSize="11"
+                        Background="{DynamicResource MeowsDanger}" BorderBrush="{DynamicResource MeowsDangerLine}" />
             </Grid>
         </Border>
 
