@@ -1,0 +1,174 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Catnip.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Catnip.Views.CatnipView"
+             x:DataType="vm:CatnipViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="14,12,14,6" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+        <Style Selector="TextBlock.never">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsWarnText}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Headline}" FontWeight="SemiBold" TextWrapping="Wrap" IsVisible="{Binding HasScanned}" />
+                    <TextBlock Text="{m:Tr catnip.title}" FontWeight="SemiBold" IsVisible="{Binding !HasScanned}" />
+                    <TextBlock Classes="label" Text="{Binding Status}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="{m:Tr catnip.scan}" Command="{Binding ScanCommand}" IsVisible="{Binding !IsScanning}" />
+                    <Button Content="{m:Tr catnip.stop}" Command="{Binding CancelCommand}" IsVisible="{Binding IsScanning}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="240,4,*,4,300">
+
+            <!-- The folders walked -->
+            <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr catnip.roots}" />
+                    <StackPanel DockPanel.Dock="Bottom" Margin="10,6,10,12" Spacing="6">
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
+                            <Button Grid.Column="0" Name="AddRootButton" Content="{m:Tr catnip.roots.add}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <Button Grid.Column="1" Content="{m:Tr catnip.roots.remove}" Command="{Binding RemoveRootCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        </Grid>
+                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr catnip.roots.hint}" />
+                    </StackPanel>
+                    <ListBox ItemsSource="{Binding Roots}"
+                             SelectedItem="{Binding SelectedRoot}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Margin="6,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RootViewModel">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Path}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <!-- The files, least recently touched first -->
+            <DockPanel Grid.Column="2">
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,14,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding !HasScanned}"
+                           Text="{m:Tr catnip.empty}" />
+                <TextBlock DockPanel.Dock="Top" Classes="label" Margin="14,10,14,4" Text="{m:Tr catnip.none}" IsVisible="{Binding IsEmpty}" />
+                <TextBlock DockPanel.Dock="Bottom" Classes="label" Margin="14,4,14,10" Text="{Binding TruncatedText}" />
+                <ListBox ItemsSource="{Binding Files}"
+                         SelectedItem="{Binding Selected}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8,0,8,8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:NeglectedViewModel">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <StackPanel Grid.Column="0" Spacing="2">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Folder}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding SizeText}" FontWeight="SemiBold" HorizontalAlignment="Right" />
+                                    <TextBlock Text="{Binding WhenText}" Classes="label" Classes.never="{Binding NeverOpened}" HorizontalAlignment="Right" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="3" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <!-- The selected file, and the dials -->
+            <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0">
+                <ScrollViewer Padding="16,12">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="{m:Tr catnip.selected}" FontWeight="SemiBold" FontSize="13" />
+                        <TextBlock Text="{m:Tr catnip.nothingselected}" Classes="label" IsVisible="{Binding !HasSelection}" />
+                        <StackPanel Spacing="6" IsVisible="{Binding HasSelection}">
+                            <TextBlock Text="{Binding Selected.Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding Selected.SizeText}" FontSize="20" />
+                            <TextBlock Text="{Binding Selected.WhenText}" Classes="label" TextWrapping="Wrap" />
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="2">
+                                <TextBlock Grid.Row="0" Grid.Column="0" Classes="label" Text="{m:Tr catnip.arrived}" />
+                                <TextBlock Grid.Row="0" Grid.Column="1" Classes="label" Text="{Binding Selected.ArrivedText}" />
+                                <TextBlock Grid.Row="1" Grid.Column="0" Classes="label" Text="{m:Tr catnip.accessed}" />
+                                <TextBlock Grid.Row="1" Grid.Column="1" Classes="label" Text="{Binding Selected.AccessedText}" />
+                            </Grid>
+                            <TextBlock Text="{Binding Selected.Path}" Classes="label" TextWrapping="Wrap" />
+                            <Button Content="{m:Tr catnip.open}" Command="{Binding OpenCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,6,0,0" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr catnip.open.hint}" />
+                            <Button Content="{m:Tr catnip.reveal}" Command="{Binding RevealCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <Button Content="{m:Tr catnip.recycle}" Command="{Binding RecycleCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                    Background="{DynamicResource MeowsDanger}" BorderBrush="{DynamicResource MeowsDangerLine}" />
+                        </StackPanel>
+
+                        <TextBlock Text="{m:Tr catnip.dials}" FontWeight="SemiBold" FontSize="13" Margin="0,14,0,0" />
+                        <CheckBox Content="{m:Tr catnip.onlynever}" IsChecked="{Binding OnlyNeverOpened}" FontSize="12" />
+                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr catnip.onlynever.hint}" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <TextBlock Grid.Column="0" Classes="label" Text="{m:Tr catnip.olderthan}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                            <NumericUpDown Grid.Column="1" Value="{Binding OlderThanDays}" Minimum="0" Maximum="3650" Increment="30" FontSize="11" Width="100" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <TextBlock Grid.Column="0" Classes="label" Text="{m:Tr catnip.minsize}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                            <NumericUpDown Grid.Column="1" Value="{Binding MinMegabytes}" Minimum="0" Maximum="100000" Increment="1" FontSize="11" Width="100" />
+                        </Grid>
+                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr catnip.about}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

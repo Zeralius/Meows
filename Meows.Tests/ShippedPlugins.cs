@@ -31,6 +31,7 @@ internal static class ShippedPlugins
         typeof(Plugins.Purr.PurrPlugin),
         typeof(Plugins.Kit.KitPlugin),
         typeof(Plugins.WeighIn.WeighInPlugin),
+        typeof(Plugins.Catnip.CatnipPlugin),
         // kitten: next plugin goes here
     ];
 }
