@@ -1,0 +1,48 @@
+{
+  "tokens": [
+    {
+      "file": "token-gold.png",
+      "label": "Gold ring",
+      "size": 512,
+      "innerRadius": 224
+    },
+    {
+      "file": "token-silver.png",
+      "label": "Silver double ring",
+      "size": 512,
+      "innerRadius": 222
+    },
+    {
+      "file": "token-crimson.png",
+      "label": "Crimson rim",
+      "size": 512,
+      "innerRadius": 216
+    },
+    {
+      "file": "token-studded.png",
+      "label": "Studded iron",
+      "size": 512,
+      "innerRadius": 224
+    }
+  ],
+  "borders": [
+    {
+      "file": "border-parchment.png",
+      "label": "Parchment edge",
+      "size": 192,
+      "slice": 64
+    },
+    {
+      "file": "border-stone.png",
+      "label": "Stone rim",
+      "size": 192,
+      "slice": 64
+    },
+    {
+      "file": "border-torn.png",
+      "label": "Torn paper",
+      "size": 192,
+      "slice": 64
+    }
+  ]
+}

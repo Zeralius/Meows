@@ -29,6 +29,7 @@ internal static class ShippedPlugins
         typeof(Plugins.TelegramPoster.TelegramPosterPlugin),
         typeof(Plugins.Tin.TinPlugin),
         typeof(Plugins.Purr.PurrPlugin),
+        typeof(Plugins.Kit.KitPlugin),
         // kitten: next plugin goes here
     ];
 }

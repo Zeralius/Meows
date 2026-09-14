@@ -44,6 +44,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Kitten", "Meows.Kitte
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Plugins.Purr", "Meows.Plugins.Purr\Meows.Plugins.Purr.csproj", "{E3DEA76A-0D9A-475E-835E-1AE7ED6BB519}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Plugins.Kit", "Meows.Plugins.Kit\Meows.Plugins.Kit.csproj", "{60A998B0-DDBC-43AB-B759-63CB9B6D0986}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -318,6 +320,18 @@ Global
 		{E3DEA76A-0D9A-475E-835E-1AE7ED6BB519}.Release|x64.Build.0 = Release|Any CPU
 		{E3DEA76A-0D9A-475E-835E-1AE7ED6BB519}.Release|x86.ActiveCfg = Release|Any CPU
 		{E3DEA76A-0D9A-475E-835E-1AE7ED6BB519}.Release|x86.Build.0 = Release|Any CPU
+		{60A998B0-DDBC-43AB-B759-63CB9B6D0986}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{60A998B0-DDBC-43AB-B759-63CB9B6D0986}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{60A998B0-DDBC-43AB-B759-63CB9B6D0986}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{60A998B0-DDBC-43AB-B759-63CB9B6D0986}.Debug|x64.Build.0 = Debug|Any CPU
+		{60A998B0-DDBC-43AB-B759-63CB9B6D0986}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{60A998B0-DDBC-43AB-B759-63CB9B6D0986}.Debug|x86.Build.0 = Debug|Any CPU
+		{60A998B0-DDBC-43AB-B759-63CB9B6D0986}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{60A998B0-DDBC-43AB-B759-63CB9B6D0986}.Release|Any CPU.Build.0 = Release|Any CPU
+		{60A998B0-DDBC-43AB-B759-63CB9B6D0986}.Release|x64.ActiveCfg = Release|Any CPU
+		{60A998B0-DDBC-43AB-B759-63CB9B6D0986}.Release|x64.Build.0 = Release|Any CPU
+		{60A998B0-DDBC-43AB-B759-63CB9B6D0986}.Release|x86.ActiveCfg = Release|Any CPU
+		{60A998B0-DDBC-43AB-B759-63CB9B6D0986}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
