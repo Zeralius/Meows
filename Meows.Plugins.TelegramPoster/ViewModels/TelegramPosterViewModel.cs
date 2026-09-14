@@ -116,7 +116,11 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISe
     {
         if (DetailItem is not { } item)
             return;
-        if (!_host.Handoff.Send(KnownPlugins.Portion, Handoff.Files([item.Path])))
+        var handoff = Handoff.Files([item.Path]) with
+        {
+            Reply = outcome => _host.Notifications.Post(NotificationSeverity.Info, _host.Text["tp.shrinkwithportion"], outcome),
+        };
+        if (!_host.Handoff.Send(KnownPlugins.Portion, handoff))
             ErrorMessage = _host.Text["tp.error.portion"];
     }
 

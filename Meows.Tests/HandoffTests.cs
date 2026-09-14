@@ -108,6 +108,42 @@ public class HandoffTests : IDisposable
     }
 
     [Fact]
+    public void A_receiver_answers_the_sender_once_the_work_is_done()
+    {
+        var host = Host("kibble");
+        using var kibble = new KibbleViewModel(host);
+        string? heard = null;
+
+        kibble.Receive(Handoff.Folder(Path.Combine(_root, "fat")) with { Reply = outcome => heard = outcome });
+
+        Assert.Equal("2 files waiting to be sorted", heard);
+
+        using var scruff = new ScruffViewModel(Host("scruff"), new HttpClient());
+        heard = null;
+        scruff.Receive(Handoff.Files([Path.Combine(_root, "fat", "pic.jpg")]) with { Reply = outcome => heard = outcome });
+        Assert.Equal("1 picture on the pile", heard);
+
+        // Nobody asked: answering is a quiet no-op rather than a null reference.
+        Handoff.Folder(_root).Answer("nothing to say");
+    }
+
+    [Fact]
+    public void Chonk_asks_and_puts_the_answer_in_its_status_line()
+    {
+        var host = Host("chonk", KnownPlugins.Purrge);
+        using var model = new ChonkViewModel(host);
+        model.ShowScanned(DiskScan.Run(_root, new ScanOptions(), null, CancellationToken.None));
+        model.Selected = model.Entries.First(e => e.Name == "fat");
+
+        model.FindDuplicatesCommand.Execute(null);
+
+        var (_, what) = Assert.Single(host.Handoffs.Sent);
+        Assert.True(what.WantsReply);
+        what.Answer("3 sets, 12 copies");
+        Assert.Equal("fat: 3 sets, 12 copies", model.Status);
+    }
+
+    [Fact]
     public void A_shell_without_handoffs_reaches_nobody_and_a_send_is_a_quiet_no()
     {
         IMeowsHost host = new StaleHost(Path.Combine(_root, "stale"));

@@ -77,6 +77,8 @@
   "kibble.remaining.many": "{0} files left",
   "kibble.remaining.none": "Nothing left",
   "kibble.remaining.one": "1 file left",
+  "kibble.reply.many": "{0} files waiting to be sorted",
+  "kibble.reply.one": "1 file waiting to be sorted",
   "kibble.selected": "{0} picked",
   "kibble.sendverb.comic": "SEND AS ONE COMIC",
   "kibble.sendverb.files": "SEND {0} FILES",

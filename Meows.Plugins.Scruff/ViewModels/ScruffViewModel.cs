@@ -392,8 +392,13 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
 
     public void Receive(Handoff handoff)
     {
-        if (Accepts(handoff))
-            AddPaths(handoff.Paths);
+        if (!Accepts(handoff))
+            return;
+
+        var before = Files.Count;
+        AddPaths(handoff.Paths);
+        var added = Files.Count - before;
+        handoff.Answer(added == 1 ? _host.Text["scruff.reply.one"] : _host.Text.Format("scruff.reply.many", added));
     }
 
     /// <summary>Puts files on the pile and starts reading them. A folder means everything in it, one level.</summary>

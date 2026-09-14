@@ -42,6 +42,7 @@
   "chonk.status.progress": "{0} Ordner, {1} bisher",
   "chonk.status.ready": "{0} gewählt. Messen misst es.",
   "chonk.status.removed": "{0} in den Papierkorb verschoben, {1} frei geworden",
+  "chonk.status.reply": "{0}: {1}",
   "chonk.status.start": "Ein Laufwerk wählen, oder einen Ordner darin, dann Messen.",
   "chonk.stop": "Anhalten",
   "chonk.twin": "Doppelt bezahlt. Egal welche Seite du entfernst, die andere behält alles.",

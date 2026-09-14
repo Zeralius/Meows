@@ -42,6 +42,7 @@
   "chonk.status.progress": "{0} folders, {1} so far",
   "chonk.status.ready": "{0} chosen. Scan measures it.",
   "chonk.status.removed": "Sent {0} to the Recycle Bin, {1} freed",
+  "chonk.status.reply": "{0}: {1}",
   "chonk.status.start": "Pick a drive, or a folder inside one, then Scan.",
   "chonk.stop": "Stop",
   "chonk.twin": "Paid for twice. Whichever side you remove, the other keeps all of it.",

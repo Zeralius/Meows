@@ -89,6 +89,8 @@
   "scruff.remind.rating.adult": "Die Einstufung auf Adult stellen",
   "scruff.remind.rating.mature": "Die Einstufung auf Mature stellen",
   "scruff.remove": "Vom Stapel nehmen",
+  "scruff.reply.many": "{0} Bilder auf dem Stapel",
+  "scruff.reply.one": "1 Bild auf dem Stapel",
   "scruff.selected": "AUSGEWÄHLT",
   "scruff.signin": "Anmelden",
   "scruff.status.browser": "{0}: die Anmeldung im Browser abschließen, dann hierher zurück",

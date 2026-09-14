@@ -292,6 +292,7 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
         Status = first is null
             ? _host.Text.Format("portion.status.handoff.fine", fine)
             : _host.Text.Format("portion.status.handoff", handoff.Paths.Count - fine, fine);
+        handoff.Answer(Status);
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(AllClear));
         RaiseCommands();

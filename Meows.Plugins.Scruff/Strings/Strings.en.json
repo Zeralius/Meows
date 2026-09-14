@@ -89,6 +89,8 @@
   "scruff.remind.rating.adult": "Set the rating to Adult",
   "scruff.remind.rating.mature": "Set the rating to Mature",
   "scruff.remove": "Take off the pile",
+  "scruff.reply.many": "{0} pictures on the pile",
+  "scruff.reply.one": "1 picture on the pile",
   "scruff.selected": "SELECTED",
   "scruff.signin": "Sign in",
   "scruff.status.browser": "{0}: finish signing in in the browser, then come back here",

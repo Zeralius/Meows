@@ -900,8 +900,13 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
 
     public void Receive(Handoff handoff)
     {
-        if (Accepts(handoff))
-            LoadFolder(handoff.Paths[0]);
+        if (!Accepts(handoff))
+            return;
+
+        LoadFolder(handoff.Paths[0]);
+        handoff.Answer(_pending.Count == 1
+            ? _host.Text["kibble.reply.one"]
+            : _host.Text.Format("kibble.reply.many", _pending.Count));
     }
 
     public void LoadFolder(string folder)
@@ -1604,7 +1609,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         if (files.Count == 0)
             return;
 
-        if (!_host.Handoff.Send(KnownPlugins.Scruff, Handoff.Files(files)))
+        var handoff = Handoff.Files(files) with { Reply = outcome => StatusMessage = outcome };
+        if (!_host.Handoff.Send(KnownPlugins.Scruff, handoff))
             ErrorMessage = _host.Text.Format("kibble.error.handoff", "Scruff");
     }
 

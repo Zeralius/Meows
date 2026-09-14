@@ -188,7 +188,14 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable
         if (Selected is not { CanDrillInto: true } folder)
             return;
 
-        if (!_host.Handoff.Send(pluginId, Handoff.Folder(folder.Path)))
+        // The answer lands in the status line, so the result is known without the tab switch.
+        var name = System.IO.Path.GetFileName(folder.Path);
+        var handoff = Handoff.Folder(folder.Path) with
+        {
+            Reply = outcome => Status = _host.Text.Format("chonk.status.reply", name, outcome),
+        };
+
+        if (!_host.Handoff.Send(pluginId, handoff))
             ErrorMessage = _host.Text.Format("chonk.error.handoff", pluginId);
     }
 

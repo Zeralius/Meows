@@ -9,6 +9,20 @@ public sealed record Handoff(string Verb, IReadOnlyList<string> Paths, string? N
     public static Handoff Folder(string path, string? note = null) => new(HandoffVerbs.Folder, [path], note);
 
     public static Handoff Files(IEnumerable<string> paths, string? note = null) => new(HandoffVerbs.Files, paths.ToList(), note);
+
+    /// <summary>
+    /// Where the receiver says how it went, once, when the work the handoff asked for is done:
+    /// "3 sets, 12 copies", "41 files waiting", "6 on the pile". Set by the sender, called by
+    /// the receiver through <see cref="Answer"/>; the shell sees to it that it runs on the UI
+    /// thread and only once. Null when the sender did not ask. Since 0.9.0.
+    /// </summary>
+    public Action<string>? Reply { get; init; }
+
+    /// <summary>Whether anyone is waiting to hear how it went.</summary>
+    public bool WantsReply => Reply is not null;
+
+    /// <summary>The receiver's side of it. Safe to call when nobody asked, and safe to call twice.</summary>
+    public void Answer(string outcome) => Reply?.Invoke(outcome);
 }
 
 /// <summary>

@@ -399,6 +399,10 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         if (Sets.Count > 0)
             _host.Notifications.Post(NotificationSeverity.Info, _host.Text["purrge.notify.finished"], ResultSummary);
 
+        // The tab that sent the folder gets one sentence back, and its status line says it.
+        _askedBy?.Answer(Sets.Count == 0 ? _host.Text["purrge.status.none"] : ResultSummary);
+        _askedBy = null;
+
         RaiseResultState();
         _ = LoadThumbnailsAsync();
     }
@@ -604,6 +608,9 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         return hits;
     }
 
+    /// <summary>Whoever handed over the folder being scanned, waiting to hear what was found.</summary>
+    private Handoff? _askedBy;
+
     public void Receive(Handoff handoff)
     {
         if (!Accepts(handoff) || IsScanning)
@@ -611,6 +618,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
 
         IsCompareMode = false;
         ScanRoot = handoff.Paths[0];
+        _askedBy = handoff.WantsReply ? handoff : null;
         StartScan();
     }
 

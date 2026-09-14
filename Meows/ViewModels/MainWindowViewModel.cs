@@ -671,7 +671,7 @@ public sealed class MainWindowViewModel : ObservableObject
         SelectedTab = tab;
         try
         {
-            target.Receive(handoff);
+            target.Receive(WithReplyOnUiThread(handoff, fromId, entry.DisplayName));
             _log.Write("shell", $"{fromId} handed {handoff.Paths.Count} path(s) to '{entry.DisplayName}'.");
             return true;
         }
@@ -680,6 +680,36 @@ public sealed class MainWindowViewModel : ObservableObject
             _log.Write("shell", $"'{entry.DisplayName}' failed to take a handoff: {ex}");
             return false;
         }
+    }
+
+    /// <summary>
+    /// The sender's Reply, made safe for a receiver to call from wherever its work finishes: it
+    /// lands on the UI thread, runs once, and is logged, so the sender's status line can bind
+    /// to it without thinking about threads.
+    /// </summary>
+    private Handoff WithReplyOnUiThread(Handoff handoff, string fromId, string toName)
+    {
+        if (handoff.Reply is not { } reply)
+            return handoff;
+
+        var answered = 0;
+        return handoff with
+        {
+            Reply = outcome => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                if (Interlocked.Exchange(ref answered, 1) != 0)
+                    return;
+                _log.Write("shell", $"'{toName}' answered {fromId}: {outcome}");
+                try
+                {
+                    reply(outcome);
+                }
+                catch (Exception ex)
+                {
+                    _log.Write("shell", $"{fromId} could not take the reply: {ex.Message}", LogLevel.Warning);
+                }
+            }),
+        };
     }
 
     private void Deactivate(PluginEntryViewModel entry)

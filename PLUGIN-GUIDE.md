@@ -444,6 +444,22 @@ public bool Accepts(Handoff handoff) =>
 public void Receive(Handoff handoff) => LoadFolder(handoff.Paths[0]);
 ```
 
+**An answer, when the sender wants one** (0.9.0). A sender that would like to know how it went
+sets `Reply` on the handoff; the receiver calls `handoff.Answer("3 sets, 12 copies")` once, when
+the work the handoff asked for is done, which may be after a scan rather than in `Receive`. The
+shell puts the reply on the UI thread, runs it once and logs it, so the sender's status line can
+take it directly:
+
+```csharp
+// The sender
+_host.Handoff.Send(KnownPlugins.Purrge, Handoff.Folder(path) with { Reply = outcome => Status = outcome });
+
+// The receiver, when its scan lands
+_askedBy?.Answer(ResultSummary);
+```
+
+`Answer` on a handoff nobody asked about is a quiet no-op, so a receiver can always call it.
+
 Two verbs are agreed on, `HandoffVerbs.Folder` and `HandoffVerbs.Files`; two plugins may invent a
 third between themselves. The receiver is switched on if it is installed but off, because "open
 this in Purrge" means open Purrge. `Receive` is called on the UI thread after the tab has come to
