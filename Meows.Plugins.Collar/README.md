@@ -40,6 +40,11 @@ Each entry carries what it is, what sort it is, when, whether it comes round aga
 optionally the file. The file is referenced where it already lives and never copied, so Collar
 holds a path and nothing else.
 
+## From another tab
+
+A *files* handoff makes one entry per file the way a drop does, and the sender hears *2 added to
+Collar*. If an entry is selected and has no paper yet, the first file attaches to it instead.
+
 ## Dealt with
 
 One button. Something that **repeats** moves to its next date, and the walk forward keeps going

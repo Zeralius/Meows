@@ -43,6 +43,8 @@
   "collar.pickone": "Pick something on the left to change it, or add a date.",
   "collar.repeat.every": "every {0} months",
   "collar.repeat.once": "once",
+  "collar.reply.added": "{0} added to Collar",
+  "collar.reply.attached": "attached in Collar",
   "collar.status.added": "{0} added",
   "collar.status.attached": "{0} attached",
   "collar.status.deleted": "{0} deleted",

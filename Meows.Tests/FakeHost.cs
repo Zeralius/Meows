@@ -47,6 +47,31 @@ public sealed class FakeHost : IMeowsHost
         public event Action? Changed;
 
         public void Raise() => Changed?.Invoke();
+
+        /// <summary>What a plugin asked to pause or resume, by id, in order.</summary>
+        public List<(string Id, DateTime? Until)> Asked { get; } = [];
+
+        public bool Pause(string id, DateTime until)
+        {
+            var i = Items.FindIndex(w => w.Id == id);
+            if (i < 0)
+                return false;
+            Asked.Add((id, until));
+            Items[i] = Items[i] with { PausedUntil = until };
+            Raise();
+            return true;
+        }
+
+        public bool Resume(string id)
+        {
+            var i = Items.FindIndex(w => w.Id == id);
+            if (i < 0)
+                return false;
+            Asked.Add((id, null));
+            Items[i] = Items[i] with { PausedUntil = null };
+            Raise();
+            return true;
+        }
     }
 
     /// <summary>In memory, so a test never touches the Windows data protection API.</summary>

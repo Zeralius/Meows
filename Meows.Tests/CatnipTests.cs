@@ -139,6 +139,42 @@ public sealed class CatnipTests : IDisposable
         Assert.Equal(big, model.Selected?.Path);
     }
 
+    [Fact]
+    public void Several_rows_can_be_picked_and_asked_about_together()
+    {
+        var host = new FakeHost(Path.Combine(_root, "hostdata3"));
+        host.Handoffs.Reachable.Add(KnownPlugins.Purrge);
+        var arrived = DateTime.Now.AddMonths(-6);
+        var a = Stamped(Path.Combine("pile3", "a.zip"), 3_000_000, arrived, arrived, arrived);
+        var b = Stamped(Path.Combine("pile3", "b.zip"), 2_000_000, arrived, arrived, arrived);
+        var c = Stamped(Path.Combine("pile3", "c.zip"), 1_500_000, arrived, arrived, arrived);
+        host.SaveSettings(new CatnipSettings { Roots = [Path.Combine(_root, "pile3")], MinMegabytes = 1 });
+        using var model = new CatnipViewModel(host);
+        model.ShowWalked(Neglect.Scan(model.Roots.Select(r => r.Path).ToList(), true, 1_000_000, null, CancellationToken.None));
+
+        model.Selection.Select(0);
+        model.Selection.Select(2);
+
+        Assert.Equal(2, model.ChosenCount);
+        Assert.Equal([a, c], model.Chosen.Select(f => f.Path));
+        Assert.StartsWith("2 files, 4", model.ChosenText);
+        Assert.Same(model.Files[0], model.Selected);
+
+        model.AskPurrgeCommand.Execute(null);
+        var (to, what) = Assert.Single(host.Handoffs.Sent);
+        Assert.Equal(KnownPlugins.Purrge, to);
+        Assert.Equal(HandoffVerbs.Files, what.Verb);
+        Assert.Equal([a, c], what.Paths);
+        Assert.True(what.WantsReply);
+        what.Answer("1 of 2 have another copy");
+        Assert.Equal("Purrge: 1 of 2 have another copy", model.Status);
+
+        // Picking one row again makes it the only one.
+        model.Selected = model.Files[1];
+        Assert.Equal(1, model.ChosenCount);
+        Assert.Equal(b, model.Selected?.Path);
+    }
+
     public void Dispose()
     {
         try

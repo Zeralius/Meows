@@ -17,7 +17,8 @@ public sealed class PurrTests : IDisposable
         bool busy = false, DateTime? stopped = null, string? failure = null, string status = "") =>
         new(plugin.ToLowerInvariant(), plugin, title, every, DateTime.Now.AddHours(-1), last,
             stopped is null && !busy ? (last ?? DateTime.Now.AddHours(-1)) + every : null,
-            passes, busy, stopped, failure, status);
+            passes, busy, stopped, failure, status)
+        { Id = plugin.ToLowerInvariant() + "/" + title };
 
     private (PurrViewModel Model, FakeHost Host) Open(params WatchInfo[] watches)
     {
@@ -119,6 +120,36 @@ public sealed class PurrTests : IDisposable
         hit.Open();
 
         Assert.Equal("Refresh", model.Selected?.Title);
+    }
+
+    [Fact]
+    public void A_watch_can_be_paused_from_the_tab_and_resumed()
+    {
+        var (model, host) = Open(
+            Watch("Birdwatch", "Refresh", TimeSpan.FromMinutes(15), last: DateTime.Now.AddMinutes(-10), passes: 2));
+        model.Selected = model.Watches[0];
+        Assert.True(model.Selected.CanPause);
+        Assert.True(model.PauseTomorrowCommand.CanExecute(null));
+        Assert.False(model.ResumeCommand.CanExecute(null));
+
+        model.PauseTomorrowCommand.Execute(null);
+
+        var asked = Assert.Single(host.Watches.Asked);
+        Assert.Equal("birdwatch/Refresh", asked.Id);
+        Assert.Equal(DateTime.Today.AddDays(1).AddHours(8), asked.Until);
+        // The list was re-read from the shell: the row is paused, the words say so, and only Resume is left.
+        Assert.True(model.Selected!.IsPaused);
+        Assert.StartsWith("paused, back", model.Selected.NextText);
+        Assert.Equal("‖", model.Selected.Glyph);
+        Assert.False(model.PauseHourCommand.CanExecute(null));
+        Assert.True(model.ResumeCommand.CanExecute(null));
+
+        model.ResumeCommand.Execute(null);
+        Assert.Null(host.Watches.Asked[^1].Until);
+        Assert.False(model.Selected!.IsPaused);
+
+        model.PauseCommand.Execute(null);
+        Assert.Equal("paused until told otherwise", model.Selected!.NextText);
     }
 
     public void Dispose()

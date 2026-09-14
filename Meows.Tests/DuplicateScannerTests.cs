@@ -27,6 +27,27 @@ public sealed class DuplicateScannerTests : IDisposable
         new DuplicateScanner().ScanAsync(_root, options ?? new ScanOptions(), null, CancellationToken.None);
 
     [Fact]
+    public async Task Asked_about_particular_files_only_their_sizes_are_opened_and_only_their_sets_come_back()
+    {
+        var asked = Write("asked.bin", Payload(1));
+        Write("sub/copy-of-asked.bin", Payload(1));
+        // A different pair, same size as each other, not asked about: a duplicate the whole-folder scan would list.
+        Write("a.bin", Payload(2));
+        Write("b.bin", Payload(2));
+        // A small asked file, under the usual floor: still counted, because it was asked about.
+        var small = Write("small.bin", Payload(3, 100));
+        Write("sub/small-copy.bin", Payload(3, 100));
+        var alone = Write("alone.bin", Payload(4, 5000));
+
+        var sets = await new DuplicateScanner().ScanAsync([_root], new ScanOptions(OnlyCopiesOf: [asked, small, alone]), null, CancellationToken.None);
+
+        Assert.Equal(2, sets.Count);
+        Assert.Contains(sets, set => set.Files.Any(f => f.Path == asked) && set.Files.Count == 2);
+        Assert.Contains(sets, set => set.Files.Any(f => f.Path == small) && set.Files.Count == 2);
+        Assert.DoesNotContain(sets, set => set.Files.Any(f => f.Path.EndsWith("a.bin")));
+    }
+
+    [Fact]
     public async Task Identical_files_are_grouped_across_folders()
     {
         var payload = Payload(1);

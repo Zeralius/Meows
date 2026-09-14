@@ -13,12 +13,21 @@ public enum SaveOutcome
     /// <summary>Video, or anything else with no file behind it.</summary>
     NotSaveable,
 
+    /// <summary>
+    /// Downloaded, hashed, and found in the shared seen table: the same picture already came
+    /// in, from another account or another plugin. Dropped rather than saved twice.
+    /// </summary>
+    AlreadySeen,
+
     Failed,
 }
 
 public sealed record SaveResult(SaveOutcome Outcome, string? Path, string? Detail)
 {
     public bool Landed => Outcome is SaveOutcome.Saved or SaveOutcome.AlreadyThere;
+
+    /// <summary>The content hash of what was fetched, for the seen table. Null when nothing was.</summary>
+    public string? Hash { get; init; }
 }
 
 /// <summary>
@@ -108,6 +117,12 @@ public sealed class MediaSaver
         return cleaned.Length == 0 ? "unknown" : cleaned;
     }
 
+    /// <summary>
+    /// Whether a hash has been seen before, and by whom. Asked once the bytes are here, since
+    /// the picture two accounts both post has two URLs and one content. Null means never ask.
+    /// </summary>
+    public Func<string, string?>? SeenBefore { get; set; }
+
     public async Task<SaveResult> SaveAsync(
         FeedPost post, FeedMedia media, int index, string intakeFolder, CancellationToken token)
     {
@@ -140,8 +155,17 @@ public sealed class MediaSaver
                 await response.Content.CopyToAsync(file, token);
             }
 
+            // The same picture from a second account, or one Kibble already sorted, is not
+            // news. The hash is of the bytes, so it does not care what the CDN called them.
+            var hash = Meows.Disk.ContentHash.Full(partial);
+            if (hash is not null && SeenBefore?.Invoke(hash) is { } where)
+            {
+                File.Delete(partial);
+                return new SaveResult(SaveOutcome.AlreadySeen, null, where) { Hash = hash };
+            }
+
             File.Move(partial, target, overwrite: false);
-            return new SaveResult(SaveOutcome.Saved, target, null);
+            return new SaveResult(SaveOutcome.Saved, target, null) { Hash = hash };
         }
         catch (OperationCanceledException)
         {

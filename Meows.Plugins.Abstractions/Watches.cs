@@ -31,6 +31,21 @@ public sealed record WatchInfo(
     string Status)
 {
     public bool IsStopped => StoppedAt is not null;
+
+    /// <summary>
+    /// What to hand back to <see cref="IMeowsWatches.Pause"/> and <see cref="IMeowsWatches.Resume"/>.
+    /// Stable for as long as the schedule runs; empty from a shell before 0.10.0. Since 0.10.0.
+    /// </summary>
+    public string Id { get; init; } = "";
+
+    /// <summary>
+    /// Not looking until then: someone asked for quiet. <see cref="DateTime.MaxValue"/> for
+    /// "until I say so"; null when it is not paused. The schedule is kept, nothing is lost, and
+    /// the first pass after the pause runs at once. Since 0.10.0.
+    /// </summary>
+    public DateTime? PausedUntil { get; init; }
+
+    public bool IsPaused => PausedUntil is { } until && until > DateTime.Now;
 }
 
 /// <summary>
@@ -44,6 +59,16 @@ public interface IMeowsWatches
 
     /// <summary>Raised on the UI thread when a watch starts, passes, fails or ends.</summary>
     event Action? Changed;
+
+    /// <summary>
+    /// Holds a watch until a moment (<see cref="DateTime.MaxValue"/> for indefinitely). The
+    /// plugin's schedule stays registered; passes simply do not run. False when the shell is
+    /// older than 0.10.0 or the id is not a running watch. Since 0.10.0.
+    /// </summary>
+    bool Pause(string id, DateTime until) => false;
+
+    /// <summary>Lets a paused watch look again, at once. Since 0.10.0.</summary>
+    bool Resume(string id) => false;
 }
 
 /// <summary>What a shell built against an older contract answers. Nothing is watched.</summary>

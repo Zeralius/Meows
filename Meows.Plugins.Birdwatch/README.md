@@ -5,6 +5,21 @@ and drops what they post into the intake folder Kibble sorts. No login anywhere.
 
 Plugin id `meows.birdwatch`.
 
+## Since 2.23.0
+
+**Try before watching.** *Try* beside *Watch* reads the account's last page and says what it
+would have saved, *@x on Bluesky: 25 posts on the last page, 14 pictures to save, 3 reposts;
+newest 12 Sep*, without adding it. The wrong account, or one that posts no pictures, costs a
+glance instead of an add and a remove.
+
+**Pause an account.** The tick on each row. Unticked, it stays in the list, is skipped on every
+look, and its pictures stay where they are; tick it again and the next look reads it.
+
+**The same picture once.** Two accounts posting one picture used to arrive twice. A download is
+now hashed before it gets its name and checked against the shell's shared *seen* table; a
+picture that came in before, from another account or another plugin, is dropped and the tile
+says why. Everything saved is marked seen, so Kibble and Saucer can ask the same table.
+
 ## No account needed
 
 Bluesky's public AppView answers `getAuthorFeed` for any public account without a login, and the

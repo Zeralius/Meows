@@ -12,6 +12,9 @@ public sealed class BirdwatchSettings
 {
     public List<string> Handles { get; set; } = [];
 
+    /// <summary>Handles kept but not read for now: a noisy account, or one on a break.</summary>
+    public List<string> Paused { get; set; } = [];
+
     public string? IntakeFolder { get; set; }
 
     public bool IncludeReposts { get; set; }
@@ -40,11 +43,24 @@ public sealed class RefreshOption(int minutes, string key)
     public TranslatedString Label { get; } = MeowsText.Entry(key);
 }
 
+/// <summary>Full opacity for an active row, dimmed for a paused one.</summary>
+public sealed class Dim : Avalonia.Data.Converters.IValueConverter
+{
+    public static readonly Dim Instance = new();
+
+    public object Convert(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        value is true ? 1.0 : 0.45;
+
+    public object ConvertBack(object? value, Type targetType, object? parameter, System.Globalization.CultureInfo culture) =>
+        throw new NotSupportedException();
+}
+
 /// <summary>One account being watched, and how its last look went.</summary>
-public sealed class WatchedViewModel(string handle, string service) : ObservableObject
+public sealed class WatchedViewModel(string handle, string service, Action<WatchedViewModel>? pausedChanged = null, bool paused = false) : ObservableObject
 {
     private string _status = "";
     private bool _isBusy;
+    private bool _isPaused = paused;
 
     public string Handle { get; } = handle;
 
@@ -65,6 +81,21 @@ public sealed class WatchedViewModel(string handle, string service) : Observable
         get => _isBusy;
         set => SetField(ref _isBusy, value);
     }
+
+    /// <summary>Kept in the list, skipped on every look, until unticked. Its pictures stay where they are.</summary>
+    public bool IsPaused
+    {
+        get => _isPaused;
+        set
+        {
+            if (!SetField(ref _isPaused, value))
+                return;
+            OnPropertyChanged(nameof(IsActive));
+            pausedChanged?.Invoke(this);
+        }
+    }
+
+    public bool IsActive => !_isPaused;
 }
 
 /// <summary>
@@ -178,6 +209,8 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
     private MediaViewModel? _previewFor;
 
     private string _newHandle = "";
+    private string? _trialText;
+    private bool _isTrying;
     private string? _status;
     private string? _errorMessage;
     private bool _isBusy;
@@ -215,11 +248,20 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
         _saver = new MediaSaver(_http);
 
         foreach (var handle in _settings.Handles)
-            Watched.Add(new WatchedViewModel(handle, _source.ServiceOf(handle)));
+            Watched.Add(NewWatched(handle));
 
-        AddHandleCommand = new RelayCommand(AddHandle, () => NewHandle.Trim().Length > 0);
+        // Dropped when the same bytes came in before, from another account or another plugin.
+        _saver.SeenBefore = hash => _host.Store.Seen(hash) is { } seen ? seen.Plugin : null;
+
+        AddHandleCommand = new RelayCommand(AddHandle, () => NewHandle.Trim().Length > 0 && !IsTrying);
+        TryHandleCommand = new RelayCommand(() => _ = TryHandleAsync(), () => NewHandle.Trim().Length > 0 && !IsTrying);
         RemoveHandleCommand = new RelayCommand(p => RemoveHandle(p as WatchedViewModel));
-        RefreshCommand = new RelayCommand(() => _ = LoadAsync(more: false), () => !IsBusy && Watched.Count > 0);
+        TogglePauseCommand = new RelayCommand(p =>
+        {
+            if (p is WatchedViewModel w)
+                w.IsPaused = !w.IsPaused;
+        });
+        RefreshCommand = new RelayCommand(() => _ = LoadAsync(more: false), () => !IsBusy && Watched.Any(w => !w.IsPaused));
         LoadMoreCommand = new RelayCommand(() => _ = LoadAsync(more: true), () => !IsBusy && HasMore);
         SaveCommand = new RelayCommand(p => _ = SaveAsync(p as MediaViewModel));
         SavePostCommand = new RelayCommand(p => _ = SavePostAsync(p as MediaViewModel));
@@ -248,7 +290,83 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
 
     public RelayCommand AddHandleCommand { get; }
 
+    public RelayCommand TryHandleCommand { get; }
+
+    /// <summary>What the last trial found, under the box, until the next one or the handle changes.</summary>
+    public string? TrialText
+    {
+        get => _trialText;
+        private set
+        {
+            if (SetField(ref _trialText, value))
+                OnPropertyChanged(nameof(HasTrial));
+        }
+    }
+
+    public bool HasTrial => !string.IsNullOrEmpty(_trialText);
+
+    public bool IsTrying
+    {
+        get => _isTrying;
+        private set
+        {
+            if (!SetField(ref _isTrying, value))
+                return;
+            AddHandleCommand.RaiseCanExecuteChanged();
+            TryHandleCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    private WatchedViewModel NewWatched(string handle) =>
+        new(handle, _source.ServiceOf(handle), PausedChanged, _settings.Paused.Contains(handle, StringComparer.OrdinalIgnoreCase));
+
+    private void PausedChanged(WatchedViewModel watched)
+    {
+        _settings.Paused = Watched.Where(w => w.IsPaused).Select(w => w.Handle).ToList();
+        Save();
+        watched.Status = watched.IsPaused ? _host.Text["birdwatch.watched.paused"] : "";
+        RefreshCommand.RaiseCanExecuteChanged();
+        StartAutoRefresh();
+    }
+
+    /// <summary>
+    /// A look at an account before it is watched: the last page, counted, and nothing kept.
+    /// Answers "is this the account I think it is, and does it post pictures" without adding a
+    /// handle that then has to be removed.
+    /// </summary>
+    public async Task TryHandleAsync()
+    {
+        var handle = _source.TidyHandle(NewHandle);
+        if (handle.Length == 0 || IsTrying)
+            return;
+
+        IsTrying = true;
+        TrialText = _host.Text.Format("birdwatch.trial.reading", handle);
+        try
+        {
+            var page = await _source.FetchAsync(handle, null, CancellationToken.None);
+            var posts = page.Posts;
+            var pictures = posts.Sum(p => p.Media.Count(m => m.CanSave));
+            var reposts = posts.Count(p => p.IsRepost);
+            var newest = posts.Select(p => p.PostedAt).Where(t => t != DateTimeOffset.MinValue).DefaultIfEmpty().Max();
+            TrialText = posts.Count == 0
+                ? _host.Text.Format("birdwatch.trial.nothing", handle, _source.ServiceOf(handle))
+                : _host.Text.Format("birdwatch.trial.found", handle, _source.ServiceOf(handle), posts.Count, pictures, reposts,
+                    newest == default ? "?" : newest.ToLocalTime().ToString("d MMM"));
+        }
+        catch (Exception ex)
+        {
+            TrialText = _host.Text.Format("birdwatch.trial.failed", handle, Explain(ex));
+        }
+        finally
+        {
+            IsTrying = false;
+        }
+    }
+
     public RelayCommand RemoveHandleCommand { get; }
+
+    public RelayCommand TogglePauseCommand { get; }
 
     public RelayCommand RefreshCommand { get; }
 
@@ -429,7 +547,7 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
         _auto?.Cancel();
         _auto = null;
 
-        if (!_settings.AutoRefresh || Watched.Count == 0)
+        if (!_settings.AutoRefresh || Watched.All(w => w.IsPaused))
             return;
 
         var every = TimeSpan.FromMinutes(Math.Max(1, _settings.RefreshEveryMinutes));
@@ -469,11 +587,12 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
             return;
         }
 
-        Watched.Add(new WatchedViewModel(handle, _source.ServiceOf(handle)));
+        Watched.Add(NewWatched(handle));
         _settings.Handles = Watched.Select(w => w.Handle).ToList();
         Save();
 
         NewHandle = "";
+        TrialText = null;
         RefreshCommand.RaiseCanExecuteChanged();
         StartAutoRefresh();
         _ = LoadAsync(more: false);
@@ -485,6 +604,7 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
             return;
 
         _settings.Handles = Watched.Select(w => w.Handle).ToList();
+        _settings.Paused = Watched.Where(w => w.IsPaused).Select(w => w.Handle).ToList();
         Save();
 
         // Everything of theirs goes with them, rather than lingering until the next refresh.
@@ -539,6 +659,8 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
             foreach (var watched in Watched.ToList())
             {
                 token.ThrowIfCancellationRequested();
+                if (watched.IsPaused)
+                    continue;
 
                 // Starting again means starting at the top, not where the last look stopped.
                 if (!more)
@@ -747,11 +869,19 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
                     media.IsSaved = true;
                     Status = _host.Text.Format("birdwatch.status.saved", Path.GetFileName(result.Path!));
                     _host.Log($"Birdwatch saved {result.Path}");
+                    if (result.Hash is not null)
+                        _host.Store.MarkSeen(result.Hash, $"@{media.AuthorHandle} {media.Post.Id}");
                     break;
 
                 case SaveOutcome.AlreadyThere:
                     media.IsSaved = true;
                     Status = _host.Text["birdwatch.status.already"];
+                    break;
+
+                case SaveOutcome.AlreadySeen:
+                    media.IsSaved = true;
+                    Status = _host.Text.Format("birdwatch.status.seen", result.Detail ?? "");
+                    _host.Log($"Birdwatch dropped a picture from {media.Post.Id}: the same bytes came in before via {result.Detail}");
                     break;
 
                 case SaveOutcome.Failed:

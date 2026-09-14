@@ -43,6 +43,8 @@
   "collar.pickone": "Links etwas auswählen, um es zu ändern, oder ein Datum anlegen.",
   "collar.repeat.every": "alle {0} Monate",
   "collar.repeat.once": "einmalig",
+  "collar.reply.added": "{0} in Collar aufgenommen",
+  "collar.reply.attached": "in Collar angehängt",
   "collar.status.added": "{0} angelegt",
   "collar.status.attached": "{0} hinterlegt",
   "collar.status.deleted": "{0} gelöscht",

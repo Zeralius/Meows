@@ -156,6 +156,26 @@ public sealed class CollarNotificationTests : IDisposable
     }
 
     [Fact]
+    public void Files_handed_over_become_entries_and_the_sender_hears_how_many()
+    {
+        var host = new FakeHost(_root);
+        using var model = new CollarViewModel(host);
+        var receipt = Path.Combine(_root, "Receipt Fridge.pdf");
+        var policy = Path.Combine(_root, "Policy 2026.pdf");
+        File.WriteAllText(receipt, "x");
+        File.WriteAllText(policy, "x");
+        string? heard = null;
+
+        Assert.True(model.Accepts(Handoff.Files([receipt, policy])));
+        Assert.False(model.Accepts(Handoff.Folder(_root)));
+        model.Receive(Handoff.Files([receipt, policy]) with { Reply = o => heard = o });
+
+        Assert.Equal(2, model.Entries.Count);
+        Assert.Equal("2 added to Collar", heard);
+        Assert.Contains(model.Entries, e => e.Entry.File == receipt);
+    }
+
+    [Fact]
     public void A_date_that_has_passed_is_raised_on_the_shell()
     {
         var host = new FakeHost(_root);

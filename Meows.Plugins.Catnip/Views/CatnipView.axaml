@@ -104,7 +104,8 @@
                 <TextBlock DockPanel.Dock="Top" Classes="label" Margin="14,10,14,4" Text="{m:Tr catnip.none}" IsVisible="{Binding IsEmpty}" />
                 <TextBlock DockPanel.Dock="Bottom" Classes="label" Margin="14,4,14,10" Text="{Binding TruncatedText}" />
                 <ListBox ItemsSource="{Binding Files}"
-                         SelectedItem="{Binding Selected}"
+                         Selection="{Binding Selection}"
+                         SelectionMode="Multiple"
                          Background="Transparent"
                          BorderThickness="0"
                          Margin="8,0,8,8">
@@ -134,6 +135,7 @@
                         <TextBlock Text="{m:Tr catnip.selected}" FontWeight="SemiBold" FontSize="13" />
                         <TextBlock Text="{m:Tr catnip.nothingselected}" Classes="label" IsVisible="{Binding !HasSelection}" />
                         <StackPanel Spacing="6" IsVisible="{Binding HasSelection}">
+                            <TextBlock Text="{Binding ChosenText}" FontWeight="SemiBold" TextWrapping="Wrap" IsVisible="{Binding ChosenText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                             <TextBlock Text="{Binding Selected.Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
                             <TextBlock Text="{Binding Selected.SizeText}" FontSize="20" />
                             <TextBlock Text="{Binding Selected.WhenText}" Classes="label" TextWrapping="Wrap" />
@@ -147,8 +149,11 @@
                             <Button Content="{m:Tr catnip.open}" Command="{Binding OpenCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,6,0,0" />
                             <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr catnip.open.hint}" />
                             <Button Content="{m:Tr catnip.reveal}" Command="{Binding RevealCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <Button Content="{m:Tr catnip.purrge}" Command="{Binding AskPurrgeCommand}" IsVisible="{Binding CanReachPurrge}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr catnip.purrge.hint}" IsVisible="{Binding CanReachPurrge}" />
                             <Button Content="{m:Tr catnip.recycle}" Command="{Binding RecycleCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                     Background="{DynamicResource MeowsDanger}" BorderBrush="{DynamicResource MeowsDangerLine}" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr catnip.multi.hint}" />
                         </StackPanel>
 
                         <TextBlock Text="{m:Tr catnip.dials}" FontWeight="SemiBold" FontSize="13" Margin="0,14,0,0" />

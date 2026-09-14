@@ -55,8 +55,48 @@ public sealed class BackgroundTaskItem : INotifyPropertyChanged, IBackgroundTask
 
     public string? LastFailure { get; private set; }
 
+    /// <summary>Stable for the life of the item, so Purr can point at it across refreshes.</summary>
+    public string Id { get; } = Guid.NewGuid().ToString("N");
+
+    private DateTime? _pausedUntil;
+    private TaskCompletionSource _resumed = new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    /// <summary>Not looking until then. The loop waits on it; Resume wakes the loop early.</summary>
+    public DateTime? PausedUntil
+    {
+        get => _pausedUntil is { } until && until > DateTime.Now ? until : null;
+        private set => Set(ref _pausedUntil, value);
+    }
+
+    public bool IsPaused => PausedUntil is not null;
+
+    public void Pause(DateTime until)
+    {
+        PausedUntil = until;
+        OnPropertyChanged(nameof(IsPaused));
+    }
+
+    public void Resume()
+    {
+        PausedUntil = null;
+        OnPropertyChanged(nameof(IsPaused));
+        var waiting = Interlocked.Exchange(ref _resumed, new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously));
+        waiting.TrySetResult();
+    }
+
+    /// <summary>Waits out a pause. Returns as soon as it ends, by time or by Resume.</summary>
+    internal async Task WaitWhilePausedAsync()
+    {
+        while (_pausedUntil is { } until && until > DateTime.Now && !Token.IsCancellationRequested)
+        {
+            var resumed = _resumed.Task;
+            var wait = until == DateTime.MaxValue ? Timeout.InfiniteTimeSpan : until - DateTime.Now;
+            await Task.WhenAny(resumed, Task.Delay(wait, Token)).ConfigureAwait(false);
+        }
+    }
+
     public DateTime? NextDueAt => Interval is { } every && StoppedAt is null && !PassInProgress
-        ? (LastPassAt ?? StartedAt) + every
+        ? PausedUntil is { } paused ? (paused == DateTime.MaxValue ? null : paused) : (LastPassAt ?? StartedAt) + every
         : null;
 
     internal void PassStarted() => PassInProgress = true;
@@ -77,7 +117,11 @@ public sealed class BackgroundTaskItem : INotifyPropertyChanged, IBackgroundTask
 
     public WatchInfo AsWatch() => new(
         PluginId, SourceName, Title, Interval ?? TimeSpan.Zero, StartedAt, LastPassAt, NextDueAt,
-        Passes, PassInProgress, StoppedAt, LastFailure, Status);
+        Passes, PassInProgress, StoppedAt, LastFailure, Status)
+    {
+        Id = Id,
+        PausedUntil = PausedUntil,
+    };
 
     public string Status
     {
@@ -204,6 +248,34 @@ public sealed class BackgroundTaskService : IDisposable
 
     private void WatchesMoved() => OnUiThread(() => WatchesChanged?.Invoke());
 
+    public bool PauseWatch(string id, DateTime until)
+    {
+        BackgroundTaskItem? item;
+        lock (_watches)
+            item = _watches.FirstOrDefault(w => w.Id == id && w.StoppedAt is null);
+        if (item is null)
+            return false;
+        item.Pause(until);
+        _log.Write(item.Source, until == DateTime.MaxValue
+            ? $"'{item.Title}' paused until resumed"
+            : $"'{item.Title}' paused until {until:g}");
+        WatchesMoved();
+        return true;
+    }
+
+    public bool ResumeWatch(string id)
+    {
+        BackgroundTaskItem? item;
+        lock (_watches)
+            item = _watches.FirstOrDefault(w => w.Id == id && w.StoppedAt is null);
+        if (item is null)
+            return false;
+        item.Resume();
+        _log.Write(item.Source, $"'{item.Title}' resumed");
+        WatchesMoved();
+        return true;
+    }
+
     public int RunningCount => Running.Count;
 
     internal CancellationToken TokenFor(string pluginId)
@@ -283,6 +355,14 @@ public sealed class BackgroundTaskService : IDisposable
 
                     while (!item.Token.IsCancellationRequested)
                     {
+                        // A pause holds the loop here, between passes, and Resume lets it go on.
+                        if (item.IsPaused)
+                        {
+                            await item.WaitWhilePausedAsync().ConfigureAwait(false);
+                            if (item.Token.IsCancellationRequested)
+                                break;
+                        }
+
                         item.PassStarted();
                         await work(item).ConfigureAwait(false);
                         item.PassFinished();

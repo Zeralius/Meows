@@ -513,10 +513,16 @@ do with a destination is send.
 
 ### `Watches`
 
-Every schedule every plugin has running, read-only and deliberately not scoped, with the times
-the shell records as passes finish and the reason a schedule stopped. Purr is the one plugin
-that reads it; you will not usually need to. `Changed` fires on the UI thread whenever a watch
-starts, passes, fails or ends.
+Every schedule every plugin has running, deliberately not scoped, with the times the shell
+records as passes finish and the reason a schedule stopped. Purr is the one plugin that reads
+it; you will not usually need to. `Changed` fires on the UI thread whenever a watch starts,
+passes, fails or ends.
+
+**Pause and resume** (0.10.0). Each `WatchInfo` carries an `Id`; `Pause(id, until)` holds that
+schedule (`DateTime.MaxValue` for "until I say") and `Resume(id)` lets it look again at once.
+The plugin that owns the schedule is not told; its passes simply do not run, and `PausedUntil`
+on the info says so. Both return false on a shell older than 0.10.0 or for a watch that has
+stopped. Purr puts three buttons on it; nothing else needs to.
 
 ### `Explorer`
 

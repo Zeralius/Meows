@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using Avalonia.Controls.Selection;
 using Avalonia.Threading;
 using Meows.Disk;
 using Meows.Plugins.Abstractions;
@@ -93,7 +94,23 @@ public sealed class CatnipViewModel : ObservableObject, IDisposable, ISearchable
         RemoveRootCommand = new RelayCommand(RemoveRoot, () => SelectedRoot is not null);
         OpenCommand = new RelayCommand(() => Open(Selected), () => Selected is not null);
         RevealCommand = new RelayCommand(() => Reveal(Selected), () => Selected is not null);
-        RecycleCommand = new RelayCommand(Recycle, () => Selected is not null && !IsScanning);
+        RecycleCommand = new RelayCommand(Recycle, () => Chosen.Count > 0 && !IsScanning);
+        AskPurrgeCommand = new RelayCommand(AskPurrge, () => Chosen.Count > 0 && CanReachPurrge);
+
+        // Several rows at once: the list is long and binning them one at a time is a chore.
+        Selection = new SelectionModel<NeglectedViewModel> { SingleSelect = false, Source = Files };
+        Selection.SelectionChanged += (_, _) =>
+        {
+            _selected = Selection.SelectedItems.FirstOrDefault();
+            OnPropertyChanged(nameof(Selected));
+            OnPropertyChanged(nameof(HasSelection));
+            OnPropertyChanged(nameof(ChosenCount));
+            OnPropertyChanged(nameof(ChosenText));
+            OpenCommand.RaiseCanExecuteChanged();
+            RevealCommand.RaiseCanExecuteChanged();
+            RecycleCommand.RaiseCanExecuteChanged();
+            AskPurrgeCommand.RaiseCanExecuteChanged();
+        };
 
         foreach (var root in EffectiveRoots())
             Roots.Add(new RootViewModel(root));
@@ -121,6 +138,21 @@ public sealed class CatnipViewModel : ObservableObject, IDisposable, ISearchable
 
     public RelayCommand RecycleCommand { get; }
 
+    public RelayCommand AskPurrgeCommand { get; }
+
+    /// <summary>The rows picked, one or many. The list binds to it; the verbs read it.</summary>
+    public SelectionModel<NeglectedViewModel> Selection { get; }
+
+    /// <summary>What the verbs act on: every picked row, in list order.</summary>
+    public IReadOnlyList<NeglectedViewModel> Chosen => Selection.SelectedItems.Where(f => f is not null).Select(f => f!).ToList();
+
+    public int ChosenCount => Selection.Count;
+
+    /// <summary>"3 files, 41 MB" for the right column when more than one is picked.</summary>
+    public string ChosenText => ChosenCount <= 1 ? "" : _host.Text.Format("catnip.chosen", ChosenCount, Neglect.Humanise(Chosen.Sum(f => f.File.Size)));
+
+    public bool CanReachPurrge => _host.Handoff.CanReach(KnownPlugins.Purrge);
+
     public RootViewModel? SelectedRoot
     {
         get => _selectedRoot;
@@ -131,17 +163,23 @@ public sealed class CatnipViewModel : ObservableObject, IDisposable, ISearchable
         }
     }
 
+    /// <summary>The first of what is picked; setting it picks that one alone.</summary>
     public NeglectedViewModel? Selected
     {
         get => _selected;
         set
         {
-            if (!SetField(ref _selected, value))
+            if (ReferenceEquals(_selected, value))
                 return;
-            OnPropertyChanged(nameof(HasSelection));
-            OpenCommand.RaiseCanExecuteChanged();
-            RevealCommand.RaiseCanExecuteChanged();
-            RecycleCommand.RaiseCanExecuteChanged();
+            Selection.Clear();
+            if (value is not null && Files.IndexOf(value) is var i && i >= 0)
+                Selection.Select(i);
+            else
+            {
+                _selected = null;
+                OnPropertyChanged();
+                OnPropertyChanged(nameof(HasSelection));
+            }
         }
     }
 
@@ -351,10 +389,12 @@ public sealed class CatnipViewModel : ObservableObject, IDisposable, ISearchable
     private void Rebuild()
     {
         var keep = Selected?.Path;
+        Selection.Clear();
         Files.Clear();
         var now = DateTime.Now;
         foreach (var file in Sifted().Take(ShowAtMost))
             Files.Add(new NeglectedViewModel(file, now));
+        Selection.Clear();
         Selected = Files.FirstOrDefault(f => string.Equals(f.Path, keep, StringComparison.OrdinalIgnoreCase));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(HasScanned));
@@ -395,28 +435,60 @@ public sealed class CatnipViewModel : ObservableObject, IDisposable, ISearchable
         }
     }
 
+    /// <summary>Everything picked, to the Recycle Bin in one go, a History line each.</summary>
     private void Recycle()
     {
-        if (Selected is not { } file)
+        var chosen = Chosen;
+        if (chosen.Count == 0)
             return;
-        var outcome = RecycleBin.Send([file.Path]);
+        var outcome = RecycleBin.Send(chosen.Select(f => f.Path).ToList());
         if (!outcome.Succeeded)
         {
-            ErrorMessage = _host.Text.Format("catnip.error.recycle", file.Name, outcome.FailureReason ?? "");
+            ErrorMessage = _host.Text.Format("catnip.error.recycle", chosen.Count == 1 ? chosen[0].Name : chosen.Count.ToString(), outcome.FailureReason ?? "");
             return;
         }
-        Forget(file);
-        Status = _host.Text.Format("catnip.status.recycled", file.Name, file.SizeText);
-        _host.Store.Record("recycled", file.Path, Status, new Dictionary<string, string> { ["size"] = file.File.Size.ToString() });
-        _host.Log($"Catnip sent {file.Name} to the Recycle Bin, {file.SizeText}");
+
+        var bytes = chosen.Sum(f => f.File.Size);
+        foreach (var file in chosen)
+            _host.Store.Record("recycled", file.Path, _host.Text.Format("catnip.status.recycled", file.Name, file.SizeText),
+                new Dictionary<string, string> { ["size"] = file.File.Size.ToString() });
+        Forget(chosen);
+        Status = chosen.Count == 1
+            ? _host.Text.Format("catnip.status.recycled", chosen[0].Name, chosen[0].SizeText)
+            : _host.Text.Format("catnip.status.recycled.many", chosen.Count, Neglect.Humanise(bytes));
+        _host.Log($"Catnip sent {chosen.Count} file(s) to the Recycle Bin, {Neglect.Humanise(bytes)}");
+    }
+
+    /// <summary>
+    /// Before binning: is there another copy? Purrge walks the drives these sit on, opening only
+    /// files of exactly their sizes, and answers in a sentence that lands on the status line.
+    /// </summary>
+    private void AskPurrge()
+    {
+        var chosen = Chosen;
+        if (chosen.Count == 0)
+            return;
+        var handoff = Handoff.Files(chosen.Select(f => f.Path)) with
+        {
+            Reply = answer => Status = _host.Text.Format("catnip.status.purrge", answer),
+        };
+        if (!_host.Handoff.Send(KnownPlugins.Purrge, handoff))
+            ErrorMessage = _host.Text["catnip.error.purrge"];
+        else
+            Status = _host.Text.Format("catnip.status.asking", chosen.Count);
     }
 
     /// <summary>Drops a file from what was found, without walking again.</summary>
-    private void Forget(NeglectedViewModel file)
+    private void Forget(NeglectedViewModel file) => Forget([file]);
+
+    private void Forget(IReadOnlyList<NeglectedViewModel> files)
     {
-        var index = Files.IndexOf(file);
-        _found = _found.Where(f => !ReferenceEquals(f, file.File)).ToList();
-        Files.Remove(file);
+        var index = files.Select(f => Files.IndexOf(f)).Where(i => i >= 0).DefaultIfEmpty(0).Min();
+        var gone = new HashSet<NeglectedFile>(files.Select(f => f.File));
+        _found = _found.Where(f => !gone.Contains(f)).ToList();
+        Selection.Clear();
+        foreach (var file in files)
+            Files.Remove(file);
         Selected = Files.ElementAtOrDefault(Math.Min(index, Files.Count - 1));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(Headline));

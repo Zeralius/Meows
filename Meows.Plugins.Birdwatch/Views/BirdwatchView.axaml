@@ -96,10 +96,16 @@
                         <TextBox Text="{Binding NewHandle}"
                                  PlaceholderText="{m:Tr birdwatch.handle.placeholder}"
                                  FontSize="11" />
-                        <Button Content="{m:Tr birdwatch.add}"
-                                Command="{Binding AddHandleCommand}"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <Button Grid.Column="0" Content="{m:Tr birdwatch.add}"
+                                    Command="{Binding AddHandleCommand}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
+                            <Button Grid.Column="1" Content="{m:Tr birdwatch.try}"
+                                    Command="{Binding TryHandleCommand}"
+                                    ToolTip.Tip="{m:Tr birdwatch.try.hint}" />
+                        </Grid>
+                        <TextBlock Text="{Binding TrialText}" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding HasTrial}" />
                         <TextBlock Classes="label"
                                    Text="{m:Tr birdwatch.handle.hint}"
                                    TextWrapping="Wrap" />
@@ -135,8 +141,15 @@
                                             CornerRadius="6"
                                             Padding="9,6"
                                             Margin="0,0,0,5">
-                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                                            <StackPanel Grid.Column="0" Spacing="1">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="6">
+                                            <CheckBox Grid.Column="0"
+                                                      IsChecked="{Binding IsActive, Mode=OneWay}"
+                                                      Command="{Binding $parent[UserControl].((vm:BirdwatchViewModel)DataContext).TogglePauseCommand}"
+                                                      CommandParameter="{Binding}"
+                                                      ToolTip.Tip="{m:Tr birdwatch.pause.hint}"
+                                                      VerticalAlignment="Center"
+                                                      MinWidth="0" Padding="0" />
+                                            <StackPanel Grid.Column="1" Spacing="1" Opacity="{Binding IsActive, Converter={x:Static vm:Dim.Instance}}">
                                                 <TextBlock Text="{Binding Handle}"
                                                            FontWeight="SemiBold"
                                                            FontSize="12"
@@ -146,7 +159,7 @@
                                                     <TextBlock Text="{Binding Status}" Classes="label" />
                                                 </StackPanel>
                                             </StackPanel>
-                                            <Button Grid.Column="1"
+                                            <Button Grid.Column="2"
                                                     Content="✕"
                                                     FontSize="10"
                                                     Padding="6,2"

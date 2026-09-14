@@ -4,6 +4,14 @@ Says what Meows is watching, when it last looked, and which watch quietly stoppe
 
 Plugin id `meows.purr`. Plain name **Watches**.
 
+## Quiet, for a while
+
+A watch that is noisy today, or pointless while the machine it polls is off, can be held from
+the right column: *An hour*, *Until tomorrow* (eight in the morning), or *Until I say*. The
+schedule stays registered and the plugin is none the wiser; its passes simply do not run, the
+row says *paused, back in 2 h*, and *Look again* ends it early with a pass at once. Switching
+the plugin off and on clears a pause, since that makes a new schedule.
+
 ## What it shows
 
 Since 2.0 Meows keeps running in the tray, and several plugins keep looking at things while the

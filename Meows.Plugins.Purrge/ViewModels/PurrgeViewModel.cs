@@ -336,14 +336,24 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         ClearSets();
 
         var root = ScanRoot;
-        _settings.LastRoot = root;
-        SaveSettings();
+        var copiesOf = _copiesOf;
+        _copiesOf = null;
+        if (copiesOf is null)
+        {
+            _settings.LastRoot = root;
+            SaveSettings();
+        }
         IsScanning = true;
 
-        var options = new Services.ScanOptions(_settings.MinimumBytes, _settings.SkipSystemFolders);
+        var options = new Services.ScanOptions(_settings.MinimumBytes, _settings.SkipSystemFolders, copiesOf);
+        var roots = copiesOf is null
+            ? [root]
+            : copiesOf.Select(Path.GetPathRoot).Where(r => r is not null).Select(r => r!).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
 
         _scanTask = _host.Background.Run(
-            _host.Text.Format("purrge.task.scan", Path.GetFileName(root.TrimEnd(Path.DirectorySeparatorChar))),
+            copiesOf is null
+                ? _host.Text.Format("purrge.task.scan", Path.GetFileName(root.TrimEnd(Path.DirectorySeparatorChar)))
+                : _host.Text.Format("purrge.task.copies", copiesOf.Count),
             async context =>
             {
                 var total = 0;
@@ -369,8 +379,8 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
 
                 try
                 {
-                    var found = await _scanner.ScanAsync(root, options, progress, context.Token);
-                    await Dispatcher.UIThread.InvokeAsync(() => ApplyResults(found));
+                    var found = await _scanner.ScanAsync(roots, options, progress, context.Token);
+                    await Dispatcher.UIThread.InvokeAsync(() => ApplyResults(found, copiesOf));
                 }
                 catch (OperationCanceledException)
                 {
@@ -386,10 +396,26 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         _host.Log($"Scanning {root} for duplicates");
     }
 
-    private void ApplyResults(IReadOnlyList<DuplicateSet> found)
+    private void ApplyResults(IReadOnlyList<DuplicateSet> found, IReadOnlyList<string>? copiesOf = null)
     {
         foreach (var set in found)
             Sets.Add(new DuplicateSetViewModel(set));
+
+        if (copiesOf is not null)
+        {
+            // The answer to "is there another copy": how many of the asked files have one.
+            var withCopies = copiesOf.Count(p => found.Any(s => s.Files.Any(f => string.Equals(f.Path, Path.GetFullPath(p), StringComparison.OrdinalIgnoreCase))));
+            var answer = withCopies == 0
+                ? _host.Text.Format("purrge.copies.none", copiesOf.Count)
+                : _host.Text.Format("purrge.copies.some", withCopies, copiesOf.Count);
+            StatusMessage = answer;
+            _host.Log($"Copies asked for {copiesOf.Count} file(s): {answer}");
+            _askedBy?.Answer(answer);
+            _askedBy = null;
+            RaiseResultState();
+            _ = LoadThumbnailsAsync();
+            return;
+        }
 
         StatusMessage = Sets.Count == 0
             ? _host.Text["purrge.status.none"]
@@ -559,7 +585,8 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
 
     /// <summary>A folder, from Chonk usually: find the duplicates in it, now.</summary>
     public bool Accepts(Handoff handoff) =>
-        handoff.Verb == HandoffVerbs.Folder && handoff.Paths.Count == 1 && Directory.Exists(handoff.Paths[0]);
+        (handoff.Verb == HandoffVerbs.Folder && handoff.Paths.Count == 1 && Directory.Exists(handoff.Paths[0]))
+        || (handoff.Verb == HandoffVerbs.Files && handoff.Paths.Count > 0 && handoff.Paths.All(File.Exists));
 
     /// <summary>
     /// Ctrl+K reaching into the results: every copy in every set by name or folder, and every
@@ -617,10 +644,24 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
             return;
 
         IsCompareMode = false;
-        ScanRoot = handoff.Paths[0];
         _askedBy = handoff.WantsReply ? handoff : null;
+        if (handoff.Verb == HandoffVerbs.Files)
+        {
+            // "Is there another copy of these?" The drives they sit on are walked, only their
+            // sizes are opened, and the answer names how many of them have one.
+            _copiesOf = handoff.Paths.ToList();
+            ScanRoot = string.Join("; ", _copiesOf.Select(Path.GetPathRoot).Where(r => r is not null).Distinct(StringComparer.OrdinalIgnoreCase));
+            StartScan();
+            return;
+        }
+
+        _copiesOf = null;
+        ScanRoot = handoff.Paths[0];
         StartScan();
     }
+
+    /// <summary>Set by a Files handoff for the scan that follows: the files whose copies are wanted.</summary>
+    private IReadOnlyList<string>? _copiesOf;
 
     private void SaveSettings()
     {

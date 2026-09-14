@@ -82,13 +82,29 @@ public class HandoffTests : IDisposable
         var handoff = Handoff.Folder(Path.Combine(_root, "fat"));
 
         Assert.True(model.Accepts(handoff));
-        Assert.False(model.Accepts(Handoff.Files([Path.Combine(_root, "fat", "pic.jpg")])));
+        Assert.False(model.Accepts(Handoff.Files([Path.Combine(_root, "fat", "missing.jpg")])));
 
         model.Receive(handoff);
 
         Assert.Equal(Path.Combine(_root, "fat"), model.ScanRoot);
         Assert.False(model.IsCompareMode);
         Assert.Contains(host.Work.Requested, title => title.Contains("fat"));
+    }
+
+    [Fact]
+    public void Purrge_takes_files_and_looks_for_their_copies_on_their_drives()
+    {
+        var host = Host("purrge");
+        using var model = new PurrgeViewModel(host);
+        var pic = Path.Combine(_root, "fat", "pic.jpg");
+        var handoff = Handoff.Files([pic]);
+
+        Assert.True(model.Accepts(handoff));
+        model.Receive(handoff);
+
+        // The root shown is the drive, not the file's folder, and the task says what it is doing.
+        Assert.Equal(Path.GetPathRoot(pic), model.ScanRoot);
+        Assert.Contains(host.Work.Requested, title => title.Contains("copies"));
     }
 
     [Fact]

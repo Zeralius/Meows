@@ -23,7 +23,12 @@ public sealed class WatchViewModel(WatchInfo watch) : ObservableObject
 
     public bool IsBusy => Watch.PassInProgress;
 
-    public string Glyph => HasFailed ? "✕" : IsStopped ? "–" : IsBusy ? "…" : "●";
+    public bool IsPaused => Watch.IsPaused;
+
+    /// <summary>Running and not paused: the ones the pause buttons apply to.</summary>
+    public bool CanPause => !IsStopped && !IsPaused;
+
+    public string Glyph => HasFailed ? "✕" : IsStopped ? "–" : IsPaused ? "‖" : IsBusy ? "…" : "●";
 
     public string EveryText => MeowsText.Current.Format("purr.every", PurrClock.Span(Watch.Interval));
 
@@ -42,6 +47,8 @@ public sealed class WatchViewModel(WatchInfo watch) : ObservableObject
                 return text.Format("purr.stopped.failed", PurrClock.Ago(Watch.StoppedAt ?? DateTime.Now), failure);
             if (Watch.IsStopped)
                 return text.Format("purr.stopped", PurrClock.Ago(Watch.StoppedAt ?? DateTime.Now));
+            if (Watch.PausedUntil is { } until)
+                return until == DateTime.MaxValue ? text["purr.paused"] : text.Format("purr.paused.until", PurrClock.Until(until));
             if (Watch.PassInProgress)
                 return Watch.Status.Length > 0 ? text.Format("purr.looking.status", Watch.Status) : text["purr.looking"];
             if (Watch.NextDueAt is { } due)
@@ -86,6 +93,10 @@ public sealed class PurrViewModel : ObservableObject, IDisposable, ISearchable
         _settings = host.LoadSettings<PurrSettings>() ?? new PurrSettings();
 
         RefreshCommand = new RelayCommand(Refresh);
+        PauseHourCommand = new RelayCommand(() => Pause(DateTime.Now.AddHours(1)), () => Selected is { CanPause: true });
+        PauseTomorrowCommand = new RelayCommand(() => Pause(DateTime.Today.AddDays(1).AddHours(8)), () => Selected is { CanPause: true });
+        PauseCommand = new RelayCommand(() => Pause(DateTime.MaxValue), () => Selected is { CanPause: true });
+        ResumeCommand = new RelayCommand(Resume, () => Selected is { IsPaused: true });
 
         _host.Watches.Changed += Refresh;
 
@@ -110,13 +121,49 @@ public sealed class PurrViewModel : ObservableObject, IDisposable, ISearchable
 
     public RelayCommand RefreshCommand { get; }
 
+    public RelayCommand PauseHourCommand { get; }
+
+    public RelayCommand PauseTomorrowCommand { get; }
+
+    public RelayCommand PauseCommand { get; }
+
+    public RelayCommand ResumeCommand { get; }
+
+    private void Pause(DateTime until)
+    {
+        if (Selected is not { } watch)
+            return;
+        if (!_host.Watches.Pause(watch.Watch.Id, until))
+            ErrorMessage = _host.Text["purr.error.pause"];
+        Refresh();
+    }
+
+    private void Resume()
+    {
+        if (Selected is not { } watch)
+            return;
+        if (!_host.Watches.Resume(watch.Watch.Id))
+            ErrorMessage = _host.Text["purr.error.pause"];
+        Refresh();
+    }
+
+    private void RaisePauseCommands()
+    {
+        PauseHourCommand.RaiseCanExecuteChanged();
+        PauseTomorrowCommand.RaiseCanExecuteChanged();
+        PauseCommand.RaiseCanExecuteChanged();
+        ResumeCommand.RaiseCanExecuteChanged();
+    }
+
     public WatchViewModel? Selected
     {
         get => _selected;
         set
         {
-            if (SetField(ref _selected, value))
-                OnPropertyChanged(nameof(HasSelection));
+            if (!SetField(ref _selected, value))
+                return;
+            OnPropertyChanged(nameof(HasSelection));
+            RaisePauseCommands();
         }
     }
 

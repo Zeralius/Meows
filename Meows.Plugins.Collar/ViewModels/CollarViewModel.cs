@@ -207,7 +207,7 @@ public sealed class EntryViewModel : ObservableObject
     internal void Reread() => OnEverythingChanged();
 }
 
-public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget
 {
     /// <summary>The condition key. One per plugin scope, so it replaces rather than stacks.</summary>
     private const string DueKey = "due";
@@ -392,6 +392,27 @@ public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable
         }
 
         Add(Receipt.From(path, DateTime.Today));
+    }
+
+    /// <summary>
+    /// Files from another tab: Saucer's clipping of a receipt, Kibble's right-click, Litter's
+    /// invoice. One entry per file, the same way a drop makes one, and the sender hears how many.
+    /// The first file attaches to a selected entry that has no paper yet, as a drop would.
+    /// </summary>
+    public bool Accepts(Handoff handoff) =>
+        handoff.Verb == HandoffVerbs.Files && handoff.Paths.Count > 0 && handoff.Paths.All(System.IO.File.Exists);
+
+    public void Receive(Handoff handoff)
+    {
+        if (!Accepts(handoff))
+            return;
+        var before = Entries.Count;
+        foreach (var path in handoff.Paths)
+            AddFromFile(path);
+        var added = Entries.Count - before;
+        handoff.Answer(added == 0
+            ? _host.Text["collar.reply.attached"]
+            : _host.Text.Format("collar.reply.added", added));
     }
 
     /// <summary>Dealt with: a repeat moves to its next date, a one-off is finished.</summary>

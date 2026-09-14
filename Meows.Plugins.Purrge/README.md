@@ -7,7 +7,15 @@ that a backup copy is really complete and identical.
 Two modes on one tab, **Duplicates** and **Compare**, switched at the top. They share the folder
 tree and the staged content check and nothing else.
 
-Plugin id `meows.purrge`. Windows only, because deletion goes through the shell's Recycle Bin.
+Plugin id `meows.purrge`.
+
+## Asked about particular files
+
+A tab that is about to bin something can hand Purrge the files (a *files* handoff, Catnip does
+it) and ask whether there is another copy. Purrge walks the drives those files sit on but opens
+only files of exactly their sizes, so a drive with a million files costs a listing and a handful
+of hashes, and answers in a sentence: *1 of 3 have another copy; the sets are listed*. Only sets
+holding one of the asked files are shown. Windows only, because deletion goes through the shell's Recycle Bin.
 
 ## The three columns
 

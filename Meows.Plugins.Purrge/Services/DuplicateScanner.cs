@@ -3,7 +3,12 @@ using Meows.Disk;
 
 namespace Meows.Plugins.Purrge.Services;
 
-public sealed record ScanOptions(long MinimumBytes = 4096, bool SkipSystemFolders = true);
+/// <param name="OnlyCopiesOf">
+/// Ask only about these files: every other size is skipped on the walk, and only sets holding
+/// one of them come back. What a tab hands over when it wants to know "is there another copy
+/// of this before I bin it", which is cheap because a drive has few files of exactly that size.
+/// </param>
+public sealed record ScanOptions(long MinimumBytes = 4096, bool SkipSystemFolders = true, IReadOnlyList<string>? OnlyCopiesOf = null);
 
 public enum ScanPhase
 {
@@ -39,11 +44,21 @@ public sealed class DuplicateScanner
         IProgress<ScanProgress>? progress,
         CancellationToken token)
     {
-        return await Task.Run(() => Scan(root, options, progress, token), token).ConfigureAwait(true);
+        return await Task.Run(() => Scan([root], options, progress, token), token).ConfigureAwait(true);
+    }
+
+    /// <summary>Several roots at once, which is what "anywhere on the machine" means for a handful of files.</summary>
+    public async Task<IReadOnlyList<DuplicateSet>> ScanAsync(
+        IReadOnlyList<string> roots,
+        ScanOptions options,
+        IProgress<ScanProgress>? progress,
+        CancellationToken token)
+    {
+        return await Task.Run(() => Scan(roots, options, progress, token), token).ConfigureAwait(true);
     }
 
     private IReadOnlyList<DuplicateSet> Scan(
-        string root,
+        IReadOnlyList<string> roots,
         ScanOptions options,
         IProgress<ScanProgress>? progress,
         CancellationToken token)
@@ -51,10 +66,37 @@ public sealed class DuplicateScanner
         var bySize = new Dictionary<long, List<string>>();
         var seen = 0;
 
-        foreach (var path in EnumerateFiles(root, options, token))
+        // Asked about particular files: only their sizes can hold a copy, so nothing else is
+        // even opened, and the files themselves are in the pool whether the walk meets them or not.
+        HashSet<long>? wantedSizes = null;
+        HashSet<string>? wanted = null;
+        if (options.OnlyCopiesOf is { Count: > 0 } asked)
+        {
+            wantedSizes = [];
+            wanted = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var path in asked)
+            {
+                try
+                {
+                    var size = new FileInfo(path).Length;
+                    wantedSizes.Add(size);
+                    wanted.Add(Path.GetFullPath(path));
+                    if (!bySize.TryGetValue(size, out var list))
+                        bySize[size] = list = [];
+                    list.Add(Path.GetFullPath(path));
+                }
+                catch (Exception)
+                {
+                }
+            }
+        }
+
+        foreach (var path in roots.SelectMany(root => EnumerateFiles(root, options, token)))
         {
             token.ThrowIfCancellationRequested();
             seen++;
+            if (wanted is not null && wanted.Contains(path))
+                continue;
 
             long size;
             try
@@ -66,7 +108,9 @@ public sealed class DuplicateScanner
                 continue;
             }
 
-            if (size < options.MinimumBytes)
+            if (size < options.MinimumBytes && wantedSizes is null)
+                continue;
+            if (wantedSizes is not null && !wantedSizes.Contains(size))
                 continue;
 
             if (!bySize.TryGetValue(size, out var list))
@@ -113,6 +157,9 @@ public sealed class DuplicateScanner
             progress?.Report(new ScanProgress(ScanPhase.Hashing, seen, candidateCount - hashed,
                 $"{results.Count} duplicate set(s) so far"));
         }
+
+        if (wanted is not null)
+            results = results.Where(r => r.Files.Any(f => wanted.Contains(f.Path))).ToList();
 
         progress?.Report(new ScanProgress(ScanPhase.Done, seen, 0, $"{results.Count} duplicate set(s)"));
         return results.OrderByDescending(r => r.RedundantBytes).ToList();

@@ -135,6 +135,16 @@
                                        Classes="label"
                                        TextWrapping="Wrap"
                                        Margin="0,6,0,0" />
+
+                            <!-- Quiet, for a while or until asked: the schedule stays, the passes do not run. -->
+                            <TextBlock Classes="label" Text="{m:Tr purr.pause}" Margin="0,10,0,0" IsVisible="{Binding Selected.CanPause}" />
+                            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6" IsVisible="{Binding Selected.CanPause}">
+                                <Button Grid.Column="0" Content="{m:Tr purr.pause.hour}" Command="{Binding PauseHourCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                                <Button Grid.Column="1" Content="{m:Tr purr.pause.tomorrow}" Command="{Binding PauseTomorrowCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                                <Button Grid.Column="2" Content="{m:Tr purr.pause.indefinitely}" Command="{Binding PauseCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            </Grid>
+                            <Button Content="{m:Tr purr.resume}" Command="{Binding ResumeCommand}" IsVisible="{Binding Selected.IsPaused}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,10,0,0" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr purr.pause.hint}" />
                         </StackPanel>
 
                         <TextBlock Classes="label"

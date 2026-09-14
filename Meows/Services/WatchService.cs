@@ -10,6 +10,10 @@ public sealed class WatchService(BackgroundTaskService background) : IMeowsWatch
 {
     public IReadOnlyList<WatchInfo> All() => background.Watches();
 
+    public bool Pause(string id, DateTime until) => background.PauseWatch(id, until);
+
+    public bool Resume(string id) => background.ResumeWatch(id);
+
     public event Action? Changed
     {
         add => background.WatchesChanged += value;
