@@ -340,14 +340,14 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         SaveSettings();
         IsScanning = true;
 
-        var options = new ScanOptions(_settings.MinimumBytes, _settings.SkipSystemFolders);
+        var options = new Services.ScanOptions(_settings.MinimumBytes, _settings.SkipSystemFolders);
 
         _scanTask = _host.Background.Run(
             _host.Text.Format("purrge.task.scan", Path.GetFileName(root.TrimEnd(Path.DirectorySeparatorChar))),
             async context =>
             {
                 var total = 0;
-                var progress = new Progress<ScanProgress>(p =>
+                var progress = new Progress<Services.ScanProgress>(p =>
                 {
                     switch (p.Phase)
                     {

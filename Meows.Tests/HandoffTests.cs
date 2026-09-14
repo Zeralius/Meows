@@ -1,5 +1,5 @@
+using Meows.Disk;
 using Meows.Plugins.Abstractions;
-using Meows.Plugins.Chonk.Services;
 using Meows.Plugins.Chonk.ViewModels;
 using Meows.Plugins.Kibble.ViewModels;
 using Meows.Plugins.Purrge.ViewModels;
@@ -25,8 +25,16 @@ public class HandoffTests : IDisposable
 
     public void Dispose()
     {
-        if (Directory.Exists(_root))
-            Directory.Delete(_root, recursive: true);
+        try
+        {
+            if (Directory.Exists(_root))
+                Directory.Delete(_root, recursive: true);
+        }
+        catch (IOException)
+        {
+            // Chonk may still be reading a picture for its identity line; a leftover temp
+            // folder is not worth failing the run over.
+        }
     }
 
     private FakeHost Host(string name, params string[] reachable)

@@ -1,6 +1,7 @@
-using Meows.Disk;
+namespace Meows.Disk;
 
-namespace Meows.Plugins.Chonk.Services;
+// Lived in Chonk until 2.19.0. Moved here because Weigh-In takes the same measurement on a
+// schedule, and two walks of a drive is how one gets a fix and the other does not.
 
 /// <summary>One thing taking up room: a folder, a file, or the small stuff rolled together.</summary>
 public sealed class DiskEntry

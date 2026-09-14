@@ -29,6 +29,7 @@ to install.
 | **[Scruff](Meows.Plugins.Scruff/README.md)** | Takes the metadata out of pictures, posts them to Bluesky, Mastodon, Discord, DeviantArt and Tumblr, and hands them to FurAffinity, X, Instagram and Reddit with every field spelled that site's way |
 | **[Purr](Meows.Plugins.Purr/README.md)** | Says what Meows is watching, when it last looked, and which watch quietly stopped |
 | **[Kit](Meows.Plugins.Kit/README.md)** | Turns a folder of maps, tokens and handouts into a one-shot the table can use: named, gridded or gridless, fitted, framed, and handed to Foundry or Roll20 the way each wants it |
+| **[Weigh-In](Meows.Plugins.WeighIn/README.md)** | Measures every drive once a day and says what grew: which drive lost how much since last week, and the folders responsible |
 | **[Kibble](Meows.Plugins.Kibble/README.md)** | Sorts a folder of new material into queues, one key press at a time, and can bundle a pick into a comic |
 | **[Perch](Meows.Plugins.Perch/README.md)** | One timeline of what the posting bot will send and when, every group merged, out as far as the queues last |
 | **[Portion](Meows.Plugins.Portion/README.md)** | Finds what the bot will fail on in every queue before it fails at night, and shrinks the pictures that can be shrunk |
@@ -210,7 +211,7 @@ Duplicate plugin ids are ignored, and a plugin that throws while starting up is 
 | `Meows.Plugins.Abstractions/` | The contract a plugin implements, published as a NuGet package |
 | `Meows.Plugins.*/` | The plugins listed above |
 | `Meows.Bot.Core/` | Shared: the posting bot's config and media rules |
-| `Meows.Disk/` | Shared: Recycle Bin deletion, folder walking, content hashing and what a folder is |
+| `Meows.Disk/` | Shared: Recycle Bin deletion, folder walking, the drive scan, content hashing and what a folder is |
 | `Meows.Media/` | Shared: metadata stripping and fitting a picture to a limit, on the shell's Skia |
 | `template/` | The `dotnet new` template, published as `Meows.Plugins.Template` |
 | `Meows.Kitten/` | Developer tool: writes a new in-tree plugin from a name and proves it builds. [README](Meows.Kitten/README.md) |

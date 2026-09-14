@@ -64,6 +64,7 @@
     <ProjectReference Include="..\Meows.Plugins.Portion\Meows.Plugins.Portion.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Purr\Meows.Plugins.Purr.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Kit\Meows.Plugins.Kit.csproj" />
+    <ProjectReference Include="..\Meows.Plugins.WeighIn\Meows.Plugins.WeighIn.csproj" />
   </ItemGroup>
 
 </Project>

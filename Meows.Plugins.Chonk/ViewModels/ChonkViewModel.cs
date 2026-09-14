@@ -2,7 +2,6 @@ using System.Collections.ObjectModel;
 using Avalonia.Threading;
 using Meows.Disk;
 using Meows.Plugins.Abstractions;
-using Meows.Plugins.Chonk.Services;
 
 namespace Meows.Plugins.Chonk.ViewModels;
 
