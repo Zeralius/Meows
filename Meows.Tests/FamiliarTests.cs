@@ -189,7 +189,7 @@ public sealed class FamiliarTests : IDisposable
         Assert.True(File.Exists(Path.Combine(folder, "kit.json")));
         Assert.True(File.Exists(Path.Combine(folder, "maps", "a.png")));
         Assert.Contains(host.Store.Events, e => e.Kind == "exported-foundry");
-        Assert.Contains(host.Lines, l => l.StartsWith("post: Kit written"));
+        Assert.Contains(host.Lines, l => l.StartsWith("post: One-shot written"));
     }
 
     [Fact]
@@ -270,7 +270,7 @@ public sealed class FamiliarTests : IDisposable
         Assert.True(model.IsEmptyBench);
         Assert.True(Directory.Exists(Path.Combine(model.Root, "Bench", "tokens")));
 
-        // A portrait, cut to a token, without ever making a kit.
+        // A portrait, cut to a token, without ever making a one-shot.
         var source = Path.Combine(_root, "portrait.png");
         File.WriteAllBytes(source, Png(300, 400, SKColors.Green));
         model.AddAs = ItemKind.Token;
