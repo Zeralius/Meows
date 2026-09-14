@@ -2,12 +2,12 @@ using System.Collections.ObjectModel;
 using Avalonia.Media.Imaging;
 using Meows.Media;
 using Meows.Plugins.Abstractions;
-using Meows.Plugins.Kit.Services;
+using Meows.Plugins.Familiar.Services;
 using SkiaSharp;
 
-namespace Meows.Plugins.Kit.ViewModels;
+namespace Meows.Plugins.Familiar.ViewModels;
 
-public sealed class KitSettings
+public sealed class FamiliarSettings
 {
     /// <summary>Where the kits live: one folder per one-shot.</summary>
     public string? Root { get; set; }
@@ -23,11 +23,14 @@ public sealed class KitSettings
 }
 
 /// <summary>A one-shot folder in the left column.</summary>
-public sealed class KitEntryViewModel(string folder)
+public sealed class KitEntryViewModel(string folder, bool isBench = false)
 {
     public string Folder { get; } = folder;
 
-    public string Name => Path.GetFileName(Folder.TrimEnd(Path.DirectorySeparatorChar));
+    /// <summary>The standing kit for pictures that belong to no one-shot: always there, first, never exported.</summary>
+    public bool IsBench { get; } = isBench;
+
+    public string Name => IsBench ? MeowsText.Current["familiar.bench"] : Path.GetFileName(Folder.TrimEnd(Path.DirectorySeparatorChar));
 }
 
 public enum ItemKind
@@ -70,9 +73,9 @@ public sealed class ItemViewModel(KitItem item, ItemKind kind, string kitFolder)
             if (!IsMap || Item.Grid is null)
                 return size;
             if (!Item.Grid.Enabled)
-                return $"{size} · {text["kit.grid.none"]}";
+                return $"{size} · {text["familiar.grid.none"]}";
             var (c, r) = Pictures.Squares(Item.Width - 2 * Item.Padding, Item.Height - 2 * Item.Padding, Item.Grid);
-            return $"{size} · {text.Format("kit.grid.squares", c, r, (int)Math.Round(Item.Grid.Size))}";
+            return $"{size} · {text.Format("familiar.grid.squares", c, r, (int)Math.Round(Item.Grid.Size))}";
         }
     }
 
@@ -187,7 +190,7 @@ public sealed class EncounterViewModel(Encounter encounter, Func<IReadOnlyList<M
         }
     }
 
-    public string Title => Encounter.Name.Length > 0 ? Encounter.Name : MeowsText.Current["kit.encounter.unnamed"];
+    public string Title => Encounter.Name.Length > 0 ? Encounter.Name : MeowsText.Current["familiar.encounter.unnamed"];
 
     /// <summary>"Tavern · 3 × Goblin, Bugbear", for the row.</summary>
     public string Detail
@@ -213,13 +216,16 @@ public sealed record FrameChoice(string? File, string Label)
 /// framed and cut, and written out the way Foundry or Roll20 wants them. Every change is a
 /// change to a file; the manifest only remembers what a file cannot.
 /// </summary>
-public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget
+public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget
 {
+    /// <summary>The folder under the root that holds the bench. Fixed, so it is the same in every language.</summary>
+    public const string BenchFolderName = "Bench";
+
     private const int ThumbnailWidth = 96;
     private const int PreviewWidth = 640;
 
     private readonly IMeowsHost _host;
-    private readonly KitSettings _settings;
+    private readonly FamiliarSettings _settings;
     private readonly LanguageWatch _language;
     private CancellationTokenSource? _thumbnails;
     private CancellationTokenSource? _preview;
@@ -260,10 +266,10 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
 
     private static readonly FrameChoice NoFrame = new(null, "");
 
-    public KitViewModel(IMeowsHost host)
+    public FamiliarViewModel(IMeowsHost host)
     {
         _host = host;
-        _settings = host.LoadSettings<KitSettings>() ?? new KitSettings();
+        _settings = host.LoadSettings<FamiliarSettings>() ?? new FamiliarSettings();
         _settings.Root ??= Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.MyDocuments), "Oneshots");
 
         NewKitCommand = new RelayCommand(NewKit, () => NewKitName.Trim().Length > 0);
@@ -278,8 +284,8 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         MoveUpCommand = new RelayCommand(() => Move(-1), () => Selected is not null);
         MoveDownCommand = new RelayCommand(() => Move(+1), () => Selected is not null);
         RemoveCommand = new RelayCommand(Remove, () => Selected is not null && !IsBusy);
-        ExportFoundryCommand = new RelayCommand(() => _ = ExportAsync(foundry: true), () => _manifest is not null && !IsBusy);
-        ExportRoll20Command = new RelayCommand(() => _ = ExportAsync(foundry: false), () => _manifest is not null && !IsBusy);
+        ExportFoundryCommand = new RelayCommand(() => _ = ExportAsync(foundry: true), () => CanExport && !IsBusy);
+        ExportRoll20Command = new RelayCommand(() => _ = ExportAsync(foundry: false), () => CanExport && !IsBusy);
         OpenExportsCommand = new RelayCommand(() => Open(ExportRoot));
         OpenFramesFolderCommand = new RelayCommand(() => Open(FramesFolder));
         ShowPicturesCommand = new RelayCommand(() => ShowRunSheet = false);
@@ -333,7 +339,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         get
         {
             var own = _frames.Tokens.Count(t => t.Path is not null) + _frames.Backgrounds.Count(b => b.Path is not null) + _frames.Borders.Count(b => b.Path is not null);
-            return _host.Text.Format("kit.frames.count", _frames.Tokens.Count, _frames.Backgrounds.Count, _frames.Borders.Count, own);
+            return _host.Text.Format("familiar.frames.count", _frames.Tokens.Count, _frames.Backgrounds.Count, _frames.Borders.Count, own);
         }
     }
 
@@ -462,7 +468,11 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             if (!SetField(ref _selectedKit, value))
                 return;
             OnPropertyChanged(nameof(HasKit));
+            OnPropertyChanged(nameof(IsBench));
+            OnPropertyChanged(nameof(CanExport));
             OnPropertyChanged(nameof(KitTitle));
+            if (value?.IsBench == true)
+                ShowRunSheet = false;
             OpenKitFolderCommand.RaiseCanExecuteChanged();
             ExportFoundryCommand.RaiseCanExecuteChanged();
             ExportRoll20Command.RaiseCanExecuteChanged();
@@ -471,6 +481,15 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
     }
 
     public bool HasKit => _selectedKit is not null && _manifest is not null;
+
+    public bool IsBench => _selectedKit?.IsBench == true;
+
+    /// <summary>A one-shot is written for a VTT; the bench is not one and is not.</summary>
+    public bool CanExport => HasKit && !IsBench;
+
+    public bool IsEmptyKit => IsEmpty && HasKit && !IsBench;
+
+    public bool IsEmptyBench => IsEmpty && IsBench;
 
     public string KitTitle => _manifest?.Title ?? "";
 
@@ -488,7 +507,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
 
     public string Status
     {
-        get => _status ?? _host.Text["kit.status.start"];
+        get => _status ?? _host.Text["familiar.status.start"];
         private set => SetField(ref _status, value);
     }
 
@@ -528,10 +547,19 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         {
             Directory.CreateDirectory(Root);
             LoadFrames();
+
+            // The bench first: a kit that is not a one-shot, for a token or a framed map wanted
+            // on its own. Made if it is missing, so there is always somewhere to put a picture.
+            var bench = Path.Combine(Root, BenchFolderName);
+            MakeKitFolders(bench, BenchFolderName);
+            Kits.Add(new KitEntryViewModel(bench, isBench: true));
+
             foreach (var folder in Directory.EnumerateDirectories(Root).OrderBy(f => f, StringComparer.CurrentCultureIgnoreCase))
             {
-                if (string.Equals(Path.GetFileName(folder), "Exports", StringComparison.OrdinalIgnoreCase)
-                    || string.Equals(Path.GetFileName(folder), FrameSet.UserFolderName, StringComparison.OrdinalIgnoreCase))
+                var name = Path.GetFileName(folder);
+                if (string.Equals(name, "Exports", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(name, FrameSet.UserFolderName, StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(name, BenchFolderName, StringComparison.OrdinalIgnoreCase))
                     continue;
                 Kits.Add(new KitEntryViewModel(folder));
             }
@@ -539,7 +567,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         }
         catch (Exception ex)
         {
-            ErrorMessage = _host.Text.Format("kit.error.root", Root, ex.Message);
+            ErrorMessage = _host.Text.Format("familiar.error.root", Root, ex.Message);
         }
 
         SelectedKit = Kits.FirstOrDefault(k => string.Equals(k.Folder, keep, StringComparison.OrdinalIgnoreCase)) ?? Kits.FirstOrDefault();
@@ -550,23 +578,35 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
     private void NewKit()
     {
         var name = Exporter.Slug(NewKitName);
+        if (string.Equals(name, BenchFolderName, StringComparison.OrdinalIgnoreCase))
+        {
+            ErrorMessage = _host.Text["familiar.error.benchname"];
+            return;
+        }
         var folder = Path.Combine(Root, name);
         try
         {
-            foreach (var sub in new[] { "maps", "tokens", "handouts", "notes" })
-                Directory.CreateDirectory(Path.Combine(folder, sub));
-            new KitManifest { Title = name }.Save(folder);
+            MakeKitFolders(folder, name);
         }
         catch (Exception ex)
         {
-            ErrorMessage = _host.Text.Format("kit.error.create", ex.Message);
+            ErrorMessage = _host.Text.Format("familiar.error.create", ex.Message);
             return;
         }
 
         NewKitName = "";
         Reload();
         SelectedKit = Kits.FirstOrDefault(k => string.Equals(k.Folder, folder, StringComparison.OrdinalIgnoreCase));
-        _host.Store.Record("created", folder, _host.Text.Format("kit.journal.created", name));
+        _host.Store.Record("created", folder, _host.Text.Format("familiar.journal.created", name));
+    }
+
+    /// <summary>The four folders and a manifest, for a new kit or a bench that is not there yet.</summary>
+    private static void MakeKitFolders(string folder, string title)
+    {
+        foreach (var sub in new[] { "maps", "tokens", "handouts", "notes" })
+            Directory.CreateDirectory(Path.Combine(folder, sub));
+        if (!File.Exists(Path.Combine(folder, KitManifest.FileName)))
+            new KitManifest { Title = title }.Save(folder);
     }
 
     // ---- the open kit ----
@@ -600,7 +640,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         }
         catch (Exception ex)
         {
-            ErrorMessage = _host.Text.Format("kit.error.load", ex.Message);
+            ErrorMessage = _host.Text.Format("familiar.error.load", ex.Message);
             RaiseKitState();
             return;
         }
@@ -618,7 +658,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             Encounters.Add(new EncounterViewModel(encounter, () => MapChoices, () => _manifest?.Tokens ?? [], SaveManifest));
         SelectedNote = Notes.FirstOrDefault();
 
-        Status = _host.Text.Format("kit.status.loaded", _manifest.Maps.Count, _manifest.Tokens.Count, _manifest.Handouts.Count, _manifest.Notes.Count);
+        Status = _host.Text.Format("familiar.status.loaded", _manifest.Maps.Count, _manifest.Tokens.Count, _manifest.Handouts.Count, _manifest.Notes.Count);
         RaiseKitState();
         _ = LoadThumbnailsAsync();
     }
@@ -640,7 +680,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
 
     /// <summary>The maps a fight can be on, with "no map" first.</summary>
     public IReadOnlyList<MapChoice> MapChoices =>
-        [new MapChoice("", _host.Text["kit.encounter.nomap"]), .. (_manifest?.Maps ?? []).Select(m => new MapChoice(m.File, m.Name))];
+        [new MapChoice("", _host.Text["familiar.encounter.nomap"]), .. (_manifest?.Maps ?? []).Select(m => new MapChoice(m.File, m.Name))];
 
     public NoteViewModel? SelectedNote
     {
@@ -702,7 +742,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         }
         catch (Exception ex)
         {
-            ErrorMessage = _host.Text.Format("kit.error.note", ex.Message);
+            ErrorMessage = _host.Text.Format("familiar.error.note", ex.Message);
         }
     }
 
@@ -720,7 +760,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         }
         catch (Exception ex)
         {
-            ErrorMessage = _host.Text.Format("kit.error.note", ex.Message);
+            ErrorMessage = _host.Text.Format("familiar.error.note", ex.Message);
             return;
         }
 
@@ -755,7 +795,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             return;
         var encounter = new Encounter
         {
-            Name = _host.Text.Format("kit.encounter.new", _manifest.Encounters.Count + 1),
+            Name = _host.Text.Format("familiar.encounter.new", _manifest.Encounters.Count + 1),
             Map = Selected is { IsMap: true } map ? map.Item.File : _manifest.Maps.FirstOrDefault()?.File ?? "",
         };
         _manifest.Encounters.Add(encounter);
@@ -836,6 +876,9 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
 
     private void RaiseKitState()
     {
+        OnPropertyChanged(nameof(IsEmptyKit));
+        OnPropertyChanged(nameof(IsEmptyBench));
+        OnPropertyChanged(nameof(CanExport));
         OnPropertyChanged(nameof(MapChoices));
         NewNoteCommand.RaiseCanExecuteChanged();
         AddEncounterCommand.RaiseCanExecuteChanged();
@@ -895,8 +938,8 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             return;
 
         LoadKit();
-        Status = _host.Text.Format("kit.status.added", added, sub);
-        _host.Store.Record("added", kit.Folder, _host.Text.Format("kit.journal.added", added, _manifest.Title));
+        Status = _host.Text.Format("familiar.status.added", added, sub);
+        _host.Store.Record("added", kit.Folder, _host.Text.Format("familiar.journal.added", added, _manifest.Title));
     }
 
     public bool Accepts(Handoff handoff) =>
@@ -908,7 +951,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             return;
         var before = Items.Count;
         AddPictures(handoff.Paths);
-        handoff.Answer(_host.Text.Format("kit.reply.added", Items.Count - before, KitTitle));
+        handoff.Answer(_host.Text.Format("familiar.reply.added", Items.Count - before, KitTitle));
     }
 
     // ---- the selected picture ----
@@ -1013,10 +1056,10 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             if (Selected is not { IsMap: true } map)
                 return "";
             if (!_gridEnabled)
-                return _host.Text["kit.grid.none.long"];
+                return _host.Text["familiar.grid.none.long"];
             var (c, r) = Pictures.Squares(map.Item.Width - 2 * map.Item.Padding, map.Item.Height - 2 * map.Item.Padding,
                 new GridSpec { Size = _gridSize, OffsetX = _gridOffsetX, OffsetY = _gridOffsetY });
-            return _host.Text.Format("kit.grid.squares.long", c, r, (int)Math.Round(_gridSize));
+            return _host.Text.Format("familiar.grid.squares.long", c, r, (int)Math.Round(_gridSize));
         }
     }
 
@@ -1198,7 +1241,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         {
             if (File.Exists(target))
             {
-                ErrorMessage = _host.Text.Format("kit.error.nameclash", Path.GetFileName(target));
+                ErrorMessage = _host.Text.Format("familiar.error.nameclash", Path.GetFileName(target));
                 return;
             }
             try
@@ -1207,7 +1250,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             }
             catch (Exception ex)
             {
-                ErrorMessage = _host.Text.Format("kit.error.rename", ex.Message);
+                ErrorMessage = _host.Text.Format("familiar.error.rename", ex.Message);
                 return;
             }
             item.Item.File = Path.GetRelativePath(kit.Folder, target).Replace('\\', '/');
@@ -1217,7 +1260,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         ErrorMessage = null;
         SaveManifest();
         item.Reread();
-        Status = _host.Text.Format("kit.status.renamed", name);
+        Status = _host.Text.Format("familiar.status.renamed", name);
     }
 
     private void GuessGrid()
@@ -1252,7 +1295,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             return;
 
         IsBusy = true;
-        Status = _host.Text.Format("kit.status.fitting", item.Name);
+        Status = _host.Text.Format("familiar.status.fitting", item.Name);
         try
         {
             var path = item.Path;
@@ -1294,12 +1337,12 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             item.Reread();
             _ = item.LoadThumbnailAsync(ThumbnailWidth, CancellationToken.None);
             _ = ShowPreviewAsync();
-            Status = _host.Text.Format("kit.status.fitted", item.Name, Humanise(before), Humanise(bytes.LongLength));
+            Status = _host.Text.Format("familiar.status.fitted", item.Name, Humanise(before), Humanise(bytes.LongLength));
             _host.Store.Record("fitted", target, Status);
         }
         catch (Exception ex)
         {
-            ErrorMessage = _host.Text.Format("kit.error.fit", ex.Message);
+            ErrorMessage = _host.Text.Format("familiar.error.fit", ex.Message);
         }
         finally
         {
@@ -1339,12 +1382,12 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             item.Reread();
             _ = item.LoadThumbnailAsync(ThumbnailWidth, CancellationToken.None);
             _ = ShowPreviewAsync();
-            Status = _host.Text.Format("kit.status.framed", item.Name, frame.Label, padding);
+            Status = _host.Text.Format("familiar.status.framed", item.Name, frame.Label, padding);
             _host.Store.Record("framed", target, Status);
         }
         catch (Exception ex)
         {
-            ErrorMessage = _host.Text.Format("kit.error.frame", ex.Message);
+            ErrorMessage = _host.Text.Format("familiar.error.frame", ex.Message);
         }
         finally
         {
@@ -1392,12 +1435,12 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             OnPropertyChanged(nameof(OffsetY));
             _ = item.LoadThumbnailAsync(ThumbnailWidth, CancellationToken.None);
             _ = ShowPreviewAsync();
-            Status = _host.Text.Format("kit.status.token", item.Name, ring?.Label ?? _host.Text["kit.frame.none"]);
+            Status = _host.Text.Format("familiar.status.token", item.Name, ring?.Label ?? _host.Text["familiar.frame.none"]);
             _host.Store.Record("token", target, Status);
         }
         catch (Exception ex)
         {
-            ErrorMessage = _host.Text.Format("kit.error.token", ex.Message);
+            ErrorMessage = _host.Text.Format("familiar.error.token", ex.Message);
         }
         finally
         {
@@ -1444,7 +1487,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         var outcome = Disk.RecycleBin.Send([item.Path]);
         if (!outcome.Succeeded)
         {
-            ErrorMessage = outcome.FailureReason ?? _host.Text["kit.error.remove"];
+            ErrorMessage = outcome.FailureReason ?? _host.Text["familiar.error.remove"];
             return;
         }
 
@@ -1452,7 +1495,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         _manifest.Reconcile(kit.Folder);
         SaveManifest();
         LoadKit();
-        Status = _host.Text.Format("kit.status.removed", name);
+        Status = _host.Text.Format("familiar.status.removed", name);
     }
 
     // ---- export ----
@@ -1463,7 +1506,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             return;
 
         IsBusy = true;
-        Status = _host.Text[foundry ? "kit.status.exporting.foundry" : "kit.status.exporting.roll20"];
+        Status = _host.Text[foundry ? "familiar.status.exporting.foundry" : "familiar.status.exporting.roll20"];
         try
         {
             var folder = kit.Folder;
@@ -1473,16 +1516,16 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
                 ? Exporter.ForFoundry(folder, manifest, root)
                 : Exporter.ForRoll20(folder, manifest, root, limit));
 
-            Status = _host.Text.Format(foundry ? "kit.status.exported.foundry" : "kit.status.exported.roll20", report.Files, report.Folder);
+            Status = _host.Text.Format(foundry ? "familiar.status.exported.foundry" : "familiar.status.exported.roll20", report.Files, report.Folder);
             foreach (var note in report.Notes.Where(n => n != "foundry"))
                 _host.Log(LogLevel.Warning, note);
             _host.Store.Record(foundry ? "exported-foundry" : "exported-roll20", report.Folder, Status);
-            _host.Notifications.Post(NotificationSeverity.Info, _host.Text["kit.notify.exported"], Status,
-                new NotificationAction(_host.Text["kit.notify.open"], () => Open(report.Folder), DismissesAfter: true));
+            _host.Notifications.Post(NotificationSeverity.Info, _host.Text["familiar.notify.exported"], Status,
+                new NotificationAction(_host.Text["familiar.notify.open"], () => Open(report.Folder), DismissesAfter: true));
         }
         catch (Exception ex)
         {
-            ErrorMessage = _host.Text.Format("kit.error.export", ex.Message);
+            ErrorMessage = _host.Text.Format("familiar.error.export", ex.Message);
         }
         finally
         {
@@ -1502,7 +1545,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         }
         catch (Exception ex)
         {
-            ErrorMessage = _host.Text.Format("kit.error.save", ex.Message);
+            ErrorMessage = _host.Text.Format("familiar.error.save", ex.Message);
         }
     }
 
@@ -1514,7 +1557,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         }
         catch (Exception ex)
         {
-            _host.Log(LogLevel.Warning, $"Could not save Kit settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Familiar settings: {ex.Message}");
         }
     }
 
@@ -1539,7 +1582,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         }
         catch (Exception ex)
         {
-            ErrorMessage = _host.Text.Format("kit.error.open", folder, ex.Message);
+            ErrorMessage = _host.Text.Format("familiar.error.open", folder, ex.Message);
         }
     }
 
@@ -1602,7 +1645,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             if (ReferenceEquals(kit, SelectedKit) || !SearchWords.Match(words, kit.Name))
                 continue;
             var chosen = kit;
-            hits.Add(new SearchHit(kit.Name, _host.Text["kit.search.kit"], () => SelectedKit = chosen));
+            hits.Add(new SearchHit(kit.Name, _host.Text["familiar.search.kit"], () => SelectedKit = chosen));
         }
 
         return hits;

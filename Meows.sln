@@ -44,7 +44,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Kitten", "Meows.Kitte
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Plugins.Purr", "Meows.Plugins.Purr\Meows.Plugins.Purr.csproj", "{E3DEA76A-0D9A-475E-835E-1AE7ED6BB519}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Plugins.Kit", "Meows.Plugins.Kit\Meows.Plugins.Kit.csproj", "{60A998B0-DDBC-43AB-B759-63CB9B6D0986}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Plugins.Familiar", "Meows.Plugins.Familiar\Meows.Plugins.Familiar.csproj", "{60A998B0-DDBC-43AB-B759-63CB9B6D0986}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Meows.Plugins.WeighIn", "Meows.Plugins.WeighIn\Meows.Plugins.WeighIn.csproj", "{969A4853-D0F2-4F6A-9C9C-CB5EB660BFB8}"
 EndProject

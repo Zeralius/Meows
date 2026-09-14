@@ -63,7 +63,7 @@
     <ProjectReference Include="..\Meows.Plugins.Perch\Meows.Plugins.Perch.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Portion\Meows.Plugins.Portion.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Purr\Meows.Plugins.Purr.csproj" />
-    <ProjectReference Include="..\Meows.Plugins.Kit\Meows.Plugins.Kit.csproj" />
+    <ProjectReference Include="..\Meows.Plugins.Familiar\Meows.Plugins.Familiar.csproj" />
     <ProjectReference Include="..\Meows.Plugins.WeighIn\Meows.Plugins.WeighIn.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Catnip\Meows.Plugins.Catnip.csproj" />
   </ItemGroup>

@@ -1,9 +1,9 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:vm="using:Meows.Plugins.Kit.ViewModels"
+             xmlns:vm="using:Meows.Plugins.Familiar.ViewModels"
              xmlns:m="using:Meows.Plugins.Abstractions"
-             x:Class="Meows.Plugins.Kit.Views.KitView"
-             x:DataType="vm:KitViewModel">
+             x:Class="Meows.Plugins.Familiar.Views.FamiliarView"
+             x:DataType="vm:FamiliarViewModel">
 
     <UserControl.Styles>
         <Style Selector="TextBlock.label">
@@ -49,15 +49,15 @@
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
                 <StackPanel Grid.Column="0" Spacing="2">
                     <TextBlock Text="{Binding KitTitle}" FontWeight="SemiBold" IsVisible="{Binding HasKit}" />
-                    <TextBlock Text="{m:Tr kit.title}" FontWeight="SemiBold" IsVisible="{Binding !HasKit}" />
+                    <TextBlock Text="{m:Tr familiar.title}" FontWeight="SemiBold" IsVisible="{Binding !HasKit}" />
                     <TextBlock Classes="label" Text="{Binding Status}" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
                     <ComboBox ItemsSource="{Binding Kinds}" SelectedItem="{Binding AddAs}" FontSize="11" VerticalAlignment="Center" />
-                    <Button Name="AddPicturesButton" Content="{m:Tr kit.add}" IsEnabled="{Binding HasKit}" />
-                    <Button Content="{m:Tr kit.openfolder}" Command="{Binding OpenKitFolderCommand}" />
-                    <Button Name="PickRootButton" Content="{m:Tr kit.root}" />
-                    <Button Content="{m:Tr kit.refresh}" Command="{Binding RefreshCommand}" />
+                    <Button Name="AddPicturesButton" Content="{m:Tr familiar.add}" IsEnabled="{Binding HasKit}" />
+                    <Button Content="{m:Tr familiar.openfolder}" Command="{Binding OpenKitFolderCommand}" />
+                    <Button Name="PickRootButton" Content="{m:Tr familiar.root}" />
+                    <Button Content="{m:Tr familiar.refresh}" Command="{Binding RefreshCommand}" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -76,10 +76,10 @@
             <!-- Kits -->
             <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr kit.kits}" />
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr familiar.kits}" />
                     <StackPanel DockPanel.Dock="Bottom" Margin="10,6,10,12" Spacing="6">
-                        <TextBox Text="{Binding NewKitName}" Watermark="{m:Tr kit.new.placeholder}" FontSize="11" />
-                        <Button Content="{m:Tr kit.new}" Command="{Binding NewKitCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <TextBox Text="{Binding NewKitName}" Watermark="{m:Tr familiar.new.placeholder}" FontSize="11" />
+                        <Button Content="{m:Tr familiar.new}" Command="{Binding NewKitCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                         <TextBlock Classes="label" TextWrapping="Wrap" Text="{Binding Root}" />
                     </StackPanel>
                     <ListBox ItemsSource="{Binding Kits}"
@@ -89,7 +89,10 @@
                              Margin="6,0">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:KitEntryViewModel">
-                                <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                <StackPanel Orientation="Horizontal" Spacing="6">
+                                    <TextBlock Text="🔧" FontSize="11" Opacity="0.6" IsVisible="{Binding IsBench}" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
                             </DataTemplate>
                         </ListBox.ItemTemplate>
                     </ListBox>
@@ -100,18 +103,18 @@
 
             <!-- What is in the kit: the pictures, or the run sheet -->
             <DockPanel Grid.Column="2">
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="14,10,14,4" IsVisible="{Binding HasKit}">
-                    <ToggleButton Classes="switch" Content="{m:Tr kit.pictures}" IsChecked="{Binding ShowPictures, Mode=OneWay}" Command="{Binding ShowPicturesCommand}" />
-                    <ToggleButton Classes="switch" Content="{m:Tr kit.runsheet}" IsChecked="{Binding ShowRunSheet, Mode=OneWay}" Command="{Binding ShowRunSheetCommand}" />
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="14,10,14,4" IsVisible="{Binding CanExport}">
+                    <ToggleButton Classes="switch" Content="{m:Tr familiar.pictures}" IsChecked="{Binding ShowPictures, Mode=OneWay}" Command="{Binding ShowPicturesCommand}" />
+                    <ToggleButton Classes="switch" Content="{m:Tr familiar.runsheet}" IsChecked="{Binding ShowRunSheet, Mode=OneWay}" Command="{Binding ShowRunSheetCommand}" />
                 </StackPanel>
 
                 <!-- The run sheet: notes on the left, the fights on the right -->
                 <Grid IsVisible="{Binding ShowRunSheet}" ColumnDefinitions="*,4,*" Margin="8,0,8,8">
                     <DockPanel Grid.Column="0">
-                        <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr kit.notes}" Margin="6,8,6,4" />
+                        <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr familiar.notes}" Margin="6,8,6,4" />
                         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="6,0,6,6">
-                            <TextBox Grid.Column="0" Text="{Binding NewNoteName}" Watermark="{m:Tr kit.notes.new.placeholder}" FontSize="11" />
-                            <Button Grid.Column="1" Content="{m:Tr kit.notes.new}" Command="{Binding NewNoteCommand}" FontSize="11" />
+                            <TextBox Grid.Column="0" Text="{Binding NewNoteName}" Watermark="{m:Tr familiar.notes.new.placeholder}" FontSize="11" />
+                            <Button Grid.Column="1" Content="{m:Tr familiar.notes.new}" Command="{Binding NewNoteCommand}" FontSize="11" />
                         </Grid>
                         <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Notes}" SelectedItem="{Binding SelectedNote}" Background="Transparent" BorderThickness="0" MaxHeight="120" Margin="0,0,0,6">
                             <ListBox.ItemTemplate>
@@ -121,22 +124,22 @@
                             </ListBox.ItemTemplate>
                         </ListBox>
                         <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="6,6,6,0">
-                            <TextBlock Grid.Column="0" Classes="label" Text="{m:Tr kit.notes.unsaved}" IsVisible="{Binding NoteDirty}" VerticalAlignment="Center" />
-                            <Button Grid.Column="1" Content="{m:Tr kit.notes.save}" Command="{Binding SaveNoteCommand}" FontSize="11" />
+                            <TextBlock Grid.Column="0" Classes="label" Text="{m:Tr familiar.notes.unsaved}" IsVisible="{Binding NoteDirty}" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Content="{m:Tr familiar.notes.save}" Command="{Binding SaveNoteCommand}" FontSize="11" />
                         </Grid>
-                        <TextBlock Classes="label" TextWrapping="Wrap" Margin="6" Text="{m:Tr kit.notes.empty}" IsVisible="{Binding !HasNote}" />
+                        <TextBlock Classes="label" TextWrapping="Wrap" Margin="6" Text="{m:Tr familiar.notes.empty}" IsVisible="{Binding !HasNote}" />
                         <TextBox Text="{Binding NoteText}" AcceptsReturn="True" TextWrapping="Wrap" FontSize="12" FontFamily="Cascadia Mono, Consolas, monospace" Margin="6,0" IsVisible="{Binding HasNote}" VerticalContentAlignment="Top" />
                     </DockPanel>
 
                     <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
 
                     <DockPanel Grid.Column="2">
-                        <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr kit.encounters}" Margin="6,8,6,4" />
+                        <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr familiar.encounters}" Margin="6,8,6,4" />
                         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="4" Margin="6,0,6,6">
-                            <Button Grid.Column="0" Content="{m:Tr kit.encounter.add}" Command="{Binding AddEncounterCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-                            <Button Grid.Column="1" Content="{m:Tr kit.up}" Command="{Binding EncounterUpCommand}" FontSize="11" />
-                            <Button Grid.Column="2" Content="{m:Tr kit.down}" Command="{Binding EncounterDownCommand}" FontSize="11" />
-                            <Button Grid.Column="3" Content="{m:Tr kit.remove}" Command="{Binding RemoveEncounterCommand}" FontSize="11" Background="{DynamicResource MeowsDanger}" BorderBrush="{DynamicResource MeowsDangerLine}" />
+                            <Button Grid.Column="0" Content="{m:Tr familiar.encounter.add}" Command="{Binding AddEncounterCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <Button Grid.Column="1" Content="{m:Tr familiar.up}" Command="{Binding EncounterUpCommand}" FontSize="11" />
+                            <Button Grid.Column="2" Content="{m:Tr familiar.down}" Command="{Binding EncounterDownCommand}" FontSize="11" />
+                            <Button Grid.Column="3" Content="{m:Tr familiar.remove}" Command="{Binding RemoveEncounterCommand}" FontSize="11" Background="{DynamicResource MeowsDanger}" BorderBrush="{DynamicResource MeowsDangerLine}" />
                         </Grid>
                         <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Encounters}" SelectedItem="{Binding SelectedEncounter}" Background="Transparent" BorderThickness="0" MaxHeight="160" Margin="0,0,0,6">
                             <ListBox.ItemTemplate>
@@ -148,17 +151,17 @@
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
-                        <TextBlock Classes="label" TextWrapping="Wrap" Margin="6" Text="{m:Tr kit.encounters.empty}" IsVisible="{Binding !HasEncounter}" />
+                        <TextBlock Classes="label" TextWrapping="Wrap" Margin="6" Text="{m:Tr familiar.encounters.empty}" IsVisible="{Binding !HasEncounter}" />
                         <ScrollViewer IsVisible="{Binding HasEncounter}" Margin="6,0">
                             <StackPanel Spacing="6" DataContext="{Binding SelectedEncounter}" x:DataType="vm:EncounterViewModel">
-                                <TextBlock Classes="label" Text="{m:Tr kit.encounter.name}" />
+                                <TextBlock Classes="label" Text="{m:Tr familiar.encounter.name}" />
                                 <TextBox Text="{Binding Name}" FontSize="12" />
-                                <TextBlock Classes="label" Text="{m:Tr kit.encounter.map}" />
+                                <TextBlock Classes="label" Text="{m:Tr familiar.encounter.map}" />
                                 <ComboBox ItemsSource="{Binding Maps}" SelectedItem="{Binding Map}" FontSize="11" HorizontalAlignment="Stretch" />
-                                <TextBlock Classes="label" Text="{m:Tr kit.encounter.roster}" />
-                                <TextBox Text="{Binding Roster}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="70" FontSize="12" VerticalContentAlignment="Top" Watermark="{m:Tr kit.encounter.roster.placeholder}" />
-                                <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr kit.encounter.roster.hint}" />
-                                <TextBlock Classes="label" Text="{m:Tr kit.encounter.notes}" />
+                                <TextBlock Classes="label" Text="{m:Tr familiar.encounter.roster}" />
+                                <TextBox Text="{Binding Roster}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="70" FontSize="12" VerticalContentAlignment="Top" Watermark="{m:Tr familiar.encounter.roster.placeholder}" />
+                                <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr familiar.encounter.roster.hint}" />
+                                <TextBlock Classes="label" Text="{m:Tr familiar.encounter.notes}" />
                                 <TextBox Text="{Binding Notes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90" FontSize="12" VerticalContentAlignment="Top" />
                             </StackPanel>
                         </ScrollViewer>
@@ -169,8 +172,14 @@
                            Margin="14,14,14,10"
                            Opacity="0.45"
                            TextWrapping="Wrap"
-                           IsVisible="{Binding IsEmpty}"
-                           Text="{m:Tr kit.empty}" />
+                           IsVisible="{Binding IsEmptyKit}"
+                           Text="{m:Tr familiar.empty}" />
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,14,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsEmptyBench}"
+                           Text="{m:Tr familiar.bench.empty}" />
                 <ListBox ItemsSource="{Binding Items}"
                          IsVisible="{Binding ShowPictures}"
                          SelectedItem="{Binding Selected}"
@@ -207,8 +216,8 @@
                 <ScrollViewer Padding="16,12">
                     <StackPanel Spacing="10">
 
-                        <TextBlock Text="{m:Tr kit.selected}" FontWeight="SemiBold" FontSize="13" />
-                        <TextBlock Text="{m:Tr kit.nothingselected}" Classes="label" IsVisible="{Binding !HasSelection}" />
+                        <TextBlock Text="{m:Tr familiar.selected}" FontWeight="SemiBold" FontSize="13" />
+                        <TextBlock Text="{m:Tr familiar.nothingselected}" Classes="label" IsVisible="{Binding !HasSelection}" />
 
                         <StackPanel Spacing="8" IsVisible="{Binding HasSelection}">
                             <Border Background="{DynamicResource MeowsSunken}" CornerRadius="6" MinHeight="160" Padding="6">
@@ -216,21 +225,21 @@
                             </Border>
 
                             <!-- Name: the name in the VTT, and the file name follows it. -->
-                            <TextBlock Classes="label" Text="{m:Tr kit.name}" />
+                            <TextBlock Classes="label" Text="{m:Tr familiar.name}" />
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
                                 <TextBox Grid.Column="0" Name="NameBox" Text="{Binding EditName}" FontSize="12" />
-                                <Button Grid.Column="1" Content="{m:Tr kit.rename}" Command="{Binding RenameCommand}" FontSize="11" />
+                                <Button Grid.Column="1" Content="{m:Tr familiar.rename}" Command="{Binding RenameCommand}" FontSize="11" />
                             </Grid>
-                            <TextBlock Classes="label" Text="{m:Tr kit.caption}" />
+                            <TextBlock Classes="label" Text="{m:Tr familiar.caption}" />
                             <TextBox Text="{Binding EditCaption}" FontSize="12" />
 
                             <!-- Maps: the grid, or none. -->
                             <StackPanel Spacing="6" IsVisible="{Binding Selected.IsMap}">
-                                <TextBlock Classes="label" Text="{m:Tr kit.grid}" Margin="0,6,0,0" />
-                                <CheckBox Content="{m:Tr kit.grid.enabled}" IsChecked="{Binding GridEnabled}" FontSize="12" />
-                                <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr kit.grid.enabled.hint}" />
+                                <TextBlock Classes="label" Text="{m:Tr familiar.grid}" Margin="0,6,0,0" />
+                                <CheckBox Content="{m:Tr familiar.grid.enabled}" IsChecked="{Binding GridEnabled}" FontSize="12" />
+                                <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr familiar.grid.enabled.hint}" />
                                 <Grid ColumnDefinitions="Auto,*,Auto,*,Auto,*" ColumnSpacing="6" IsEnabled="{Binding GridEnabled}">
-                                    <TextBlock Grid.Column="0" Classes="label" Text="{m:Tr kit.grid.size}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="0" Classes="label" Text="{m:Tr familiar.grid.size}" VerticalAlignment="Center" />
                                     <NumericUpDown Grid.Column="1" Value="{Binding GridSize}" Minimum="10" Maximum="1000" Increment="1" FormatString="0.#" FontSize="11" />
                                     <TextBlock Grid.Column="2" Classes="label" Text="X" VerticalAlignment="Center" />
                                     <NumericUpDown Grid.Column="3" Value="{Binding GridOffsetX}" Minimum="0" Maximum="1000" Increment="1" FormatString="0.#" FontSize="11" />
@@ -238,81 +247,81 @@
                                     <NumericUpDown Grid.Column="5" Value="{Binding GridOffsetY}" Minimum="0" Maximum="1000" Increment="1" FormatString="0.#" FontSize="11" />
                                 </Grid>
                                 <StackPanel Orientation="Horizontal" Spacing="6">
-                                    <Button Content="{m:Tr kit.grid.apply}" Command="{Binding ApplyGridCommand}" FontSize="11" />
-                                    <Button Content="{m:Tr kit.grid.guess}" Command="{Binding GuessGridCommand}" FontSize="11" />
+                                    <Button Content="{m:Tr familiar.grid.apply}" Command="{Binding ApplyGridCommand}" FontSize="11" />
+                                    <Button Content="{m:Tr familiar.grid.guess}" Command="{Binding GuessGridCommand}" FontSize="11" />
                                 </StackPanel>
                                 <TextBlock Text="{Binding GridText}" FontSize="12" TextWrapping="Wrap" />
                             </StackPanel>
 
                             <!-- Maps and handouts: fit, and a border outside the picture. -->
                             <StackPanel Spacing="6" IsVisible="{Binding !Selected.IsToken}">
-                                <TextBlock Classes="label" Text="{m:Tr kit.fit}" Margin="0,6,0,0" />
+                                <TextBlock Classes="label" Text="{m:Tr familiar.fit}" Margin="0,6,0,0" />
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
                                     <ComboBox Grid.Column="0" ItemsSource="{Binding FitSizes}" SelectedItem="{Binding FitMaxSide}" FontSize="11" HorizontalAlignment="Stretch" />
-                                    <Button Grid.Column="1" Content="{m:Tr kit.fit.do}" Command="{Binding FitCommand}" FontSize="11" />
+                                    <Button Grid.Column="1" Content="{m:Tr familiar.fit.do}" Command="{Binding FitCommand}" FontSize="11" />
                                 </Grid>
-                                <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr kit.fit.hint}" />
+                                <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr familiar.fit.hint}" />
 
-                                <TextBlock Classes="label" Text="{m:Tr kit.frame}" Margin="0,6,0,0" />
+                                <TextBlock Classes="label" Text="{m:Tr familiar.frame}" Margin="0,6,0,0" />
                                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
                                     <ComboBox Grid.Column="0" ItemsSource="{Binding Borders}" SelectedItem="{Binding Border}" FontSize="11" HorizontalAlignment="Stretch" />
-                                    <Button Grid.Column="1" Content="{m:Tr kit.frame.do}" Command="{Binding FrameCommand}" FontSize="11" />
+                                    <Button Grid.Column="1" Content="{m:Tr familiar.frame.do}" Command="{Binding FrameCommand}" FontSize="11" />
                                 </Grid>
-                                <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr kit.frame.hint}" />
+                                <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr familiar.frame.hint}" />
                             </StackPanel>
 
                             <!-- Tokens: the ring, and where the picture sits in it. -->
                             <StackPanel Spacing="6" IsVisible="{Binding Selected.IsToken}">
-                                <TextBlock Classes="label" Text="{m:Tr kit.token}" Margin="0,6,0,0" />
+                                <TextBlock Classes="label" Text="{m:Tr familiar.token}" Margin="0,6,0,0" />
                                 <ComboBox ItemsSource="{Binding Rings}" SelectedItem="{Binding Ring}" FontSize="11" HorizontalAlignment="Stretch" />
-                                <TextBlock Classes="label" Text="{m:Tr kit.token.background}" />
+                                <TextBlock Classes="label" Text="{m:Tr familiar.token.background}" />
                                 <ComboBox ItemsSource="{Binding Backgrounds}" SelectedItem="{Binding Background}" FontSize="11" HorizontalAlignment="Stretch" />
-                                <TextBlock Classes="label" Text="{m:Tr kit.token.zoom}" />
+                                <TextBlock Classes="label" Text="{m:Tr familiar.token.zoom}" />
                                 <Slider Value="{Binding Zoom}" Minimum="0.5" Maximum="4" />
-                                <TextBlock Classes="label" Text="{m:Tr kit.token.x}" />
+                                <TextBlock Classes="label" Text="{m:Tr familiar.token.x}" />
                                 <Slider Value="{Binding OffsetX}" Minimum="-1" Maximum="1" />
-                                <TextBlock Classes="label" Text="{m:Tr kit.token.y}" />
+                                <TextBlock Classes="label" Text="{m:Tr familiar.token.y}" />
                                 <Slider Value="{Binding OffsetY}" Minimum="-1" Maximum="1" />
-                                <TextBlock Classes="label" Text="{m:Tr kit.token.side}" />
+                                <TextBlock Classes="label" Text="{m:Tr familiar.token.side}" />
                                 <ComboBox ItemsSource="{Binding Sides}" SelectedItem="{Binding Side}" FontSize="11" HorizontalAlignment="Stretch" />
-                                <Button Content="{m:Tr kit.token.do}" Command="{Binding MakeTokenCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-                                <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr kit.token.hint}" />
+                                <Button Content="{m:Tr familiar.token.do}" Command="{Binding MakeTokenCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                                <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr familiar.token.hint}" />
                             </StackPanel>
 
                             <Grid ColumnDefinitions="*,*,*" ColumnSpacing="6" Margin="0,6,0,0">
-                                <Button Grid.Column="0" Content="{m:Tr kit.up}" Command="{Binding MoveUpCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-                                <Button Grid.Column="1" Content="{m:Tr kit.down}" Command="{Binding MoveDownCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-                                <Button Grid.Column="2" Content="{m:Tr kit.remove}" Command="{Binding RemoveCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
+                                <Button Grid.Column="0" Content="{m:Tr familiar.up}" Command="{Binding MoveUpCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                                <Button Grid.Column="1" Content="{m:Tr familiar.down}" Command="{Binding MoveDownCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                                <Button Grid.Column="2" Content="{m:Tr familiar.remove}" Command="{Binding RemoveCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"
                                         Background="{DynamicResource MeowsDanger}" BorderBrush="{DynamicResource MeowsDangerLine}" />
                             </Grid>
                         </StackPanel>
 
                         <!-- Export -->
-                        <TextBlock Text="{m:Tr kit.export}" FontWeight="SemiBold" FontSize="13" Margin="0,14,0,0" IsVisible="{Binding HasKit}" />
-                        <StackPanel Spacing="6" IsVisible="{Binding HasKit}">
-                            <Button Content="{m:Tr kit.export.foundry}" Command="{Binding ExportFoundryCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
-                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr kit.export.foundry.hint}" />
-                            <Button Content="{m:Tr kit.export.roll20}" Command="{Binding ExportRoll20Command}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        <TextBlock Text="{m:Tr familiar.export}" FontWeight="SemiBold" FontSize="13" Margin="0,14,0,0" IsVisible="{Binding CanExport}" />
+                        <StackPanel Spacing="6" IsVisible="{Binding CanExport}">
+                            <Button Content="{m:Tr familiar.export.foundry}" Command="{Binding ExportFoundryCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr familiar.export.foundry.hint}" />
+                            <Button Content="{m:Tr familiar.export.roll20}" Command="{Binding ExportRoll20Command}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
-                                <TextBlock Grid.Column="0" Classes="label" Text="{m:Tr kit.export.roll20.limit}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                                <TextBlock Grid.Column="0" Classes="label" Text="{m:Tr familiar.export.roll20.limit}" VerticalAlignment="Center" TextWrapping="Wrap" />
                                 <NumericUpDown Grid.Column="1" Value="{Binding Roll20MaxMegabytes}" Minimum="1" Maximum="100" Increment="1" FontSize="11" Width="90" />
                             </Grid>
-                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr kit.export.roll20.hint}" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr familiar.export.roll20.hint}" />
                             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
                                 <TextBlock Grid.Column="0" Classes="label" Text="{Binding ExportRoot}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                <Button Grid.Column="1" Name="PickExportButton" Content="{m:Tr kit.export.where}" FontSize="11" />
-                                <Button Grid.Column="2" Content="{m:Tr kit.export.open}" Command="{Binding OpenExportsCommand}" FontSize="11" />
+                                <Button Grid.Column="1" Name="PickExportButton" Content="{m:Tr familiar.export.where}" FontSize="11" />
+                                <Button Grid.Column="2" Content="{m:Tr familiar.export.open}" Command="{Binding OpenExportsCommand}" FontSize="11" />
                             </Grid>
                         </StackPanel>
 
                         <!-- Frames: what ships, and the folder for your own -->
-                        <TextBlock Text="{m:Tr kit.frames}" FontWeight="SemiBold" FontSize="13" Margin="0,14,0,0" />
+                        <TextBlock Text="{m:Tr familiar.frames}" FontWeight="SemiBold" FontSize="13" Margin="0,14,0,0" />
                         <TextBlock Classes="label" Text="{Binding FramesText}" TextWrapping="Wrap" />
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
                             <TextBlock Grid.Column="0" Classes="label" Text="{Binding FramesFolder}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                            <Button Grid.Column="1" Content="{m:Tr kit.frames.open}" Command="{Binding OpenFramesFolderCommand}" FontSize="11" />
+                            <Button Grid.Column="1" Content="{m:Tr familiar.frames.open}" Command="{Binding OpenFramesFolderCommand}" FontSize="11" />
                         </Grid>
-                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr kit.frames.hint}" />
+                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr familiar.frames.hint}" />
 
                     </StackPanel>
                 </ScrollViewer>

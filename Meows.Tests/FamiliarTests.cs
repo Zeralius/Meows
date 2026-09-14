@@ -1,7 +1,7 @@
 using Meows.Media;
 using Meows.Plugins.Abstractions;
-using Meows.Plugins.Kit.Services;
-using Meows.Plugins.Kit.ViewModels;
+using Meows.Plugins.Familiar.Services;
+using Meows.Plugins.Familiar.ViewModels;
 using SkiaSharp;
 
 namespace Meows.Tests;
@@ -10,11 +10,11 @@ namespace Meows.Tests;
 /// The Kit tab: a folder per one-shot, pictures in it named, gridded or not, cut and framed,
 /// and written out. The picture work has its own tests; these are the tab's verbs.
 /// </summary>
-public sealed class KitTests : IDisposable
+public sealed class FamiliarTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kittab-" + Guid.NewGuid().ToString("N")[..10]);
 
-    public KitTests() => Directory.CreateDirectory(_root);
+    public FamiliarTests() => Directory.CreateDirectory(_root);
 
     private static byte[] Png(int w, int h, SKColor colour)
     {
@@ -24,11 +24,11 @@ public sealed class KitTests : IDisposable
         return Preparer.Encode(bitmap, ImageFormat.Png, 100);
     }
 
-    private (KitViewModel Model, FakeHost Host) Open()
+    private (FamiliarViewModel Model, FakeHost Host) Open()
     {
         var host = new FakeHost(Path.Combine(_root, "hostdata"));
-        host.SaveSettings(new KitSettings { Root = Path.Combine(_root, "Oneshots") });
-        return (new KitViewModel(host), host);
+        host.SaveSettings(new FamiliarSettings { Root = Path.Combine(_root, "Oneshots") });
+        return (new FamiliarViewModel(host), host);
     }
 
     [Fact]
@@ -39,7 +39,9 @@ public sealed class KitTests : IDisposable
         model.NewKitName = "Cellar of Woe";
         model.NewKitCommand.Execute(null);
 
-        var kit = Assert.Single(model.Kits);
+        // The bench is always first; the new kit sits after it and is opened.
+        Assert.True(model.Kits[0].IsBench);
+        var kit = Assert.Single(model.Kits.Where(k => !k.IsBench));
         Assert.Equal("Cellar of Woe", kit.Name);
         Assert.Same(kit, model.SelectedKit);
         foreach (var sub in new[] { "maps", "tokens", "handouts", "notes" })
@@ -253,6 +255,38 @@ public sealed class KitTests : IDisposable
         hit.Open();
         Assert.True(model.ShowRunSheet);
         Assert.Same(fight, model.SelectedEncounter);
+    }
+
+    [Fact]
+    public async Task The_bench_takes_a_picture_without_a_one_shot_and_is_never_exported()
+    {
+        var (model, _) = Open();
+
+        var bench = Assert.Single(model.Kits);
+        Assert.True(bench.IsBench);
+        Assert.Same(bench, model.SelectedKit);
+        Assert.True(model.IsBench);
+        Assert.False(model.CanExport);
+        Assert.True(model.IsEmptyBench);
+        Assert.True(Directory.Exists(Path.Combine(model.Root, "Bench", "tokens")));
+
+        // A portrait, cut to a token, without ever making a kit.
+        var source = Path.Combine(_root, "portrait.png");
+        File.WriteAllBytes(source, Png(300, 400, SKColors.Green));
+        model.AddAs = ItemKind.Token;
+        model.AddPictures([source]);
+        model.Selected = model.Items.Single();
+        model.MakeTokenCommand.Execute(null);
+        await WaitUntil(() => !model.IsBusy && model.Selected!.Item.Width == 512);
+
+        Assert.True(File.Exists(Path.Combine(model.Root, "Bench", "tokens", "portrait.png")));
+        Assert.False(model.ExportFoundryCommand.CanExecute(null));
+
+        // The bench cannot be made twice under its own name.
+        model.NewKitName = "bench";
+        model.NewKitCommand.Execute(null);
+        Assert.True(model.HasError);
+        Assert.Single(model.Kits);
     }
 
     private static async Task WaitUntil(Func<bool> condition)

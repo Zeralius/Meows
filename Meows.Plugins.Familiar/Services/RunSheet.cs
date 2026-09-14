@@ -1,6 +1,6 @@
 using System.Text.RegularExpressions;
 
-namespace Meows.Plugins.Kit.Services;
+namespace Meows.Plugins.Familiar.Services;
 
 /// <summary>One line of a roster, worked out: how many of which token, or a line that is just a line.</summary>
 public sealed record RosterLine(int Count, string Name, KitItem? Token)

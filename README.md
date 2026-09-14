@@ -28,7 +28,7 @@ to install.
 | **[Collar](Meows.Plugins.Collar/README.md)** | Keeps the dates that matter and the paper behind them, and says so on the notification surface when one comes round |
 | **[Scruff](Meows.Plugins.Scruff/README.md)** | Takes the metadata out of pictures, posts them to Bluesky, Mastodon, Discord, DeviantArt and Tumblr, and hands them to FurAffinity, X, Instagram and Reddit with every field spelled that site's way |
 | **[Purr](Meows.Plugins.Purr/README.md)** | Says what Meows is watching, when it last looked, and which watch quietly stopped |
-| **[Kit](Meows.Plugins.Kit/README.md)** | Turns a folder of maps, tokens and handouts into a one-shot the table can use: named, gridded or gridless, fitted, framed, with a run sheet of notes and fights, and handed to Foundry or Roll20 the way each wants it |
+| **[Familiar](Meows.Plugins.Familiar/README.md)** | The wizard's cat for the table: maps gridded or gridless, tokens cut round, handouts framed, on the bench or as a one-shot kit with its run sheet, handed to Foundry or Roll20 the way each wants it |
 | **[Weigh-In](Meows.Plugins.WeighIn/README.md)** | Measures every drive once a day and says what grew: which drive lost how much since last week, and the folders responsible |
 | **[Catnip](Meows.Plugins.Catnip/README.md)** | Finds what was downloaded and never opened, least recently touched first, without opening anything itself |
 | **[Kibble](Meows.Plugins.Kibble/README.md)** | Sorts a folder of new material into queues, one key press at a time, and can bundle a pick into a comic |

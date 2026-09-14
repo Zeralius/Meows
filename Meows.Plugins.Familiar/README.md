@@ -1,16 +1,27 @@
-# Kit
+# Familiar
 
-Turns a folder of maps, tokens and handouts into a one-shot the table can use: named, gridded or
-gridless, fitted, framed, and handed to Foundry or Roll20 the way each wants it.
+The wizard's cat, fetching things for the table. Maps gridded or gridless, tokens cut round with
+a ring, handouts framed: on their own, on the bench, or as a one-shot kit with its run sheet,
+handed to Foundry or Roll20 the way each wants it.
 
-Plugin id `meows.kit`. Plain name **One-shot kits**.
+Plugin id `meows.familiar` (was `meows.kit` until 2.22.0; settings, activation and history
+follow the rename). Plain name **Tabletop pictures**.
+
+## The bench
+
+Not everything is a one-shot. The first entry in the list, **Bench**, is a standing kit under
+`Oneshots\Bench` that is always there: add a portrait, cut it to a token; add a map, grid it or
+frame it; the results sit in the bench's folders, *Open the folder* shows them, and nothing on
+the bench is written for a VTT. It is the same tab and the same verbs with the one-shot part
+left off. When a bench picture turns out to belong to an evening, add it to that kit from the
+bench folder.
 
 ## A kit is a folder
 
 `Oneshots\<name>\` with `maps`, `tokens`, `handouts` and `notes`, and a `kit.json` for what a
 file name cannot hold: the grid, the order the evening reaches things, captions. Delete the
 manifest and it is still a folder of pictures. Every change on the tab is a change to a file;
-the manifest only remembers. Anything Kit alters keeps the picture it started from under
+the manifest only remembers. Anything Familiar alters keeps the picture it started from under
 `originals`, once, so the first original is always the one you can go back to.
 
 *New kit* makes the folder. *Add pictures…* copies pictures in, as maps, tokens or handouts
@@ -107,5 +118,5 @@ the run sheet: each fight, its map, and how many of which token to drag onto the
 
 ## What it is not
 
-A table. Running the session is the VTT's job; Kit stops at its door. And nothing here draws on
+A table. Running the session is the VTT's job; Familiar stops at its door. And nothing here draws on
 a map: a frame goes outside the playable area, always, or the artist's grid would be lost.

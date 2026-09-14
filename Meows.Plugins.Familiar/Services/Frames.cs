@@ -2,7 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using SkiaSharp;
 
-namespace Meows.Plugins.Kit.Services;
+namespace Meows.Plugins.Familiar.Services;
 
 /// <summary>Where a frame's pixels come from: a file on disk when the user dropped it in, the assembly otherwise.</summary>
 public interface IFrame

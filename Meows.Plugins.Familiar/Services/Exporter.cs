@@ -3,7 +3,7 @@ using System.Text.Json;
 using Meows.Media;
 using SkiaSharp;
 
-namespace Meows.Plugins.Kit.Services;
+namespace Meows.Plugins.Familiar.Services;
 
 /// <summary>What an export wrote, and where.</summary>
 public sealed record ExportReport(string Folder, int Files, IReadOnlyList<string> Notes);

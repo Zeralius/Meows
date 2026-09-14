@@ -31,9 +31,44 @@ public sealed class ShellSettings
             CarryOverFromMews(previous, Root);
 
         Directory.CreateDirectory(Root);
+        foreach (var (from, to) in RenamedPlugins)
+            FollowRename(from, to);
     }
 
     public string Root { get; }
+
+    /// <summary>
+    /// Plugins that changed their id. An id is the settings folder and the activation record,
+    /// so a rename without this would open the plugin switched off and on defaults.
+    /// </summary>
+    public static readonly IReadOnlyList<(string From, string To)> RenamedPlugins =
+    [
+        ("meows.kit", "meows.familiar"),
+    ];
+
+    /// <summary>Moves the old id's folder to the new name, once, and rewrites the activation list.</summary>
+    private void FollowRename(string from, string to)
+    {
+        try
+        {
+            var old = Path.Combine(Root, "plugins", from);
+            var current = Path.Combine(Root, "plugins", to);
+            if (Directory.Exists(old) && !Directory.Exists(current))
+                Directory.Move(old, current);
+
+            if (File.Exists(ActivationFile))
+            {
+                var text = File.ReadAllText(ActivationFile);
+                var renamed = text.Replace($"\"{from}\"", $"\"{to}\"");
+                if (renamed != text)
+                    File.WriteAllText(ActivationFile, renamed);
+            }
+        }
+        catch (Exception)
+        {
+            // Worst case the plugin starts fresh and has to be ticked again.
+        }
+    }
 
     /// <summary>
     /// The activation list is stored as plugin ids, and the ids contain the app name. Copying

@@ -90,6 +90,19 @@ public sealed class MeowsStore
                 """);
             Execute(connection, "PRAGMA user_version = 1");
         }
+
+        // A plugin that changed its id keeps its history under the new one.
+        foreach (var (from, to) in ShellSettings.RenamedPlugins)
+        {
+            foreach (var table in new[] { "events", "facts", "seen" })
+            {
+                using var command = connection.CreateCommand();
+                command.CommandText = $"UPDATE {table} SET plugin = $to WHERE plugin = $from";
+                command.Parameters.AddWithValue("$to", to);
+                command.Parameters.AddWithValue("$from", from);
+                command.ExecuteNonQuery();
+            }
+        }
     }
 
     /// <summary>The view one plugin gets: its own events and facts, and the shared seen table.</summary>

@@ -1,5 +1,5 @@
 using Meows.Media;
-using Meows.Plugins.Kit.Services;
+using Meows.Plugins.Familiar.Services;
 using SkiaSharp;
 
 namespace Meows.Tests;
@@ -9,11 +9,11 @@ namespace Meows.Tests;
 /// goes round a map without touching it, the grid guess picks a sensible number, and the
 /// manifest follows the folder.
 /// </summary>
-public sealed class KitPicturesTests : IDisposable
+public sealed class FamiliarPicturesTests : IDisposable
 {
     private readonly string _root = Path.Combine(Path.GetTempPath(), "kit-" + Guid.NewGuid().ToString("N")[..10]);
 
-    public KitPicturesTests() => Directory.CreateDirectory(_root);
+    public FamiliarPicturesTests() => Directory.CreateDirectory(_root);
 
     /// <summary>A solid picture, so every pixel of it is opaque and coloured.</summary>
     private static SKBitmap Solid(int w, int h, SKColor colour)

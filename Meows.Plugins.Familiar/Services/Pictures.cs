@@ -1,6 +1,6 @@
 using SkiaSharp;
 
-namespace Meows.Plugins.Kit.Services;
+namespace Meows.Plugins.Familiar.Services;
 
 /// <summary>How the source sits inside the token circle: how far in, and how far off centre.</summary>
 /// <param name="Zoom">1 fits the shorter side to the circle; 2 shows half of it, twice as large.</param>

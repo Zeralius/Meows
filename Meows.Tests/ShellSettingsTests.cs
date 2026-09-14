@@ -120,6 +120,27 @@ public sealed class ShellSettingsTests : IDisposable
         Assert.Empty(_reported);
     }
 
+    [Fact]
+    public void A_plugin_that_changed_its_id_keeps_its_settings_activation_and_history()
+    {
+        var root = Path.Combine(_root, "Meows");
+        var oldFolder = Path.Combine(root, "plugins", "meows.kit");
+        Directory.CreateDirectory(oldFolder);
+        File.WriteAllText(Path.Combine(oldFolder, "settings.json"), "{\"root\":\"F:\\Oneshots\"}");
+        File.WriteAllText(Path.Combine(root, "activated-plugins.json"), "[\"meows.kibble\",\"meows.kit\"]");
+        new MeowsStore(root, _ => { }).For("meows.kit").Record("token", @"F:\Oneshots.png", "cut");
+
+        var settings = new ShellSettings(root, Path.Combine(_root, "no old folder"));
+        var store = new MeowsStore(root, _ => { });
+
+        Assert.False(Directory.Exists(oldFolder));
+        Assert.True(File.Exists(Path.Combine(root, "plugins", "meows.familiar", "settings.json")));
+        Assert.Contains("meows.familiar", settings.LoadActivatedPlugins());
+        Assert.DoesNotContain("meows.kit", settings.LoadActivatedPlugins());
+        Assert.Single(store.For("meows.familiar").Recent());
+        Assert.Empty(store.For("meows.kit").Recent());
+    }
+
     public void Dispose()
     {
         try

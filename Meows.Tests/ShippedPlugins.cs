@@ -29,7 +29,7 @@ internal static class ShippedPlugins
         typeof(Plugins.TelegramPoster.TelegramPosterPlugin),
         typeof(Plugins.Tin.TinPlugin),
         typeof(Plugins.Purr.PurrPlugin),
-        typeof(Plugins.Kit.KitPlugin),
+        typeof(Plugins.Familiar.FamiliarPlugin),
         typeof(Plugins.WeighIn.WeighInPlugin),
         typeof(Plugins.Catnip.CatnipPlugin),
         // kitten: next plugin goes here

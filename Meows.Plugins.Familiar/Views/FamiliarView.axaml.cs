@@ -4,13 +4,13 @@ using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
 using Meows.Plugins.Abstractions;
-using Meows.Plugins.Kit.ViewModels;
+using Meows.Plugins.Familiar.ViewModels;
 
-namespace Meows.Plugins.Kit.Views;
+namespace Meows.Plugins.Familiar.Views;
 
-public partial class KitView : UserControl, IDisposable
+public partial class FamiliarView : UserControl, IDisposable
 {
-    public KitView()
+    public FamiliarView()
     {
         InitializeComponent();
         this.FindControl<Button>("AddPicturesButton")!.Click += OnAddPictures;
@@ -31,7 +31,7 @@ public partial class KitView : UserControl, IDisposable
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);
 
-    private KitViewModel? Model => DataContext as KitViewModel;
+    private FamiliarViewModel? Model => DataContext as FamiliarViewModel;
 
     private async void OnAddPictures(object? sender, RoutedEventArgs e)
     {
@@ -40,7 +40,7 @@ public partial class KitView : UserControl, IDisposable
 
         var picked = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
         {
-            Title = MeowsText.Current["kit.dialog.pictures"],
+            Title = MeowsText.Current["familiar.dialog.pictures"],
             AllowMultiple = true,
             FileTypeFilter = [FilePickerFileTypes.ImageAll, FilePickerFileTypes.All],
         });
@@ -52,7 +52,7 @@ public partial class KitView : UserControl, IDisposable
     {
         if (Model is not { } model)
             return;
-        if (await PickFolder(MeowsText.Current["kit.dialog.root"]) is { } folder)
+        if (await PickFolder(MeowsText.Current["familiar.dialog.root"]) is { } folder)
             model.SetRoot(folder);
     }
 
@@ -60,7 +60,7 @@ public partial class KitView : UserControl, IDisposable
     {
         if (Model is not { } model)
             return;
-        if (await PickFolder(MeowsText.Current["kit.dialog.export"]) is { } folder)
+        if (await PickFolder(MeowsText.Current["familiar.dialog.export"]) is { } folder)
             model.SetExportRoot(folder);
     }
 

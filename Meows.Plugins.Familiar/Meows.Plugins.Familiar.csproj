@@ -7,7 +7,7 @@
         <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 
-        <OutputPath Condition="'$(Configuration)' == 'Debug'">$(MSBuildThisFileDirectory)..\plugins\Meows.Plugins.Kit\</OutputPath>
+        <OutputPath Condition="'$(Configuration)' == 'Debug'">$(MSBuildThisFileDirectory)..\plugins\Meows.Plugins.Familiar\</OutputPath>
         <OutputPath Condition="'$(Configuration)' != 'Debug'">$(MSBuildThisFileDirectory)bin\$(Configuration)\</OutputPath>
     </PropertyGroup>
 

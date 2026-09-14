@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace Meows.Plugins.Kit.Services;
+namespace Meows.Plugins.Familiar.Services;
 
 /// <summary>What a map's grid is, when it has one. Pixels per square and where the first line sits.</summary>
 public sealed class GridSpec
