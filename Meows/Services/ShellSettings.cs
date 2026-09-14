@@ -300,4 +300,11 @@ public sealed class ShellPreferences
     /// existed. Facts and the seen table are never subject to this.
     /// </summary>
     public int HistoryKeepDays { get; set; }
+
+    /// <summary>
+    /// Per log source, the least a line has to be to show: "warning" for warnings and errors
+    /// only, "quiet" for nothing. A source not listed shows everything. The file keeps it all
+    /// regardless; this is about the pane and the Log tab.
+    /// </summary>
+    public Dictionary<string, string> LogLevels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 }

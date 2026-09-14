@@ -376,7 +376,7 @@ public sealed class MouserViewModel : ObservableObject, IDisposable, ISearchable
         if (!outcome.Succeeded)
         {
             ErrorMessage = outcome.FailureReason ?? _host.Text["mouser.error.nothing"];
-            _host.Log($"Mouser could not remove {items.Count} thing(s): {ErrorMessage}");
+            _host.Log(LogLevel.Warning, $"Mouser could not remove {items.Count} thing(s): {ErrorMessage}");
         }
         else
         {
@@ -412,7 +412,7 @@ public sealed class MouserViewModel : ObservableObject, IDisposable, ISearchable
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not save Mouser settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Mouser settings: {ex.Message}");
         }
     }
 

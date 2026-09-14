@@ -455,7 +455,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
             ErrorMessage = outcome.FailureReason;
 
         StatusMessage = _host.Text.Format("purrge.status.removed", what, outcome.Deleted);
-        _host.Log($"Purrge {what}: {outcome.Deleted} deleted, {outcome.Failed} failed");
+        _host.Log(LogLevel.Warning, $"Purrge {what}: {outcome.Deleted} deleted, {outcome.Failed} failed");
 
         foreach (var file in gone)
             _host.Store.Record("recycled", file.FullPath, what, new Dictionary<string, string> { ["size"] = file.File.Size.ToString() });
@@ -622,7 +622,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not save Purrge settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Purrge settings: {ex.Message}");
         }
     }
 

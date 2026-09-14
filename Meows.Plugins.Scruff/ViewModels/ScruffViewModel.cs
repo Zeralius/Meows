@@ -514,7 +514,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
             catch (Exception ex)
             {
                 await Dispatcher.UIThread.InvokeAsync(() => file.Failure = ex.Message);
-                _host.Log($"Scruff could not read {file.Path}: {ex.Message}");
+                _host.Log(LogLevel.Warning, $"Scruff could not read {file.Path}: {ex.Message}");
             }
         }
 
@@ -649,7 +649,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
             }, _closing.Token);
 
             Status = _host.Text.Format("scruff.status.cleaned", written, removed);
-            _host.Log($"Scruff cleaned {written} file(s), {removed} carried something, {failures.Count} failed.");
+            _host.Log(LogLevel.Warning, $"Scruff cleaned {written} file(s), {removed} carried something, {failures.Count} failed.");
             _host.Notifications.Post(NotificationSeverity.Info, _host.Text["scruff.notify.cleaned"], Status);
 
             if (failures.Count > 0)
@@ -782,7 +782,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
                             failed++;
                             target.Outcome = result.Error ?? _host.Text["scruff.outcome.failed"];
                             target.Failed = true;
-                            _host.Log($"Scruff could not post to {target.Name}: {result.Error}");
+                            _host.Log(LogLevel.Warning, $"Scruff could not post to {target.Name}: {result.Error}");
                         }
                     }
                     else if (target.Target is IManualTarget hand)
@@ -808,7 +808,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
                     failed++;
                     target.Outcome = ex.Message;
                     target.Failed = true;
-                    _host.Log($"Scruff failed on {target.Name}: {ex}");
+                    _host.Log(LogLevel.Warning, $"Scruff failed on {target.Name}: {ex}");
                 }
                 finally
                 {
@@ -940,7 +940,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
         }
         catch (Exception ex)
         {
-            _host.Log($"Scruff could not read the {name} credential: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Scruff could not read the {name} credential: {ex.Message}");
             return null;
         }
     }
@@ -1028,7 +1028,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
         {
             card.LoginB = "";
             ErrorMessage = _host.Text.Format("scruff.error.signin", card.Name, ex.Message);
-            _host.Log($"Scruff could not sign in to {card.Name}: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Scruff could not sign in to {card.Name}: {ex.Message}");
         }
         finally
         {
@@ -1111,7 +1111,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not save Scruff settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Scruff settings: {ex.Message}");
         }
     }
 

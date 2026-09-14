@@ -301,7 +301,7 @@ public sealed class BackgroundTaskService : IDisposable
             catch (Exception ex)
             {
                 failure = ex.Message;
-                _log.Write(source, $"Background task '{title}' failed: {ex}");
+                _log.Write(source, $"Background task '{title}' failed: {ex}", LogLevel.Error);
                 _notifications.Post(source, NotificationSeverity.Error,
                     $"{title} failed", ex.Message, RestartActionFor?.Invoke(pluginId));
             }

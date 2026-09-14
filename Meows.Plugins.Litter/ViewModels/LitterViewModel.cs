@@ -353,7 +353,7 @@ public sealed class LitterViewModel : ObservableObject, IDisposable, ISearchable
         if (!outcome.Succeeded)
         {
             ErrorMessage = outcome.FailureReason ?? _host.Text["litter.error.nothing"];
-            _host.Log($"Litter could not remove {items.Count} item(s): {ErrorMessage}");
+            _host.Log(LogLevel.Warning, $"Litter could not remove {items.Count} item(s): {ErrorMessage}");
             Refresh();
             return;
         }
@@ -393,7 +393,7 @@ public sealed class LitterViewModel : ObservableObject, IDisposable, ISearchable
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not save Litter settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Litter settings: {ex.Message}");
         }
     }
 

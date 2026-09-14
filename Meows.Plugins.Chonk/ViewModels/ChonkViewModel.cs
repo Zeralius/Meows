@@ -534,7 +534,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not work out what {entry.Path} is: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not work out what {entry.Path} is: {ex.Message}");
         }
         finally
         {
@@ -739,7 +739,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable
         if (!outcome.Succeeded)
         {
             ErrorMessage = outcome.FailureReason ?? _host.Text[$"chonk.error.{what}"];
-            _host.Log($"Chonk could not remove {entry.Path}: {ErrorMessage}");
+            _host.Log(LogLevel.Warning, $"Chonk could not remove {entry.Path}: {ErrorMessage}");
             return;
         }
 
@@ -779,7 +779,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not save Chonk settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Chonk settings: {ex.Message}");
         }
     }
 

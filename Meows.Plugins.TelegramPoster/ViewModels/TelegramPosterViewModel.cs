@@ -621,7 +621,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISe
         catch (Exception ex)
         {
             ErrorMessage = _host.Text.Format("tp.error.writeconfig", ex.Message);
-            _host.Log($"Saving config.json failed: {ex}");
+            _host.Log(LogLevel.Warning, $"Saving config.json failed: {ex}");
         }
     }
 
@@ -748,7 +748,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISe
             }
             catch (Exception ex)
             {
-                _host.Log($"Could not start with '{candidate}': {ex.Message}");
+                _host.Log(LogLevel.Warning, $"Could not start with '{candidate}': {ex.Message}");
             }
         }
 

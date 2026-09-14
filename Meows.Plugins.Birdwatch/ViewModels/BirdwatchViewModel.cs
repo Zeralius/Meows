@@ -564,7 +564,7 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
                     // the usual cause and the message says which one.
                     watched.Status = _host.Text["birdwatch.watched.failed"];
                     failures.Add($"{watched.Handle}: {Explain(ex)}");
-                    _host.Log($"Birdwatch could not read {watched.Handle}: {ex.Message}");
+                    _host.Log(LogLevel.Warning, $"Birdwatch could not read {watched.Handle}: {ex.Message}");
                 }
                 finally
                 {
@@ -756,7 +756,7 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
 
                 case SaveOutcome.Failed:
                     ErrorMessage = _host.Text.Format("birdwatch.error.save", result.Detail ?? "");
-                    _host.Log($"Birdwatch could not save from {media.Post.Id}: {result.Detail}");
+                    _host.Log(LogLevel.Warning, $"Birdwatch could not save from {media.Post.Id}: {result.Detail}");
                     break;
             }
         }
@@ -802,7 +802,7 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not save Birdwatch settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Birdwatch settings: {ex.Message}");
         }
     }
 

@@ -88,6 +88,12 @@ by default, or a year, six months, three months or a month, applied when Meows s
 day while it runs; Purr lists that pass under Meows. Neither forgetting ever touches the facts a
 plugin keeps or the hashes anything has seen.
 
+The **Log** tab is what Meows and the plugins said this run, with a word to filter on, a source
+to narrow to, *Only trouble* to see the warnings and errors, and on the right a level per source:
+everything, warnings and errors, or nothing, which is quiet mode for a plugin with a lot to say.
+The bottom pane shows the same lines under the same levels; `meows.log` keeps every line
+regardless.
+
 Settings, logs and that history live in `%APPDATA%\Meows`, never inside the folder you unzipped,
 so deleting that folder resets Meows completely. `meows.log` there is also where a crash gets written, stack
 trace and all, which is worth attaching to a bug report. The log stays in English whatever the

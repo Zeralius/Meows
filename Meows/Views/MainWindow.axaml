@@ -218,8 +218,8 @@
             <ScrollViewer Padding="10,6">
                 <ItemsControl ItemsSource="{Binding LogLines}">
                     <ItemsControl.ItemTemplate>
-                        <DataTemplate x:DataType="x:String">
-                            <TextBlock Text="{Binding}"
+                        <DataTemplate x:DataType="svc:LogEntry">
+                            <TextBlock Text="{Binding Text}"
                                        FontFamily="Cascadia Mono,Consolas,monospace"
                                        FontSize="11"
                                        Opacity="0.75"

@@ -285,6 +285,24 @@ settings key and moving it later orphans whatever was stored.
 Everything below is what the template writes and why, which is worth reading once even if you
 never write it by hand.
 
+## Starting inside the repository: Kitten
+
+The template is for a plugin that lives outside this repository and drops into a `plugins`
+folder. A plugin that lives *here* and ships with the release has more to be: on the solution,
+referenced by the test project, on the shipped list every plugin-wide test walks, in the README
+table, with a version bump and a changelog line. **Kitten** writes all of it from a name:
+
+```bash
+dotnet run --project Meows.Kitten -- Whiskers --plain "Print queue" --icon 🧵 --category group.disk
+```
+
+It writes the project in the house style, view model with the header state, error strip,
+language watch, `ISearchable` hook and dispose, both string catalogues, a README and a test
+file, makes the six edits, then builds the plugin, builds the tests and runs every test that
+knows every plugin, so a template that has drifted from the shell fails in the terminal rather
+than at release time. `--dry-run` says what would happen; `--no-verify` skips the build. See
+[Meows.Kitten/README.md](Meows.Kitten/README.md).
+
 ## 3. The entry point
 
 ```csharp
@@ -330,6 +348,7 @@ public interface IMeowsHost
     string PluginId { get; }
     string DataDirectory { get; }
     void Log(string message);
+    void Log(LogLevel level, string message); // 0.9.0
     T? LoadSettings<T>() where T : class;
     void SaveSettings<T>(T settings) where T : class;
     IMeowsNotifications Notifications { get; }
@@ -354,9 +373,16 @@ and databases here. Never write inside the repository or next to the executable.
 
 ### `Log`
 
-Goes to the shared log pane and `%APPDATA%\Meows\meows.log`. Safe from any thread. Use it for a
-trail you would want when something misbehaves, not for anything the user must act on. That is
-what notifications are for.
+Goes to the shared log pane, the Log tab and `%APPDATA%\Meows\meows.log`. Safe from any thread.
+Use it for a trail you would want when something misbehaves, not for anything the user must act
+on. That is what notifications are for.
+
+`Log(LogLevel.Warning, ...)` and `Log(LogLevel.Error, ...)` (0.9.0) mark a line as trouble: the
+Log tab colours it, counts it, and can be set to show *only* trouble, and a person who has turned
+your plugin down to *Warnings and errors* on that tab still sees it. Plain `Log(...)` is Info.
+The file keeps every line whatever the tab is set to; the levels decide what is shown, which is
+what "quiet" means for a plugin with a lot to say. Say what failed at Warning, what went wrong in
+a way that needs looking at at Error, and everything else at Info.
 
 ### Settings
 

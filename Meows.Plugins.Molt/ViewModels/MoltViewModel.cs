@@ -338,7 +338,7 @@ public sealed class MoltViewModel : ObservableObject, IDisposable, ISearchable
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not save Molt settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Molt settings: {ex.Message}");
         }
     }
 

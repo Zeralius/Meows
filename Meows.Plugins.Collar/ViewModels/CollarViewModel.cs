@@ -610,7 +610,7 @@ public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not save Collar settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Collar settings: {ex.Message}");
         }
     }
 

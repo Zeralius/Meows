@@ -314,7 +314,7 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable, ISearchable
         catch (Exception ex)
         {
             ErrorMessage = _host.Text.Format("saucer.error.save", IntakeFolder, ex.Message);
-            _host.Log($"Saucer could not save a clipping: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Saucer could not save a clipping: {ex.Message}");
             return null;
         }
     }
@@ -413,7 +413,7 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable, ISearchable
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not save Saucer settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Saucer settings: {ex.Message}");
         }
     }
 

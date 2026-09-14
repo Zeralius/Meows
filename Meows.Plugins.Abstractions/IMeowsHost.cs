@@ -11,6 +11,13 @@ public interface IMeowsHost
     /// <summary>Goes to the shared log pane and meows.log. Safe from any thread.</summary>
     void Log(string message);
 
+    /// <summary>
+    /// The same, with a level, so a warning reads as one on the Log tab and survives a plugin
+    /// being turned down to warnings only. Since 0.8.0; the default drops the level, so a shell
+    /// from before still gets the line.
+    /// </summary>
+    void Log(LogLevel level, string message) => Log(message);
+
     /// <summary>The shell's notification surface, scoped to this plugin.</summary>
     IMeowsNotifications Notifications { get; }
 

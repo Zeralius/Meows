@@ -1,9 +1,23 @@
 using System.Collections.ObjectModel;
 using Avalonia.Threading;
+using Meows.Plugins.Abstractions;
 
 namespace Meows.Services;
 
-/// <summary>The shared log. Bounded, so a chatty plugin cannot eat memory.</summary>
+/// <summary>One line of the log, with its parts kept apart so the tab can filter on them.</summary>
+public sealed record LogEntry(DateTime At, string Source, LogLevel Level, string Message)
+{
+    public string Text => $"{At:HH:mm:ss} [{Source}] {Message}";
+
+    public bool IsWarning => Level == LogLevel.Warning;
+
+    public bool IsError => Level == LogLevel.Error;
+}
+
+/// <summary>
+/// The shared log. Bounded, so a chatty plugin cannot eat memory. Everything goes to the file;
+/// what the pane and the Log tab show is theirs to decide, per source, which is what "quiet" is.
+/// </summary>
 public sealed class ShellLog
 {
     private const int MaxLines = 2000;
@@ -28,20 +42,41 @@ public sealed class ShellLog
         }
     }
 
-    public ObservableCollection<string> Lines { get; } = new();
+    public DateTime StartedAt { get; } = DateTime.Now;
 
-    public void Write(string source, string message)
+    public string? FilePath => _logFile;
+
+    /// <summary>Every line this run, oldest first, on the UI thread.</summary>
+    public ObservableCollection<LogEntry> Entries { get; } = new();
+
+    /// <summary>The lines as text, for anything that only wants to read them.</summary>
+    public IEnumerable<string> Lines => Entries.Select(e => e.Text);
+
+    /// <summary>Raised on the UI thread after a line lands in <see cref="Entries"/>.</summary>
+    public event Action<LogEntry>? Written;
+
+    public void Write(string source, string message) => Write(source, message, LogLevel.Info);
+
+    public void Write(string source, string message, LogLevel level)
     {
-        var line = $"{DateTime.Now:HH:mm:ss} [{source}] {message}";
-        AppendToFile(line);
+        var entry = new LogEntry(DateTime.Now, source, level, message);
+        AppendToFile(level == LogLevel.Info ? entry.Text : $"{entry.At:HH:mm:ss} [{source}] {Tag(level)} {message}");
 
         Dispatcher.UIThread.Post(() =>
         {
-            Lines.Add(line);
-            while (Lines.Count > MaxLines)
-                Lines.RemoveAt(0);
+            Entries.Add(entry);
+            while (Entries.Count > MaxLines)
+                Entries.RemoveAt(0);
+            Written?.Invoke(entry);
         });
     }
+
+    private static string Tag(LogLevel level) => level switch
+    {
+        LogLevel.Warning => "WARN",
+        LogLevel.Error => "ERROR",
+        _ => "",
+    };
 
     private void AppendToFile(string line)
     {

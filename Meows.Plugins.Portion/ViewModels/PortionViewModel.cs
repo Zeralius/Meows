@@ -522,7 +522,7 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
                     failed++;
                     row.Outcome = outcome.Error ?? _host.Text["portion.outcome.failed"];
                     row.Failed = true;
-                    _host.Log($"Portion could not shrink {row.Heavy.Path}: {outcome.Error}");
+                    _host.Log(LogLevel.Warning, $"Portion could not shrink {row.Heavy.Path}: {outcome.Error}");
                 }
             }
 
@@ -631,7 +631,7 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not save Portion settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Portion settings: {ex.Message}");
         }
     }
 

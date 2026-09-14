@@ -435,7 +435,7 @@ public sealed class PerchViewModel : ObservableObject, IDisposable, ISearchable
         catch (Exception ex)
         {
             ErrorMessage = _host.Text.Format("perch.error.read", ex.Message);
-            _host.Log($"Perch could not read the bot: {ex}");
+            _host.Log(LogLevel.Warning, $"Perch could not read the bot: {ex}");
         }
         finally
         {
@@ -572,7 +572,7 @@ public sealed class PerchViewModel : ObservableObject, IDisposable, ISearchable
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not save Perch settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Perch settings: {ex.Message}");
         }
     }
 

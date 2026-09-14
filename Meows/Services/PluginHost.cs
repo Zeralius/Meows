@@ -53,6 +53,8 @@ public sealed class PluginHost : IMeowsHost
 
     public void Log(string message) => _log.Write(DisplayName, message);
 
+    public void Log(LogLevel level, string message) => _log.Write(DisplayName, message, level);
+
     public T? LoadSettings<T>() where T : class => _settings.LoadPluginSettings<T>(PluginId);
 
     public void SaveSettings<T>(T settings) where T : class => _settings.SavePluginSettings(PluginId, settings);

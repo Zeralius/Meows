@@ -230,7 +230,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not read Kibble's journal for undo: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not read Kibble's journal for undo: {ex.Message}");
             return;
         }
 
@@ -1086,7 +1086,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
             _blocked = (result, destination, file);
             BlockedReason = result.Detail;
             RaiseBlockedWays();
-            _host.Log($"Not sent: {file.FileName} to {destination.Name}: {result.Detail}");
+            _host.Log(LogLevel.Warning, $"Not sent: {file.FileName} to {destination.Name}: {result.Detail}");
             return;
         }
 
@@ -1133,7 +1133,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         {
             // Same as a refused single file. Everything stays picked and in the grid.
             BlockedReason = result.Detail;
-            _host.Log($"Not sent: comic to {destination.Name}: {result.Detail}");
+            _host.Log(LogLevel.Warning, $"Not sent: comic to {destination.Name}: {result.Detail}");
             return;
         }
 
@@ -1178,7 +1178,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         if (sent.Count == 0)
         {
             BlockedReason = string.Join("\n", refused);
-            _host.Log($"Nothing sent to {destination.Name}: {refused.Count} refused");
+            _host.Log(LogLevel.Warning, $"Nothing sent to {destination.Name}: {refused.Count} refused");
             return;
         }
 
@@ -1668,7 +1668,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not save Kibble settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Kibble settings: {ex.Message}");
         }
     }
 

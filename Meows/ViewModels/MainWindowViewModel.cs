@@ -229,6 +229,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private void Retranslate()
     {
         _history?.Retranslate();
+        _logTab?.Retranslate();
         foreach (var entry in Plugins)
             entry.Rename();
         Regroup();
@@ -253,7 +254,10 @@ public sealed class MainWindowViewModel : ObservableObject
     /// <summary>The same plugins under their headings, which is what the tab actually shows.</summary>
     public ObservableCollection<PluginGroupViewModel> PluginGroups { get; } = new();
 
-    public ObservableCollection<string> LogLines => _log.Lines;
+    /// <summary>The bottom pane shows what the Log tab shows: the same per-source levels apply.</summary>
+    public ObservableCollection<LogEntry> LogLines => _logTab.Visible;
+
+    private LogViewModel _logTab = null!;
 
     public ObservableCollection<NotificationItem> Notifications => _notifications.Items;
 
@@ -414,6 +418,10 @@ public sealed class MainWindowViewModel : ObservableObject
             _historyTab = new TabViewModel("shell.tab.history", "≡", new HistoryView { DataContext = _history });
             Tabs.Add(_historyTab);
         }
+
+        _logTab = new LogViewModel(_log, ReadLogLevels(), SaveLogLevels);
+        Tabs.Add(new TabViewModel("shell.tab.log", "≣", new LogView { DataContext = _logTab }));
+        OnPropertyChanged(nameof(LogLines));
         SelectedTab = Tabs[0];
         _background.RestartActionFor = RestartActionFor;
         Rescan();
@@ -558,6 +566,30 @@ public sealed class MainWindowViewModel : ObservableObject
             : "a file";
 
         return MeowsText.Current.Format("plugins.missingfile", name);
+    }
+
+    private IReadOnlyDictionary<string, LogLevel> ReadLogLevels()
+    {
+        var levels = new Dictionary<string, LogLevel>(StringComparer.OrdinalIgnoreCase);
+        foreach (var (source, level) in _preferences.LogLevels)
+        {
+            levels[source] = level switch
+            {
+                "warning" => LogLevel.Warning,
+                "quiet" => LogViewModel.Quiet,
+                _ => LogLevel.Info,
+            };
+        }
+        return levels;
+    }
+
+    private void SaveLogLevels(IReadOnlyDictionary<string, LogLevel> levels)
+    {
+        _preferences.LogLevels = levels.ToDictionary(
+            p => p.Key,
+            p => p.Value == LogViewModel.Quiet ? "quiet" : p.Value == LogLevel.Warning ? "warning" : "info",
+            StringComparer.OrdinalIgnoreCase);
+        _settings.SavePreferences(_preferences);
     }
 
     /// <summary>The open plugin's view model, if it reverses its own history lines. Not opened for the asking.</summary>

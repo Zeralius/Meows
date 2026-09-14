@@ -1131,7 +1131,7 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable
         }
         catch (Exception ex)
         {
-            _host.Log($"Could not save Tin settings: {ex.Message}");
+            _host.Log(LogLevel.Warning, $"Could not save Tin settings: {ex.Message}");
         }
     }
 
