@@ -1,6 +1,7 @@
 using Meows.Plugins.Abstractions;
 using Meows.Plugins.Collar.Services;
 using Meows.Plugins.Collar.ViewModels;
+using Avalonia.Headless.XUnit;
 using Meows.Services;
 
 namespace Meows.Tests;
@@ -15,7 +16,11 @@ public sealed class NotificationActionTests : IDisposable
 
     public NotificationActionTests() => Directory.CreateDirectory(_root);
 
-    [Fact]
+    /// <summary>
+    /// The centre hops to the UI thread when it is not on it, and the test thread only counts
+    /// as the UI thread when the headless app has been touched first. Touch it.
+    /// </summary>
+    [AvaloniaFact]
     public void The_centre_keeps_every_button_and_the_first_is_still_the_action()
     {
         var centre = new NotificationCenter();
