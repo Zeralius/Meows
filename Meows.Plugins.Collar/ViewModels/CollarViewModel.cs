@@ -524,8 +524,45 @@ public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable
             ? _host.Text.Format("collar.notify.more", named, worst.Count - 3)
             : named;
 
+        // One date due is the common case and the one worth a verb: dealt with, or not this
+        // week. Several due is a list, and the tab is the place for a list.
+        if (worst.Count == 1)
+        {
+            var only = worst[0];
+            _host.Notifications.SetCondition(DueKey, severity, title, message,
+                new NotificationAction(_host.Text["collar.notify.done"], () => HandleFromNotification(only)),
+                new NotificationAction(_host.Text["collar.notify.snooze"], () => SnoozeFromNotification(only)),
+                new NotificationAction(_host.Text["collar.notify.recheck"], Refresh));
+            return;
+        }
+
         _host.Notifications.SetCondition(DueKey, severity, title, message,
             new NotificationAction(_host.Text["collar.notify.recheck"], Refresh));
+    }
+
+    /// <summary>The Done button on the notification: the same as Handle on the tab, for that entry.</summary>
+    private void HandleFromNotification(CollarEntry entry)
+    {
+        var name = entry.Title.Trim().Length > 0 ? entry.Title.Trim() : _host.Text["collar.untitled"];
+        Dates.Handle(entry, DateTime.Today);
+        _host.Store.Record("handled", name, entry.RepeatMonths > 0 ? entry.Due.ToString("yyyy-MM-dd") : null);
+        Save();
+        Rebuild();
+        Recheck();
+    }
+
+    /// <summary>
+    /// A week from today, not a week from when it was due: snoozing something three weeks
+    /// overdue by a week would land it two weeks in the past and ring again at once.
+    /// </summary>
+    private void SnoozeFromNotification(CollarEntry entry)
+    {
+        var name = entry.Title.Trim().Length > 0 ? entry.Title.Trim() : _host.Text["collar.untitled"];
+        entry.Due = DateTime.Today.AddDays(7);
+        _host.Store.Record("snoozed", name, entry.Due.ToString("yyyy-MM-dd"));
+        Save();
+        Rebuild();
+        Recheck();
     }
 
     private void Retranslate()

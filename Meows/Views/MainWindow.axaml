@@ -120,12 +120,23 @@
                                             </StackPanel>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
-                                            <Button Content="{Binding ActionLabel}"
-                                                    FontSize="11"
-                                                    Padding="8,2"
-                                                    IsVisible="{Binding HasAction}"
-                                                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).InvokeNotificationActionCommand}"
-                                                    CommandParameter="{Binding}" />
+                                            <!-- As many buttons as the plugin gave it, each its own verb. -->
+                                            <ItemsControl ItemsSource="{Binding Buttons}" IsVisible="{Binding HasAction}">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <StackPanel Orientation="Horizontal" Spacing="6" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="svc:NotificationButton">
+                                                        <Button Content="{Binding Label}"
+                                                                FontSize="11"
+                                                                Padding="8,2"
+                                                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).InvokeNotificationActionCommand}"
+                                                                CommandParameter="{Binding}" />
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
                                             <Button Content="✕"
                                                     FontSize="11"
                                                     Padding="7,2"

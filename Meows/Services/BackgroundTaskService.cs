@@ -179,6 +179,13 @@ public sealed class BackgroundTaskService : IDisposable
     public ObservableCollection<BackgroundTaskItem> Running { get; } = new();
 
     /// <summary>
+    /// What a failed task's notification offers: the window sets this to "switch the plugin off
+    /// and on", which is the only way a stopped schedule starts again. Null for a plugin the
+    /// window cannot restart, the shell's own included.
+    /// </summary>
+    public Func<string, NotificationAction?>? RestartActionFor { get; set; }
+
+    /// <summary>
     /// Every schedule, kept after it ends so a watch that failed can still be seen to have
     /// failed. Cleared for a plugin when it is switched off, since its watches went with it.
     /// </summary>
@@ -296,7 +303,7 @@ public sealed class BackgroundTaskService : IDisposable
                 failure = ex.Message;
                 _log.Write(source, $"Background task '{title}' failed: {ex}");
                 _notifications.Post(source, NotificationSeverity.Error,
-                    $"{title} failed", ex.Message, action: null);
+                    $"{title} failed", ex.Message, RestartActionFor?.Invoke(pluginId));
             }
             finally
             {

@@ -24,6 +24,7 @@
   "portion.nopreview": "No preview for this file",
   "portion.nothingselected": "Nothing selected",
   "portion.notify.found": "Portion found files the bot will fail on",
+  "portion.notify.shrinkall": "Shrink what can be shrunk",
   "portion.notify.shrunk": "Portion has finished shrinking",
   "portion.outcome.done": "Shrunk from {0} to {1}. The original is in the Recycle Bin.",
   "portion.outcome.failed": "Could not be shrunk.",

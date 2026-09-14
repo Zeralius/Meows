@@ -26,6 +26,9 @@ public sealed class FakeHost : IMeowsHost
 
     public Dictionary<string, string> Conditions { get; } = [];
 
+    /// <summary>The buttons on the last condition or post per key, so a test can press one.</summary>
+    public Dictionary<string, IReadOnlyList<NotificationAction>> Buttons { get; } = [];
+
     public IMeowsNotifications Notifications => new FakeNotifications(this);
 
     public IMeowsBackgroundWork Background { get; } = new FakeBackgroundWork();
@@ -216,10 +219,22 @@ public sealed class FakeHost : IMeowsHost
     private sealed class FakeNotifications(FakeHost host) : IMeowsNotifications
     {
         public void Post(NotificationSeverity severity, string title, string message = "",
-            NotificationAction? action = null) => host.Lines.Add($"post: {title}");
+            NotificationAction? action = null) => Post(severity, title, message, action is null ? [] : [action]);
+
+        public void Post(NotificationSeverity severity, string title, string message, params NotificationAction[] actions)
+        {
+            host.Lines.Add($"post: {title}");
+            host.Buttons["post:" + title] = actions;
+        }
 
         public void SetCondition(string key, NotificationSeverity severity, string title,
-            string message = "", NotificationAction? action = null) => host.Conditions[key] = title;
+            string message = "", NotificationAction? action = null) => SetCondition(key, severity, title, message, action is null ? [] : [action]);
+
+        public void SetCondition(string key, NotificationSeverity severity, string title, string message, params NotificationAction[] actions)
+        {
+            host.Conditions[key] = title;
+            host.Buttons[key] = actions;
+        }
 
         public void ClearCondition(string key) => host.Conditions.Remove(key);
     }

@@ -462,7 +462,11 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
             : _host.Text.Format("portion.status.found", failing, fixable, found.Count - failing);
 
         _host.Log($"Portion weighed the queues: {failing} would fail, {fixable} shrinkable, {found.Count - failing} notes.");
-        if (failing > 0)
+        if (failing > 0 && fixable > 0)
+            _host.Notifications.Post(NotificationSeverity.Warning, _host.Text["portion.notify.found"], Status,
+                new NotificationAction(_host.Text["portion.notify.shrinkall"],
+                    () => _ = ShrinkAsync(Heavies.Where(h => h.CanShrink).ToList()), DismissesAfter: true));
+        else if (failing > 0)
             _host.Notifications.Post(NotificationSeverity.Warning, _host.Text["portion.notify.found"], Status);
 
         OnPropertyChanged(nameof(IsEmpty));

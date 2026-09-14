@@ -19,7 +19,13 @@ public sealed class NotificationItem
 
     public string Message { get; init; } = "";
 
-    public NotificationAction? Action { get; init; }
+    /// <summary>The first button, for anything written when there was only ever one.</summary>
+    public NotificationAction? Action => Actions.Count > 0 ? Actions[0] : null;
+
+    public IReadOnlyList<NotificationAction> Actions { get; init; } = [];
+
+    /// <summary>Each button paired with the item it sits on, so one command can serve them all.</summary>
+    public IReadOnlyList<NotificationButton> Buttons => Actions.Select(a => new NotificationButton(this, a)).ToList();
 
     /// <summary>Set for conditions, null for one-off events.</summary>
     public string? ConditionKey { get; init; }
@@ -33,7 +39,7 @@ public sealed class NotificationItem
 
     public bool HasMessage => Message.Length > 0;
 
-    public bool HasAction => Action is not null;
+    public bool HasAction => Actions.Count > 0;
 
     public string ActionLabel => Action?.Label ?? "";
 
@@ -76,7 +82,11 @@ public sealed class NotificationCenter
         : Items.Max(i => i.Severity);
 
     public void Post(string source, NotificationSeverity severity, string title, string message,
-        NotificationAction? action)
+        NotificationAction? action) =>
+        Post(source, severity, title, message, action is null ? [] : [action]);
+
+    public void Post(string source, NotificationSeverity severity, string title, string message,
+        IReadOnlyList<NotificationAction> actions)
     {
         OnUiThread(() =>
         {
@@ -86,7 +96,7 @@ public sealed class NotificationCenter
                 Severity = severity,
                 Title = title,
                 Message = message,
-                Action = action,
+                Actions = actions,
             });
 
             // Only trim events. Conditions stay until their plugin clears them.
@@ -101,7 +111,11 @@ public sealed class NotificationCenter
     }
 
     public void SetCondition(string source, string key, NotificationSeverity severity, string title,
-        string message, NotificationAction? action)
+        string message, NotificationAction? action) =>
+        SetCondition(source, key, severity, title, message, action is null ? [] : [action]);
+
+    public void SetCondition(string source, string key, NotificationSeverity severity, string title,
+        string message, IReadOnlyList<NotificationAction> actions)
     {
         OnUiThread(() =>
         {
@@ -112,7 +126,7 @@ public sealed class NotificationCenter
                 Severity = severity,
                 Title = title,
                 Message = message,
-                Action = action,
+                Actions = actions,
                 ConditionKey = key,
             });
             Changed?.Invoke();
@@ -166,6 +180,12 @@ public sealed class NotificationCenter
 }
 
 /// <summary>What a plugin actually gets, with its own name baked in as the source.</summary>
+/// <summary>One button on one notification, which is what the view's buttons bind to.</summary>
+public sealed record NotificationButton(NotificationItem Item, NotificationAction Action)
+{
+    public string Label => Action.Label;
+}
+
 public sealed class PluginNotifications : IMeowsNotifications
 {
     private readonly NotificationCenter _center;
@@ -184,6 +204,12 @@ public sealed class PluginNotifications : IMeowsNotifications
     public void SetCondition(string key, NotificationSeverity severity, string title, string message = "",
         NotificationAction? action = null) =>
         _center.SetCondition(_source, key, severity, title, message, action);
+
+    public void Post(NotificationSeverity severity, string title, string message, params NotificationAction[] actions) =>
+        _center.Post(_source, severity, title, message, actions);
+
+    public void SetCondition(string key, NotificationSeverity severity, string title, string message, params NotificationAction[] actions) =>
+        _center.SetCondition(_source, key, severity, title, message, actions);
 
     public void ClearCondition(string key) => _center.ClearCondition(_source, key);
 }

@@ -24,6 +24,7 @@
   "portion.nopreview": "Keine Vorschau für diese Datei",
   "portion.nothingselected": "Nichts ausgewählt",
   "portion.notify.found": "Portion hat Dateien gefunden, an denen der Bot scheitern wird",
+  "portion.notify.shrinkall": "Verkleinern, was geht",
   "portion.notify.shrunk": "Portion ist mit dem Verkleinern fertig",
   "portion.outcome.done": "Von {0} auf {1} verkleinert. Das Original liegt im Papierkorb.",
   "portion.outcome.failed": "Ließ sich nicht verkleinern.",

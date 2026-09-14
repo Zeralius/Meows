@@ -40,6 +40,7 @@
   "history.title": "Was die Plugins getan haben",
   "language.name.de": "Deutsch",
   "language.name.en": "Englisch",
+  "notify.restart": "Plugin neu starten",
   "palette.goto": "Zu {0}",
   "palette.hint": "Tippe ein Plugin, eine Einstellung, etwas, das ein offenes Plugin gerade zeigt, oder eine Zeile aus dem Verlauf",
   "palette.language.de": "Deutsch",

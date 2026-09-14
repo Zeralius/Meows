@@ -342,6 +342,8 @@ public interface IMeowsHost
 }
 ```
 
+`Notifications` grew its many-button overloads in 0.8.0; see [section 6](#6-notifications).
+
 The last four have defaults, so a plugin built against an older contract still compiles and
 loads; the defaults hand back the key, hold no secrets, and reach no other plugin.
 
@@ -644,6 +646,12 @@ public interface IMeowsNotifications
     void SetCondition(string key, NotificationSeverity severity, string title,
         string message = "", NotificationAction? action = null);
 
+    // 0.8.0: as many buttons as the event deserves
+    void Post(NotificationSeverity severity, string title, string message,
+        params NotificationAction[] actions);
+    void SetCondition(string key, NotificationSeverity severity, string title,
+        string message, params NotificationAction[] actions);
+
     void ClearCondition(string key);
 }
 ```
@@ -676,6 +684,15 @@ Everything you raised is retracted automatically when you are deactivated.
 
 `NotificationAction.Invoke` is called on the UI thread, and the shell catches anything it
 throws.
+
+**Buttons that do the thing.** A notification can carry two or three actions, each its own
+verb, since 0.8.0: Collar's one due date has *Done*, *Not this week* and *Look again*; Portion's
+warning has *Shrink what can be shrunk*; a failed schedule's error has *Restart the plugin*, put
+there by the shell. `DismissesAfter: true` on an action takes an event notification down once
+the button has done its work, which is what a button on a toast usually means; a condition is
+never dismissed that way, your own action clears it if it no longer applies. More than three
+buttons is a list, and a list belongs on your tab. A shell from before 0.8.0 shows the first
+button only, through the defaults on the interface.
 
 ### Notification or in-tab banner?
 

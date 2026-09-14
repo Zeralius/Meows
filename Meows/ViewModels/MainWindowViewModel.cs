@@ -349,17 +349,30 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void InvokeNotificationAction(object? parameter)
     {
-        if (parameter is not NotificationItem { Action: not null } item)
+        var (item, action) = parameter switch
+        {
+            NotificationButton button => (button.Item, button.Action),
+            NotificationItem { Action: { } first } single => (single, first),
+            _ => (null, null),
+        };
+        if (item is null || action is null)
             return;
+
         try
         {
-            item.Action.Invoke();
+            action.Invoke();
         }
         catch (Exception ex)
         {
             // It is plugin code. Do not let it take the shell down.
-            _log.Write("shell", $"Notification action '{item.ActionLabel}' threw: {ex}");
+            _log.Write("shell", $"Notification action '{action.Label}' threw: {ex}");
+            return;
         }
+
+        // A button on a toast usually means "dealt with". A condition stays: only its plugin
+        // knows whether it still applies, and its own action will clear it if it does not.
+        if (action.DismissesAfter && item.CanDismiss)
+            _notifications.Dismiss(item);
     }
 
     private void CancelTask(object? parameter)
@@ -402,6 +415,7 @@ public sealed class MainWindowViewModel : ObservableObject
             Tabs.Add(_historyTab);
         }
         SelectedTab = Tabs[0];
+        _background.RestartActionFor = RestartActionFor;
         Rescan();
     }
 
@@ -459,6 +473,27 @@ public sealed class MainWindowViewModel : ObservableObject
                 _log.Write("shell", $"Could not open {directory}: {ex.Message}");
             }
         }
+    }
+
+    /// <summary>
+    /// The button on a "task failed" notification. Off and on again is what restarts a stopped
+    /// schedule, and doing it from the notification saves the trip to the Plugins tab.
+    /// </summary>
+    private NotificationAction? RestartActionFor(string pluginId)
+    {
+        var entry = Plugins.FirstOrDefault(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+        if (entry is null || !entry.IsCompatible)
+            return null;
+
+        return new NotificationAction(_text["notify.restart"], () =>
+        {
+            if (_pluginTabs.ContainsKey(entry.Id))
+                Deactivate(entry);
+            Activate(entry);
+            entry.SetActivatedSilently(true);
+            PersistActivations();
+            _log.Write("shell", $"Restarted '{entry.DisplayName}' from a notification.");
+        }, DismissesAfter: true);
     }
 
     private void OnActivationChanged(PluginEntryViewModel entry, bool activated)
