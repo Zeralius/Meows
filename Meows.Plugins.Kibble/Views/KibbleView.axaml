@@ -39,6 +39,11 @@
             <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
             <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
         </Style>
+        <Style Selector="Button.held">
+            <Setter Property="Background" Value="{DynamicResource MeowsWarn}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsWarnLine}" />
+            <Setter Property="Foreground" Value="{DynamicResource MeowsWarnText}" />
+        </Style>
         <Style Selector="Button.mode">
             <Setter Property="Background" Value="{DynamicResource MeowsCard}" />
             <Setter Property="BorderBrush" Value="{DynamicResource MeowsLine}" />
@@ -174,6 +179,18 @@
                                                            FontWeight="SemiBold"
                                                            TextTrimming="CharacterEllipsis" />
                                                 <TextBlock Text="{Binding QueueText}" Classes="label" />
+                                                <!-- What is waiting for a decision, and the way to it. A button inside
+                                                     a button, so it has to stop the click going up to the send. -->
+                                                <Button Content="{Binding HeldText}"
+                                                        IsVisible="{Binding HasHeld}"
+                                                        Classes="held"
+                                                        FontSize="10"
+                                                        Padding="6,1"
+                                                        Margin="0,3,0,0"
+                                                        HorizontalAlignment="Left"
+                                                        ToolTip.Tip="{m:Tr kibble.held.open}"
+                                                        Command="{Binding $parent[UserControl].((vm:KibbleViewModel)DataContext).OpenHeldCommand}"
+                                                        CommandParameter="{Binding}" />
                                             </StackPanel>
                                             <TextBlock Grid.Column="2"
                                                        Text="{Binding RunwayText}"

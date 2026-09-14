@@ -214,6 +214,12 @@ needs ffmpeg to shrink and that is a different tool.
 
 A duplicate gets neither button. It has a folder of its own, below.
 
+**What was held back comes round again.** A group's card says *3 held back* when its `Held_Back`
+folder has anything in it, and pressing that opens the folder as the one to sort. From there a
+file goes into the queue like any other, or is refused again with the same buttons, except that
+*Hold it back* is not offered from inside `Held_Back`, since that is going nowhere. A picture
+that has since been shrunk elsewhere, or a video re-encoded by hand, is one send away.
+
 ## Duplicates get their own folder
 
 **Set duplicates aside**, on by default, changes what happens to the second of those. Instead of

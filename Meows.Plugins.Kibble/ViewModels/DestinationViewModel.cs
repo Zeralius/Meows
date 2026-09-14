@@ -68,9 +68,33 @@ public sealed class DestinationViewModel : ObservableObject
 
     public bool IsLow => Days is not null && Days > 0 && Days < QueueRunway.LowDays;
 
+    private int _held;
+
+    /// <summary>How many files are waiting in the group's Held_Back folder for a decision.</summary>
+    public int Held
+    {
+        get => _held;
+        private set
+        {
+            if (!SetField(ref _held, value))
+                return;
+            OnPropertyChanged(nameof(HasHeld));
+            OnPropertyChanged(nameof(HeldText));
+        }
+    }
+
+    public bool HasHeld => _held > 0;
+
+    public string HeldText => _held == 1
+        ? MeowsText.Current["kibble.held.one"]
+        : MeowsText.Current.Format("kibble.held.many", _held);
+
+    public string HeldBackFolder => _workspace.HeldBackFolder(Group);
+
     public void Refresh()
     {
         Queued = _workspace.Scan(_workspace.ToSendFolder(Group)).Count;
         Days = QueueRunway.Days(Group, Queued);
+        Held = _workspace.Scan(HeldBackFolder).Count;
     }
 }

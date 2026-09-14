@@ -158,6 +158,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         ShrinkAndSendCommand = new RelayCommand(() => _ = ShrinkAndSendAsync(), () => CanShrinkBlocked);
         HoldCommand = new RelayCommand(HoldBlocked, () => CanHoldBlocked);
         OpenSourceCommand = new RelayCommand(() => OpenInExplorer(SourceFolder), () => SourceFolder.Length > 0);
+        OpenHeldCommand = new RelayCommand(p => OpenHeld(p as DestinationViewModel));
 
         Reload();
         SeedUndoFromJournal();
@@ -294,7 +295,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
 
     public bool CanShrinkBlocked => _blocked is { Result.Outcome: IntakeOutcome.TooBig, File.Path: var p } && MediaRules.KindOf(p) == MediaKind.Photo;
 
-    public bool CanHoldBlocked => _blocked is { Result.WouldFail: true };
+    public bool CanHoldBlocked => _blocked is { Result.WouldFail: true } && !SourceIsHeldBack;
 
     private void RaiseBlockedWays()
     {
@@ -374,6 +375,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         var next = NextAfter(file);
         Take([file]);
         Selected = next;
+        destination.Refresh();
 
         StatusMessage = _host.Text.Format("kibble.status.held", destination.Name);
         _host.Log($"Held back {file.FileName} for {destination.Name}: {Path.GetFileName(held.Destination!)}");
@@ -381,6 +383,27 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
     }
 
     public RelayCommand OpenSourceCommand { get; }
+
+    /// <summary>
+    /// A group's Held_Back folder opened as the folder to sort, which closes the loop: what
+    /// was held back yesterday comes round again, and a picture that has since been made
+    /// smaller elsewhere, or a video re-encoded, goes into the queue like anything else.
+    /// </summary>
+    public RelayCommand OpenHeldCommand { get; }
+
+    private void OpenHeld(DestinationViewModel? destination)
+    {
+        if (destination is null || !Directory.Exists(destination.HeldBackFolder))
+            return;
+        LoadFolder(destination.HeldBackFolder);
+    }
+
+    /// <summary>Whether the folder on screen is some group's Held_Back, in which case holding back again is going nowhere.</summary>
+    private bool SourceIsHeldBack =>
+        _workspace is not null && Destinations.Any(d => string.Equals(
+            d.HeldBackFolder.TrimEnd(Path.DirectorySeparatorChar),
+            SourceFolder.TrimEnd(Path.DirectorySeparatorChar),
+            StringComparison.OrdinalIgnoreCase));
 
     public IReadOnlyList<StampOption> StampOptions { get; } =
     [

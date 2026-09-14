@@ -141,6 +141,31 @@ public sealed class HeldBackTests : IDisposable
     }
 
     [Fact]
+    public void The_group_card_counts_what_is_held_and_opens_the_folder_to_decide_about_it()
+    {
+        Write(_intake, "clip.mp4", new byte[MediaRules.ByteLimit(MediaKind.Video)!.Value + 1]);
+        var model = OpenKibble();
+        model.SetSelection([model.Incoming[0]]);
+        model.SendToCommand.Execute(model.Destinations[0]);
+        model.HoldCommand.Execute(null);
+
+        var alpha = model.Destinations[0];
+        Assert.True(alpha.HasHeld);
+        Assert.Equal("1 held back", alpha.HeldText);
+
+        // Open the folder as the one to sort: the held file is back in the grid, from there.
+        model.OpenHeldCommand.Execute(alpha);
+        Assert.Equal(alpha.HeldBackFolder, model.SourceFolder);
+        Assert.Single(model.Incoming);
+
+        // Still too big, still refused, but holding it back from Held_Back is going nowhere.
+        model.SetSelection([model.Incoming[0]]);
+        model.SendToCommand.Execute(alpha);
+        Assert.True(model.IsBlocked);
+        Assert.False(model.CanHoldBlocked);
+    }
+
+    [Fact]
     public void A_duplicate_gets_neither_way_out_because_it_has_a_folder_of_its_own()
     {
         var bytes = TestPictures.Jpeg(400, 300);
