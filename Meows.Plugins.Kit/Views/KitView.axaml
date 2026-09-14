@@ -30,6 +30,13 @@
         <Style Selector="Slider">
             <Setter Property="Margin" Value="0,-6,0,-6" />
         </Style>
+        <Style Selector="ToggleButton.switch">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="10,4" />
+        </Style>
+        <Style Selector="ToggleButton.switch:checked /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
     </UserControl.Styles>
 
     <DockPanel>
@@ -91,8 +98,73 @@
 
             <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
 
-            <!-- What is in the kit -->
+            <!-- What is in the kit: the pictures, or the run sheet -->
             <DockPanel Grid.Column="2">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="4" Margin="14,10,14,4" IsVisible="{Binding HasKit}">
+                    <ToggleButton Classes="switch" Content="{m:Tr kit.pictures}" IsChecked="{Binding ShowPictures, Mode=OneWay}" Command="{Binding ShowPicturesCommand}" />
+                    <ToggleButton Classes="switch" Content="{m:Tr kit.runsheet}" IsChecked="{Binding ShowRunSheet, Mode=OneWay}" Command="{Binding ShowRunSheetCommand}" />
+                </StackPanel>
+
+                <!-- The run sheet: notes on the left, the fights on the right -->
+                <Grid IsVisible="{Binding ShowRunSheet}" ColumnDefinitions="*,4,*" Margin="8,0,8,8">
+                    <DockPanel Grid.Column="0">
+                        <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr kit.notes}" Margin="6,8,6,4" />
+                        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="6,0,6,6">
+                            <TextBox Grid.Column="0" Text="{Binding NewNoteName}" Watermark="{m:Tr kit.notes.new.placeholder}" FontSize="11" />
+                            <Button Grid.Column="1" Content="{m:Tr kit.notes.new}" Command="{Binding NewNoteCommand}" FontSize="11" />
+                        </Grid>
+                        <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Notes}" SelectedItem="{Binding SelectedNote}" Background="Transparent" BorderThickness="0" MaxHeight="120" Margin="0,0,0,6">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:NoteViewModel">
+                                    <TextBlock Text="{Binding Name}" FontSize="12" TextTrimming="CharacterEllipsis" />
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <Grid DockPanel.Dock="Bottom" ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="6,6,6,0">
+                            <TextBlock Grid.Column="0" Classes="label" Text="{m:Tr kit.notes.unsaved}" IsVisible="{Binding NoteDirty}" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Content="{m:Tr kit.notes.save}" Command="{Binding SaveNoteCommand}" FontSize="11" />
+                        </Grid>
+                        <TextBlock Classes="label" TextWrapping="Wrap" Margin="6" Text="{m:Tr kit.notes.empty}" IsVisible="{Binding !HasNote}" />
+                        <TextBox Text="{Binding NoteText}" AcceptsReturn="True" TextWrapping="Wrap" FontSize="12" FontFamily="Cascadia Mono, Consolas, monospace" Margin="6,0" IsVisible="{Binding HasNote}" VerticalContentAlignment="Top" />
+                    </DockPanel>
+
+                    <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+                    <DockPanel Grid.Column="2">
+                        <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr kit.encounters}" Margin="6,8,6,4" />
+                        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="4" Margin="6,0,6,6">
+                            <Button Grid.Column="0" Content="{m:Tr kit.encounter.add}" Command="{Binding AddEncounterCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <Button Grid.Column="1" Content="{m:Tr kit.up}" Command="{Binding EncounterUpCommand}" FontSize="11" />
+                            <Button Grid.Column="2" Content="{m:Tr kit.down}" Command="{Binding EncounterDownCommand}" FontSize="11" />
+                            <Button Grid.Column="3" Content="{m:Tr kit.remove}" Command="{Binding RemoveEncounterCommand}" FontSize="11" Background="{DynamicResource MeowsDanger}" BorderBrush="{DynamicResource MeowsDangerLine}" />
+                        </Grid>
+                        <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Encounters}" SelectedItem="{Binding SelectedEncounter}" Background="Transparent" BorderThickness="0" MaxHeight="160" Margin="0,0,0,6">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:EncounterViewModel">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Detail}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <TextBlock Classes="label" TextWrapping="Wrap" Margin="6" Text="{m:Tr kit.encounters.empty}" IsVisible="{Binding !HasEncounter}" />
+                        <ScrollViewer IsVisible="{Binding HasEncounter}" Margin="6,0">
+                            <StackPanel Spacing="6" DataContext="{Binding SelectedEncounter}" x:DataType="vm:EncounterViewModel">
+                                <TextBlock Classes="label" Text="{m:Tr kit.encounter.name}" />
+                                <TextBox Text="{Binding Name}" FontSize="12" />
+                                <TextBlock Classes="label" Text="{m:Tr kit.encounter.map}" />
+                                <ComboBox ItemsSource="{Binding Maps}" SelectedItem="{Binding Map}" FontSize="11" HorizontalAlignment="Stretch" />
+                                <TextBlock Classes="label" Text="{m:Tr kit.encounter.roster}" />
+                                <TextBox Text="{Binding Roster}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="70" FontSize="12" VerticalContentAlignment="Top" Watermark="{m:Tr kit.encounter.roster.placeholder}" />
+                                <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr kit.encounter.roster.hint}" />
+                                <TextBlock Classes="label" Text="{m:Tr kit.encounter.notes}" />
+                                <TextBox Text="{Binding Notes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90" FontSize="12" VerticalContentAlignment="Top" />
+                            </StackPanel>
+                        </ScrollViewer>
+                    </DockPanel>
+                </Grid>
+
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,14,14,10"
                            Opacity="0.45"
@@ -100,6 +172,7 @@
                            IsVisible="{Binding IsEmpty}"
                            Text="{m:Tr kit.empty}" />
                 <ListBox ItemsSource="{Binding Items}"
+                         IsVisible="{Binding ShowPictures}"
                          SelectedItem="{Binding Selected}"
                          Background="Transparent"
                          BorderThickness="0"
@@ -192,6 +265,8 @@
                             <StackPanel Spacing="6" IsVisible="{Binding Selected.IsToken}">
                                 <TextBlock Classes="label" Text="{m:Tr kit.token}" Margin="0,6,0,0" />
                                 <ComboBox ItemsSource="{Binding Rings}" SelectedItem="{Binding Ring}" FontSize="11" HorizontalAlignment="Stretch" />
+                                <TextBlock Classes="label" Text="{m:Tr kit.token.background}" />
+                                <ComboBox ItemsSource="{Binding Backgrounds}" SelectedItem="{Binding Background}" FontSize="11" HorizontalAlignment="Stretch" />
                                 <TextBlock Classes="label" Text="{m:Tr kit.token.zoom}" />
                                 <Slider Value="{Binding Zoom}" Minimum="0.5" Maximum="4" />
                                 <TextBlock Classes="label" Text="{m:Tr kit.token.x}" />
@@ -229,6 +304,15 @@
                                 <Button Grid.Column="2" Content="{m:Tr kit.export.open}" Command="{Binding OpenExportsCommand}" FontSize="11" />
                             </Grid>
                         </StackPanel>
+
+                        <!-- Frames: what ships, and the folder for your own -->
+                        <TextBlock Text="{m:Tr kit.frames}" FontWeight="SemiBold" FontSize="13" Margin="0,14,0,0" />
+                        <TextBlock Classes="label" Text="{Binding FramesText}" TextWrapping="Wrap" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <TextBlock Grid.Column="0" Classes="label" Text="{Binding FramesFolder}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Content="{m:Tr kit.frames.open}" Command="{Binding OpenFramesFolderCommand}" FontSize="11" />
+                        </Grid>
+                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr kit.frames.hint}" />
 
                     </StackPanel>
                 </ScrollViewer>

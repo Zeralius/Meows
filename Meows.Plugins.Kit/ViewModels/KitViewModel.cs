@@ -110,6 +110,99 @@ public sealed class ItemViewModel(KitItem item, ItemKind kind, string kitFolder)
 }
 
 /// <summary>A frame to pick from, by its label.</summary>
+/// <summary>A map on the run sheet's combo: its file, and the name the card shows. File empty means no map.</summary>
+public sealed record MapChoice(string File, string Name)
+{
+    public override string ToString() => Name;
+}
+
+/// <summary>One markdown file under notes/.</summary>
+public sealed class NoteViewModel(string path)
+{
+    public string Path { get; } = path;
+
+    public string Name => System.IO.Path.GetFileNameWithoutExtension(Path);
+}
+
+/// <summary>One fight on the run sheet, edited in place; every change goes straight to the manifest.</summary>
+public sealed class EncounterViewModel(Encounter encounter, Func<IReadOnlyList<MapChoice>> maps, Func<IReadOnlyList<KitItem>> tokens, Action changed) : ObservableObject
+{
+    public Encounter Encounter { get; } = encounter;
+
+    public IReadOnlyList<MapChoice> Maps => maps();
+
+    public string Name
+    {
+        get => Encounter.Name;
+        set
+        {
+            if (Encounter.Name == (value ?? ""))
+                return;
+            Encounter.Name = value ?? "";
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(Title));
+            changed();
+        }
+    }
+
+    public MapChoice Map
+    {
+        get => Maps.FirstOrDefault(m => string.Equals(m.File, Encounter.Map, StringComparison.OrdinalIgnoreCase)) ?? Maps[0];
+        set
+        {
+            var file = value?.File ?? "";
+            if (Encounter.Map == file)
+                return;
+            Encounter.Map = file;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(Detail));
+            changed();
+        }
+    }
+
+    public string Roster
+    {
+        get => Encounter.Roster;
+        set
+        {
+            if (Encounter.Roster == (value ?? ""))
+                return;
+            Encounter.Roster = value ?? "";
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(Detail));
+            changed();
+        }
+    }
+
+    public string Notes
+    {
+        get => Encounter.Notes;
+        set
+        {
+            if (Encounter.Notes == (value ?? ""))
+                return;
+            Encounter.Notes = value ?? "";
+            OnPropertyChanged();
+            changed();
+        }
+    }
+
+    public string Title => Encounter.Name.Length > 0 ? Encounter.Name : MeowsText.Current["kit.encounter.unnamed"];
+
+    /// <summary>"Tavern · 3 × Goblin, Bugbear", for the row.</summary>
+    public string Detail
+    {
+        get
+        {
+            var map = Maps.FirstOrDefault(m => m.File.Length > 0 && string.Equals(m.File, Encounter.Map, StringComparison.OrdinalIgnoreCase));
+            var roster = RunSheet.Summarise(RunSheet.Parse(Encounter.Roster, tokens()));
+            return string.Join(" · ", new[] { map?.Name, roster }.Where(x => !string.IsNullOrEmpty(x)));
+        }
+    }
+
+    public void Reread() => OnEverythingChanged();
+}
+
 public sealed record FrameChoice(string? File, string Label)
 {
     public override string ToString() => Label;
@@ -150,6 +243,16 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
     private double _gridOffsetY;
     private FrameChoice _border = NoFrame;
     private FrameChoice _ring = NoFrame;
+    private FrameChoice _background = NoFrame;
+    private FrameSet _frames = FrameSet.Shipped;
+
+    // The run sheet.
+    private bool _showRunSheet;
+    private NoteViewModel? _selectedNote;
+    private string _noteText = "";
+    private bool _noteDirty;
+    private string _newNoteName = "";
+    private EncounterViewModel? _selectedEncounter;
     private double _zoom = 1;
     private double _offsetX;
     private double _offsetY;
@@ -178,9 +281,16 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         ExportFoundryCommand = new RelayCommand(() => _ = ExportAsync(foundry: true), () => _manifest is not null && !IsBusy);
         ExportRoll20Command = new RelayCommand(() => _ = ExportAsync(foundry: false), () => _manifest is not null && !IsBusy);
         OpenExportsCommand = new RelayCommand(() => Open(ExportRoot));
+        OpenFramesFolderCommand = new RelayCommand(() => Open(FramesFolder));
+        ShowPicturesCommand = new RelayCommand(() => ShowRunSheet = false);
+        ShowRunSheetCommand = new RelayCommand(() => ShowRunSheet = true);
 
-        Borders = [NoFrame, .. Frames.Borders.Select(b => new FrameChoice(b.File, b.Label))];
-        Rings = [NoFrame, .. Frames.Tokens.Select(t => new FrameChoice(t.File, t.Label))];
+        SaveNoteCommand = new RelayCommand(SaveNote, () => SelectedNote is not null && _noteDirty);
+        NewNoteCommand = new RelayCommand(NewNote, () => HasKit && NewNoteName.Trim().Length > 0);
+        AddEncounterCommand = new RelayCommand(AddEncounter, () => HasKit);
+        RemoveEncounterCommand = new RelayCommand(RemoveEncounter, () => SelectedEncounter is not null);
+        EncounterUpCommand = new RelayCommand(() => MoveEncounter(-1), () => SelectedEncounter is not null);
+        EncounterDownCommand = new RelayCommand(() => MoveEncounter(+1), () => SelectedEncounter is not null);
 
         Reload();
         _language = new LanguageWatch(() =>
@@ -188,7 +298,43 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             OnEverythingChanged();
             foreach (var item in Items)
                 item.Reread();
+            foreach (var encounter in Encounters)
+                encounter.Reread();
         });
+    }
+
+    /// <summary>The user's own frames live here, beside the kits, and are read again on every Refresh.</summary>
+    public string FramesFolder => Path.Combine(Root, FrameSet.UserFolderName);
+
+    private void LoadFrames()
+    {
+        try
+        {
+            _frames = FrameSet.WithUserFolder(FramesFolder);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not read the frames folder: {ex.Message}");
+            _frames = FrameSet.Shipped;
+        }
+        Borders = [NoFrame, .. _frames.Borders.Select(b => new FrameChoice(b.File, b.Label))];
+        Rings = [NoFrame, .. _frames.Tokens.Select(t => new FrameChoice(t.File, t.Label))];
+        Backgrounds = [NoFrame, .. _frames.Backgrounds.Select(b => new FrameChoice(b.File, b.Label))];
+        OnPropertyChanged(nameof(Borders));
+        OnPropertyChanged(nameof(Rings));
+        OnPropertyChanged(nameof(Backgrounds));
+        OnPropertyChanged(nameof(FramesFolder));
+        OnPropertyChanged(nameof(FramesText));
+    }
+
+    /// <summary>"16 rings, 7 backgrounds, 5 borders, 2 of them yours."</summary>
+    public string FramesText
+    {
+        get
+        {
+            var own = _frames.Tokens.Count(t => t.Path is not null) + _frames.Backgrounds.Count(b => b.Path is not null) + _frames.Borders.Count(b => b.Path is not null);
+            return _host.Text.Format("kit.frames.count", _frames.Tokens.Count, _frames.Backgrounds.Count, _frames.Borders.Count, own);
+        }
     }
 
     // ---- the kits ----
@@ -197,9 +343,33 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
 
     public ObservableCollection<ItemViewModel> Items { get; } = [];
 
-    public IReadOnlyList<FrameChoice> Borders { get; }
+    public IReadOnlyList<FrameChoice> Borders { get; private set; } = [NoFrame];
 
-    public IReadOnlyList<FrameChoice> Rings { get; }
+    public IReadOnlyList<FrameChoice> Rings { get; private set; } = [NoFrame];
+
+    public IReadOnlyList<FrameChoice> Backgrounds { get; private set; } = [NoFrame];
+
+    public ObservableCollection<NoteViewModel> Notes { get; } = [];
+
+    public ObservableCollection<EncounterViewModel> Encounters { get; } = [];
+
+    public RelayCommand OpenFramesFolderCommand { get; }
+
+    public RelayCommand ShowPicturesCommand { get; }
+
+    public RelayCommand ShowRunSheetCommand { get; }
+
+    public RelayCommand SaveNoteCommand { get; }
+
+    public RelayCommand NewNoteCommand { get; }
+
+    public RelayCommand AddEncounterCommand { get; }
+
+    public RelayCommand RemoveEncounterCommand { get; }
+
+    public RelayCommand EncounterUpCommand { get; }
+
+    public RelayCommand EncounterDownCommand { get; }
 
     public IReadOnlyList<string> Sides { get; } = ["", "friend", "foe", "neutral", "boss"];
 
@@ -357,9 +527,11 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         try
         {
             Directory.CreateDirectory(Root);
+            LoadFrames();
             foreach (var folder in Directory.EnumerateDirectories(Root).OrderBy(f => f, StringComparer.CurrentCultureIgnoreCase))
             {
-                if (string.Equals(Path.GetFileName(folder), "Exports", StringComparison.OrdinalIgnoreCase))
+                if (string.Equals(Path.GetFileName(folder), "Exports", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(Path.GetFileName(folder), FrameSet.UserFolderName, StringComparison.OrdinalIgnoreCase))
                     continue;
                 Kits.Add(new KitEntryViewModel(folder));
             }
@@ -402,10 +574,15 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
     private void LoadKit()
     {
         _thumbnails?.Cancel();
+        SaveNote();
         Selected = null;
         foreach (var item in Items)
             item.Dispose();
         Items.Clear();
+        SelectedNote = null;
+        Notes.Clear();
+        SelectedEncounter = null;
+        Encounters.Clear();
         _manifest = null;
 
         if (SelectedKit is not { } kit)
@@ -435,9 +612,194 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         foreach (var handout in _manifest.Handouts)
             Items.Add(new ItemViewModel(handout, ItemKind.Handout, kit.Folder));
 
+        foreach (var note in _manifest.Notes)
+            Notes.Add(new NoteViewModel(Path.Combine(kit.Folder, note.Replace('/', Path.DirectorySeparatorChar))));
+        foreach (var encounter in _manifest.Encounters)
+            Encounters.Add(new EncounterViewModel(encounter, () => MapChoices, () => _manifest?.Tokens ?? [], SaveManifest));
+        SelectedNote = Notes.FirstOrDefault();
+
         Status = _host.Text.Format("kit.status.loaded", _manifest.Maps.Count, _manifest.Tokens.Count, _manifest.Handouts.Count, _manifest.Notes.Count);
         RaiseKitState();
         _ = LoadThumbnailsAsync();
+    }
+
+    // ---- the run sheet ----
+
+    /// <summary>The middle column shows the pictures or the run sheet; the right column stays.</summary>
+    public bool ShowRunSheet
+    {
+        get => _showRunSheet;
+        set
+        {
+            if (SetField(ref _showRunSheet, value))
+                OnPropertyChanged(nameof(ShowPictures));
+        }
+    }
+
+    public bool ShowPictures => !_showRunSheet;
+
+    /// <summary>The maps a fight can be on, with "no map" first.</summary>
+    public IReadOnlyList<MapChoice> MapChoices =>
+        [new MapChoice("", _host.Text["kit.encounter.nomap"]), .. (_manifest?.Maps ?? []).Select(m => new MapChoice(m.File, m.Name))];
+
+    public NoteViewModel? SelectedNote
+    {
+        get => _selectedNote;
+        set
+        {
+            if (ReferenceEquals(_selectedNote, value))
+                return;
+            SaveNote();
+            _selectedNote = value;
+            _noteText = value is null ? "" : SafeReadText(value.Path);
+            _noteDirty = false;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(NoteText));
+            OnPropertyChanged(nameof(HasNote));
+            OnPropertyChanged(nameof(NoteDirty));
+            SaveNoteCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool HasNote => _selectedNote is not null;
+
+    public string NoteText
+    {
+        get => _noteText;
+        set
+        {
+            if (!SetField(ref _noteText, value ?? ""))
+                return;
+            _noteDirty = true;
+            OnPropertyChanged(nameof(NoteDirty));
+            SaveNoteCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool NoteDirty => _noteDirty;
+
+    public string NewNoteName
+    {
+        get => _newNoteName;
+        set
+        {
+            if (SetField(ref _newNoteName, value ?? ""))
+                NewNoteCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    /// <summary>The note as typed, written over its file. Called on Save, on switching notes or kits, and on closing.</summary>
+    public void SaveNote()
+    {
+        if (!_noteDirty || _selectedNote is not { } note)
+            return;
+        try
+        {
+            File.WriteAllText(note.Path, _noteText);
+            _noteDirty = false;
+            OnPropertyChanged(nameof(NoteDirty));
+            SaveNoteCommand.RaiseCanExecuteChanged();
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = _host.Text.Format("kit.error.note", ex.Message);
+        }
+    }
+
+    private void NewNote()
+    {
+        if (SelectedKit is not { } kit || _manifest is null)
+            return;
+        var name = Exporter.Slug(NewNoteName);
+        var path = Path.Combine(kit.Folder, "notes", name + ".md");
+        try
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+            if (!File.Exists(path))
+                File.WriteAllText(path, $"# {name}\n\n");
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = _host.Text.Format("kit.error.note", ex.Message);
+            return;
+        }
+
+        NewNoteName = "";
+        if (_manifest.Reconcile(kit.Folder))
+            SaveManifest();
+        Notes.Clear();
+        foreach (var note in _manifest.Notes)
+            Notes.Add(new NoteViewModel(Path.Combine(kit.Folder, note.Replace('/', Path.DirectorySeparatorChar))));
+        SelectedNote = Notes.FirstOrDefault(n => string.Equals(n.Path, path, StringComparison.OrdinalIgnoreCase));
+    }
+
+    public EncounterViewModel? SelectedEncounter
+    {
+        get => _selectedEncounter;
+        set
+        {
+            if (!SetField(ref _selectedEncounter, value))
+                return;
+            OnPropertyChanged(nameof(HasEncounter));
+            RemoveEncounterCommand.RaiseCanExecuteChanged();
+            EncounterUpCommand.RaiseCanExecuteChanged();
+            EncounterDownCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool HasEncounter => _selectedEncounter is not null;
+
+    private void AddEncounter()
+    {
+        if (_manifest is null)
+            return;
+        var encounter = new Encounter
+        {
+            Name = _host.Text.Format("kit.encounter.new", _manifest.Encounters.Count + 1),
+            Map = Selected is { IsMap: true } map ? map.Item.File : _manifest.Maps.FirstOrDefault()?.File ?? "",
+        };
+        _manifest.Encounters.Add(encounter);
+        SaveManifest();
+        var model = new EncounterViewModel(encounter, () => MapChoices, () => _manifest?.Tokens ?? [], SaveManifest);
+        Encounters.Add(model);
+        SelectedEncounter = model;
+    }
+
+    private void RemoveEncounter()
+    {
+        if (_manifest is null || SelectedEncounter is not { } encounter)
+            return;
+        var index = Encounters.IndexOf(encounter);
+        _manifest.Encounters.Remove(encounter.Encounter);
+        Encounters.Remove(encounter);
+        SaveManifest();
+        SelectedEncounter = Encounters.ElementAtOrDefault(Math.Min(index, Encounters.Count - 1));
+    }
+
+    private void MoveEncounter(int delta)
+    {
+        if (_manifest is null || SelectedEncounter is not { } encounter)
+            return;
+        var from = Encounters.IndexOf(encounter);
+        var to = from + delta;
+        if (from < 0 || to < 0 || to >= Encounters.Count)
+            return;
+        Encounters.Move(from, to);
+        _manifest.Encounters.RemoveAt(from);
+        _manifest.Encounters.Insert(to, encounter.Encounter);
+        SaveManifest();
+    }
+
+    private static string SafeReadText(string path)
+    {
+        try
+        {
+            return File.ReadAllText(path);
+        }
+        catch (Exception)
+        {
+            return "";
+        }
     }
 
     /// <summary>A picture that was never measured gets its size from its header, and a map its first grid guess.</summary>
@@ -474,6 +836,9 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
 
     private void RaiseKitState()
     {
+        OnPropertyChanged(nameof(MapChoices));
+        NewNoteCommand.RaiseCanExecuteChanged();
+        AddEncounterCommand.RaiseCanExecuteChanged();
         OnPropertyChanged(nameof(HasKit));
         OnPropertyChanged(nameof(KitTitle));
         OnPropertyChanged(nameof(IsEmpty));
@@ -575,6 +940,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         _gridOffsetY = grid?.OffsetY ?? 0;
         _border = Borders.FirstOrDefault(b => b.File == item?.Item.Frame && item?.Kind != ItemKind.Token) ?? NoFrame;
         _ring = Rings.FirstOrDefault(r => r.File == item?.Item.Frame && item?.Kind == ItemKind.Token) ?? Rings.ElementAtOrDefault(1) ?? NoFrame;
+        _background = Backgrounds.FirstOrDefault(b => b.File == item?.Item.Background) ?? NoFrame;
         _zoom = 1;
         _offsetX = 0;
         _offsetY = 0;
@@ -674,6 +1040,16 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         }
     }
 
+    public FrameChoice Background
+    {
+        get => _background;
+        set
+        {
+            if (SetField(ref _background, value ?? NoFrame))
+                _ = ShowPreviewAsync();
+        }
+    }
+
     public double Zoom
     {
         get => _zoom;
@@ -750,7 +1126,8 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         _preview = source;
         var path = item.Path;
         var kind = item.Kind;
-        var ring = Frames.Token(_ring.File);
+        var ring = _frames.Token(_ring.File);
+        var background = _frames.Background(_background.File);
         var crop = new TokenCrop((float)_zoom, (float)_offsetX, (float)_offsetY);
         var grid = kind == ItemKind.Map && _gridEnabled ? new GridSpec { Size = _gridSize, OffsetX = _gridOffsetX, OffsetY = _gridOffsetY } : null;
         var padding = item.Item.Padding;
@@ -763,7 +1140,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
                 if (bitmap is null)
                     return null;
                 return kind == ItemKind.Token
-                    ? Pictures.MakeToken(bitmap, ring, crop, 256)
+                    ? Pictures.MakeToken(bitmap, ring, crop, 256, background)
                     : PreviewWithGrid(bitmap, grid, padding);
             }, source.Token);
 
@@ -933,7 +1310,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
     /// <summary>A border round a map or a handout, outside the picture, the padding remembered.</summary>
     private async Task FrameAsync()
     {
-        if (Selected is not { } item || SelectedKit is not { } kit || Frames.Border(Border.File) is not { } frame)
+        if (Selected is not { } item || SelectedKit is not { } kit || _frames.Border(Border.File) is not { } frame)
             return;
 
         IsBusy = true;
@@ -985,12 +1362,13 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
         try
         {
             var path = item.Path;
-            var ring = Frames.Token(Ring.File);
+            var ring = _frames.Token(Ring.File);
+            var background = _frames.Background(Background.File);
             var crop = new TokenCrop((float)Zoom, (float)OffsetX, (float)OffsetY);
             var png = await Task.Run(() =>
             {
                 using var bitmap = Preparer.Decode(File.ReadAllBytes(path)) ?? throw new InvalidDataException("could not read the picture");
-                return Pictures.MakeToken(bitmap, ring, crop);
+                return Pictures.MakeToken(bitmap, ring, crop, 512, background);
             });
 
             KeepOriginal(kit.Folder, path);
@@ -1003,6 +1381,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             item.Item.Width = 512;
             item.Item.Height = 512;
             item.Item.Frame = ring?.File;
+            item.Item.Background = background?.File;
             SaveManifest();
             item.Reread();
             _zoom = 1;
@@ -1202,6 +1581,20 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
             hits.Add(new SearchHit(item.Name, $"{KitTitle} · {item.Detail}", () => Selected = chosen));
         }
 
+        foreach (var encounter in Encounters)
+        {
+            if (hits.Count >= limit)
+                break;
+            if (!SearchWords.Match(words, encounter.Name, encounter.Roster))
+                continue;
+            var chosen = encounter;
+            hits.Add(new SearchHit(encounter.Title, $"{KitTitle} · {encounter.Detail}", () =>
+            {
+                ShowRunSheet = true;
+                SelectedEncounter = chosen;
+            }));
+        }
+
         foreach (var kit in Kits)
         {
             if (hits.Count >= limit)
@@ -1217,6 +1610,7 @@ public sealed class KitViewModel : ObservableObject, IDisposable, ISearchable, I
 
     public void Dispose()
     {
+        SaveNote();
         _thumbnails?.Cancel();
         _preview?.Cancel();
         foreach (var item in Items)

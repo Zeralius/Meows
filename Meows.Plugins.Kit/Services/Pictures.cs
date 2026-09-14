@@ -15,11 +15,12 @@ public sealed record TokenCrop(float Zoom = 1f, float OffsetX = 0f, float Offset
 public static class Pictures
 {
     /// <summary>
-    /// A token the way the token makers on the web make one: the picture, clipped to the circle
-    /// inside the ring, the ring on top, and everything outside the ring transparent. The result
-    /// is a square PNG of the frame's size, which is what a VTT wants a token to be.
+    /// A token the way the token makers on the web make one: a background disc if one was
+    /// chosen, the picture clipped to the circle inside the ring, the ring on top, and everything
+    /// outside the ring transparent. The result is a square PNG of the frame's size, which is
+    /// what a VTT wants a token to be.
     /// </summary>
-    public static byte[] MakeToken(SKBitmap source, TokenFrame? frame, TokenCrop crop, int size = 512)
+    public static byte[] MakeToken(SKBitmap source, TokenFrame? frame, TokenCrop crop, int size = 512, BackgroundFrame? background = null)
     {
         var innerRadius = frame is null ? size / 2f * 0.98f : frame.InnerRadiusFraction * size;
         var centre = size / 2f;
@@ -42,6 +43,15 @@ public static class Pictures
             clip.AddCircle(centre, centre, innerRadius);
             canvas.ClipPath(clip, SKClipOperation.Intersect, antialias: true);
         }
+        if (background is not null)
+        {
+            // The disc fills the circle exactly; the clip keeps its corners off the token.
+            using var disc = FrameSet.Bitmap(background);
+            using var discImage = SKImage.FromBitmap(disc);
+            using var discPaint = new SKPaint { IsAntialias = true };
+            canvas.DrawImage(discImage, new SKRect(centre - innerRadius, centre - innerRadius, centre + innerRadius, centre + innerRadius),
+                new SKSamplingOptions(SKFilterMode.Linear, SKMipmapMode.Linear), discPaint);
+        }
         using (var paint = new SKPaint { IsAntialias = true })
         using (var image = SKImage.FromBitmap(source))
         {
@@ -52,7 +62,7 @@ public static class Pictures
 
         if (frame is not null)
         {
-            using var ring = Frames.Bitmap(frame.File);
+            using var ring = FrameSet.Bitmap(frame);
             using var image = SKImage.FromBitmap(ring);
             using var paint = new SKPaint { IsAntialias = true };
             canvas.DrawImage(image, new SKRect(0, 0, size, size),
@@ -83,7 +93,7 @@ public static class Pictures
         using (var image = SKImage.FromBitmap(source))
             canvas.DrawImage(image, pad, pad);
 
-        using var tile = Frames.Bitmap(frame.File);
+        using var tile = FrameSet.Bitmap(frame);
         using var tileImage = SKImage.FromBitmap(tile);
         var s = frame.Slice;
         var t = frame.Size;

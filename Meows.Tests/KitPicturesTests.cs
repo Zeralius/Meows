@@ -27,20 +27,87 @@ public sealed class KitPicturesTests : IDisposable
     [Fact]
     public void The_frames_that_ship_are_there_and_say_what_they_are()
     {
-        Assert.Equal(4, Frames.Tokens.Count);
-        Assert.Equal(3, Frames.Borders.Count);
-        Assert.Contains(Frames.Tokens, t => t.File == "token-gold.png" && t.InnerRadius < t.Size / 2);
-        Assert.Contains(Frames.Borders, b => b.File == "border-parchment.png" && b.Slice * 2 < b.Size);
+        var frames = FrameSet.Shipped;
+        Assert.Equal(16, frames.Tokens.Count);
+        Assert.Equal(7, frames.Backgrounds.Count);
+        Assert.Equal(5, frames.Borders.Count);
+        Assert.Contains(frames.Tokens, t => t.File == "token-gold.png" && t.InnerRadius < t.Size / 2);
+        Assert.Contains(frames.Borders, b => b.File == "border-parchment.png" && b.Slice * 2 < b.Size);
+        Assert.All(frames.Tokens, t => Assert.Null(t.Path));
 
-        using var ring = Frames.Bitmap("token-gold.png");
+        using var ring = FrameSet.Bitmap(frames.Token("token-gold.png")!);
         Assert.Equal(512, ring.Width);
+        // The json's inner radius agrees with the picture, give or take the anti-aliased edge.
+        Assert.InRange(FrameSet.MeasureInnerRadius(ring), frames.Token("token-gold.png")!.InnerRadius - 3, frames.Token("token-gold.png")!.InnerRadius + 1);
+    }
+
+    [Fact]
+    public void A_users_frames_folder_adds_rings_by_name_and_measures_where_they_cut()
+    {
+        var folder = Path.Combine(_root, "Frames");
+        Directory.CreateDirectory(folder);
+        // A hand-made ring: 400 wide, painted from radius 150 outwards, transparent inside.
+        using (var ring = new SKBitmap(400, 400, SKColorType.Rgba8888, SKAlphaType.Premul))
+        using (var canvas = new SKCanvas(ring))
+        {
+            canvas.Clear(SKColors.Transparent);
+            using var paint = new SKPaint { Color = SKColors.Purple, IsAntialias = false };
+            canvas.DrawCircle(200, 200, 200, paint);
+            paint.BlendMode = SKBlendMode.Clear;
+            canvas.DrawCircle(200, 200, 150, paint);
+            File.WriteAllBytes(Path.Combine(folder, "token-purple-haze.png"), Preparer.Encode(ring, ImageFormat.Png, 100));
+        }
+        // And a replacement for a shipped one, plus a disc and a border, plus a file that is not a frame.
+        File.Copy(Path.Combine(folder, "token-purple-haze.png"), Path.Combine(folder, "token-gold.png"));
+        File.WriteAllBytes(Path.Combine(folder, "background-sky.png"), Preparer.Encode(Solid(64, 64, SKColors.SkyBlue), ImageFormat.Png, 100));
+        File.WriteAllBytes(Path.Combine(folder, "border-lace.png"), Preparer.Encode(Solid(90, 90, SKColors.White), ImageFormat.Png, 100));
+        File.WriteAllText(Path.Combine(folder, "readme.txt"), "not a frame");
+
+        var frames = FrameSet.WithUserFolder(folder);
+
+        var own = frames.Token("token-purple-haze.png")!;
+        Assert.Equal("Purple haze", own.Label);
+        Assert.Equal(400, own.Size);
+        Assert.InRange(own.InnerRadius, 147, 150);
+        Assert.NotNull(own.Path);
+        Assert.Equal(FrameSet.Shipped.Tokens.Count + 1, frames.Tokens.Count);
+        // The gold ring is now the user's, in the shipped one's place.
+        Assert.NotNull(frames.Token("token-gold.png")!.Path);
+        Assert.Equal("Sky", frames.Background("background-sky.png")!.Label);
+        Assert.Equal(30, frames.Border("border-lace.png")!.Slice);
+
+        // A token cut with the user's ring is cut at the user's radius.
+        using var source = Solid(500, 500, SKColors.Blue);
+        using var token = SKBitmap.Decode(Pictures.MakeToken(source, own, new TokenCrop(), 400));
+        Assert.Equal(SKColors.Blue, token.GetPixel(200, 200));
+        Assert.Equal(SKColors.Purple, token.GetPixel(200, 390));
+    }
+
+    [Fact]
+    public void A_background_disc_shows_where_the_picture_does_not_cover_the_circle()
+    {
+        var frames = FrameSet.Shipped;
+        // A tall thin picture, zoomed out: the sides of the circle are left uncovered.
+        using var source = Solid(100, 400, SKColors.Blue);
+        var ring = frames.Token("token-silver.png")!;
+
+        using var bare = SKBitmap.Decode(Pictures.MakeToken(source, ring, new TokenCrop(Zoom: 0.5f)));
+        using var backed = SKBitmap.Decode(Pictures.MakeToken(source, ring, new TokenCrop(Zoom: 0.5f), 512, frames.Background("background-parchment.png")));
+
+        // Off to the side, inside the ring: nothing without a background, parchment with one.
+        Assert.Equal(0, bare.GetPixel(120, 256).Alpha);
+        Assert.Equal(255, backed.GetPixel(120, 256).Alpha);
+        Assert.NotEqual(SKColors.Blue, backed.GetPixel(120, 256));
+        // The picture still sits on top in the middle, and the outside is still nothing.
+        Assert.Equal(SKColors.Blue, backed.GetPixel(256, 256));
+        Assert.Equal(0, backed.GetPixel(2, 2).Alpha);
     }
 
     [Fact]
     public void A_token_is_the_picture_inside_the_ring_and_transparent_everywhere_else()
     {
         using var source = Solid(800, 600, SKColors.Blue);
-        var frame = Frames.Token("token-gold.png")!;
+        var frame = FrameSet.Shipped.Token("token-gold.png")!;
 
         var png = Pictures.MakeToken(source, frame, new TokenCrop());
         using var token = SKBitmap.Decode(png);
@@ -100,7 +167,7 @@ public sealed class KitPicturesTests : IDisposable
     public void A_border_grows_the_canvas_and_leaves_the_picture_where_it_was()
     {
         using var source = Solid(300, 200, SKColors.Magenta);
-        var frame = Frames.Border("border-stone.png")!;
+        var frame = FrameSet.Shipped.Border("border-stone.png")!;
 
         var (png, padding) = Pictures.AddBorder(source, frame);
         using var framed = SKBitmap.Decode(png);
@@ -182,6 +249,8 @@ public sealed class KitPicturesTests : IDisposable
                 new KitItem { File = "maps/a.png", Name = "Tavern", Width = 2100, Height = 1400, Grid = new GridSpec { Size = 70 } },
                 new KitItem { File = "maps/b.png", Name = "Dream", Width = 700, Height = 700, Grid = new GridSpec { Enabled = false } },
             ],
+            Tokens = [new KitItem { File = "tokens/goblin.png", Name = "Goblin" }],
+            Encounters = [new Encounter { Name = "Brawl", Map = "maps/a.png", Roster = "3 Goblin\nthe barkeep hides", Notes = "They flee at half." }],
         };
 
         var report = Exporter.ForFoundry(kit, manifest, Path.Combine(_root, "out"));
@@ -193,6 +262,41 @@ public sealed class KitPicturesTests : IDisposable
         Assert.Contains("\"gridless\": true", json);
         Assert.Contains("\"meowsKit\": 1", json);
         Assert.True(File.Exists(Path.Combine(report.Folder, "maps", "a.png")));
+
+        // The run sheet, worked out: the goblins are a group with a token, the barkeep is a line.
+        using var doc = System.Text.Json.JsonDocument.Parse(json);
+        var brawl = doc.RootElement.GetProperty("encounters")[0];
+        Assert.Equal("maps/a.png", brawl.GetProperty("map").GetString());
+        var group = Assert.Single(brawl.GetProperty("groups").EnumerateArray());
+        Assert.Equal("tokens/goblin.png", group.GetProperty("token").GetString());
+        Assert.Equal(3, group.GetProperty("count").GetInt32());
+        Assert.Equal("the barkeep hides", Assert.Single(brawl.GetProperty("lines").EnumerateArray()).GetString());
+        Assert.Equal("They flee at half.", brawl.GetProperty("notes").GetString());
+    }
+
+    [Theory]
+    [InlineData("3 Goblin", 3, "Goblin", true)]
+    [InlineData("3x goblin", 3, "Goblin", true)]
+    [InlineData("Goblin x3", 3, "Goblin", true)]
+    [InlineData("Goblin ×3", 3, "Goblin", true)]
+    [InlineData("Goblin (3)", 3, "Goblin", true)]
+    [InlineData("goblins", 1, "Goblin", true)]
+    [InlineData("- Bugbear", 1, "Bugbear", true)]
+    [InlineData("2 wolves at the door", 2, "wolves at the door", false)]
+    [InlineData("the barkeep hides", 1, "the barkeep hides", false)]
+    public void A_roster_line_is_read_leniently_and_matched_to_a_token_by_name(string line, int count, string name, bool matched)
+    {
+        var tokens = new List<KitItem>
+        {
+            new() { File = "tokens/gob.png", Name = "Goblin" },
+            new() { File = "tokens/bugbear.png", Name = "Bugbear" },
+        };
+
+        var parsed = Assert.Single(RunSheet.Parse(line, tokens));
+
+        Assert.Equal(count, parsed.Count);
+        Assert.Equal(name, parsed.Name);
+        Assert.Equal(matched, parsed.IsGroup);
     }
 
     [Fact]

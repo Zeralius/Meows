@@ -208,6 +208,53 @@ public sealed class KitTests : IDisposable
         Assert.Equal("1 added to Night", heard);
     }
 
+    [Fact]
+    public void The_run_sheet_keeps_notes_as_files_and_fights_in_the_manifest()
+    {
+        var (model, _) = Open();
+        model.NewKitName = "Night";
+        model.NewKitCommand.Execute(null);
+        var kit = model.SelectedKit!.Folder;
+        File.WriteAllBytes(Path.Combine(kit, "maps", "tavern.png"), Png(700, 700, SKColors.White));
+        File.WriteAllBytes(Path.Combine(kit, "tokens", "goblin.png"), Png(100, 100, SKColors.Green));
+        model.RefreshCommand.Execute(null);
+
+        // A note: made from the box, edited, saved when another is chosen.
+        model.NewNoteName = "Opening";
+        model.NewNoteCommand.Execute(null);
+        Assert.Equal("Opening", Assert.Single(model.Notes).Name);
+        Assert.Same(model.Notes[0], model.SelectedNote);
+        model.NoteText = "# Opening\n\nRain. The tavern door bangs.";
+        Assert.True(model.NoteDirty);
+        model.NewNoteName = "Ending";
+        model.NewNoteCommand.Execute(null);
+        Assert.False(model.NoteDirty);
+        Assert.Equal("# Opening\n\nRain. The tavern door bangs.", File.ReadAllText(Path.Combine(kit, "notes", "Opening.md")));
+        Assert.Equal(2, model.Notes.Count);
+
+        // A fight: on the map, with a roster the card summarises, kept in the manifest.
+        model.AddEncounterCommand.Execute(null);
+        var fight = Assert.Single(model.Encounters);
+        Assert.Same(fight, model.SelectedEncounter);
+        Assert.Equal("maps/tavern.png", fight.Map.File);
+        fight.Name = "Brawl";
+        fight.Roster = "3 goblins\nthe barkeep hides";
+        Assert.Equal("tavern · 3 × goblin", fight.Detail);
+
+        var saved = KitManifest.Load(kit);
+        var kept = Assert.Single(saved.Encounters);
+        Assert.Equal("Brawl", kept.Name);
+        Assert.Equal("3 goblins\nthe barkeep hides", kept.Roster);
+        Assert.Equal(["notes/Ending.md", "notes/Opening.md"], saved.Notes);
+
+        // Ctrl+K finds the fight and opens the run sheet on it.
+        model.ShowRunSheet = false;
+        var hit = Assert.Single(model.Search("brawl", 5));
+        hit.Open();
+        Assert.True(model.ShowRunSheet);
+        Assert.Same(fight, model.SelectedEncounter);
+    }
+
     private static async Task WaitUntil(Func<bool> condition)
     {
         for (var i = 0; i < 200 && !condition(); i++)

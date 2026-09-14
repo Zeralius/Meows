@@ -2,21 +2,93 @@
   "tokens": [
     {
       "file": "token-gold.png",
-      "label": "Gold ring",
+      "label": "Gold",
       "size": 512,
-      "innerRadius": 224
+      "innerRadius": 220
     },
     {
       "file": "token-silver.png",
-      "label": "Silver double ring",
+      "label": "Silver",
+      "size": 512,
+      "innerRadius": 220
+    },
+    {
+      "file": "token-bronze.png",
+      "label": "Bronze",
+      "size": 512,
+      "innerRadius": 220
+    },
+    {
+      "file": "token-iron.png",
+      "label": "Iron",
+      "size": 512,
+      "innerRadius": 220
+    },
+    {
+      "file": "token-steel.png",
+      "label": "Blued steel",
+      "size": 512,
+      "innerRadius": 220
+    },
+    {
+      "file": "token-emerald.png",
+      "label": "Emerald (friend)",
       "size": 512,
       "innerRadius": 222
     },
     {
       "file": "token-crimson.png",
-      "label": "Crimson rim",
+      "label": "Crimson (foe)",
       "size": 512,
-      "innerRadius": 216
+      "innerRadius": 222
+    },
+    {
+      "file": "token-amber.png",
+      "label": "Amber (neutral)",
+      "size": 512,
+      "innerRadius": 222
+    },
+    {
+      "file": "token-obsidian.png",
+      "label": "Obsidian (boss)",
+      "size": 512,
+      "innerRadius": 222
+    },
+    {
+      "file": "token-oak.png",
+      "label": "Oak",
+      "size": 512,
+      "innerRadius": 224
+    },
+    {
+      "file": "token-ebony.png",
+      "label": "Ebony",
+      "size": 512,
+      "innerRadius": 224
+    },
+    {
+      "file": "token-rope.png",
+      "label": "Rope",
+      "size": 512,
+      "innerRadius": 224
+    },
+    {
+      "file": "token-runes.png",
+      "label": "Rune stone",
+      "size": 512,
+      "innerRadius": 222
+    },
+    {
+      "file": "token-hellrunes.png",
+      "label": "Hell runes",
+      "size": 512,
+      "innerRadius": 222
+    },
+    {
+      "file": "token-vine.png",
+      "label": "Vine",
+      "size": 512,
+      "innerRadius": 222
     },
     {
       "file": "token-studded.png",
@@ -25,16 +97,65 @@
       "innerRadius": 224
     }
   ],
+  "backgrounds": [
+    {
+      "file": "background-parchment.png",
+      "label": "Parchment",
+      "size": 512
+    },
+    {
+      "file": "background-stone.png",
+      "label": "Dark stone",
+      "size": 512
+    },
+    {
+      "file": "background-night.png",
+      "label": "Night",
+      "size": 512
+    },
+    {
+      "file": "background-ember.png",
+      "label": "Ember",
+      "size": 512
+    },
+    {
+      "file": "background-forest.png",
+      "label": "Forest",
+      "size": 512
+    },
+    {
+      "file": "background-arcane.png",
+      "label": "Arcane",
+      "size": 512
+    },
+    {
+      "file": "background-sunburst.png",
+      "label": "Sunburst",
+      "size": 512
+    }
+  ],
   "borders": [
     {
       "file": "border-parchment.png",
-      "label": "Parchment edge",
+      "label": "Parchment",
       "size": 192,
       "slice": 64
     },
     {
       "file": "border-stone.png",
-      "label": "Stone rim",
+      "label": "Stone",
+      "size": 192,
+      "slice": 64
+    },
+    {
+      "file": "border-wood.png",
+      "label": "Wood with iron corners",
+      "size": 192,
+      "slice": 64
+    },
+    {
+      "file": "border-gilt.png",
+      "label": "Gilt",
       "size": 192,
       "slice": 64
     },

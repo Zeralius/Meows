@@ -42,6 +42,9 @@ public sealed class KitItem
     /// <summary>Which frame was applied, by its file name, or null.</summary>
     public string? Frame { get; set; }
 
+    /// <summary>Tokens: the disc drawn behind the portrait, by its file name, or null for none.</summary>
+    public string? Background { get; set; }
+
     /// <summary>Tokens: friend, foe, neutral, boss. A word for the ring colour and the VTT's disposition.</summary>
     public string Side { get; set; } = "";
 
@@ -51,6 +54,24 @@ public sealed class KitItem
 
     [JsonIgnore]
     public string FileName => Path.GetFileName(File);
+}
+
+/// <summary>
+/// One fight, or one scene of the run sheet: which map it is on, who is in it, and what the GM
+/// wants to remember. The roster is text, a line per group, <c>3 Goblin</c> or <c>Goblin x3</c>,
+/// matched to tokens by name when the kit is written; a line that matches no token is kept as
+/// a line, because "the barkeep hides behind the counter" is part of the roster too.
+/// </summary>
+public sealed class Encounter
+{
+    public string Name { get; set; } = "";
+
+    /// <summary>The map's file, relative to the kit, or empty for an encounter that is not on a map.</summary>
+    public string Map { get; set; } = "";
+
+    public string Roster { get; set; } = "";
+
+    public string Notes { get; set; } = "";
 }
 
 /// <summary>
@@ -77,6 +98,9 @@ public sealed class KitManifest
 
     /// <summary>Markdown files under notes/, relative paths, in order.</summary>
     public List<string> Notes { get; set; } = [];
+
+    /// <summary>The run sheet: the fights in the order the evening reaches them.</summary>
+    public List<Encounter> Encounters { get; set; } = [];
 
     private static readonly JsonSerializerOptions Json = new()
     {

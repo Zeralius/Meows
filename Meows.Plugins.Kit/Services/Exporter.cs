@@ -74,6 +74,21 @@ public static class Exporter
             };
         });
 
+        // The run sheet, with the roster worked out into groups the module can place, and the
+        // lines that were only lines kept as lines.
+        var encounters = manifest.Encounters.Select(e =>
+        {
+            var lines = RunSheet.Parse(e.Roster, manifest.Tokens);
+            return new
+            {
+                name = e.Name,
+                map = e.Map,
+                notes = e.Notes,
+                groups = lines.Where(l => l.IsGroup).Select(l => new { name = l.Name, token = l.Token!.File, count = l.Count }),
+                lines = lines.Where(l => !l.IsGroup).Select(l => l.Count > 1 ? $"{l.Count} × {l.Name}" : l.Name),
+            };
+        });
+
         var json = JsonSerializer.Serialize(new
         {
             meowsKit = KitManifest.CurrentVersion,
@@ -83,7 +98,8 @@ public static class Exporter
             tokens = manifest.Tokens.Select(t => new { name = t.Name, file = t.File, side = t.Side, width = t.Width, height = t.Height }),
             handouts = manifest.Handouts.Select(h => new { name = h.Name, file = h.File, caption = h.Caption }),
             notes = manifest.Notes,
-        }, new JsonSerializerOptions { WriteIndented = true });
+            encounters,
+        }, new JsonSerializerOptions { WriteIndented = true, Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping });
         File.WriteAllText(Path.Combine(target, KitManifest.FileName), json);
         files++;
 
@@ -201,6 +217,29 @@ public static class Exporter
                 files++;
                 sheet.AppendLine($"- **{handout.Name}** — `{name}`. Journal → new handout, this picture as its image" +
                                  (handout.Caption.Length > 0 ? $", caption: {handout.Caption}" : "") + ".");
+            }
+        }
+
+        if (manifest.Encounters.Count > 0)
+        {
+            sheet.AppendLine();
+            sheet.AppendLine("## Run sheet");
+            sheet.AppendLine();
+            foreach (var encounter in manifest.Encounters)
+            {
+                var map = manifest.Maps.FirstOrDefault(m => string.Equals(m.File, encounter.Map, StringComparison.OrdinalIgnoreCase));
+                sheet.AppendLine($"### {encounter.Name}" + (map is null ? "" : $" — on *{map.Name}*"));
+                sheet.AppendLine();
+                foreach (var line in RunSheet.Parse(encounter.Roster, manifest.Tokens))
+                    sheet.AppendLine(line.IsGroup
+                        ? $"- {line.Count} × **{line.Name}** — `token {Safe(line.Name)}.png`, drag {line.Count} onto the page"
+                        : $"- {(line.Count > 1 ? line.Count + " × " : "")}{line.Name}");
+                if (encounter.Notes.Trim().Length > 0)
+                {
+                    sheet.AppendLine();
+                    sheet.AppendLine(encounter.Notes.Trim());
+                }
+                sheet.AppendLine();
             }
         }
 

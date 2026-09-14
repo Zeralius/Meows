@@ -36,22 +36,44 @@ still the commonest reason a player's browser crawls.
 
 **Frame.** A border *outside* the picture: the canvas grows by the frame's thickness on every
 side and the map itself is untouched, so the grid does not move; the padding is recorded and the
-exports offset the grid by it. Three borders ship, parchment, stone and torn paper, drawn as
-9-slice tiles; nicer ones are a matter of better PNGs under `Frames` with the same names.
+exports offset the grid by it. Five borders ship, parchment, stone, wood with iron corners, gilt
+and torn paper, drawn as 9-slice tiles with an ornament in the corners.
 
 ## Tokens
 
-The way the token makers on the web do it: the picture is cut to the circle inside the ring, the
-ring is drawn on top, and **everything outside the ring is transparent**. Zoom and the two
-sliders move the picture inside the circle, with the preview showing exactly what will be
-written. *Make the token* writes a 512 × 512 PNG over the file. Four rings ship: gold, silver
-double, crimson, studded iron; *no frame* cuts the circle and nothing else. *Side* is a word the
-Foundry module turns into the token's disposition.
+The way the token makers on the web do it: a background disc if one is chosen, the picture cut
+to the circle inside the ring, the ring drawn on top, and **everything outside the ring is
+transparent**. Zoom and the two sliders move the picture inside the circle, with the preview
+showing exactly what will be written. *Make the token* writes a 512 × 512 PNG over the file.
+Sixteen rings ship: gold, silver, bronze, iron and blued steel; emerald, crimson, amber and
+obsidian for friend, foe, neutral and boss; oak, ebony, rope, vine, studded iron, and rune stone
+in two glows. Seven backgrounds: parchment, dark stone, night, ember, forest, arcane, sunburst,
+for a portrait with a transparent or ugly background. *No frame* cuts the circle and nothing
+else. *Side* is a word the Foundry module turns into the token's disposition.
+
+## Your own frames
+
+`Oneshots\Frames\` (beside the kits; *Open the frames folder* on the tab) is read on every
+Refresh. `token-*.png` is a ring: square, transparent in the middle and outside, and the cut is
+measured from the picture, so a ring drawn in any painting program works as it is.
+`background-*.png` is a disc behind the portrait. `border-*.png` is a 9-slice tile, the slice a
+third of its width. A `frames.json` there in the shipped format sets labels, inner radii and
+slices exactly. A file named like a shipped frame replaces it. Nothing needs rebuilding.
 
 ## Handouts
 
 Pictures the players get to see, framed anywhere they like, with a caption the VTT shows.
-Markdown files under `notes` travel as journal entries.
+
+## The run sheet
+
+The second view of the middle column, beside the pictures. **Notes** are markdown files under
+`notes`: make one from the box, type in it, and it is saved when you switch notes or kits, press
+*Save*, or close the tab. Each becomes a journal entry in Foundry. **Fights** are entries in
+`kit.json`: a name, the map it is on, who is in it, and notes for the GM. *Who is in it* is
+typed a line per group and read leniently, `3 Goblin`, `Goblin x3`, `Goblin (3)`, `goblins`; a
+line that matches a token by name becomes a group the VTT places, any other line travels as
+text, because "the barkeep hides behind the counter" is part of the roster too. Ctrl+K finds a
+fight by name or by who is in it.
 
 ## Where it goes: Foundry
 
@@ -62,7 +84,10 @@ in [Zera's VTT Forge Tools](https://github.com/Zeralius/Zeras-vtt-forge-tools) r
 from inside Foundry: upload it through Foundry's file picker, press *Import a kit*, and a Folder
 named after the kit appears holding one Scene per map, gridded or gridless as the card said, one
 JournalEntry per handout and per note, and one Actor per token with its picture and disposition.
-Five maps in the kit, five scenes in a folder, in order.
+The run sheet lands as one journal entry per scene with a page per fight, linked from the scene
+so its notes button opens it, and each fight's tokens are placed on the scene hidden, in a row
+at the top-left, ready to be dragged where they go. Five maps in the kit, five scenes in a
+folder, in order.
 
 There is no way to write into a running Foundry from outside, and writing its database while it
 runs corrupts the world, which is why the module exists. Getting the folder to the server is the
@@ -77,7 +102,8 @@ units, so each gridded map is resampled to exactly `columns × 70` by `rows × 7
 page grid on upload; a gridless map keeps its pixels and the sheet gives the page size in units.
 Maps are JPEG under the per-file limit on the card (it moves with your plan, so it is a setting),
 numbered in the evening's order; tokens are PNG; handouts JPEG. `ROLL20.md` beside them says
-which page gets which size and which file, and that the library folder is made by hand.
+which page gets which size and which file, that the library folder is made by hand, and carries
+the run sheet: each fight, its map, and how many of which token to drag onto the page.
 
 ## What it is not
 
