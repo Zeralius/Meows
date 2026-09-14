@@ -45,6 +45,12 @@ public partial class App : Application
 
             viewModel.Initialize();
 
+            // The history rule, once now and daily from here on. Reads the preference each time,
+            // so a change on the Settings tab takes effect at the next pass without a restart.
+            var keeper = new HistoryKeeper(store, () => preferences.HistoryKeepDays, log, background, text);
+            keeper.Apply();
+            desktop.ShutdownRequested += (_, _) => keeper.Dispose();
+
             // Meows lives in the tray from here on. The window is a view of it, opened on demand,
             // and closing the window hides it unless the Settings tab says a close is a quit. Started
             // with --tray, as the login entry does when asked, there is no window until it is wanted.

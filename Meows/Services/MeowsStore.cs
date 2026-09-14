@@ -229,15 +229,17 @@ public sealed class MeowsStore
         }
     }
 
-    /// <summary>How many lines are older than a cutoff, which is what a confirmation has to say.</summary>
-    public long CountOlderThan(DateTime cutoffUtc)
+    /// <summary>How many lines are older than a cutoff, of one plugin's or of all, which is what a confirmation has to say.</summary>
+    public long CountOlderThan(DateTime cutoffUtc, string? plugin = null)
     {
         try
         {
             using var connection = Open();
             using var command = connection.CreateCommand();
-            command.CommandText = "SELECT COUNT(*) FROM events WHERE at < $cutoff";
+            command.CommandText = "SELECT COUNT(*) FROM events WHERE at < $cutoff" + (plugin is null ? "" : " AND plugin = $plugin");
             command.Parameters.AddWithValue("$cutoff", Stamp(cutoffUtc));
+            if (plugin is not null)
+                command.Parameters.AddWithValue("$plugin", plugin);
             return (long)(command.ExecuteScalar() ?? 0L);
         }
         catch (Exception)
@@ -246,17 +248,19 @@ public sealed class MeowsStore
         }
     }
 
-    /// <summary>Removes lines older than a cutoff and says how many went. Not undoable, which is why it asks first.</summary>
-    public long Forget(DateTime cutoffUtc)
+    /// <summary>Removes lines older than a cutoff, of one plugin's or of all, and says how many went. Not undoable, which is why the tab asks first.</summary>
+    public long Forget(DateTime cutoffUtc, string? plugin = null)
     {
         try
         {
             using var connection = Open();
             using var command = connection.CreateCommand();
-            command.CommandText = "DELETE FROM events WHERE at < $cutoff";
+            command.CommandText = "DELETE FROM events WHERE at < $cutoff" + (plugin is null ? "" : " AND plugin = $plugin");
             command.Parameters.AddWithValue("$cutoff", Stamp(cutoffUtc));
+            if (plugin is not null)
+                command.Parameters.AddWithValue("$plugin", plugin);
             var gone = command.ExecuteNonQuery();
-            _log($"Forgot {gone} history line(s) older than {cutoffUtc:yyyy-MM-dd}");
+            _log($"Forgot {gone} history line(s) older than {cutoffUtc:yyyy-MM-dd}{(plugin is null ? "" : $" for {plugin}")}");
             return gone;
         }
         catch (Exception ex)

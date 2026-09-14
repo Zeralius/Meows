@@ -97,6 +97,22 @@
 
             <Border Classes="section">
                 <StackPanel Spacing="10">
+                    <TextBlock Classes="heading" Text="{m:Tr settings.history}" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.history.hint}" />
+
+                    <StackPanel Spacing="4" Margin="0,4,0,0">
+                        <RadioButton GroupName="HistoryKeep" Content="{m:Tr settings.history.forever}" IsChecked="{Binding KeepForever}" />
+                        <RadioButton GroupName="HistoryKeep" Content="{m:Tr settings.history.year}" IsChecked="{Binding KeepAYear}" />
+                        <RadioButton GroupName="HistoryKeep" Content="{m:Tr settings.history.sixmonths}" IsChecked="{Binding KeepSixMonths}" />
+                        <RadioButton GroupName="HistoryKeep" Content="{m:Tr settings.history.threemonths}" IsChecked="{Binding KeepThreeMonths}" />
+                        <RadioButton GroupName="HistoryKeep" Content="{m:Tr settings.history.month}" IsChecked="{Binding KeepAMonth}" />
+                    </StackPanel>
+                    <TextBlock Classes="hint" Text="{m:Tr settings.history.note}" />
+                </StackPanel>
+            </Border>
+
+            <Border Classes="section">
+                <StackPanel Spacing="10">
                     <TextBlock Classes="heading" Text="{m:Tr settings.startup}" />
                     <TextBlock Classes="hint" Text="{m:Tr settings.startup.hint}" />
 

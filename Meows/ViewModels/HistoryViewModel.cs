@@ -63,7 +63,7 @@ public sealed class HistoryViewModel : ObservableObject
         RefreshCommand = new RelayCommand(Refresh);
         RevealCommand = new RelayCommand(Reveal, () => Selected is { IsPath: true });
         PutBackCommand = new RelayCommand(PutBack, () => CanPutBack);
-        AskToForgetCommand = new RelayCommand(p => AskToForget(p is int days ? days : p is string s && int.TryParse(s, out var d) ? d : 365));
+        AskToForgetCommand = new RelayCommand(_ => AskToForget(SelectedForgetAge.Days));
         ForgetCommand = new RelayCommand(Forget, () => _forgetCutoff is not null);
         CancelForgetCommand = new RelayCommand(() => ForgetCutoff = null);
         CompactCommand = new RelayCommand(Compact);
@@ -74,6 +74,31 @@ public sealed class HistoryViewModel : ObservableObject
 
     private DateTime? _forgetCutoff;
     private long _forgetCount;
+    private string? _forgetPlugin;
+    private ForgetAge _selectedForgetAge = ForgetAges[3];
+
+    /// <summary>One choice of how far back to forget. Zero days is everything.</summary>
+    public sealed record ForgetAge(int Days, string Key)
+    {
+        public override string ToString() => MeowsText.Current[Key];
+    }
+
+    public static readonly IReadOnlyList<ForgetAge> ForgetAges =
+    [
+        new(30, "history.age.month"),
+        new(91, "history.age.threemonths"),
+        new(182, "history.age.sixmonths"),
+        new(365, "history.age.year"),
+        new(0, "history.age.everything"),
+    ];
+
+    public IReadOnlyList<ForgetAge> ForgetChoices => ForgetAges;
+
+    public ForgetAge SelectedForgetAge
+    {
+        get => _selectedForgetAge;
+        set => SetField(ref _selectedForgetAge, value ?? ForgetAges[3]);
+    }
 
     /// <summary>Asks first. The parameter is a number of days; the confirmation says how many lines go.</summary>
     public RelayCommand AskToForgetCommand { get; }
@@ -104,14 +129,32 @@ public sealed class HistoryViewModel : ObservableObject
 
     public bool IsAskingToForget => _forgetCutoff is not null;
 
-    public string ForgetPrompt => _forgetCutoff is { } cutoff
-        ? MeowsText.Current.Format("history.forget.prompt", _forgetCount, cutoff.ToLocalTime().ToString("d MMM yyyy"))
-        : "";
+    /// <summary>
+    /// The question, with everything that matters in it: how many lines, how old, and whose.
+    /// A plugin chosen in the dropdown narrows the forgetting to that plugin's lines, which is
+    /// how "clear what Purrge did" is asked without touching what Kibble did.
+    /// </summary>
+    public string ForgetPrompt
+    {
+        get
+        {
+            if (_forgetCutoff is not { } cutoff)
+                return "";
+
+            var text = MeowsText.Current;
+            var whose = _forgetPlugin is null ? text["history.forget.every"] : _pluginName(_forgetPlugin);
+            return cutoff > DateTime.UtcNow
+                ? text.Format("history.forget.prompt.all", _forgetCount, whose)
+                : text.Format("history.forget.prompt", _forgetCount, cutoff.ToLocalTime().ToString("d MMM yyyy"), whose);
+        }
+    }
 
     private void AskToForget(int days)
     {
-        var cutoff = DateTime.UtcNow.AddDays(-days);
-        _forgetCount = _store.CountOlderThan(cutoff);
+        // Zero days is everything: a cutoff just past now catches every line there is.
+        var cutoff = days <= 0 ? DateTime.UtcNow.AddMinutes(1) : DateTime.UtcNow.AddDays(-days);
+        _forgetPlugin = _plugin;
+        _forgetCount = _store.CountOlderThan(cutoff, _forgetPlugin);
         if (_forgetCount == 0)
         {
             Notice = MeowsText.Current["history.forget.nothing"];
@@ -125,7 +168,7 @@ public sealed class HistoryViewModel : ObservableObject
         if (_forgetCutoff is not { } cutoff)
             return;
 
-        var gone = _store.Forget(cutoff);
+        var gone = _store.Forget(cutoff, _forgetPlugin);
         _store.Compact();
         ForgetCutoff = null;
         Notice = MeowsText.Current.Format("history.forget.done", gone, Humanise(_store.FileSize));

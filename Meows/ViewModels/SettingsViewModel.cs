@@ -29,6 +29,40 @@ public sealed class SettingsViewModel : ObservableObject
     public RelayCommand OpenSettingsFolderCommand { get; }
 
     /// <summary>
+    /// How long history is kept, as radio buttons want it: one bool each, acted on for the
+    /// true side only. Zero is forever, and the default, since the store kept everything before
+    /// anyone could choose.
+    /// </summary>
+    public int HistoryKeepDays
+    {
+        get => _preferences.HistoryKeepDays;
+        set
+        {
+            if (_preferences.HistoryKeepDays == value)
+                return;
+            _preferences.HistoryKeepDays = value;
+            _settings.SavePreferences(_preferences);
+            _log.Write("settings", value == 0 ? "History is kept forever." : $"History is kept for {value} days.");
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(KeepForever));
+            OnPropertyChanged(nameof(KeepAYear));
+            OnPropertyChanged(nameof(KeepSixMonths));
+            OnPropertyChanged(nameof(KeepThreeMonths));
+            OnPropertyChanged(nameof(KeepAMonth));
+        }
+    }
+
+    public bool KeepForever { get => HistoryKeepDays == 0; set { if (value) HistoryKeepDays = 0; } }
+
+    public bool KeepAYear { get => HistoryKeepDays == 365; set { if (value) HistoryKeepDays = 365; } }
+
+    public bool KeepSixMonths { get => HistoryKeepDays == 182; set { if (value) HistoryKeepDays = 182; } }
+
+    public bool KeepThreeMonths { get => HistoryKeepDays == 91; set { if (value) HistoryKeepDays = 91; } }
+
+    public bool KeepAMonth { get => HistoryKeepDays == 30; set { if (value) HistoryKeepDays = 30; } }
+
+    /// <summary>
     /// Read from the registry each time rather than remembered here, so this cannot drift from
     /// what Windows will actually do. Somebody switching it off in the Task Manager should show
     /// up on this tab, not be quietly overwritten by a stale copy of the answer.

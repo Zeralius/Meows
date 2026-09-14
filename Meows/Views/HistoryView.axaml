@@ -67,11 +67,16 @@
                     <!-- Keeping the file small. The journal never deletes a line on its own, so
                          these are the only two things that ever make it smaller, and the first
                          one asks. -->
-                    <Button Content="{m:Tr history.forget.year}"
-                            Command="{Binding AskToForgetCommand}"
-                            CommandParameter="365"
-                            IsVisible="{Binding !IsAskingToForget}"
-                            FontSize="11" />
+                    <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding !IsAskingToForget}">
+                        <TextBlock Classes="label" Text="{m:Tr history.forget.olderthan}" VerticalAlignment="Center" />
+                        <ComboBox ItemsSource="{Binding ForgetChoices}"
+                                  SelectedItem="{Binding SelectedForgetAge}"
+                                  FontSize="11"
+                                  MinWidth="120" />
+                        <Button Content="{m:Tr history.forget}"
+                                Command="{Binding AskToForgetCommand}"
+                                FontSize="11" />
+                    </StackPanel>
                     <Button Content="{m:Tr history.compact}"
                             Command="{Binding CompactCommand}"
                             IsVisible="{Binding !IsAskingToForget}"

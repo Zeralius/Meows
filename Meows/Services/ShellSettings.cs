@@ -293,4 +293,11 @@ public sealed class ShellPreferences
 
     /// <summary>Purrge and Chonk, or Duplicates and Disk usage. On, because it is the app's character.</summary>
     public bool FelineNames { get; set; } = true;
+
+    /// <summary>
+    /// How long a line in the history is kept, in days, before the shell forgets it on its own.
+    /// Zero keeps everything forever, which is the default and what the store did before this
+    /// existed. Facts and the seen table are never subject to this.
+    /// </summary>
+    public int HistoryKeepDays { get; set; }
 }

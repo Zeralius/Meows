@@ -237,6 +237,13 @@ public sealed class BackgroundTaskService : IDisposable
         }
     }
 
+    /// <summary>
+    /// The shell's own schedules, kept and shown like a plugin's. Purr lists them under "Meows",
+    /// which is where the housekeeping belongs to be seen.
+    /// </summary>
+    public IBackgroundTask ScheduleForShell(string title, TimeSpan interval, Func<IBackgroundContext, Task> work, bool runImmediately) =>
+        Start("meows.shell", "Meows", title, work, interval, runImmediately);
+
     internal BackgroundTaskItem Start(string pluginId, string source, string title,
         Func<IBackgroundContext, Task> work, TimeSpan? interval, bool runImmediately)
     {

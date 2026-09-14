@@ -81,9 +81,12 @@ being switched off, and the undo list being emptied. A line the plugin that wrot
 reverse, a Kibble send whose file is still in the queue, carries a **Put back** button while that
 plugin is open; the shell asks the plugin first, so the button is only there when pressing it
 would do something. The tab's bottom bar says how big the database file is and how many lines it
-holds, with **Forget older than a year**, which asks first and says how many lines would go, and
-**Compact**, which gives the room back; nothing else ever makes that file smaller, and forgetting
-never touches the facts a plugin keeps or the hashes anything has seen.
+holds, with **Forget…** older than a month, three months, six months, a year or everything, for
+every plugin or only the one being shown, which asks first and says how many lines would go, and
+**Compact**, which gives the room back. The Settings tab has the standing rule, **keep everything**
+by default, or a year, six months, three months or a month, applied when Meows starts and once a
+day while it runs; Purr lists that pass under Meows. Neither forgetting ever touches the facts a
+plugin keeps or the hashes anything has seen.
 
 Settings, logs and that history live in `%APPDATA%\Meows`, never inside the folder you unzipped,
 so deleting that folder resets Meows completely. `meows.log` there is also where a crash gets written, stack
