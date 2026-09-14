@@ -264,6 +264,48 @@ public sealed class SettingsViewModel : ObservableObject
 
     private void Save() => _settings.SavePreferences(_preferences);
 
+    // ---- the whole folder as one zip, and back ----
+
+    private string? _bundleNotice;
+
+    /// <summary>What the last export or import said.</summary>
+    public string? BundleNotice
+    {
+        get => _bundleNotice;
+        private set
+        {
+            if (SetField(ref _bundleNotice, value))
+                OnPropertyChanged(nameof(HasBundleNotice));
+        }
+    }
+
+    public bool HasBundleNotice => !string.IsNullOrEmpty(_bundleNotice);
+
+    /// <summary>A name for the file, with the date in it, so two exports do not become one.</summary>
+    public string SuggestedBundleName => $"meows-settings-{DateTime.Now:yyyy-MM-dd}.zip";
+
+    public void Export(string zipPath)
+    {
+        var report = SettingsBundle.Export(_settings.Root, zipPath, MainWindowViewModel.AppVersionText);
+        BundleNotice = report.Ok
+            ? _text.Format("settings.bundle.exported", report.Files, zipPath)
+            : _text.Format("settings.bundle.failed", report.Error);
+        _log.Write("settings", report.Ok ? $"Exported {report.Files} file(s) to {zipPath}" : $"Export failed: {report.Error}",
+            report.Ok ? Plugins.Abstractions.LogLevel.Info : Plugins.Abstractions.LogLevel.Warning);
+    }
+
+    public void Import(string zipPath)
+    {
+        var report = SettingsBundle.Import(_settings.Root, zipPath, MainWindowViewModel.AppVersionText);
+        BundleNotice = report.Ok
+            ? _text.Format("settings.bundle.imported", report.Files, report.Skipped, Path.GetFileName(report.BackupPath))
+            : _text.Format("settings.bundle.failed", report.Error);
+        _log.Write("settings", report.Ok
+            ? $"Imported {report.Files} file(s) from {zipPath}, {report.Skipped} skipped, previous settings kept in {report.BackupPath}"
+            : $"Import failed: {report.Error}",
+            report.Ok ? Plugins.Abstractions.LogLevel.Info : Plugins.Abstractions.LogLevel.Warning);
+    }
+
     private void OpenSettingsFolder()
     {
         try

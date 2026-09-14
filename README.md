@@ -97,6 +97,11 @@ everything, warnings and errors, or nothing, which is quiet mode for a plugin wi
 The bottom pane shows the same lines under the same levels; `meows.log` keeps every line
 regardless.
 
+The Settings tab's **Moving house** section exports all of that as one zip and imports it again on
+another machine: preferences, which plugins are on, the bot folder, the history, every plugin's
+settings and data, never the secrets and never the log. An import keeps what it writes over as a
+bundle of its own beside the settings, so it can be undone by importing that.
+
 Settings, logs and that history live in `%APPDATA%\Meows`, never inside the folder you unzipped,
 so deleting that folder resets Meows completely. `meows.log` there is also where a crash gets written, stack
 trace and all, which is worth attaching to a bug report. The log stays in English whatever the
