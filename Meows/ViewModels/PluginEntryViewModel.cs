@@ -10,10 +10,34 @@ public sealed class PluginEntryViewModel : ObservableObject
     private bool _isActivated;
     private string? _error;
 
-    public PluginEntryViewModel(PluginDescriptor descriptor, Action<PluginEntryViewModel, bool> onActivationChanged)
+    private readonly Func<string, PluginHealth>? _health;
+
+    public PluginEntryViewModel(PluginDescriptor descriptor, Action<PluginEntryViewModel, bool> onActivationChanged,
+        Func<string, PluginHealth>? health = null)
     {
         Descriptor = descriptor;
         _onActivationChanged = onActivationChanged;
+        _health = health;
+    }
+
+    /// <summary>
+    /// What the plugin last did and what it is watching, from the store and the shell's list of
+    /// schedules, so "is Birdwatch actually doing anything" is answered where its switch is.
+    /// </summary>
+    public PluginHealth Health => _health?.Invoke(Id) ?? PluginHealth.Nothing;
+
+    public string HealthText => Health.Text;
+
+    public bool HasHealth => Health.Text.Length > 0;
+
+    public bool HealthIsTrouble => Health.StoppedWatches > 0;
+
+    public void RefreshHealth()
+    {
+        OnPropertyChanged(nameof(Health));
+        OnPropertyChanged(nameof(HealthText));
+        OnPropertyChanged(nameof(HasHealth));
+        OnPropertyChanged(nameof(HealthIsTrouble));
     }
 
     public PluginDescriptor Descriptor { get; }
@@ -96,5 +120,48 @@ public sealed class PluginEntryViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(Description));
         OnPropertyChanged(nameof(StatusText));
+        RefreshHealth();
+    }
+}
+
+/// <summary>One line about a plugin: its last journal entry and its watches, in words.</summary>
+public sealed record PluginHealth(string Text, int Watches, int StoppedWatches)
+{
+    public static PluginHealth Nothing { get; } = new("", 0, 0);
+
+    /// <summary>The words, from the last thing it recorded and the state of its schedules.</summary>
+    public static PluginHealth Describe(StoredEvent? last, IReadOnlyList<WatchInfo> watches)
+    {
+        var text = MeowsText.Current;
+        var parts = new List<string>();
+
+        if (last is not null)
+        {
+            var what = last.Detail is { Length: > 0 } detail ? detail : last.Kind;
+            var name = Path.GetFileName(last.Subject) is { Length: > 0 } file ? file : last.Subject;
+            parts.Add(text.Format("plugins.health.last", name, what, Ago(last.At)));
+        }
+
+        var stopped = watches.Count(w => w.IsStopped);
+        if (watches.Count > 0)
+        {
+            var running = watches.Count - stopped;
+            var line = running == 1 ? text["plugins.health.watch.one"] : text.Format("plugins.health.watch.many", running);
+            if (stopped > 0)
+                line += " " + text.Format("plugins.health.watch.stopped", stopped);
+            parts.Add(line);
+        }
+
+        return new PluginHealth(string.Join(" · ", parts), watches.Count, stopped);
+    }
+
+    private static string Ago(DateTime when)
+    {
+        var text = MeowsText.Current;
+        var span = DateTime.Now - when;
+        if (span.TotalMinutes < 1) return text["plugins.health.justnow"];
+        if (span.TotalMinutes < 90) return text.Format("plugins.health.minutes", (int)span.TotalMinutes);
+        if (span.TotalHours < 36) return text.Format("plugins.health.hours", (int)span.TotalHours);
+        return text.Format("plugins.health.days", (int)span.TotalDays);
     }
 }

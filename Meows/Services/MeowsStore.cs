@@ -40,6 +40,9 @@ public sealed class MeowsStore
 
     public string FilePath => _path;
 
+    /// <summary>Raised after a line lands, on whatever thread wrote it, with the plugin's id.</summary>
+    public event Action<string>? Recorded;
+
     private SqliteConnection Open()
     {
         var connection = new SqliteConnection(new SqliteConnectionStringBuilder
@@ -112,7 +115,10 @@ public sealed class MeowsStore
         catch (Exception ex)
         {
             _log($"Could not record '{kind}' for {plugin}: {ex.Message}");
+            return;
         }
+
+        Recorded?.Invoke(plugin);
     }
 
     /// <summary>Events, newest first. Plugin, kind and text are each optional filters.</summary>

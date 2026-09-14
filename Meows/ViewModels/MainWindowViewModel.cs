@@ -60,6 +60,9 @@ public sealed class MainWindowViewModel : ObservableObject
 
         _notifications.Changed += RaiseNotificationState;
         _background.Changed += RaiseTaskState;
+        _background.WatchesChanged += OnWatchesChanged;
+        if (_store is not null)
+            _store.Recorded += OnRecorded;
         _text.PropertyChanged += (_, _) => Retranslate();
 
         PluginNames.Feline = preferences.FelineNames;
@@ -443,7 +446,7 @@ public sealed class MainWindowViewModel : ObservableObject
             if (descriptor.Plugin is { } plugin)
                 _text.Add(plugin.GetType().Assembly);
 
-            Plugins.Add(new PluginEntryViewModel(descriptor, OnActivationChanged));
+            Plugins.Add(new PluginEntryViewModel(descriptor, OnActivationChanged, HealthOf));
         }
 
         Regroup();
@@ -566,6 +569,27 @@ public sealed class MainWindowViewModel : ObservableObject
             : "a file";
 
         return MeowsText.Current.Format("plugins.missingfile", name);
+    }
+
+    /// <summary>The card's health line: the last journal entry and the watches, for one plugin.</summary>
+    private PluginHealth HealthOf(string pluginId)
+    {
+        var last = _store?.Events(pluginId, null, null, 1).FirstOrDefault();
+        var watches = _background.Watches()
+            .Where(w => string.Equals(w.PluginId, pluginId, StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        return PluginHealth.Describe(last, watches);
+    }
+
+    private void OnRecorded(string pluginId) => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+    {
+        Plugins.FirstOrDefault(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase))?.RefreshHealth();
+    });
+
+    private void OnWatchesChanged()
+    {
+        foreach (var entry in Plugins)
+            entry.RefreshHealth();
     }
 
     private IReadOnlyDictionary<string, LogLevel> ReadLogLevels()

@@ -5,6 +5,13 @@
              x:Class="Meows.Views.PluginsView"
              x:DataType="vm:MainWindowViewModel">
 
+    <UserControl.Styles>
+        <Style Selector="TextBlock.trouble">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsDangerText}" />
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+    </UserControl.Styles>
+
     <DockPanel Margin="20">
 
         <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,18">
@@ -74,6 +81,13 @@
                                     </StackPanel>
                                     <TextBlock Text="{Binding Description}" Opacity="0.6" TextWrapping="Wrap" />
                                     <TextBlock Text="{Binding Origin}" Opacity="0.35" FontSize="11" />
+                                    <!-- What it last did and what it is watching, where the switch is. -->
+                                    <TextBlock Text="{Binding HealthText}"
+                                               Opacity="0.6"
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
+                                               IsVisible="{Binding HasHealth}"
+                                               Classes.trouble="{Binding HealthIsTrouble}" />
                                     <TextBlock Text="{Binding Error}"
                                                Foreground="{DynamicResource MeowsDangerStrong}"
                                                TextWrapping="Wrap"

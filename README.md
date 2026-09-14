@@ -88,6 +88,9 @@ by default, or a year, six months, three months or a month, applied when Meows s
 day while it runs; Purr lists that pass under Meows. Neither forgetting ever touches the facts a
 plugin keeps or the hashes anything has seen.
 
+Every card on the **Plugins** tab carries a line of health: the last thing that plugin recorded
+and how long ago, and how many of its watches are running, a stopped one in red.
+
 The **Log** tab is what Meows and the plugins said this run, with a word to filter on, a source
 to narrow to, *Only trouble* to see the warnings and errors, and on the right a level per source:
 everything, warnings and errors, or nothing, which is quiet mode for a plugin with a lot to say.
