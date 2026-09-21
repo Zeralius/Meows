@@ -64,6 +64,84 @@ public static class SteamLibrary
         return null;
     }
 
+    /// <summary>
+    /// Every library folder Steam knows, from its own libraryfolders.vdf: the one under the
+    /// client first, then the others on whatever drives they were made on. Empty when Steam is
+    /// not installed or the file cannot be read.
+    /// </summary>
+    public static IReadOnlyList<string> LibraryFolders()
+    {
+        var client = ClientFolder();
+        if (client is null)
+            return [];
+        var folders = new List<string> { client };
+        try
+        {
+            var vdf = Path.Combine(client, "steamapps", "libraryfolders.vdf");
+            if (File.Exists(vdf))
+            {
+                foreach (Match match in Regex.Matches(File.ReadAllText(vdf), "\"path\"\\s+\"([^\"]*)\"", RegexOptions.IgnoreCase, TimeSpan.FromSeconds(1)))
+                {
+                    var path = match.Groups[1].Value.Replace("\\\\", "\\");
+                    if (path.Length > 0 && !folders.Contains(path, StringComparer.OrdinalIgnoreCase))
+                        folders.Add(path);
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // The client folder alone is still an answer.
+        }
+        return folders;
+    }
+
+    /// <summary>
+    /// Where a game is installed, by its app id, from the manifest in whichever library holds
+    /// it: <c>&lt;library&gt;\steamapps\common\&lt;installdir&gt;</c>. Null when no library has it.
+    /// The uninstall registry often leaves a Steam game's location blank; this is the answer it
+    /// should have given.
+    /// </summary>
+    public static string? InstallFolderOf(string appId)
+    {
+        foreach (var library in LibraryFolders())
+        {
+            try
+            {
+                var manifest = Path.Combine(library, "steamapps", $"appmanifest_{appId}.acf");
+                if (!File.Exists(manifest))
+                    continue;
+                var installdir = Value(File.ReadAllText(manifest), "installdir");
+                if (installdir.Length > 0)
+                    return Path.Combine(library, "steamapps", "common", installdir);
+            }
+            catch (Exception)
+            {
+                // A library on a drive that is not there today.
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Where the Steam client is, from the registry, or the default when the registry does not say.</summary>
+    private static string? ClientFolder()
+    {
+        if (!OperatingSystem.IsWindows())
+            return null;
+        try
+        {
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\WOW6432Node\Valve\Steam")
+                            ?? Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SOFTWARE\Valve\Steam");
+            if (key?.GetValue("InstallPath") is string path && Directory.Exists(path))
+                return path;
+        }
+        catch (Exception)
+        {
+            // Fall through to the default.
+        }
+        var fallback = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFilesX86), "Steam");
+        return Directory.Exists(fallback) ? fallback : null;
+    }
+
     private static DateTime? Played(string text)
     {
         var seconds = Number(text, "LastPlayed");

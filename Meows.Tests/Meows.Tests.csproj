@@ -66,6 +66,7 @@
     <ProjectReference Include="..\Meows.Plugins.Familiar\Meows.Plugins.Familiar.csproj" />
     <ProjectReference Include="..\Meows.Plugins.WeighIn\Meows.Plugins.WeighIn.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Catnip\Meows.Plugins.Catnip.csproj" />
+    <ProjectReference Include="..\Meows.Plugins.Rehome\Meows.Plugins.Rehome.csproj" />
   </ItemGroup>
 
 </Project>

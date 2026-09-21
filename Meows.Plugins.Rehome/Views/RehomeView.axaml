@@ -1,0 +1,429 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Rehome.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Rehome.Views.RehomeView"
+             x:DataType="vm:RehomeViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="14,12,14,6" />
+        </Style>
+        <Style Selector="TextBlock.warn">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsWarnText}" />
+        </Style>
+        <Style Selector="TextBlock.bad">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsDangerText}" />
+        </Style>
+        <Style Selector="TextBlock.good">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsGoodText}" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
+        </Style>
+        <Style Selector="Border.row">
+            <Setter Property="Background" Value="{DynamicResource MeowsCard}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,8" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+        <Style Selector="Button.small">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="8,3" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <!-- Header: what was found, and the two verbs -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{m:Tr rehome.title}" FontWeight="SemiBold" />
+                    <TextBlock Classes="label" Text="{Binding Status}" TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBox Text="{Binding Filter}" Watermark="{m:Tr rehome.filter}" Width="260" FontSize="12" VerticalAlignment="Center" />
+                    <Button Content="{m:Tr rehome.filter.clear}" Command="{Binding ClearFilterCommand}" IsVisible="{Binding HasFilter}" Classes="small" VerticalAlignment="Center" />
+                    <Button Content="{m:Tr rehome.scan}" Command="{Binding ScanCommand}" IsVisible="{Binding !IsBusy}" />
+                    <Button Content="{m:Tr rehome.stop}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="200,4,*,4,320">
+
+            <!-- The steps -->
+            <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr rehome.steps}" />
+                    <TextBlock DockPanel.Dock="Bottom" Classes="label" Margin="14,6,14,12" TextWrapping="Wrap" Text="{m:Tr rehome.steps.hint}" />
+                    <ListBox ItemsSource="{Binding Steps}"
+                             SelectedItem="{Binding SelectedStep}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Margin="6,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:StepViewModel">
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" />
+                                    <TextBlock Grid.Column="1" Text="{Binding Count}" Classes="label" VerticalAlignment="Center" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <!-- The middle: one list per step -->
+            <Panel Grid.Column="2">
+
+                <TextBlock Margin="14,14" Opacity="0.45" TextWrapping="Wrap" Text="{m:Tr rehome.empty}">
+                    <TextBlock.IsVisible>
+                        <MultiBinding Converter="{x:Static BoolConverters.And}">
+                            <Binding Path="!HasScanned" />
+                            <Binding Path="IsOutward" />
+                        </MultiBinding>
+                    </TextBlock.IsVisible>
+                </TextBlock>
+
+                <!-- Programs -->
+                <DockPanel IsVisible="{Binding IsProgramsStep}">
+                    <StackPanel DockPanel.Dock="Top" Margin="14,10,14,6" Spacing="4" IsVisible="{Binding HasScanned}">
+                        <TextBlock Text="{Binding ProgramsHeadline}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding ManagersText}" Classes="label" TextWrapping="Wrap" />
+                        <CheckBox Content="{m:Tr rehome.programs.onlywiped}" IsChecked="{Binding OnlyWipedDrives}" FontSize="12" ToolTip.Tip="{m:Tr rehome.programs.onlywiped.hint}" />
+                    </StackPanel>
+                    <ListBox ItemsSource="{Binding Programs}"
+                             SelectedItem="{Binding SelectedProgram}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Margin="8,0,8,8">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ProgramRowViewModel">
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                                    <StackPanel Grid.Column="0" Spacing="2">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding DriveText}" Classes="label" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Publisher}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding HowText}" HorizontalAlignment="Right" Classes.warn="{Binding ByHand}" />
+                                        <TextBlock Text="{Binding SureText}" Classes="label" HorizontalAlignment="Right" />
+                                    </StackPanel>
+                                    <CheckBox Grid.Column="2" IsChecked="{Binding IsWanted}" Content="{m:Tr rehome.toget.tick}" FontSize="11" VerticalAlignment="Center" Padding="4,0,0,0" ToolTip.Tip="{m:Tr rehome.toget.tick.hint}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+
+                <!-- Folders -->
+                <DockPanel IsVisible="{Binding IsFoldersStep}">
+                    <StackPanel DockPanel.Dock="Top" Margin="14,10,14,6" Spacing="4" IsVisible="{Binding HasScanned}">
+                        <TextBlock Text="{Binding FoldersHeadline}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                        <TextBlock Classes="label warn" TextWrapping="Wrap" Text="{m:Tr rehome.folders.stale}" IsVisible="{Binding DriveListStale}" />
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Button Classes="small" Content="{m:Tr rehome.pick.suggested}" Command="{Binding PickSuggestedFoldersCommand}" />
+                            <Button Classes="small" Content="{m:Tr rehome.pick.all}" Command="{Binding PickAllFoldersCommand}" />
+                            <Button Classes="small" Content="{m:Tr rehome.pick.none}" Command="{Binding PickNoFoldersCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <!-- The person's own folders, grouped at the top -->
+                    <Border DockPanel.Dock="Top" Margin="8,4,8,6" Padding="10,8" CornerRadius="6"
+                            Background="{DynamicResource MeowsInset}" BorderBrush="{DynamicResource MeowsLineSoft}" BorderThickness="1"
+                            IsVisible="{Binding HasLibrary}">
+                        <StackPanel Spacing="4">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                <TextBlock Grid.Column="0" Classes="section" Margin="0,0,0,2" Text="{m:Tr rehome.library}" VerticalAlignment="Center" />
+                                <Button Grid.Column="1" Classes="small" Content="{m:Tr rehome.pick.all}" Command="{Binding PickAllLibraryCommand}" />
+                                <Button Grid.Column="2" Classes="small" Content="{m:Tr rehome.pick.none}" Command="{Binding PickNoLibraryCommand}" />
+                            </Grid>
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <CheckBox Content="{m:Tr rehome.cloud.pull}" IsChecked="{Binding PullCloudOnly}" FontSize="12" ToolTip.Tip="{m:Tr rehome.cloud.pull.hint}" />
+                                <TextBlock Text="{Binding CloudText}" Classes="label" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <ItemsControl ItemsSource="{Binding LibraryFolders}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel Orientation="Horizontal" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:FolderRowViewModel">
+                                        <Border Classes="row" Width="215" Margin="0,0,6,6" Padding="10,6">
+                                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8">
+                                                <CheckBox Grid.Column="0" IsChecked="{Binding IsPicked}" IsEnabled="{Binding !Survives}" VerticalAlignment="Top" Padding="0" />
+                                                <StackPanel Grid.Column="1" Spacing="1">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                                                        <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                        <TextBlock Grid.Column="1" Text="{Binding SizeText}" FontWeight="SemiBold" />
+                                                    </Grid>
+                                                    <TextBlock Text="{Binding DetailText}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Path}" Opacity="0.35" FontSize="10" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Note}" Classes="label warn" TextWrapping="Wrap" IsVisible="{Binding HasNote}" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Margin="14,2,14,4" Text="{m:Tr rehome.library.rest}" IsVisible="{Binding HasLibrary}" />
+                    <ListBox ItemsSource="{Binding Folders}"
+                             SelectedItem="{Binding SelectedFolder}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Margin="8,0,8,8">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FolderRowViewModel">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                    <CheckBox Grid.Column="0" IsChecked="{Binding IsPicked}" VerticalAlignment="Top" Padding="0" />
+                                    <StackPanel Grid.Column="1" Spacing="2">
+                                        <StackPanel Orientation="Horizontal" Spacing="8">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Text="{Binding KindText}" Classes="label" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                        <TextBlock Text="{Binding Path}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Note}" Classes="label warn" TextWrapping="Wrap" IsVisible="{Binding HasNote}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding SizeText}" FontWeight="SemiBold" HorizontalAlignment="Right" />
+                                        <TextBlock Text="{Binding DetailText}" Classes="label" HorizontalAlignment="Right" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+
+                <!-- Extras -->
+                <ScrollViewer IsVisible="{Binding IsExtrasStep}" Padding="14,10">
+                    <StackPanel Spacing="6">
+                        <TextBlock Classes="label" TextWrapping="Wrap" Margin="0,0,0,6" Text="{m:Tr rehome.extras.about}" />
+                        <ItemsControl ItemsSource="{Binding Extras}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ExtraRowViewModel">
+                                    <Border Classes="row">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                            <CheckBox Grid.Column="0" IsChecked="{Binding IsPicked}" IsEnabled="{Binding Present}" VerticalAlignment="Top" Padding="0" />
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding Note}" Classes="label" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding Source}" Opacity="0.35" FontSize="10" TextTrimming="CharacterEllipsis" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2" Text="{Binding Detail}" Classes="label" VerticalAlignment="Top" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- Keys -->
+                <ScrollViewer IsVisible="{Binding IsKeysStep}" Padding="14,10">
+                    <StackPanel Spacing="6">
+                        <TextBlock Classes="label" TextWrapping="Wrap" Margin="0,0,0,6" Text="{m:Tr rehome.keys.about}" />
+                        <ItemsControl ItemsSource="{Binding KeyRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:KeyRowViewModel">
+                                    <Border Classes="row">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <StackPanel Grid.Column="0" Spacing="2">
+                                                <TextBlock Text="{Binding Product}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding Key}" FontFamily="Consolas,Courier New,monospace" FontSize="14" IsVisible="{Binding HasKey}" />
+                                                <TextBlock Text="{Binding Detail}" Classes="label" TextWrapping="Wrap" Classes.warn="{Binding IsWarning}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Top">
+                                                <TextBlock Text="{Binding StandingText}" Classes="label" HorizontalAlignment="Right" />
+                                                <Button Classes="small" Content="{m:Tr rehome.copy}" IsVisible="{Binding HasKey}" HorizontalAlignment="Right"
+                                                        Command="{Binding $parent[UserControl].((vm:RehomeViewModel)DataContext).CopyKeyCommand}"
+                                                        CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+                <!-- The way back -->
+                <ScrollViewer IsVisible="{Binding IsWayBackStep}" Padding="14,10">
+                    <StackPanel Spacing="6">
+                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr rehome.back.about}" IsVisible="{Binding !HasManifest}" />
+                        <TextBlock Text="{Binding ManifestHeadline}" FontWeight="SemiBold" TextWrapping="Wrap" IsVisible="{Binding HasManifest}" />
+                        <TextBlock Classes="label" TextWrapping="Wrap" Margin="0,0,0,6" Text="{m:Tr rehome.back.hint}" IsVisible="{Binding HasManifest}" />
+                        <ItemsControl ItemsSource="{Binding RestoreRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:RestoreRowViewModel">
+                                    <Border Classes="row">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                            <CheckBox Grid.Column="0" IsChecked="{Binding IsPicked}" IsEnabled="{Binding HasCopy}" VerticalAlignment="Top" Padding="0" />
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding Source}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Carried}" Classes="label" />
+                                                <TextBlock Text="{m:Tr rehome.back.incomplete}" Classes="label warn" IsVisible="{Binding WasIncomplete}" />
+                                                <TextBlock Text="{Binding HereText}" Classes="label" Classes.warn="{Binding Exists}" />
+                                                <ComboBox ItemsSource="{Binding Options}" SelectedItem="{Binding Conflict}" IsVisible="{Binding Exists}" FontSize="11" MinWidth="220">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:ConflictOption">
+                                                            <TextBlock Text="{Binding Text}" />
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                                <TextBlock Text="{Binding Outcome}" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding HasOutcome}" Classes.bad="{Binding Failed}" Classes.good="{Binding !Failed}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Top">
+                                                <TextBlock Text="{Binding SizeText}" FontWeight="SemiBold" HorizontalAlignment="Right" />
+                                                <Button Classes="small" Content="{m:Tr rehome.back.show}" HorizontalAlignment="Right"
+                                                        Command="{Binding $parent[UserControl].((vm:RehomeViewModel)DataContext).RevealStoredCommand}"
+                                                        CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Classes="section" Margin="0,8,0,4" Text="{m:Tr rehome.step.extras}" IsVisible="{Binding HasManifest}" />
+                        <ItemsControl ItemsSource="{Binding RestoreExtras}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:RestoreExtraViewModel">
+                                    <Border Classes="row">
+                                        <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                            <CheckBox Grid.Column="0" IsChecked="{Binding IsPicked}" IsEnabled="{Binding CanPutBack}" VerticalAlignment="Top" Padding="0" />
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                <TextBlock Text="{Binding Detail}" Classes="label" TextWrapping="Wrap" />
+                                                <TextBlock Text="{Binding Outcome}" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding HasOutcome}" Classes.bad="{Binding Failed}" Classes.good="{Binding !Failed}" />
+                                            </StackPanel>
+                                            <Button Grid.Column="2" Classes="small" Content="{m:Tr rehome.back.show}" VerticalAlignment="Top"
+                                                    Command="{Binding $parent[UserControl].((vm:RehomeViewModel)DataContext).RevealStoredCommand}"
+                                                    CommandParameter="{Binding}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+
+            </Panel>
+
+            <GridSplitter Grid.Column="3" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <!-- The right: the drives, the destination, the pack; or the way back -->
+            <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0">
+                <ScrollViewer Padding="16,12">
+                    <StackPanel Spacing="10">
+
+                        <!-- Before the wipe -->
+                        <StackPanel Spacing="10" IsVisible="{Binding IsOutward}">
+                            <TextBlock Text="{m:Tr rehome.drives}" FontWeight="SemiBold" FontSize="13" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr rehome.drives.hint}" />
+                            <ItemsControl ItemsSource="{Binding Drives}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DriveRowViewModel">
+                                        <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,2">
+                                            <CheckBox Grid.Column="0" IsChecked="{Binding IsWiped}" Padding="0" VerticalAlignment="Top" />
+                                            <StackPanel Grid.Column="1">
+                                                <TextBlock Text="{Binding Name}" FontSize="12" />
+                                                <TextBlock Text="{Binding FreeText}" Classes="label" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+
+                            <TextBlock Text="{m:Tr rehome.destination}" FontWeight="SemiBold" FontSize="13" Margin="0,10,0,0" />
+                            <TextBlock Text="{Binding DestinationText}" TextWrapping="Wrap" FontSize="12" />
+                            <TextBlock Text="{Binding DestinationWarning}" Classes="label warn" TextWrapping="Wrap" IsVisible="{Binding DestinationWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                            <Button Name="PickDestinationButton" Content="{m:Tr rehome.destination.pick}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr rehome.destination.hint}" />
+
+                            <TextBlock Text="{m:Tr rehome.pack}" FontWeight="SemiBold" FontSize="13" Margin="0,10,0,0" />
+                            <TextBlock Text="{Binding PackSummary}" TextWrapping="Wrap" FontSize="12" />
+                            <Button Content="{m:Tr rehome.pack.go}" Command="{Binding PackCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr rehome.pack.hint}" />
+                            <Button Content="{m:Tr rehome.pack.open}" Command="{Binding OpenPackedCommand}" IsVisible="{Binding HasPacked}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+
+                            <TextBlock Text="{m:Tr rehome.toget}" FontWeight="SemiBold" FontSize="13" Margin="0,10,0,0" />
+                            <TextBlock Text="{Binding WantedText}" TextWrapping="Wrap" FontSize="12" />
+                            <Button Content="{m:Tr rehome.toget.write}" Command="{Binding WriteToGetCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr rehome.toget.hint}" />
+
+                            <StackPanel Spacing="6" IsVisible="{Binding HasSelectedProgram}" Margin="0,10,0,0">
+                                <TextBlock Text="{m:Tr rehome.selected}" FontWeight="SemiBold" FontSize="13" />
+                                <TextBlock Text="{Binding SelectedProgram.Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding SelectedProgram.Version}" Classes="label" />
+                                <TextBlock Text="{Binding SelectedProgram.HowText}" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding SelectedProgram.InstalledText}" Classes="label" />
+                                <TextBlock Text="{Binding SelectedProgram.Where}" Classes="label" TextWrapping="Wrap" />
+                                <Button Content="{m:Tr rehome.program.url}" Command="{Binding OpenProgramUrlCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                                <Button Content="{m:Tr rehome.program.reveal}" Command="{Binding RevealProgramCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="6" IsVisible="{Binding IsFoldersStep}" Margin="0,10,0,0">
+                                <Button Content="{m:Tr rehome.folder.reveal}" Command="{Binding RevealFolderCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                                <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr rehome.folders.about}" />
+                            </StackPanel>
+                        </StackPanel>
+
+                        <!-- After the wipe -->
+                        <StackPanel Spacing="10" IsVisible="{Binding IsWayBackStep}">
+                            <TextBlock Text="{m:Tr rehome.back}" FontWeight="SemiBold" FontSize="13" />
+                            <TextBlock Text="{Binding RehomeFolder}" TextWrapping="Wrap" FontSize="12" IsVisible="{Binding HasManifest}" />
+                            <Button Name="OpenManifestButton" Content="{m:Tr rehome.back.pick}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr rehome.back.pick.hint}" />
+                            <Button Content="{m:Tr rehome.back.go}" Command="{Binding BringBackCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,6,0,0" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr rehome.back.go.hint}" />
+                            <Button Content="{m:Tr rehome.back.open}" Command="{Binding OpenRehomeFolderCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

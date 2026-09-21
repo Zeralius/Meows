@@ -1,3 +1,4 @@
+using Avalonia.Headless.XUnit;
 using Meows.Plugins.Abstractions;
 using Meows.Plugins.Catnip.Services;
 using Meows.Plugins.Catnip.ViewModels;
@@ -10,6 +11,9 @@ namespace Meows.Tests;
 /// </summary>
 public sealed class CatnipTests : IDisposable
 {
+    // The view model holds a SelectionModel, which is Avalonia's and checks the thread it is
+    // touched from, so the tests that build one run on the headless dispatcher thread.
+
     private readonly string _root = Path.Combine(Path.GetTempPath(), "catnip-" + Guid.NewGuid().ToString("N")[..10]);
 
     public CatnipTests() => Directory.CreateDirectory(_root);
@@ -89,7 +93,7 @@ public sealed class CatnipTests : IDisposable
         Assert.Equal(expected, Neglect.Ago(Now.AddDays(-days), Now, k => text[k]));
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void A_handoff_adds_the_folder_and_asks_for_the_walk()
     {
         var host = new FakeHost(Path.Combine(_root, "hostdata"));
@@ -110,7 +114,7 @@ public sealed class CatnipTests : IDisposable
         Assert.False(model.HasScanned);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void The_tab_lists_the_least_recently_touched_first_and_the_dials_narrow_it()
     {
         var host = new FakeHost(Path.Combine(_root, "hostdata2"));
@@ -139,7 +143,7 @@ public sealed class CatnipTests : IDisposable
         Assert.Equal(big, model.Selected?.Path);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Several_rows_can_be_picked_and_asked_about_together()
     {
         var host = new FakeHost(Path.Combine(_root, "hostdata3"));
