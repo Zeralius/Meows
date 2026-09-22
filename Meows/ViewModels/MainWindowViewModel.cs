@@ -92,6 +92,14 @@ public sealed class MainWindowViewModel : ObservableObject
             if (tab is TabViewModel picked)
                 SelectedTab = picked;
         });
+
+        SwitchOffCommand = new RelayCommand(tab =>
+        {
+            if (tab is not TabViewModel picked)
+                return;
+            if (Plugins.FirstOrDefault(p => string.Equals(p.Id, picked.Key, StringComparison.OrdinalIgnoreCase)) is { } entry)
+                entry.IsActivated = false;
+        });
     }
 
     /// <summary>
@@ -107,6 +115,13 @@ public sealed class MainWindowViewModel : ObservableObject
 
     /// <summary>Clicking a tab on the strip. Its own button rather than a TabControl's selection.</summary>
     public RelayCommand SelectTabCommand { get; }
+
+    /// <summary>
+    /// Switching a plugin off from its own tab, which is the same as unticking it on the Plugins
+    /// tab: the tab closes and whatever it was running is cancelled. Only a plugin's tab can be
+    /// switched off; the shell's own tabs are not optional.
+    /// </summary>
+    public RelayCommand SwitchOffCommand { get; }
 
     /// <summary>
     /// What the palette offers before anything is typed: every plugin under both its names,
@@ -994,7 +1009,7 @@ public sealed class MainWindowViewModel : ObservableObject
             _dormant.Remove(entry.Id);
             _sourceById[entry.Id] = entry.DisplayName;
             var view = entry.Descriptor.Plugin!.CreateView(host);
-            var tab = new TabViewModel(entry.Id, () => entry.DisplayName, entry.Icon, view);
+            var tab = new TabViewModel(entry.Id, () => entry.DisplayName, entry.Icon, view) { IsPlugin = true };
             _pluginTabs[entry.Id] = tab;
             Tabs.Add(tab);
             SelectedTab = tab;

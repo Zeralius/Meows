@@ -88,6 +88,12 @@ public sealed class TabViewModel : ObservableObject
 
     public bool HasGroup => _groupColour is not null;
 
+    /// <summary>
+    /// Whether this tab belongs to a plugin, and so can be switched off from its own menu. The
+    /// shell's own tabs are not optional and do not offer it.
+    /// </summary>
+    public bool IsPlugin { get; init; }
+
     public IBrush Paint => GroupPaint.For(_groupColour);
 
     /// <summary>Set while something is being dragged over this tab, and cleared when it leaves.</summary>

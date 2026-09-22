@@ -1,4 +1,6 @@
 {
+  "kibble.back": "Zurück",
+  "kibble.back.to": "← {0}",
   "kibble.botfolder": "Bot-Ordner…",
   "kibble.botskips": "DAS ÜBERSPRINGT DER BOT",
   "kibble.bundle.comic": "{0} Dateien werden zu einem Comic gepackt und als ein einziger Post eingereiht.",
@@ -25,8 +27,10 @@
   "kibble.error.open": "Konnte {0} nicht öffnen: {1}",
   "kibble.error.read": "Konnte {0} nicht lesen: {1}",
   "kibble.error.shrink": "Konnte nicht verkleinern: {0}",
+  "kibble.held.here": "Das ist, was für {0} zurückgestellt ist. Von hier aus sortieren schickt es weiter, Zurück führt dahin, wo du warst.",
   "kibble.held.many": "{0} zurückgehalten",
   "kibble.held.moved": "für die Gruppe zurückgehalten, zum späteren Entscheiden",
+  "kibble.held.of": "Zurückgestellt für {0}",
   "kibble.held.one": "1 zurückgehalten",
   "kibble.held.open": "Den Ordner Held_Back der Gruppe hier öffnen, um über den Inhalt zu entscheiden.",
   "kibble.hold": "Zurückhalten",

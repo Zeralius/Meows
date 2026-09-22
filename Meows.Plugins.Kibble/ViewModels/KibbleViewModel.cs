@@ -159,6 +159,7 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         HoldCommand = new RelayCommand(HoldBlocked, () => CanHoldBlocked);
         OpenSourceCommand = new RelayCommand(() => OpenInExplorer(SourceFolder), () => SourceFolder.Length > 0);
         OpenHeldCommand = new RelayCommand(p => OpenHeld(p as DestinationViewModel));
+        BackCommand = new RelayCommand(Back, () => _back.Count > 0);
 
         Reload();
         SeedUndoFromJournal();
@@ -286,6 +287,81 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
 
     /// <summary>The way out of a refusal for a picture that is merely too big.</summary>
     public RelayCommand ShrinkAndSendCommand { get; }
+
+    // ---- Where you were before -----------------------------------------------------------
+
+    /// <summary>
+    /// The folders this tab has been showing, most recent last.
+    ///
+    /// Opening a group's Held_Back is the one navigation here that happens by accident: it is a
+    /// small button on a destination card, it replaces the folder being sorted, and every
+    /// Held_Back is called Held_Back, so there was no way back and no way to tell which one you
+    /// had landed in. The stack answers the first half and <see cref="Describe"/> the second.
+    /// </summary>
+    private readonly List<string> _back = [];
+
+    public RelayCommand BackCommand { get; }
+
+    public bool CanGoBack => _back.Count > 0;
+
+    /// <summary>Names the folder it would return to, so the button says where it goes.</summary>
+    public string BackLabel => _back.Count == 0
+        ? _host.Text["kibble.back"]
+        : _host.Text.Format("kibble.back.to", WhatItIs(_back[^1]));
+
+    private void Back()
+    {
+        if (_back.Count == 0)
+            return;
+
+        var to = _back[^1];
+        _back.RemoveAt(_back.Count - 1);
+
+        if (!Directory.Exists(to))
+        {
+            // Gone since it was left. Say so rather than loading nothing, and keep stepping
+            // back so a folder that was deleted does not strand the button.
+            ErrorMessage = _host.Text.Format("kibble.error.missing", to);
+            RaiseBack();
+            return;
+        }
+
+        LoadFolder(to, remember: false);
+    }
+
+    private void RaiseBack()
+    {
+        OnPropertyChanged(nameof(CanGoBack));
+        OnPropertyChanged(nameof(BackLabel));
+        BackCommand.RaiseCanExecuteChanged();
+    }
+
+    /// <summary>
+    /// What a folder is, in words: the group's name when it is that group's Held_Back, and the
+    /// folder's own name otherwise. Every Held_Back is called Held_Back, so the folder name
+    /// alone says nothing about which one it is.
+    /// </summary>
+    private string WhatItIs(string folder)
+    {
+        var name = Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        var group = GroupHoldingBack(folder);
+        return group is null ? name : _host.Text.Format("kibble.held.of", group);
+    }
+
+    /// <summary>The group whose Held_Back this folder is, or null when it is not one.</summary>
+    private string? GroupHoldingBack(string folder) =>
+        Destinations.FirstOrDefault(d => string.Equals(
+            d.HeldBackFolder.TrimEnd(Path.DirectorySeparatorChar),
+            folder.TrimEnd(Path.DirectorySeparatorChar),
+            StringComparison.OrdinalIgnoreCase))?.Name;
+
+    /// <summary>Whether what is on screen is some group's Held_Back, which the header says out loud.</summary>
+    public bool IsInHeldBack => SourceFolder.Length > 0 && GroupHoldingBack(SourceFolder) is not null;
+
+    /// <summary>"Held back for Alpha", for the strip above the grid.</summary>
+    public string HeldBackText => GroupHoldingBack(SourceFolder) is { } group
+        ? _host.Text.Format("kibble.held.here", group)
+        : "";
 
     /// <summary>The way out of any refusal the bot would fail on: into Held_Back, to decide later.</summary>
     public RelayCommand HoldCommand { get; }
@@ -921,7 +997,13 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
             : _host.Text.Format("kibble.reply.many", _pending.Count));
     }
 
-    public void LoadFolder(string folder)
+    public void LoadFolder(string folder) => LoadFolder(folder, remember: true);
+
+    /// <param name="remember">
+    /// Whether the folder being left goes on the back stack. False when stepping back, which
+    /// would otherwise put the folder being left on the stack and make Back bounce between two.
+    /// </param>
+    public void LoadFolder(string folder, bool remember)
     {
         ErrorMessage = null;
         CancelThumbnails();
@@ -931,6 +1013,15 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         {
             ErrorMessage = _host.Text.Format("kibble.error.missing", folder);
             return;
+        }
+
+        // Remembered before it is replaced, and only when it is really somewhere else: Refresh
+        // loads the same folder again and is not a place you can go back from.
+        if (remember && _sourceFolder.Length > 0 &&
+            !string.Equals(_sourceFolder.TrimEnd(Path.DirectorySeparatorChar), folder.TrimEnd(Path.DirectorySeparatorChar),
+                StringComparison.OrdinalIgnoreCase))
+        {
+            _back.Add(_sourceFolder);
         }
 
         SourceFolder = folder;
@@ -965,12 +1056,15 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
 
         Selected = Incoming.FirstOrDefault();
         StatusMessage = Describe(folder);
+        RaiseBack();
+        OnPropertyChanged(nameof(IsInHeldBack));
+        OnPropertyChanged(nameof(HeldBackText));
         RaiseGridState();
     }
 
     private string Describe(string folder)
     {
-        var where = Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar));
+        var where = WhatItIs(folder);
         return HasMore
             ? _host.Text.Format("kibble.describe.showing", Incoming.Count, _pending.Count, where)
             : _host.Text.Format("kibble.describe.all", _pending.Count, where);

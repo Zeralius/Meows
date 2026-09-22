@@ -420,6 +420,10 @@
                                                   Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).PopOutCommand}"
                                                   CommandParameter="{Binding}"
                                                   IsVisible="{Binding !IsPoppedOut}" />
+                                        <MenuItem Header="{m:Tr strip.tab.off}"
+                                                  Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SwitchOffCommand}"
+                                                  CommandParameter="{Binding}"
+                                                  IsVisible="{Binding IsPlugin}" />
                                     </ContextMenu>
                                 </Button.ContextMenu>
                             </Button>

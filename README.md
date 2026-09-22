@@ -80,8 +80,8 @@ move a whole group along the strip. Nothing moves until the pointer has travelle
 mean it, so a slightly shaky click still just selects the tab.
 
 Right-click a chip to rename the group, give it one of seven colours, or move it along the strip.
-Right-click a tab to step it left or right, drop it into another group, or start a group of its
-own; a tab stepped off the end of its group joins the next one. *Put it back where its plugin
+Right-click a tab to step it left or right, drop it into another group, switch the plugin off,
+or start a group of its own; a tab stepped off the end of its group joins the next one. *Put it back where its plugin
 says* undoes it for one tab, and the palette has the same for all of them. What you arrange is
 remembered, and a group whose plugins are all switched off waits rather than showing empty.
 

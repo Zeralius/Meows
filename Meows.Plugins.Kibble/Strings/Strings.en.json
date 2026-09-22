@@ -1,4 +1,6 @@
 {
+  "kibble.back": "Back",
+  "kibble.back.to": "← {0}",
   "kibble.botfolder": "Bot folder…",
   "kibble.botskips": "THE BOT SKIPS THIS",
   "kibble.bundle.comic": "{0} files will be zipped into one comic and queued as a single post.",
@@ -25,8 +27,10 @@
   "kibble.error.open": "Could not open {0}: {1}",
   "kibble.error.read": "Could not read {0}: {1}",
   "kibble.error.shrink": "Could not shrink it: {0}",
+  "kibble.held.here": "This is what is held back for {0}. Sorting from here sends it on, or Back returns to where you were.",
   "kibble.held.many": "{0} held back",
   "kibble.held.moved": "held back for the group, to decide about later",
+  "kibble.held.of": "Held back for {0}",
   "kibble.held.one": "1 held back",
   "kibble.held.open": "Open the group's Held_Back folder here, to decide about what is in it.",
   "kibble.hold": "Hold it back",
