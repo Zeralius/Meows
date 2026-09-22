@@ -67,6 +67,8 @@
     <ProjectReference Include="..\Meows.Plugins.WeighIn\Meows.Plugins.WeighIn.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Catnip\Meows.Plugins.Catnip.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Rehome\Meows.Plugins.Rehome.csproj" />
+    <ProjectReference Include="..\Meows.Plugins.Scoop\Meows.Plugins.Scoop.csproj" />
+    <ProjectReference Include="..\Meows.Plugins.Trail\Meows.Plugins.Trail.csproj" />
     <!-- The examples under examples/, so their views are smoke-tested like every plugin's. -->
     <ProjectReference Include="..\examples\Meow\Meow.csproj" />
     <ProjectReference Include="..\examples\Yowl\Yowl.csproj" />

@@ -33,6 +33,8 @@ internal static class ShippedPlugins
         typeof(Plugins.WeighIn.WeighInPlugin),
         typeof(Plugins.Catnip.CatnipPlugin),
         typeof(Plugins.Rehome.RehomePlugin),
+        typeof(Plugins.Scoop.ScoopPlugin),
+        typeof(Plugins.Trail.TrailPlugin),
         // kitten: next plugin goes here
     ];
 }

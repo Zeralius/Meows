@@ -1,0 +1,161 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Scoop.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Scoop.Views.ScoopView"
+             x:DataType="vm:ScoopViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <!-- The headline: everything in every bin, which is the question the tab exists for. -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding SummaryText}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Classes="label" Text="{Binding Status}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="{m:Tr scoop.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
+        </Border>
+
+        <!-- The two verbs, kept apart on purpose: one row back, or one drive gone for good. -->
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource MeowsBar}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,1,0,0"
+                Padding="14,8">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+                <Button Grid.Column="0" Content="{m:Tr scoop.restore}" Command="{Binding RestoreCommand}" />
+                <Button Grid.Column="1" Content="{m:Tr scoop.origin}" Command="{Binding ShowOriginCommand}" />
+                <TextBlock Grid.Column="2"
+                           Classes="label"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           Text="{Binding BlockedText}"
+                           IsVisible="{Binding IsSelectionBlocked}" />
+                <Button Grid.Column="3"
+                        Content="{Binding EmptyText}"
+                        Command="{Binding EmptyCommand}"
+                        Foreground="{DynamicResource MeowsDangerText}" />
+            </Grid>
+        </Border>
+
+        <!-- Left: one line per drive. Right: what is in the one that is selected. -->
+        <Grid ColumnDefinitions="260,Auto,*">
+
+            <ListBox Grid.Column="0"
+                     ItemsSource="{Binding Drives}"
+                     SelectedItem="{Binding SelectedDrive}"
+                     Background="Transparent"
+                     BorderThickness="0"
+                     Margin="8">
+                <ListBox.ItemTemplate>
+                    <DataTemplate x:DataType="vm:DriveViewModel">
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Text="{Binding Root}" FontWeight="SemiBold" />
+                                <TextBlock Classes="label" Text="{Binding CountText}" IsVisible="{Binding !IsUnreadable}" />
+                                <TextBlock Classes="label"
+                                           Foreground="{DynamicResource MeowsWarnText}"
+                                           Text="{Binding Unreadable}"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding IsUnreadable}" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="1"
+                                       Text="{Binding SizeText}"
+                                       VerticalAlignment="Center"
+                                       Opacity="0.8" />
+                        </Grid>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <Border Grid.Column="1" Width="1" Background="{DynamicResource MeowsLineSoft}" />
+
+            <DockPanel Grid.Column="2">
+
+                <Border DockPanel.Dock="Top"
+                        Background="{DynamicResource MeowsWarn}"
+                        BorderBrush="{DynamicResource MeowsWarnLine}"
+                        BorderThickness="0,0,0,1"
+                        Padding="14,8"
+                        IsVisible="{Binding HasDriveTrouble}">
+                    <TextBlock Text="{Binding DriveUnreadable}"
+                               Foreground="{DynamicResource MeowsWarnText}"
+                               TextWrapping="Wrap" />
+                </Border>
+
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,12"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           Text="{m:Tr scoop.empty.none}"
+                           IsVisible="{Binding IsEmpty}" />
+
+                <ListBox ItemsSource="{Binding Items}"
+                         SelectedItem="{Binding SelectedItem}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:BinItemViewModel">
+                            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding Glyph}"
+                                           FontFamily="Segoe UI Emoji"
+                                           VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Classes="label"
+                                               Text="{Binding OriginalFolder}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="2"
+                                           Classes="label"
+                                           Text="{Binding WhenText}"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3"
+                                           Text="{Binding SizeText}"
+                                           VerticalAlignment="Center"
+                                           MinWidth="70"
+                                           TextAlignment="Right" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+            </DockPanel>
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

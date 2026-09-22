@@ -1,0 +1,141 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Trail.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Trail.Views.TrailView"
+             x:DataType="vm:TrailViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.mono">
+            <Setter Property="FontFamily" Value="Consolas, monospace" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding SummaryText}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Classes="label" Text="{Binding Status}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="{m:Tr trail.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
+        </Border>
+
+        <!-- Which copy wins: the question that costs the afternoon. -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsInset}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <StackPanel Spacing="8">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <TextBlock Text="{m:Tr trail.which}" VerticalAlignment="Center" />
+                    <TextBox Text="{Binding Command}" Watermark="dotnet" Width="200" />
+                    <Button Content="{m:Tr trail.which.go}" Command="{Binding ResolveCommand}" IsDefault="True" />
+                </StackPanel>
+                <TextBlock Classes="mono"
+                           Text="{Binding WinnerText}"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding HasWinner}" />
+                <StackPanel Spacing="2" IsVisible="{Binding HasShadowed}">
+                    <TextBlock Classes="label" Text="{m:Tr trail.winner.never}" />
+                    <TextBlock Classes="mono label" Text="{Binding ShadowedText}" TextWrapping="Wrap" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- The one verb, with the way back beside it. -->
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource MeowsBar}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,1,0,0"
+                Padding="14,8">
+            <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="8">
+                <Button Grid.Column="0" Content="{Binding TidyText}" Command="{Binding TidyCommand}" />
+                <Button Grid.Column="1" Content="{m:Tr trail.undo}" Command="{Binding UndoCommand}" />
+                <TextBlock Grid.Column="2"
+                           Classes="label"
+                           VerticalAlignment="Center"
+                           TextWrapping="Wrap"
+                           Text="{m:Tr trail.tidy.note}" />
+                <Button Grid.Column="3" Content="{m:Tr trail.folder}" Command="{Binding ShowFolderCommand}" />
+            </Grid>
+        </Border>
+
+        <TextBlock DockPanel.Dock="Top"
+                   Margin="14,12"
+                   Opacity="0.45"
+                   TextWrapping="Wrap"
+                   Text="{m:Tr trail.empty}"
+                   IsVisible="{Binding IsEmpty}" />
+
+        <ListBox ItemsSource="{Binding Entries}"
+                 SelectedItem="{Binding Selected}"
+                 Background="Transparent"
+                 BorderThickness="0"
+                 Margin="8">
+            <ListBox.ItemTemplate>
+                <DataTemplate x:DataType="vm:EntryViewModel">
+                    <Grid ColumnDefinitions="Auto,30,*,Auto" ColumnSpacing="10">
+                        <!-- Only the user's half, and only what is faulty, can be ticked. -->
+                        <CheckBox Grid.Column="0"
+                                  IsChecked="{Binding IsPicked}"
+                                  IsVisible="{Binding CanPick}"
+                                  VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1"
+                                   Classes="label"
+                                   Text="{Binding Position}"
+                                   VerticalAlignment="Center"
+                                   TextAlignment="Right" />
+                        <StackPanel Grid.Column="2" Spacing="2">
+                            <TextBlock Classes="mono" Text="{Binding Raw}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="mono label"
+                                       Text="{Binding Expanded}"
+                                       TextTrimming="CharacterEllipsis"
+                                       IsVisible="{Binding ShowsExpanded}" />
+                            <TextBlock Classes="label"
+                                       Foreground="{DynamicResource MeowsWarnText}"
+                                       Text="{Binding FaultText}"
+                                       TextWrapping="Wrap"
+                                       IsVisible="{Binding IsTrouble}" />
+                        </StackPanel>
+                        <TextBlock Grid.Column="3"
+                                   Classes="label"
+                                   Text="{Binding ScopeText}"
+                                   VerticalAlignment="Center" />
+                    </Grid>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+    </DockPanel>
+
+</UserControl>
