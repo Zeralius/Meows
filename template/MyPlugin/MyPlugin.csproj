@@ -9,6 +9,16 @@
         <!-- The folder Meows looks in must be named after the dll, so keep the framework out of
              the output path or you end up with plugins/MyPlugin/net10.0/MyPlugin.dll. -->
         <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+        <!-- What the card on the Plugins tab says about this plugin, read from the built DLL.
+             Version: the release workflow passes the tag's number in as -p:Version, so this is
+             only what a local build says. Authors: your name; left as the project name, Meows
+             shows no author at all rather than a wrong one. RepositoryUrl: the GitHub repository
+             this lives in, which is also where Meows looks for a newer release. -->
+        <Version>1.0.0</Version>
+        <Authors>MyPlugin</Authors>
+        <RepositoryUrl>PLUGIN-REPOSITORY</RepositoryUrl>
+        <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
     </PropertyGroup>
 
     <ItemGroup>
@@ -16,7 +26,7 @@
              contract at run time, and there has to be exactly one copy of each: a plugin that
              brings its own Avalonia hands back a Control of a type the shell cannot host. -->
         <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-        <PackageReference Include="Meows.Plugins.Abstractions" Version="0.5.0" ExcludeAssets="runtime" PrivateAssets="all" />
+        <PackageReference Include="Meows.Plugins.Abstractions" Version="1.0.0" ExcludeAssets="runtime" PrivateAssets="all" />
     </ItemGroup>
 
     <!-- One file per language, embedded. The shell merges them into its own string table when

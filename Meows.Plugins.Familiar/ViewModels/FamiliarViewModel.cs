@@ -943,12 +943,21 @@ public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchab
     }
 
     public bool Accepts(Handoff handoff) =>
-        handoff.Verb == HandoffVerbs.Files && handoff.Paths.Count > 0 && HasKit;
+        (handoff.Verb == FamiliarPlugin.KitVerb && handoff.Note is { Length: > 0 }) ||
+        (handoff.Verb == HandoffVerbs.Files && handoff.Paths.Count > 0 && HasKit);
 
     public void Receive(Handoff handoff)
     {
         if (!Accepts(handoff))
             return;
+
+        // From Ctrl+K while Familiar was off: the kit, now that there is a list to pick it in.
+        if (handoff.Verb == FamiliarPlugin.KitVerb)
+        {
+            SelectedKit = Kits.FirstOrDefault(k => string.Equals(k.Folder, handoff.Note, StringComparison.OrdinalIgnoreCase)) ?? SelectedKit;
+            return;
+        }
+
         var before = Items.Count;
         AddPictures(handoff.Paths);
         handoff.Answer(_host.Text.Format("familiar.reply.added", Items.Count - before, KitTitle));
@@ -1660,5 +1669,72 @@ public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchab
             item.Dispose();
         PreviewImage = null;
         _language.Dispose();
+    }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _addPicturesCommand;
+
+    public RelayCommand AddPicturesCommand => _addPicturesCommand ??= new RelayCommand(() => _ = PickPicturesAsync());
+
+    private async Task PickPicturesAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Files(new PickOptions
+            {
+                Title = _host.Text["familiar.dialog.pictures"],
+                Filters =
+                [
+                    PickFilter.Of(_host.Text["pick.pictures"], "*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp", "*.bmp"),
+                    PickFilter.Of(_host.Text["pick.all"], "*"),
+                ],
+            });
+            if (picked.Count == 0)
+                return;
+            AddPictures(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
+
+    private RelayCommand? _pickRootCommand;
+
+    public RelayCommand PickRootCommand => _pickRootCommand ??= new RelayCommand(() => _ = PickRootAsync());
+
+    private async Task PickRootAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["familiar.dialog.root"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            SetRoot(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
+
+    private RelayCommand? _pickExportCommand;
+
+    public RelayCommand PickExportCommand => _pickExportCommand ??= new RelayCommand(() => _ = PickExportAsync());
+
+    private async Task PickExportAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["familiar.dialog.export"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            SetExportRoot(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
     }
 }

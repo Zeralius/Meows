@@ -13,9 +13,15 @@ namespace Meows.Bot;
 /// </summary>
 public static class BotLocation
 {
-    /// <summary>Overridable so a test can keep its answers to itself.</summary>
+    /// <summary>
+    /// Overridable so a test can keep its answers to itself. The shell says where its settings
+    /// are through MEOWS_SETTINGS_ROOT, which is the roaming profile or, for a portable Meows,
+    /// a folder beside the exe; the profile is only the fallback for running without a shell.
+    /// </summary>
     public static string SettingsFolder { get; set; } =
-        Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Meows");
+        Environment.GetEnvironmentVariable("MEOWS_SETTINGS_ROOT") is { Length: > 0 } root
+            ? root
+            : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Meows");
 
     private static string FilePath => Path.Combine(SettingsFolder, "bot.json");
 

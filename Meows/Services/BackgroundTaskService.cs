@@ -323,6 +323,10 @@ public sealed class BackgroundTaskService : IDisposable
     public IBackgroundTask ScheduleForShell(string title, TimeSpan interval, Func<IBackgroundContext, Task> work, bool runImmediately) =>
         Start("meows.shell", "Meows", title, work, interval, runImmediately);
 
+    /// <summary>One piece of the shell's own work, shown in the Tasks panel while it runs.</summary>
+    public IBackgroundTask RunForShell(string title, Func<IBackgroundContext, Task> work) =>
+        Start("meows.shell", "Meows", title, work, interval: null, runImmediately: true);
+
     internal BackgroundTaskItem Start(string pluginId, string source, string title,
         Func<IBackgroundContext, Task> work, TimeSpan? interval, bool runImmediately)
     {

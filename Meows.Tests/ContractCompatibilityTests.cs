@@ -30,12 +30,26 @@ public sealed class ContractCompatibilityTests
     }
 
     [Fact]
-    public void A_plugin_built_against_the_first_contract_still_loads()
+    public void The_first_contract_of_this_major_still_loads()
     {
-        // 0.1.0 is what every plugin written before Category existed was built against, including
-        // any living outside this repository. Adding a member with a default must not strand them,
-        // and this is the assertion that says so in as many words.
-        Assert.Null(ContractCompatibility.Check(new Version(0, 1, 0)));
+        // Every member added since the major began has a default, so a plugin built against
+        // the first release of this major must not be stranded by any of them. Through 0.x that
+        // was 0.1.0; from 1.0.0 the promise starts again, and this is the assertion that says so.
+        Assert.Null(ContractCompatibility.Check(new Version(Shell.Major, 0, 0)));
+    }
+
+    [Fact]
+    public void A_plugin_from_before_1_0_0_is_refused_with_the_major_reason()
+    {
+        // 0.x plugins were built against a contract that 1.0.0 is allowed to have changed, so
+        // they are refused before any of their code runs, and told to rebuild.
+        if (Shell.Major == 0)
+            return;
+
+        var reason = ContractCompatibility.Check(new Version(0, 10, 0));
+
+        Assert.NotNull(reason);
+        Assert.Contains("0.10.0", reason);
     }
 
     [Fact]
@@ -135,5 +149,30 @@ public sealed class ContractCompatibilityTests
         var plugin = typeof(Meows.Plugins.Mouser.MouserPlugin).Assembly;
 
         Assert.Null(ContractCompatibility.CheckAssembly(plugin));
+    }
+}
+
+/// <summary>
+/// The template is what a stranger starts from, and it pins the contract it compiles against.
+/// An older pin still loads, but it hides every member added since, and nobody bumps a pin in a
+/// file they never open. So the build says when it has fallen behind.
+/// </summary>
+public sealed class TemplatePinTests
+{
+    [Fact]
+    public void The_template_pins_the_contract_version_the_repository_ships()
+    {
+        var here = new DirectoryInfo(AppContext.BaseDirectory);
+        while (here is not null && !File.Exists(Path.Combine(here.FullName, "Meows.sln")))
+            here = here.Parent;
+        Assert.NotNull(here);
+
+        var contract = File.ReadAllText(Path.Combine(here.FullName, "Meows.Plugins.Abstractions", "Meows.Plugins.Abstractions.csproj"));
+        var template = File.ReadAllText(Path.Combine(here.FullName, "template", "MyPlugin", "MyPlugin.csproj"));
+
+        var shipped = System.Text.RegularExpressions.Regex.Match(contract, @"<ContractVersion>([^<]+)</ContractVersion>").Groups[1].Value;
+        var pinned = System.Text.RegularExpressions.Regex.Match(template, @"Include=""Meows\.Plugins\.Abstractions"" Version=""([^""]+)""").Groups[1].Value;
+
+        Assert.Equal(shipped, pinned);
     }
 }

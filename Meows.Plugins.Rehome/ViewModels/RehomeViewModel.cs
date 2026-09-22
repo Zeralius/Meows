@@ -1207,4 +1207,44 @@ public sealed class RehomeViewModel : ObservableObject, IDisposable, ISearchable
         _work?.Cancel();
         _language.Dispose();
     }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _pickDestinationCommand;
+
+    public RelayCommand PickDestinationCommand => _pickDestinationCommand ??= new RelayCommand(() => _ = PickDestinationAsync());
+
+    private async Task PickDestinationAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["rehome.dialog.destination"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            SetDestination(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
+
+    private RelayCommand? _openManifestCommand;
+
+    public RelayCommand OpenManifestCommand => _openManifestCommand ??= new RelayCommand(() => _ = PickManifestAsync());
+
+    private async Task PickManifestAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["rehome.dialog.manifest"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            LoadRehomeFolder(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
 }

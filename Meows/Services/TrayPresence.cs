@@ -88,6 +88,15 @@ public sealed class TrayPresence : IDisposable
             _shown = _window();
             _shown.Closing += OnClosing;
             _desktop.MainWindow = _shown;
+            if (_shown.DataContext is ViewModels.MainWindowViewModel model)
+            {
+                model.Window = _shown;
+                _shown.Opened += (_, _) => model.RestorePopOuts();
+            }
+
+            // Back where it was on this arrangement of screens, the way a popped-out tab is.
+            if (WindowLayout.Of(_shown) is { } layout && _preferences.MainWindowPlaces.TryGetValue(layout, out var place))
+                WindowLayout.Apply(_shown, place);
         }
 
         if (_shown.WindowState == WindowState.Minimized)
@@ -97,9 +106,20 @@ public sealed class TrayPresence : IDisposable
         _shown.Activate();
     }
 
+    /// <summary>Where the window is now, kept for the next time it is shown on these screens.</summary>
+    private void RememberPlace()
+    {
+        if (_shown is null || WindowLayout.Of(_shown) is not { } layout || WindowLayout.PlaceOf(_shown) is not { } place)
+            return;
+        _preferences.MainWindowPlaces[layout] = place;
+        if (_shown.DataContext is ViewModels.MainWindowViewModel model)
+            model.SavePreferencesNow();
+    }
+
     /// <summary>Closing the window hides it while the tray is wanted; otherwise it is the quit it always was.</summary>
     private void OnClosing(object? sender, WindowClosingEventArgs e)
     {
+        RememberPlace();
         if (_quitting || !_preferences.CloseToTray)
         {
             if (!_quitting)
@@ -108,6 +128,8 @@ public sealed class TrayPresence : IDisposable
         }
 
         e.Cancel = true;
+        if (_shown?.DataContext is ViewModels.MainWindowViewModel model)
+            model.MarkSeen();
         _shown?.Hide();
     }
 

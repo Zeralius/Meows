@@ -101,12 +101,12 @@
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <Button Name="OpenFolderButton" Content="{m:Tr kibble.openfolder}" />
+                    <Button Name="OpenFolderButton" Command="{Binding PickFolderCommand}" Content="{m:Tr kibble.openfolder}" />
                     <Button Content="{m:Tr kibble.refresh}" Command="{Binding RefreshCommand}" />
                     <Button Content="{Binding UndoLabel}"
                             Command="{Binding UndoCommand}"
                             ToolTip.Tip="{Binding UndoHint}" />
-                    <Button Name="ChooseBotButton" Content="{m:Tr kibble.botfolder}" />
+                    <Button Name="ChooseBotButton" Command="{Binding ChooseBotCommand}" Content="{m:Tr kibble.botfolder}" />
                 </StackPanel>
             </Grid>
         </Border>

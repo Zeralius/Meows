@@ -62,6 +62,13 @@ public interface IMeowsHost
     /// what Meows is watching. The default watches nothing.
     /// </summary>
     IMeowsWatches Watches => NoWatches.Instance;
+
+    /// <summary>
+    /// The shell's file dialogs, so a view model can ask for a file or a folder without a
+    /// TopLevel in hand. The default picks nothing, which is also what a shell with no window
+    /// showing answers. Since 1.0.0.
+    /// </summary>
+    IMeowsPicker Pick => NoPicker.Instance;
 }
 
 /// <summary>What a shell built against an older contract answers. Nothing is kept.</summary>

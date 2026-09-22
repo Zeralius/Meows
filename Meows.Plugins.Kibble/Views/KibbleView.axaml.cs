@@ -1,9 +1,7 @@
-using Meows.Plugins.Abstractions;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using Avalonia.Platform.Storage;
 using Avalonia.Threading;
 using Meows.Plugins.Kibble.ViewModels;
 
@@ -14,8 +12,6 @@ public partial class KibbleView : UserControl, IDisposable
     public KibbleView()
     {
         InitializeComponent();
-        this.FindControl<Button>("OpenFolderButton")!.Click += OnOpenFolder;
-        this.FindControl<Button>("ChooseBotButton")!.Click += OnChooseBotRoot;
         var grid = this.FindControl<ListBox>("FileGrid")!;
         grid.SelectionChanged += OnSelectionChanged;
         grid.DoubleTapped += OnGridDoubleTapped;
@@ -177,49 +173,6 @@ public partial class KibbleView : UserControl, IDisposable
             model.Open(null);
             e.Handled = true;
         }
-    }
-
-    private async void OnOpenFolder(object? sender, RoutedEventArgs e)
-    {
-        if (Model is not { } model)
-            return;
-
-        var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
-        if (storage is null)
-            return;
-
-        var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = MeowsText.Current["kibble.dialog.openfolder"],
-            AllowMultiple = false,
-        });
-
-        var picked = folders.FirstOrDefault()?.TryGetLocalPath();
-        if (!string.IsNullOrWhiteSpace(picked))
-        {
-            model.LoadFolder(picked);
-            KeepFocusOnGrid();
-        }
-    }
-
-    private async void OnChooseBotRoot(object? sender, RoutedEventArgs e)
-    {
-        if (Model is not { } model)
-            return;
-
-        var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
-        if (storage is null)
-            return;
-
-        var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = MeowsText.Current["kibble.dialog.botfolder"],
-            AllowMultiple = false,
-        });
-
-        var picked = folders.FirstOrDefault()?.TryGetLocalPath();
-        if (!string.IsNullOrWhiteSpace(picked))
-            model.SetBotRoot(picked);
     }
 
     public void Dispose() => (DataContext as IDisposable)?.Dispose();

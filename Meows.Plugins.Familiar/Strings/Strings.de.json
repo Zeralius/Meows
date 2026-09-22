@@ -66,6 +66,7 @@
   "familiar.grid.squares.long": "{0} × {1} Felder, je {2} px. Prüfen, ob die blauen Linien auf den Linien der Karte liegen.",
   "familiar.journal.added": "{0} Bild(er) zu {1} hinzugefügt",
   "familiar.journal.created": "Oneshot {0} angelegt",
+  "familiar.kit.detail": "One-Shot",
   "familiar.kits": "ONESHOTS",
   "familiar.name": "Name, wie das VTT ihn zeigt",
   "familiar.name.plain": "Tischbilder",

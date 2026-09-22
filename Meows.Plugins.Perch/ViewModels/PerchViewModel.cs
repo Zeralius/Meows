@@ -617,4 +617,25 @@ public sealed class PerchViewModel : ObservableObject, IDisposable, ISearchable
         Preview = null;
         _closing.Dispose();
     }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _chooseBotCommand;
+
+    public RelayCommand ChooseBotCommand => _chooseBotCommand ??= new RelayCommand(() => _ = ChooseBotAsync());
+
+    private async Task ChooseBotAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["perch.dialog.botfolder"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            SetBotRoot(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
 }

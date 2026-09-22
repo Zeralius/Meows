@@ -39,7 +39,13 @@ public sealed record PluginDescriptor
 
     public string Origin => Path.GetFileName(Path.GetDirectoryName(AssemblyPath)) ?? AssemblyPath;
 
-    public static PluginDescriptor Loaded(IMeowsPlugin plugin, string assemblyPath) =>
+    /// <summary>The folder the plugin was loaded from, which is what an uninstall takes away.</summary>
+    public string Folder => Path.GetDirectoryName(AssemblyPath) ?? AssemblyPath;
+
+    /// <summary>Version, author, homepage and the installer's note, whichever of those exist.</summary>
+    public PluginProvenance Provenance { get; private init; } = PluginProvenance.None;
+
+    public static PluginDescriptor Loaded(IMeowsPlugin plugin, string assemblyPath, PluginProvenance? provenance = null) =>
         new(assemblyPath)
         {
             Plugin = plugin,
@@ -48,6 +54,7 @@ public sealed record PluginDescriptor
             Description = plugin.Description,
             Icon = plugin.Icon ?? "●",
             Category = Tidy(plugin.Category),
+            Provenance = provenance ?? PluginProvenance.None,
         };
 
     private static string? Tidy(string? category) =>
@@ -56,7 +63,7 @@ public sealed record PluginDescriptor
     /// <summary>
     /// Only the file name to go on, since constructing it is the thing we are refusing to do.
     /// </summary>
-    public static PluginDescriptor Incompatible(string assemblyPath, string reason) =>
+    public static PluginDescriptor Incompatible(string assemblyPath, string reason, PluginProvenance? provenance = null) =>
         new(assemblyPath)
         {
             Id = "file:" + Path.GetFileNameWithoutExtension(assemblyPath),
@@ -64,5 +71,6 @@ public sealed record PluginDescriptor
             Description = "plugins.unloadable",
             Icon = "⛔",
             IncompatibleReason = reason,
+            Provenance = provenance ?? PluginProvenance.None,
         };
 }

@@ -18,6 +18,12 @@ public sealed class PaletteItem(string glyph, string title, string subtitle, Act
     public int Weight { get; } = weight;
 
     public Action Run { get; } = run;
+
+    /// <summary>Offered when the query starts with <c>&gt;</c>: something to do, not somewhere to go.</summary>
+    public bool IsCommand { get; init; }
+
+    /// <summary>Only under <c>&gt;</c>, so the plain list stays the plain list.</summary>
+    public bool CommandOnly { get; init; }
 }
 
 /// <summary>
@@ -35,6 +41,8 @@ public sealed class CommandPaletteViewModel : ObservableObject
     private bool _isOpen;
     private string _query = "";
     private PaletteItem? _selected;
+    private string? _scopeKey;
+    private string _scopeName = "";
 
     public CommandPaletteViewModel(Func<IEnumerable<PaletteItem>> fixedItems, Func<string, IEnumerable<PaletteItem>> searchedItems)
     {
@@ -83,9 +91,60 @@ public sealed class CommandPaletteViewModel : ObservableObject
 
     public bool IsEmpty => Items.Count == 0;
 
-    public void Open() => IsOpen = true;
+    /// <summary>
+    /// Ctrl+Shift+K: the tab in front and nothing else. The key of that tab, for whoever answers
+    /// the search, and its name for the box; null is the whole window as usual.
+    /// </summary>
+    public string? ScopeKey => _scopeKey;
 
-    public void Toggle() => IsOpen = !IsOpen;
+    public bool IsScoped => _scopeKey is not null;
+
+    /// <summary>What the box says before anything is typed: the usual hint, or the tab being searched.</summary>
+    public string Hint => _scopeKey is null
+        ? MeowsText.Current["palette.hint"]
+        : MeowsText.Current.Format("palette.hint.scoped", _scopeName);
+
+    public void Open()
+    {
+        _scopeKey = null;
+        _scopeName = "";
+        OnPropertyChanged(nameof(Hint));
+        OnPropertyChanged(nameof(IsScoped));
+        IsOpen = true;
+    }
+
+    public void OpenScoped(string tabKey, string tabName)
+    {
+        _scopeKey = tabKey;
+        _scopeName = tabName;
+        OnPropertyChanged(nameof(Hint));
+        OnPropertyChanged(nameof(IsScoped));
+        if (IsOpen)
+            Rebuild();
+        else
+            IsOpen = true;
+    }
+
+    public void Toggle()
+    {
+        if (IsOpen)
+            IsOpen = false;
+        else
+            Open();
+    }
+
+    /// <summary>Whether a query is asking for commands, and the words after the mark.</summary>
+    public static bool IsCommandQuery(string query, out string rest)
+    {
+        var trimmed = query.TrimStart();
+        if (trimmed.StartsWith('>'))
+        {
+            rest = trimmed[1..].Trim();
+            return true;
+        }
+        rest = trimmed;
+        return false;
+    }
 
     public void MoveSelection(int delta)
     {
@@ -128,9 +187,24 @@ public sealed class CommandPaletteViewModel : ObservableObject
     private void Rebuild()
     {
         var query = _query.Trim();
-        var all = _fixed().ToList();
-        if (query.Length >= 2)
-            all.AddRange(_searched(query));
+        List<PaletteItem> all;
+
+        if (_scopeKey is not null)
+        {
+            // One tab: nothing fixed, only what that tab answers, from two letters on.
+            all = query.Length >= 2 ? _searched(query).ToList() : [];
+        }
+        else if (IsCommandQuery(query, out var rest))
+        {
+            all = _fixed().Where(i => i.IsCommand).ToList();
+            query = rest;
+        }
+        else
+        {
+            all = _fixed().Where(i => !i.CommandOnly).ToList();
+            if (query.Length >= 2)
+                all.AddRange(_searched(query));
+        }
 
         Items.Clear();
         foreach (var item in Rank(all, query).Take(40))

@@ -14,7 +14,7 @@ namespace Meows.Tests;
 public sealed class BarePluginTests : IDisposable
 {
     /// <summary>The least a plugin can be and still compile.</summary>
-    private sealed class Bare : IMeowsPlugin
+    internal sealed class Bare : IMeowsPlugin
     {
         public string Id => "someone.weather";
 

@@ -528,4 +528,26 @@ public sealed class CatnipViewModel : ObservableObject, IDisposable, ISearchable
         _scan?.Cancel();
         _language.Dispose();
     }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _addRootCommand;
+
+    public RelayCommand AddRootCommand => _addRootCommand ??= new RelayCommand(() => _ = AddRootsAsync());
+
+    private async Task AddRootsAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folders(new PickOptions { Title = _host.Text["catnip.dialog.root"] });
+            if (picked.Count == 0)
+                return;
+            foreach (var folder in picked)
+                AddRoot(folder);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
 }

@@ -54,7 +54,7 @@
                     <Button Content="{m:Tr tp.startbot}" Command="{Binding StartBotCommand}" />
                     <Button Content="{m:Tr tp.stop}" Command="{Binding StopBotCommand}" />
                     <Button Content="{m:Tr tp.reload}" Command="{Binding ReloadCommand}" />
-                    <Button Name="ChooseRootButton" Content="{m:Tr tp.botfolder}" />
+                    <Button Name="ChooseRootButton" Command="{Binding ChooseRootCommand}" Content="{m:Tr tp.botfolder}" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -123,7 +123,7 @@
                 <TextBlock Classes="label" Margin="0,8,0,0" Text="{m:Tr tp.setup.cloneinto}" />
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                     <TextBox Grid.Column="0" Text="{Binding Destination}" />
-                    <Button Grid.Column="1" Name="BrowseDestinationButton" Content="{m:Tr tp.setup.browse}" />
+                    <Button Grid.Column="1" Name="BrowseDestinationButton" Command="{Binding $parent[UserControl].((vm:TelegramPosterViewModel)DataContext).BrowseDestinationCommand}" Content="{m:Tr tp.setup.browse}" />
                 </Grid>
                 <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,8,0,0">
                     <Button Content="{m:Tr tp.setup.clone}" Command="{Binding CloneCommand}" />

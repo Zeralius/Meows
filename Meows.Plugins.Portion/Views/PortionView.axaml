@@ -55,7 +55,7 @@
                     <TextBlock Text="{Binding Status}" Classes="label" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <Button Name="ChooseBotButton" Content="{m:Tr portion.botfolder}" />
+                    <Button Name="ChooseBotButton" Command="{Binding ChooseBotCommand}" Content="{m:Tr portion.botfolder}" />
                     <Button Content="{m:Tr portion.scan}" Command="{Binding ScanCommand}" />
                     <Button Content="{m:Tr portion.cancel}" Command="{Binding CancelCommand}" />
                     <Button Content="{m:Tr portion.shrinkall}"

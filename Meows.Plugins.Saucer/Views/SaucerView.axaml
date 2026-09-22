@@ -44,7 +44,7 @@
                               IsChecked="{Binding AutoSaveImages}"
                               FontSize="11"
                               VerticalAlignment="Center" />
-                    <Button Name="PickIntakeButton" Content="{m:Tr saucer.intake}" />
+                    <Button Name="PickIntakeButton" Command="{Binding PickIntakeCommand}" Content="{m:Tr saucer.intake}" />
                     <Button Content="{m:Tr saucer.open}" Command="{Binding OpenIntakeCommand}" />
                     <Button Content="{m:Tr saucer.clear}" Command="{Binding ClearCommand}" />
                 </StackPanel>

@@ -29,7 +29,7 @@
                     </StackPanel>
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <Button Name="PickBuildRootButton" Content="{m:Tr molt.projects}" FontSize="11" />
+                    <Button Name="PickBuildRootButton" Command="{Binding PickBuildRootCommand}" Content="{m:Tr molt.projects}" FontSize="11" />
                     <Button Content="{m:Tr molt.rescan}" Command="{Binding ScanCommand}" IsVisible="{Binding !IsScanning}" />
                     <Button Content="{m:Tr molt.stop}" Command="{Binding CancelCommand}" IsVisible="{Binding IsScanning}" />
                 </StackPanel>

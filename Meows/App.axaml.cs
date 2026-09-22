@@ -19,6 +19,11 @@ public partial class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             var settings = new ShellSettings();
+            // Where the settings are, for code that cannot be handed a host: Meows.Bot.Core's
+            // shared bot folder lives beside them, and a portable Meows must not leave bot.json
+            // in the profile. An environment variable crosses the plugin load contexts; a
+            // static on a shared library would not, since each plugin carries its own copy.
+            Environment.SetEnvironmentVariable(ShellSettings.RootVariable, settings.Root);
             var log = new ShellLog(Path.Combine(settings.Root, "meows.log"));
             settings.Report = message => log.Write("settings", message);
 
@@ -65,6 +70,17 @@ public partial class App : Application
                 background);
 
             desktop.ShutdownRequested += (_, _) => tray.Dispose();
+
+            // A second Meows started while this one runs: its arguments arrive here, and the
+            // window comes up unless that start only wanted the tray.
+            Program.Instance?.Listen(args => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            {
+                log.Write("shell", "Another start asked for the running Meows" +
+                    (args.Length == 0 ? "." : ": " + string.Join(' ', args)));
+                if (!args.Contains(StartWithWindows.TrayArgument, StringComparer.OrdinalIgnoreCase))
+                    tray.Show();
+            }));
+            desktop.ShutdownRequested += (_, _) => Program.Instance?.Dispose();
 
             var startHidden = desktop.Args?.Contains(StartWithWindows.TrayArgument, StringComparer.OrdinalIgnoreCase) == true;
             if (!startHidden)

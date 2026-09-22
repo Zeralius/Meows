@@ -444,4 +444,25 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable, ISearchable
         foreach (var clip in Clips)
             clip.Dispose();
     }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _pickIntakeCommand;
+
+    public RelayCommand PickIntakeCommand => _pickIntakeCommand ??= new RelayCommand(() => _ = PickIntakeAsync());
+
+    private async Task PickIntakeAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["saucer.dialog.folder"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            SetIntakeFolder(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
 }

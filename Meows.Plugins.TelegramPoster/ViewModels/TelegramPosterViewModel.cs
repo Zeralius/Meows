@@ -850,4 +850,47 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISe
         foreach (var item in NextUpItems)
             item.Dispose();
     }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _chooseRootCommand;
+
+    public RelayCommand ChooseRootCommand => _chooseRootCommand ??= new RelayCommand(() => _ = ChooseRootAsync());
+
+    private async Task ChooseRootAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["tp.dialog.botfolder"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            SetBotRoot(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
+
+    private RelayCommand? _browseDestinationCommand;
+
+    public RelayCommand BrowseDestinationCommand => _browseDestinationCommand ??= new RelayCommand(() => _ = BrowseDestinationAsync());
+
+    private async Task BrowseDestinationAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["tp.dialog.cloneinto"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            // Empty folder means clone straight into it. Otherwise nest inside.
+            Setup.Destination = Directory.Exists(picked) && Directory.EnumerateFileSystemEntries(picked).Any()
+                ? Path.Combine(picked, "telegram-posting-bot")
+                : picked;
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
 }

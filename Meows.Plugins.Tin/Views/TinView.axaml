@@ -86,7 +86,7 @@
                     <ToggleButton Content="{m:Tr tin.chart}"
                                   IsChecked="{Binding ShowChart}"
                                   VerticalAlignment="Center" />
-                    <Button Name="PickFolderButton" Content="{m:Tr tin.folder}" />
+                    <Button Name="PickFolderButton" Command="{Binding PickFolderCommand}" Content="{m:Tr tin.folder}" />
                     <Button Content="{m:Tr tin.open}" Command="{Binding OpenFolderCommand}" />
                     <Button Content="{m:Tr tin.refresh}" Command="{Binding RefreshCommand}" />
                 </StackPanel>

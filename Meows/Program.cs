@@ -39,14 +39,16 @@ internal static class Program
         }
     }
 
+    /// <summary>The claim on being the one Meows, held for the life of the process.</summary>
+    public static Meows.Services.SingleInstance? Instance { get; private set; }
+
     [STAThread]
     public static void Main(string[] args)
     {
         // First thing, so startup failures get recorded too. The log lives with the settings
-        // rather than next to the exe, since the unzipped folder may not be writable.
-        var log = Path.Combine(
-            Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-            "Meows", "meows.log");
+        // rather than next to the exe, since the unzipped folder may not be writable; unless a
+        // portable marker says the settings are next to the exe, in which case so is the log.
+        var log = Path.Combine(Meows.Services.ShellSettings.DefaultRoot, "meows.log");
 
         CrashLog.Watch(log);
 
@@ -57,6 +59,15 @@ internal static class Program
         {
             UseParentConsole();
             Environment.ExitCode = ListPlugins();
+            return;
+        }
+
+        // One Meows per user. A second start hands its arguments to the first and leaves; the
+        // first shows its window, unless the second was only asked for the tray.
+        Instance = Meows.Services.SingleInstance.TryClaim();
+        if (Instance is null)
+        {
+            Meows.Services.SingleInstance.Signal(args);
             return;
         }
 

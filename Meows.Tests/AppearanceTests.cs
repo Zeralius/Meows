@@ -243,7 +243,8 @@ public class SourceTests
         Assert.Empty(bare);
 
         // Guards the search. A regex that matches nothing would pass with no icons examined.
-        Assert.Equal(2, found);
+        // The tab strip, the plugin card, and the Home tab's plugin line.
+        Assert.Equal(3, found);
     }
 
     [Fact]

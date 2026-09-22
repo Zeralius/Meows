@@ -427,4 +427,25 @@ public sealed class LitterViewModel : ObservableObject, IDisposable, ISearchable
     {
         _language.Dispose();
     }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _pickFolderCommand;
+
+    public RelayCommand PickFolderCommand => _pickFolderCommand ??= new RelayCommand(() => _ = PickFolderAsync());
+
+    private async Task PickFolderAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["litter.dialog.folder"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            SetFolder(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
 }

@@ -185,6 +185,9 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>Where the two files behind this tab actually live.</summary>
     public string SettingsFolder => _settings.Root;
 
+    /// <summary>Beside the exe because a file called portable sits there.</summary>
+    public bool IsPortable => ShellSettings.IsPortable;
+
     /// <summary>
     /// Radio buttons want a bool each rather than one string, and a group of them fires the
     /// unticked one as well as the ticked one. Acting only on the true side keeps a switch to

@@ -63,7 +63,7 @@
                               IsChecked="{Binding ConfirmDeletes}"
                               FontSize="11"
                               VerticalAlignment="Center" />
-                    <Button Name="PickFolderButton" Content="{m:Tr litter.folder}" />
+                    <Button Name="PickFolderButton" Command="{Binding PickFolderCommand}" Content="{m:Tr litter.folder}" />
                     <Button Content="{m:Tr litter.open}" Command="{Binding OpenFolderCommand}" />
                     <Button Content="{m:Tr litter.refresh}" Command="{Binding RefreshCommand}" />
                 </StackPanel>

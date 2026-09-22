@@ -155,6 +155,8 @@
                 <StackPanel Spacing="10">
                     <TextBlock Classes="heading" Text="{m:Tr settings.storage}" />
                     <TextBlock Classes="hint" Text="{m:Tr settings.storage.hint}" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.storage.portable}" IsVisible="{Binding IsPortable}" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.storage.portable.how}" IsVisible="{Binding !IsPortable}" />
                     <SelectableTextBlock Text="{Binding SettingsFolder}"
                                          FontFamily="Cascadia Mono,Consolas,monospace"
                                          FontSize="12"

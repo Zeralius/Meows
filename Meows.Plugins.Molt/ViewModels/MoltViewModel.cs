@@ -373,4 +373,25 @@ public sealed class MoltViewModel : ObservableObject, IDisposable, ISearchable
 
         _scan?.Cancel();
     }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _pickBuildRootCommand;
+
+    public RelayCommand PickBuildRootCommand => _pickBuildRootCommand ??= new RelayCommand(() => _ = PickBuildRootAsync());
+
+    private async Task PickBuildRootAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["molt.dialog.folder"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            SetBuildRoot(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
 }

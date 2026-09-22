@@ -46,7 +46,7 @@
                               IsChecked="{Binding IncludeReposts}"
                               FontSize="11"
                               VerticalAlignment="Center" />
-                    <Button Name="PickIntakeButton" Content="{m:Tr birdwatch.intake}" />
+                    <Button Name="PickIntakeButton" Command="{Binding PickIntakeCommand}" Content="{m:Tr birdwatch.intake}" />
                     <Button Content="{m:Tr birdwatch.open}" Command="{Binding OpenIntakeCommand}" />
 
                     <!-- Beside the button it automates. The hint is a tooltip rather than a line

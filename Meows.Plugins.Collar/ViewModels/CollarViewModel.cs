@@ -400,12 +400,21 @@ public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable
     /// The first file attaches to a selected entry that has no paper yet, as a drop would.
     /// </summary>
     public bool Accepts(Handoff handoff) =>
-        handoff.Verb == HandoffVerbs.Files && handoff.Paths.Count > 0 && handoff.Paths.All(System.IO.File.Exists);
+        (handoff.Verb == CollarPlugin.ShowVerb && handoff.Note is { Length: > 0 }) ||
+        (handoff.Verb == HandoffVerbs.Files && handoff.Paths.Count > 0 && handoff.Paths.All(System.IO.File.Exists));
 
     public void Receive(Handoff handoff)
     {
         if (!Accepts(handoff))
             return;
+
+        // From Ctrl+K while Collar was off: the hit, now that there is a list to select in.
+        if (handoff.Verb == CollarPlugin.ShowVerb)
+        {
+            Selected = Entries.FirstOrDefault(e => e.Entry.Id == handoff.Note);
+            return;
+        }
+
         var before = Entries.Count;
         foreach (var path in handoff.Paths)
             AddFromFile(path);
@@ -659,5 +668,26 @@ public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable
     {
         _watch?.Cancel();
         _language.Dispose();
+    }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _attachCommand;
+
+    public RelayCommand AttachCommand => _attachCommand ??= new RelayCommand(() => _ = AttachAsync());
+
+    private async Task AttachAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.File(new PickOptions { Title = _host.Text["collar.dialog.file"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            AddFromFile(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
     }
 }

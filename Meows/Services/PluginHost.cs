@@ -16,8 +16,10 @@ public sealed class PluginHost : IMeowsHost
         NotificationCenter notifications,
         BackgroundTaskService background,
         IMeowsHandoff? handoff = null,
-        IMeowsStore? store = null)
+        IMeowsStore? store = null,
+        IMeowsPicker? picker = null)
     {
+        Pick = picker ?? NoPicker.Instance;
         PluginId = pluginId;
         _settings = settings;
         _log = log;
@@ -32,6 +34,8 @@ public sealed class PluginHost : IMeowsHost
     }
 
     public IMeowsWatches Watches { get; }
+
+    public IMeowsPicker Pick { get; }
 
     public IMeowsSecrets Secrets { get; }
 

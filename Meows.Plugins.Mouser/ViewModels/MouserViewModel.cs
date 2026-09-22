@@ -447,4 +447,25 @@ public sealed class MouserViewModel : ObservableObject, IDisposable, ISearchable
         _language.Dispose();
         _scan?.Cancel();
     }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _pickFolderCommand;
+
+    public RelayCommand PickFolderCommand => _pickFolderCommand ??= new RelayCommand(() => _ = PickFolderAsync());
+
+    private async Task PickFolderAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["mouser.dialog.folder"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            SetRoot(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
 }

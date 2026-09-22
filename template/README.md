@@ -12,6 +12,7 @@ That gives you:
 
 ```
 WeatherWatch/
+  .github/workflows/release.yml  a tag becomes a release with the zip attached
   WeatherWatch.csproj          net10.0, Avalonia and the contract, both runtime excluded
   WeatherWatch.cs              the IMeowsPlugin implementation
   WeatherWatchView.axaml       the tab, using theme colours and translated strings
@@ -32,15 +33,26 @@ it is the settings key, so moving it later orphans whatever was stored.
 headings are keys (`group.everyday`, `group.disk`, `group.bot`) and are translated; anything else
 makes a group of its own and is shown exactly as written. The shell keeps no list of valid ones.
 
+`--Repository https://github.com/you/WeatherWatch` names the repository it lives in. Meows shows
+it on the plugin's card as a link, and once the plugin was installed from a zip, asks that
+repository once a day whether a newer release is out and offers it on the card. Leave it off and
+the card just has no link. `Authors` in the csproj is your name; left as the project name, no
+author is shown.
+
+The project comes with `.github/workflows/release.yml`: push a tag like `v1.0.0` and GitHub
+builds the plugin at that version, zips the build folder and attaches it to a release. That zip
+is what **Install plugin…** takes.
+
 ## Building and installing it
 
 ```bash
-dotnet build -c Release -o path/to/plugins/WeatherWatch
+dotnet build -c Release -o WeatherWatch
 ```
 
 The output folder must be named after the dll. Put it under the `plugins` directory beside
 `Meows.exe`, or point `MEOWS_PLUGINS_DIR` at a folder of your own, which adds to the search rather
-than replacing it.
+than replacing it. To hand it to someone, zip the whole folder: **Install plugin…** on their
+Plugins tab takes the zip from there.
 
 ```bash
 Meows.exe --list-plugins

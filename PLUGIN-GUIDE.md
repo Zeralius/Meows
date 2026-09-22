@@ -124,47 +124,58 @@ suppression into `.editorconfig` itself, which beats guessing the inspection id 
 ### Developing a plugin in its own repository
 
 You do not have to work inside the Meows solution at all. A plugin needs exactly two things from
-Meows: the **contract**, and a way for the shell to **find** it. Both are available from outside.
+Meows: the **contract**, and a way for the shell to **find** it. Both are available from outside,
+and neither needs this repository cloned.
 
-**1. Get the contract as a package.** From the Meows repo, once per contract version:
+**1. Start from the template**, which writes a project that already does everything below:
 
 ```bash
-dotnet pack Meows.Plugins.Abstractions/Meows.Plugins.Abstractions.csproj -c Release -o artifacts/nuget
+dotnet new install Meows.Plugins.Template
+dotnet new meows-plugin -n HelloMeows
 ```
 
-**2. Point your own repo at that folder** with a `nuget.config` beside your `.csproj`:
-
-```xml
-<?xml version="1.0" encoding="utf-8"?>
-<configuration>
-  <packageSources>
-    <add key="meows-local" value="F:\path\to\Meows\artifacts\nuget" />
-  </packageSources>
-</configuration>
-```
-
-**3. Your `.csproj` references packages only.** No `ProjectReference`, no Meows sources:
+**2. The contract is a package.** The generated `.csproj` references it from nuget.org, at the
+contract version the template was published with. No `ProjectReference`, no Meows sources:
 
 ```xml
 <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Meows.Plugins.Abstractions" Version="0.2.1" ExcludeAssets="runtime" />
+    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.0.0" ExcludeAssets="runtime" PrivateAssets="all" />
 </ItemGroup>
 ```
 
 `ExcludeAssets="runtime"` still matters, for the same reason as in-tree: the shell supplies both
 at runtime, and a second copy of Avalonia in your output would make your `Control` a different
-type from the one the shell can host.
+type from the one the shell can host. The Plugins tab says which contract version the Meows you
+are running provides; pin that or anything older.
 
-**4. Tell the shell where your build lands.** `MEOWS_PLUGINS_DIR` takes a `;`-separated list and
+To build against a contract that is not on nuget.org yet, pack it from a checkout and point a
+`nuget.config` beside your `.csproj` at the folder:
+
+```bash
+dotnet pack Meows.Plugins.Abstractions/Meows.Plugins.Abstractions.csproj -c Release -o artifacts/nuget
+```
+
+```xml
+<?xml version="1.0" encoding="utf-8"?>
+<configuration>
+  <packageSources>
+    <add key="meows-local" value="F:\path	o\Meowsrtifacts
+uget" />
+  </packageSources>
+</configuration>
+```
+
+**3. Tell the shell where your build lands.** `MEOWS_PLUGINS_DIR` takes a `;`-separated list and
 is **additive**, so your plugin loads *alongside* the built-in ones rather than instead of them:
 
 ```bash
 MEOWS_PLUGINS_DIR="C:\dev\HelloMeows\meows-plugins"
 ```
 
-It still needs one subfolder per plugin, so copy your DLL to
-`...\meows-plugins\HelloMeows\HelloMeows.dll`. The log then shows both roots being scanned:
+It still needs one subfolder per plugin, named after the DLL, which is what
+`dotnet build -c Release -o C:\dev\HelloMeows\meows-plugins\HelloMeows` gives you. The log then
+shows both roots being scanned:
 
 ```
 [plugins] Scanning C:\dev\HelloMeows\meows-plugins
@@ -176,6 +187,40 @@ It still needs one subfolder per plugin, so copy your DLL to
 Everything else behaves identically: your own `%APPDATA%\Meows\plugins\<your-id>\` data
 directory, notifications, background work.
 
+**4. Handing it to someone.** The build folder, zipped, is the release:
+
+```bash
+dotnet build -c Release -o HelloMeows
+```
+
+Zip the whole folder, not just the DLL: a plugin's own libraries are loaded from beside it. The
+person receiving it presses **Install plugin…** on the Plugins tab, picks the zip or drops it on
+the tab, and the card appears, switched off like every other. The installer names the folder
+after the DLL, so it does not matter what the zip or the folder inside it was called, and it
+refuses a zip in which it cannot tell which DLL is the plugin, which does not happen to a build
+folder because the `.deps.json` says. A plugin that is already installed is already loaded, so a
+new version is put beside it as `HelloMeows.update` and the old folder is renamed aside to make
+room; when that rename is refused because the folder is held open, the new one waits until
+Meows next starts, and the notice under the buttons says which happened.
+
+The template does the zipping for you: `.github/workflows/release.yml` builds on a `v*` tag with
+the tag's number as the version, zips the folder and attaches it to a GitHub release.
+
+**5. What the card says, and the update check.** Meows reads three things the SDK stamps into
+the DLL and shows them under the description: `Version` (as `AssemblyInformationalVersion`, with
+any `+commit` suffix cut off), `Authors` (as `AssemblyCompany`, hidden when it is just the
+assembly name, which is the SDK's default), and `RepositoryUrl` (as an `AssemblyMetadata`
+attribute, shown as a link). None of that is contract; a plugin that sets none of them gets a
+plainer card. The template sets all three, `--Repository` on `dotnet new` fills the last.
+
+Once a day, and once at start, the shell asks the GitHub repository of every plugin the installer
+put there for its latest release, one request each, unauthenticated. A tag that parses as a
+higher version than the DLL's, with a `.zip` among the release's assets, shows on the card as
+*available* with an **Update** button; the download runs as a task and goes through the same
+installer. So a plugin takes part by doing nothing more than setting `RepositoryUrl`, tagging
+releases `vMAJOR.MINOR.PATCH`, and attaching the zip, which is what the workflow does. A plugin
+without a numeric version, or without a GitHub `RepositoryUrl`, is never asked about.
+
 #### Version compatibility
 
 `Meows.Plugins.Abstractions` is deliberately **shared** with the shell rather than loaded from
@@ -186,8 +231,8 @@ The shell checks this for you. At discovery it reads the contract version your a
 compiled against and refuses anything it cannot honour, **before constructing your plugin**, so
 none of your code runs. The reason appears on your plugin's card in place of its toggle:
 
-> Built for Meows contract 0.3.0, which is newer than this shell's 0.2.1. Update Meows, or rebuild
-> the plugin against 0.2.1.
+> Built for Meows contract 1.1.0, which is newer than this shell's 1.0.0. Update Meows, or rebuild
+> the plugin against 1.0.0.
 
 A mismatched **major** is refused either way, since a major bump means members may have been
 removed. A **newer** minor or patch is refused; an older one loads fine, because additive
@@ -336,6 +381,43 @@ ignoring case. Pick an existing one to join it, or invent your own.
 `CreateView` runs once per activation. If it throws, the shell catches it, marks the plugin
 *Failed* on its card, and logs the exception; a broken plugin cannot take the window down.
 
+### Being searched while switched off
+
+Ctrl+K asks every open plugin's view model through `ISearchable` ([section 4](#being-searched-from-ctrlk)).
+A plugin that is off has no view model, so from 1.0.0 it can be asked through the plugin class
+instead:
+
+```csharp
+public ISearchable? WhileOff(IMeowsDormantHost host)
+{
+    var settings = host.LoadSettings<MySettings>();
+    return settings is null || settings.Things.Count == 0 ? null : new Asleep(host, settings.Things);
+}
+```
+
+`IMeowsDormantHost` is the little a plugin gets while off: `PluginId`, `DataDirectory`,
+`LoadSettings`, `Text`, a read-only view of its `Store`, and `Handoff`. No log, no
+notifications, no background work: a plugin that is off is off. Return null to be left out
+until switched on, which is the default and what a plugin that does not override this gets.
+
+The shell asks once, the first time the palette needs it after a scan, and keeps the answer
+until the plugin is switched on or the list is read again, so read what you keep in
+`WhileOff` and answer `Search` from memory. A hit's `Open` cannot reach a view model that does
+not exist yet; the way in is to hand the plugin to itself:
+
+```csharp
+new SearchHit(thing.Title, thing.Kind, () =>
+    host.Handoff.Send(host.PluginId, new Handoff("myplugin.show", [], thing.Id)))
+```
+
+The shell answers a handoff to a plugin that is off by switching it on, bringing its tab to the
+front and delivering, so the view model's `IHandoffTarget.Receive` gets the verb with the id in
+`Note` and selects the thing. Collar does exactly this for its dates: `CollarPlugin.WhileOff`
+and the `collar.show` verb in `CollarViewModel.Receive` are the worked example. Kibble answers
+with the files waiting in its last folder, one listing when first asked, and Familiar with its
+one-shots by name; a plugin whose data only exists once it is on, Tin's accounts or Birdwatch's
+posts, answers nothing and is left out, which is the honest default.
+
 ---
 
 ## 4. `IMeowsHost`
@@ -358,13 +440,21 @@ public interface IMeowsHost
     IMeowsHandoff Handoff { get; }      // 0.5.0
     IMeowsStore Store { get; }          // 0.5.0
     IMeowsWatches Watches { get; }      // 0.7.0
+    IMeowsPicker Pick { get; }          // 1.0.0
 }
 ```
 
 `Notifications` grew its many-button overloads in 0.8.0; see [section 6](#6-notifications).
 
-The last four have defaults, so a plugin built against an older contract still compiles and
-loads; the defaults hand back the key, hold no secrets, and reach no other plugin.
+The last five have defaults, so a plugin built against an older release of the same major
+still compiles and loads; the defaults hand back the key, hold no secrets, reach no other
+plugin, and pick nothing.
+
+**Contract 1.0.0** is where the 0.x run ended and the promise started: within a major, a member
+is only ever added, never removed or changed, and the shell loads anything built against an
+older minor. A plugin built against 0.x is refused by a 1.x shell, before any of its code runs,
+with *rebuild against 1.0.0* on its card. The members that came with 1.0.0 are `Pick` below and
+`IMeowsPlugin.WhileOff` in [section 3](#3-the-entry-point); nothing was taken away.
 
 ### `DataDirectory`
 
@@ -523,6 +613,31 @@ schedule (`DateTime.MaxValue` for "until I say") and `Resume(id)` lets it look a
 The plugin that owns the schedule is not told; its passes simply do not run, and `PausedUntil`
 on the info says so. Both return false on a shell older than 0.10.0 or for a watch that has
 stopped. Purr puts three buttons on it; nothing else needs to.
+
+### `Pick`
+
+The shell's file dialogs, so a view model can ask for a file without a `TopLevel` in hand:
+
+```csharp
+var path = await _host.Pick.File(new PickOptions
+{
+    Title = _host.Text["myplugin.pick.receipt"],
+    Filters = [PickFilter.Of("Pictures", "*.jpg", "*.png"), PickFilter.Of("PDF", "*.pdf")],
+});
+if (path is null) return;   // cancelled, or no window to ask over
+```
+
+`File`, `Files`, `Folder`, `Folders` and `Save`, each taking the same optional `PickOptions`:
+title, filters, where to start, and for `Save` a suggested name and a default extension. Every
+one answers null, or an empty list, when the user cancelled and also when there is no window
+showing, which is what a plugin driven from the tray gets and what a test's fake host answers.
+The dialogs are put over the main window; a tab in a window of its own still gets them there.
+
+Every built-in plugin picks this way, from a command on its view model, and none of their
+code-behinds opens a dialog any more; `ChonkViewModel.PickFolderCommand` is the shape. In the
+tests, `FakeHost.Picks` answers each dialog with the next scripted path, so the whole flow runs
+without a window. Reaching for `TopLevel.GetTopLevel(this)?.StorageProvider` in code-behind
+still works, if a plugin would rather.
 
 ### `Explorer`
 
@@ -870,6 +985,14 @@ ancestor *source* folder named `Plugins` wins. It is why the shell's own loader 
 `Meows/PluginSystem/` and not `Meows/Plugins/`.
 
 Inside your folder the shell prefers `<foldername>.dll` and otherwise scans every `.dll`.
+
+Three folder names are the installer's and are never scanned: `<Name>.installing` while a zip
+is being written out, `<Name>.update` for a newer version waiting beside one that is loaded, and
+`<Name>.old` for the one it replaced or uninstalled, until that can be deleted. Before each scan
+the shell swaps every `.update` in and clears every `.old` it can. The installer also leaves
+`meows-install.json` in a folder it made, and that note is the only thing that tells an
+installed plugin from one copied by hand: only a folder with it gets *Uninstall* on its card
+and the daily look for a newer release.
 
 ### Assembly isolation
 

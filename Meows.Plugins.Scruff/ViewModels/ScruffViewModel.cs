@@ -1163,4 +1163,72 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
         _http.Dispose();
         _closing.Dispose();
     }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _pickOutputCommand;
+
+    public RelayCommand PickOutputCommand => _pickOutputCommand ??= new RelayCommand(() => _ = PickOutputAsync());
+
+    private async Task PickOutputAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["scruff.dialog.output"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            SetOutputFolder(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
+
+    private RelayCommand? _addFilesCommand;
+
+    public RelayCommand AddFilesCommand => _addFilesCommand ??= new RelayCommand(() => _ = PickFilesAsync());
+
+    private async Task PickFilesAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Files(new PickOptions
+            {
+                Title = _host.Text["scruff.dialog.files"],
+                StartIn = LastFolder,
+                Filters =
+                [
+                    PickFilter.Of(_host.Text["pick.pictures"], "*.jpg", "*.jpeg", "*.png", "*.gif", "*.webp", "*.bmp"),
+                    PickFilter.Of(_host.Text["pick.all"], "*"),
+                ],
+            });
+            if (picked.Count == 0)
+                return;
+            AddPaths(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
+
+    private RelayCommand? _addFolderCommand;
+
+    public RelayCommand AddFolderCommand => _addFolderCommand ??= new RelayCommand(() => _ = PickFolderAsync());
+
+    private async Task PickFolderAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["scruff.dialog.folder"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            AddPaths([picked]);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
 }

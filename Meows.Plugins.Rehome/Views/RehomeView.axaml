@@ -376,7 +376,7 @@
                             <TextBlock Text="{m:Tr rehome.destination}" FontWeight="SemiBold" FontSize="13" Margin="0,10,0,0" />
                             <TextBlock Text="{Binding DestinationText}" TextWrapping="Wrap" FontSize="12" />
                             <TextBlock Text="{Binding DestinationWarning}" Classes="label warn" TextWrapping="Wrap" IsVisible="{Binding DestinationWarning, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
-                            <Button Name="PickDestinationButton" Content="{m:Tr rehome.destination.pick}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <Button Name="PickDestinationButton" Command="{Binding PickDestinationCommand}" Content="{m:Tr rehome.destination.pick}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                             <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr rehome.destination.hint}" />
 
                             <TextBlock Text="{m:Tr rehome.pack}" FontWeight="SemiBold" FontSize="13" Margin="0,10,0,0" />
@@ -411,7 +411,7 @@
                         <StackPanel Spacing="10" IsVisible="{Binding IsWayBackStep}">
                             <TextBlock Text="{m:Tr rehome.back}" FontWeight="SemiBold" FontSize="13" />
                             <TextBlock Text="{Binding RehomeFolder}" TextWrapping="Wrap" FontSize="12" IsVisible="{Binding HasManifest}" />
-                            <Button Name="OpenManifestButton" Content="{m:Tr rehome.back.pick}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <Button Name="OpenManifestButton" Command="{Binding OpenManifestCommand}" Content="{m:Tr rehome.back.pick}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                             <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr rehome.back.pick.hint}" />
                             <Button Content="{m:Tr rehome.back.go}" Command="{Binding BringBackCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,6,0,0" />
                             <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr rehome.back.go.hint}" />

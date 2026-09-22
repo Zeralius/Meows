@@ -1,9 +1,7 @@
-using Meows.Plugins.Abstractions;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using Avalonia.Platform.Storage;
 using Meows.Plugins.Chonk.ViewModels;
 
 namespace Meows.Plugins.Chonk.Views;
@@ -13,7 +11,6 @@ public partial class ChonkView : UserControl, IDisposable
     public ChonkView()
     {
         InitializeComponent();
-        this.FindControl<Button>("PickFolderButton")!.Click += OnPickFolder;
 
         var list = this.FindControl<ListBox>("EntryList")!;
         list.DoubleTapped += OnRowActivated;
@@ -63,27 +60,6 @@ public partial class ChonkView : UserControl, IDisposable
     {
         if (Model is { Selected: { CanDrillInto: true } row } model)
             model.OpenCommand.Execute(row);
-    }
-
-    private async void OnPickFolder(object? sender, RoutedEventArgs e)
-    {
-        if (Model is not { } model)
-            return;
-
-        var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
-        if (storage is null)
-            return;
-
-        var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = MeowsText.Current["chonk.dialog.folder"],
-            AllowMultiple = false,
-        });
-
-        // Chosen, shown in the tree, and not measured until Scan says so.
-        var picked = folders.FirstOrDefault()?.TryGetLocalPath();
-        if (!string.IsNullOrWhiteSpace(picked))
-            model.Choose(picked);
     }
 
     public void Dispose() => (DataContext as IDisposable)?.Dispose();

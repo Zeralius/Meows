@@ -1,0 +1,51 @@
+# Tag a commit v1.2.3 and push the tag: this builds the plugin at that version, zips the build
+# folder, and attaches the zip to a GitHub release. That zip is exactly what "Install plugin…"
+# on the Meows Plugins tab takes, and the version is what Meows compares against the release
+# when it looks for updates, so the tag is the only place the version has to be typed.
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Work out the version
+        id: version
+        run: |
+          v="${GITHUB_REF_NAME#v}"
+          if ! [[ "$v" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Tag '$GITHUB_REF_NAME' is not vMAJOR.MINOR.PATCH" >&2
+            exit 1
+          fi
+          echo "value=$v" >> "$GITHUB_OUTPUT"
+          echo "Building $v"
+
+      # The folder is named after the DLL, which is the layout Meows expects, and the zip is
+      # the folder itself so the name survives the trip.
+      - name: Build
+        run: dotnet build MyPlugin.csproj -c Release -o MyPlugin -p:Version=${{ steps.version.outputs.value }}
+
+      - name: Zip it
+        run: zip -r "MyPlugin-${{ steps.version.outputs.value }}.zip" MyPlugin
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            "MyPlugin-${{ steps.version.outputs.value }}.zip" \
+            --title "MyPlugin ${{ steps.version.outputs.value }}" \
+            --notes "A Meows plugin. Download the zip and use *Install plugin…* on the Plugins tab, or drop it on that tab."

@@ -2,7 +2,10 @@ using System.Text.Json;
 
 namespace Meows.Services;
 
-/// <summary>Everything we persist, under %APPDATA%\Meows. Nothing is written into the repo.</summary>
+/// <summary>
+/// Everything we persist, under %APPDATA%\Meows, or beside the exe when a file called
+/// <c>portable</c> sits there. Nothing is written into the repo.
+/// </summary>
 public sealed class ShellSettings
 {
     private static readonly JsonSerializerOptions Json = new()
@@ -12,17 +15,39 @@ public sealed class ShellSettings
     };
 
     /// <summary>
+    /// A file called <c>portable</c> (or <c>portable.txt</c>, which is what Explorer makes) next
+    /// to Meows.exe says the settings go in <c>data\</c> next to it too, so the unzipped folder
+    /// is the whole installation and can be carried on a stick or kept out of a roaming
+    /// profile. Read once; making the file takes effect at the next start.
+    /// </summary>
+    public static bool IsPortable { get; } =
+        File.Exists(Path.Combine(AppContext.BaseDirectory, "portable")) ||
+        File.Exists(Path.Combine(AppContext.BaseDirectory, "portable.txt"));
+
+    /// <summary>
+    /// Set by the shell at startup to its settings root, for libraries the plugins carry that
+    /// keep something beside the settings and cannot be handed a host.
+    /// </summary>
+    public const string RootVariable = "MEOWS_SETTINGS_ROOT";
+
+    /// <summary>Where a real run keeps everything: the roaming profile, or beside the exe when portable.</summary>
+    public static string DefaultRoot => IsPortable
+        ? Path.Combine(AppContext.BaseDirectory, "data")
+        : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Meows");
+
+    /// <summary>
     /// The root is injectable so tests can use a throwaway directory. The app always uses the
     /// default.
     /// </summary>
     public ShellSettings(string? root = null, string? previousRoot = null)
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
-        Root = root ?? Path.Combine(appData, "Meows");
+        Root = root ?? DefaultRoot;
 
-        // Only look at the real old folder on a real run. A test with its own Root has to pass
-        // its own previous folder too, or it would read the actual settings on this machine.
-        var previous = previousRoot ?? (root is null ? Path.Combine(appData, "Mews") : null);
+        // Only look at the real old folder on a real run, and only a roaming one: a portable
+        // folder is deliberately its own world. A test with its own Root has to pass its own
+        // previous folder too, or it would read the actual settings on this machine.
+        var previous = previousRoot ?? (root is null && !IsPortable ? Path.Combine(appData, "Mews") : null);
 
         // Whether there are settings here, not whether the folder exists. CrashLog runs first
         // and creates the folder to write into, so an empty folder is normal on a first run.
@@ -309,6 +334,100 @@ public sealed class ShellSettings
 /// The two choices on the Settings tab. Both default to following the machine, so a first run
 /// looks like the rest of the desktop rather than like whatever we happened to prefer.
 /// </summary>
+/// <summary>Where a window sat, in screen pixels, and whether it was maximised over that.</summary>
+public sealed record WindowPlace(int X, int Y, double Width, double Height, bool Maximized = false);
+
+/// <summary>
+/// The monitors as one string: each one's bounds, in order. Plug a screen in or out and it is
+/// a different layout, with places of its own, so a window remembered on the second screen goes
+/// back there when that screen is there and lands somewhere sensible when it is not.
+/// </summary>
+public static class WindowLayout
+{
+    public static string? Of(Avalonia.Controls.Window? window)
+    {
+        try
+        {
+            var screens = window?.Screens.All;
+            if (screens is null || screens.Count == 0)
+                return null;
+            return string.Join("|", screens.Select(s => $"{s.Bounds.X},{s.Bounds.Y},{s.Bounds.Width},{s.Bounds.Height}"));
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The window's place now, or null when it is not somewhere worth keeping.</summary>
+    public static WindowPlace? PlaceOf(Avalonia.Controls.Window window)
+    {
+        if (window.WindowState == Avalonia.Controls.WindowState.Minimized)
+            return null;
+        var maximized = window.WindowState == Avalonia.Controls.WindowState.Maximized;
+        return new WindowPlace(window.Position.X, window.Position.Y, window.Width, window.Height, maximized);
+    }
+
+    /// <summary>
+    /// Puts the window where the place says, before it is shown. The size and the maximised
+    /// state always; the position only when enough of the window would land on a screen that
+    /// is there, since a layout string cannot tell a DPI change or a screen that moved from one
+    /// that did not, and a window remembered off the edge is a window nobody can reach.
+    /// </summary>
+    public static void Apply(Avalonia.Controls.Window window, WindowPlace place)
+    {
+        if (place.Width > 0 && place.Height > 0)
+        {
+            window.Width = place.Width;
+            window.Height = place.Height;
+        }
+
+        IReadOnlyList<Avalonia.PixelRect> screens;
+        try
+        {
+            screens = window.Screens.All.Select(s => s.WorkingArea).ToList();
+        }
+        catch (Exception)
+        {
+            screens = [];
+        }
+
+        if (Fits(place, screens))
+        {
+            window.WindowStartupLocation = Avalonia.Controls.WindowStartupLocation.Manual;
+            window.Position = new Avalonia.PixelPoint(place.X, place.Y);
+        }
+
+        if (place.Maximized)
+            window.WindowState = Avalonia.Controls.WindowState.Maximized;
+    }
+
+    /// <summary>
+    /// Whether a window at this place shows enough of itself on one of these screens to be
+    /// grabbed: its title bar's left corner, plus a hand's width of it, inside a working area.
+    /// No screens at all means nobody can say, and the place is taken as it is.
+    /// </summary>
+    public static bool Fits(WindowPlace place, IReadOnlyList<Avalonia.PixelRect> screens)
+    {
+        if (screens.Count == 0)
+            return true;
+
+        const int grab = 120;
+        var width = (int)Math.Max(place.Width, grab);
+        var height = (int)Math.Max(place.Height, 40);
+        var window = new Avalonia.PixelRect(place.X, place.Y, width, height);
+
+        foreach (var screen in screens)
+        {
+            var seen = screen.Intersect(window);
+            if (seen.Width >= grab && seen.Height >= 40 && seen.Y == window.Y)
+                return true;
+        }
+
+        return false;
+    }
+}
+
 public sealed class ShellPreferences
 {
     /// <summary>"system", "light" or "dark".</summary>
@@ -335,6 +454,24 @@ public sealed class ShellPreferences
     /// existed. Facts and the seen table are never subject to this.
     /// </summary>
     public int HistoryKeepDays { get; set; }
+
+    /// <summary>
+    /// When the window was last hidden or Meows last quit, which is what "since you were away"
+    /// on the Home tab counts from. Null until the first time.
+    /// </summary>
+    public DateTime? LastSeen { get; set; }
+
+    /// <summary>The tabs that were in windows of their own when Meows last quit, by tab key.</summary>
+    public List<string> PoppedOutTabs { get; set; } = [];
+
+    /// <summary>
+    /// Where each popped-out tab's window sat, per monitor layout: the outer key is the layout
+    /// as a string of every screen's bounds, the inner one the tab key.
+    /// </summary>
+    public Dictionary<string, Dictionary<string, WindowPlace>> PopOutPlaces { get; set; } = [];
+
+    /// <summary>Where the main window sat, per monitor layout, the same way.</summary>
+    public Dictionary<string, WindowPlace> MainWindowPlaces { get; set; } = [];
 
     /// <summary>
     /// Per log source, the least a line has to be to show: "warning" for warnings and errors

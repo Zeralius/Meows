@@ -51,7 +51,7 @@
                                    Width="110"
                                    FontSize="11"
                                    VerticalAlignment="Center" />
-                    <Button Name="AttachButton" Content="{m:Tr collar.fromfile}" />
+                    <Button Name="AttachButton" Command="{Binding AttachCommand}" Content="{m:Tr collar.fromfile}" />
                     <Button Content="{m:Tr collar.add}" Command="{Binding AddCommand}" />
                 </StackPanel>
             </Grid>

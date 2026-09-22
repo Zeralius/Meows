@@ -31,7 +31,7 @@ cannot host the control you hand back.
 
 ```xml
 <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-<PackageReference Include="Meows.Plugins.Abstractions" Version="0.10.0" ExcludeAssets="runtime" PrivateAssets="all" />
+<PackageReference Include="Meows.Plugins.Abstractions" Version="1.0.0" ExcludeAssets="runtime" PrivateAssets="all" />
 ```
 
 There is a `dotnet new` template that writes all of this for you:
@@ -89,6 +89,11 @@ was refused.
 This package carries the contract version, which moves independently of the app. The shell refuses
 a plugin built against a newer contract, or a different major, and says so on the plugin's card
 rather than failing later. An older minor is fine, since additions stay backward compatible.
+
+**1.0.0** is the first stable contract: within 1.x a member is only added, never removed or
+changed. What came with it: `IMeowsHost.Pick`, the shell's file dialogs for a view model, and
+`IMeowsPlugin.WhileOff`, a way to be searched from Ctrl+K while switched off, through
+`IMeowsDormantHost`. Both have defaults. Plugins built against 0.x need a rebuild.
 
 Full documentation: **[PLUGIN-GUIDE.md](https://github.com/Zeralius/Meows/blob/main/PLUGIN-GUIDE.md)**
 

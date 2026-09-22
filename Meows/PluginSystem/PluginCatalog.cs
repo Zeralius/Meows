@@ -18,6 +18,13 @@ public sealed class PluginCatalog
         PluginsDirectories.Count == 0 ? null : string.Join(" ; ", PluginsDirectories);
 
     /// <summary>
+    /// Where an installed plugin goes: the folder beside the exe, or the one found above it,
+    /// which is always last because MEOWS_PLUGINS_DIR entries are put first. A development
+    /// folder from the environment is where a build lands, not where a zip should.
+    /// </summary>
+    public string? InstallDirectory => PluginsDirectories.Count == 0 ? null : PluginsDirectories[^1];
+
+    /// <summary>
     /// Where to look, in order: MEOWS_PLUGINS_DIR, then a plugins folder next to the exe (the
     /// deployed layout), then one in a parent folder (what makes an in-solution build work).
     ///
@@ -107,6 +114,11 @@ public sealed class PluginCatalog
 
         foreach (var assemblyPath in PluginsDirectories.SelectMany(directory =>
                  {
+                     // A version installed while its predecessor was loaded waits beside it
+                     // until now, when nothing is loaded yet, or until the next start if this
+                     // is a rescan and the old one is still held open.
+                     foreach (var line in PluginInstaller.ApplyPending(directory))
+                         _log.Write("plugins", line);
                      _log.Write("plugins", $"Scanning {directory}");
                      return CandidateAssemblies(directory);
                  }))
@@ -129,6 +141,11 @@ public sealed class PluginCatalog
     {
         foreach (var dir in Directory.EnumerateDirectories(pluginsDirectory))
         {
+            // Half written, or waiting to replace its neighbour: loading it would hold it open
+            // and make it a duplicate of the one it is meant to replace.
+            if (PluginInstaller.IsTransient(dir))
+                continue;
+
             // Usually named after the folder. Fall back to scanning so a hand-dropped
             // folder still works.
             var preferred = Path.Combine(dir, Path.GetFileName(dir) + ".dll");
@@ -147,42 +164,45 @@ public sealed class PluginCatalog
     /// Split out because you cannot yield from inside a try/catch. Gives back the types to
     /// scan, or a reason the plugin is unusable.
     /// </summary>
-    private (Type[] Types, string? Incompatible) Inspect(string assemblyPath)
+    private (Type[] Types, string? Incompatible, PluginProvenance Provenance) Inspect(string assemblyPath)
     {
+        Assembly? assembly = null;
         try
         {
-            var assembly = new PluginLoadContext(assemblyPath).LoadFromAssemblyPath(assemblyPath);
+            assembly = new PluginLoadContext(assemblyPath).LoadFromAssemblyPath(assemblyPath);
 
-            // Before touching its types, so an unusable plugin never runs any of its code.
+            // Before touching its types, so an unusable plugin never runs any of its code. The
+            // assembly's own attributes are read either way: who made it is worth knowing about
+            // a plugin that is being refused, and reading them runs nothing of the plugin's.
             var problem = ContractCompatibility.CheckAssembly(assembly);
             if (problem is not null)
-                return ([], problem);
+                return ([], problem, PluginProvenance.Read(assembly, assemblyPath));
 
-            return (assembly.GetTypes(), null);
+            return (assembly.GetTypes(), null, PluginProvenance.Read(assembly, assemblyPath));
         }
         catch (ReflectionTypeLoadException ex)
         {
-            return (ex.Types.OfType<Type>().ToArray(), null);
+            return (ex.Types.OfType<Type>().ToArray(), null, PluginProvenance.Read(assembly, assemblyPath));
         }
         catch (BadImageFormatException)
         {
-            return ([], null); // Native or otherwise non-managed dll sitting in the folder.
+            return ([], null, PluginProvenance.None); // Native or otherwise non-managed dll sitting in the folder.
         }
         catch (Exception ex)
         {
             _log.Write("plugins", $"Could not load {Path.GetFileName(assemblyPath)}: {ex.Message}");
-            return ([], null);
+            return ([], null, PluginProvenance.None);
         }
     }
 
     private IEnumerable<PluginDescriptor> LoadFrom(string assemblyPath)
     {
-        var (types, incompatible) = Inspect(assemblyPath);
+        var (types, incompatible, provenance) = Inspect(assemblyPath);
 
         if (incompatible is not null)
         {
             _log.Write("plugins", $"{Path.GetFileName(assemblyPath)} is incompatible: {incompatible}");
-            yield return PluginDescriptor.Incompatible(assemblyPath, incompatible);
+            yield return PluginDescriptor.Incompatible(assemblyPath, incompatible, provenance);
             yield break;
         }
 
@@ -201,7 +221,7 @@ public sealed class PluginCatalog
             {
                 var plugin = (IMeowsPlugin)Activator.CreateInstance(type)!;
                 PluginNames.Register(plugin);
-                descriptor = PluginDescriptor.Loaded(plugin, assemblyPath);
+                descriptor = PluginDescriptor.Loaded(plugin, assemblyPath, provenance);
             }
             catch (Exception ex)
             {

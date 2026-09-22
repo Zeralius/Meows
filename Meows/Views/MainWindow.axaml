@@ -39,17 +39,28 @@
                            FontWeight="SemiBold"
                            Opacity="0.55"
                            VerticalAlignment="Center" />
-                <TextBlock Grid.Column="1"
-                           Margin="12,0"
-                           Opacity="0.45"
-                           VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis"
-                           Text="{Binding PluginsDirectoryText}" />
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0" Spacing="12">
+                    <!-- A newer Meows on the releases page. A link, not a download: the running exe
+                         is not something the shell replaces underneath itself. -->
+                    <Button Content="{Binding ShellUpdateText}"
+                            Command="{Binding OpenShellUpdateCommand}"
+                            IsVisible="{Binding HasShellUpdate}"
+                            Padding="8,1"
+                            FontSize="12"
+                            Background="{DynamicResource MeowsInfo}"
+                            BorderBrush="{DynamicResource MeowsInfoLine}"
+                            Foreground="{DynamicResource MeowsInfoText}"
+                            VerticalAlignment="Center" />
+                    <TextBlock Opacity="0.45"
+                               VerticalAlignment="Center"
+                               TextTrimming="CharacterEllipsis"
+                               Text="{Binding PluginsDirectoryText}" />
+                </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
                     <Button Content="{m:Tr shell.palette}"
                             Padding="10,2"
                             Command="{Binding OpenPaletteCommand}"
-                            ToolTip.Tip="Ctrl+K" />
+                            ToolTip.Tip="{m:Tr shell.palette.tip}" />
                     <!-- Feline names or plain ones. The same switch is on the Settings tab. -->
                     <ToggleButton Content="🐾"
                                   FontFamily="Segoe UI Emoji"
@@ -245,12 +256,38 @@
                                    FontFamily="Segoe UI Emoji"
                                    VerticalAlignment="Center" />
                         <TextBlock Text="{Binding Header}" VerticalAlignment="Center" />
+                        <!-- Into a window of its own. Shown faintly so the strip stays a strip. -->
+                        <Button Content="⧉"
+                                FontSize="11"
+                                Padding="3,0"
+                                MinHeight="0"
+                                Background="Transparent"
+                                BorderThickness="0"
+                                Opacity="0.4"
+                                VerticalAlignment="Center"
+                                ToolTip.Tip="{m:Tr shell.popout}"
+                                IsVisible="{Binding !IsPoppedOut}"
+                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).PopOutCommand}"
+                                CommandParameter="{Binding}" />
                     </StackPanel>
                 </DataTemplate>
             </TabControl.ItemTemplate>
             <TabControl.ContentTemplate>
                 <DataTemplate x:DataType="vm:TabViewModel">
-                    <ContentControl Content="{Binding Content}" />
+                    <ContentControl Content="{Binding Shown}">
+                        <ContentControl.DataTemplates>
+                            <!-- What stands in for a tab while its content is in its own window. -->
+                            <DataTemplate x:DataType="vm:PoppedOutNotice">
+                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
+                                    <TextBlock Text="{m:Tr shell.popout.away}" Opacity="0.55" HorizontalAlignment="Center" />
+                                    <Button Content="{m:Tr shell.popout.back}"
+                                            HorizontalAlignment="Center"
+                                            Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).BringBackCommand}"
+                                            CommandParameter="{Binding Tab}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ContentControl.DataTemplates>
+                    </ContentControl>
                 </DataTemplate>
             </TabControl.ContentTemplate>
         </TabControl>
@@ -276,7 +313,7 @@
                 <TextBox Name="PaletteBox"
                          DockPanel.Dock="Top"
                          Text="{Binding Palette.Query}"
-                         Watermark="{m:Tr palette.hint}"
+                         Watermark="{Binding Palette.Hint}"
                          FontSize="15"
                          Margin="0,0,0,8" />
                 <TextBlock DockPanel.Dock="Top"

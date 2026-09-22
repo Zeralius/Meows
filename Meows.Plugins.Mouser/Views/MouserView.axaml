@@ -67,7 +67,7 @@
                               IsChecked="{Binding ConfirmDeletes}"
                               FontSize="11"
                               VerticalAlignment="Center" />
-                    <Button Name="PickFolderButton" Content="{m:Tr mouser.folder}" />
+                    <Button Name="PickFolderButton" Command="{Binding PickFolderCommand}" Content="{m:Tr mouser.folder}" />
                     <Button Content="{m:Tr mouser.lookagain}" Command="{Binding ScanCommand}" />
                     <Button Content="{m:Tr mouser.stop}" Command="{Binding CancelCommand}" IsVisible="{Binding IsScanning}" />
                 </StackPanel>

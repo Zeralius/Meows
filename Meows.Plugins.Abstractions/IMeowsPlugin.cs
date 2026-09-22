@@ -48,4 +48,14 @@ public interface IMeowsPlugin
     /// deactivation if they implement IDisposable.
     /// </summary>
     Control CreateView(IMeowsHost host);
+
+    /// <summary>
+    /// Something to search while this plugin is switched off, or null to be left out of Ctrl+K
+    /// until it is on, which is what a plugin that does not say gets. Called when the palette
+    /// first needs it and kept until the plugin is switched on or the list is read again, so
+    /// read what you keep once, here, and answer from memory. The host has your settings, your
+    /// journal and a way to hand yourself the thing that was found; see
+    /// <see cref="IMeowsDormantHost"/>. Since 1.0.0.
+    /// </summary>
+    ISearchable? WhileOff(IMeowsDormantHost host) => null;
 }

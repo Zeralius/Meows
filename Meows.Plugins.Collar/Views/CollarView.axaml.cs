@@ -1,9 +1,7 @@
 using Avalonia.Controls;
 using Avalonia.Input;
-using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
 using Avalonia.Platform.Storage;
-using Meows.Plugins.Abstractions;
 using Meows.Plugins.Collar.ViewModels;
 
 namespace Meows.Plugins.Collar.Views;
@@ -13,7 +11,6 @@ public partial class CollarView : UserControl, IDisposable
     public CollarView()
     {
         InitializeComponent();
-        this.FindControl<Button>("AttachButton")!.Click += OnPickFile;
 
         // A list that has to be typed into is a list nobody keeps up, so a receipt dropped on the
         // tab fills in most of an entry by itself.
@@ -52,26 +49,6 @@ public partial class CollarView : UserControl, IDisposable
         }
 
         e.Handled = true;
-    }
-
-    private async void OnPickFile(object? sender, RoutedEventArgs e)
-    {
-        if (Model is not { } model)
-            return;
-
-        var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
-        if (storage is null)
-            return;
-
-        var picked = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
-        {
-            Title = MeowsText.Current["collar.dialog.file"],
-            AllowMultiple = false,
-        });
-
-        var path = picked.FirstOrDefault()?.TryGetLocalPath();
-        if (!string.IsNullOrWhiteSpace(path))
-            model.AddFromFile(path);
     }
 
     public void Dispose() => (DataContext as IDisposable)?.Dispose();

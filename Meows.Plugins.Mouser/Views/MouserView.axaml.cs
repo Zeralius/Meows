@@ -1,9 +1,7 @@
-using Meows.Plugins.Abstractions;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Markup.Xaml;
-using Avalonia.Platform.Storage;
 using Meows.Plugins.Mouser.ViewModels;
 
 namespace Meows.Plugins.Mouser.Views;
@@ -15,7 +13,6 @@ public partial class MouserView : UserControl, IDisposable
     public MouserView()
     {
         InitializeComponent();
-        this.FindControl<Button>("PickFolderButton")!.Click += OnPickFolder;
         var list = this.FindControl<ListBox>("FindingList")!;
         list.SelectionChanged += OnSelectionChanged;
 
@@ -69,26 +66,6 @@ public partial class MouserView : UserControl, IDisposable
     {
         if (sender is ListBox list && Model is { } model)
             model.SetSelection(list.SelectedItems?.OfType<FindingViewModel>() ?? []);
-    }
-
-    private async void OnPickFolder(object? sender, RoutedEventArgs e)
-    {
-        if (Model is not { } model)
-            return;
-
-        var storage = TopLevel.GetTopLevel(this)?.StorageProvider;
-        if (storage is null)
-            return;
-
-        var folders = await storage.OpenFolderPickerAsync(new FolderPickerOpenOptions
-        {
-            Title = MeowsText.Current["mouser.dialog.folder"],
-            AllowMultiple = false,
-        });
-
-        var picked = folders.FirstOrDefault()?.TryGetLocalPath();
-        if (!string.IsNullOrWhiteSpace(picked))
-            model.SetRoot(picked);
     }
 
     public void Dispose() => (DataContext as IDisposable)?.Dispose();

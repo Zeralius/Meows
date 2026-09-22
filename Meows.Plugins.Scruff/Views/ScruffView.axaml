@@ -75,10 +75,10 @@
                     <TextBlock Text="{Binding Status}" Classes="label" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                    <Button Name="PickOutputButton" Content="{m:Tr scruff.output}" />
+                    <Button Name="PickOutputButton" Command="{Binding PickOutputCommand}" Content="{m:Tr scruff.output}" />
                     <Button Content="{m:Tr scruff.open}" Command="{Binding OpenOutputCommand}" />
-                    <Button Name="AddFilesButton" Content="{m:Tr scruff.add}" />
-                    <Button Name="AddFolderButton" Content="{m:Tr scruff.addfolder}" />
+                    <Button Name="AddFilesButton" Command="{Binding AddFilesCommand}" Content="{m:Tr scruff.add}" />
+                    <Button Name="AddFolderButton" Command="{Binding AddFolderCommand}" Content="{m:Tr scruff.addfolder}" />
                 </StackPanel>
             </Grid>
         </Border>

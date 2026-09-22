@@ -665,4 +665,25 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
             heavy.Dispose();
         Preview = null;
     }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _chooseBotCommand;
+
+    public RelayCommand ChooseBotCommand => _chooseBotCommand ??= new RelayCommand(() => _ = ChooseBotAsync());
+
+    private async Task ChooseBotAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["portion.dialog.botfolder"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            SetBotRoot(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
 }

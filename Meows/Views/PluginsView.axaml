@@ -10,6 +10,25 @@
             <Setter Property="Foreground" Value="{DynamicResource MeowsDangerText}" />
             <Setter Property="Opacity" Value="1" />
         </Style>
+        <!-- An address on a card: reads as text, acts as a button. -->
+        <Style Selector="Button.link">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Foreground" Value="{DynamicResource MeowsInfoText}" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+        <Style Selector="Button.link:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="TextBlock.TextDecorations" Value="Underline" />
+        </Style>
+        <Style Selector="Button.small">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="8,3" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
     </UserControl.Styles>
 
     <DockPanel Margin="20">
@@ -26,9 +45,24 @@
                     Orientation="Horizontal"
                     Spacing="10"
                     Margin="0,0,0,14">
+            <Button Name="InstallButton" Content="{m:Tr plugins.install}" />
             <Button Content="{m:Tr plugins.rescan}" Command="{Binding RescanCommand}" />
             <Button Content="{m:Tr plugins.open}" Command="{Binding OpenPluginsFolderCommand}" />
         </StackPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsInfo}"
+                BorderBrush="{DynamicResource MeowsInfoLine}"
+                BorderThickness="1"
+                CornerRadius="4"
+                Padding="8,6"
+                Margin="0,0,0,14"
+                IsVisible="{Binding HasInstallNotice}">
+            <TextBlock Text="{Binding InstallNotice}"
+                       Foreground="{DynamicResource MeowsInfoText}"
+                       TextWrapping="Wrap"
+                       FontSize="12" />
+        </Border>
 
         <TextBlock DockPanel.Dock="Top"
                    Margin="0,0,0,14"
@@ -36,6 +70,13 @@
                    TextWrapping="Wrap"
                    IsVisible="{Binding !HasPlugins}"
                    Text="{m:Tr plugins.empty}" />
+
+        <TextBlock DockPanel.Dock="Top"
+                   Margin="0,0,0,14"
+                   Opacity="0.35"
+                   FontSize="11"
+                   TextWrapping="Wrap"
+                   Text="{m:Tr plugins.install.hint}" />
 
         <ScrollViewer>
             <ItemsControl ItemsSource="{Binding PluginGroups}">
@@ -81,6 +122,24 @@
                                     </StackPanel>
                                     <TextBlock Text="{Binding Description}" Opacity="0.6" TextWrapping="Wrap" />
                                     <TextBlock Text="{Binding Origin}" Opacity="0.35" FontSize="11" />
+                                    <!-- Who made it and when it arrived, from the DLL and the installer's note. -->
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{Binding ProvenanceText}"
+                                                   Opacity="0.35"
+                                                   FontSize="11"
+                                                   IsVisible="{Binding HasProvenance}" />
+                                        <Button Classes="link"
+                                                Content="{Binding HomepageText}"
+                                                Command="{Binding OpenHomepageCommand}"
+                                                IsVisible="{Binding HasHomepage}" />
+                                    </StackPanel>
+                                    <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasUpdate}">
+                                        <TextBlock Text="{Binding UpdateText}"
+                                                   Foreground="{DynamicResource MeowsGoodText}"
+                                                   FontSize="11"
+                                                   VerticalAlignment="Center" />
+                                        <Button Classes="small" Content="{m:Tr plugins.update}" Command="{Binding UpdateCommand}" />
+                                    </StackPanel>
                                     <!-- What it last did and what it is watching, where the switch is. -->
                                     <TextBlock Text="{Binding HealthText}"
                                                Opacity="0.6"
@@ -111,6 +170,11 @@
                                             IsVisible="{Binding IsIncompatible}">
                                         <TextBlock Text="{m:Tr plugins.incompatible}" Foreground="{DynamicResource MeowsWarnText}" FontSize="11" />
                                     </Border>
+                                    <Button Classes="small"
+                                            HorizontalAlignment="Right"
+                                            Content="{Binding UninstallText}"
+                                            Command="{Binding UninstallCommand}"
+                                            IsVisible="{Binding IsInstalled}" />
                                 </StackPanel>
                             </Grid>
                         </Border>

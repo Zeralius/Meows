@@ -55,7 +55,7 @@
                               IsChecked="{Binding ConfirmDeletes}"
                               FontSize="11"
                               VerticalAlignment="Center" />
-                    <Button Name="PickFolderButton" Content="{m:Tr chonk.folder}" />
+                    <Button Name="PickFolderButton" Command="{Binding PickFolderCommand}" Content="{m:Tr chonk.folder}" />
                     <Button Content="{m:Tr chonk.scan}"
                             Command="{Binding ScanCommand}"
                             IsVisible="{Binding !IsScanning}" />

@@ -19,12 +19,22 @@ public sealed class MainWindowViewModel : ObservableObject
     private readonly Dictionary<string, TabViewModel> _pluginTabs = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, string> _sourceById = new(StringComparer.OrdinalIgnoreCase);
     private readonly MeowsStore? _store;
+    private readonly PluginUpdates _updater;
+    private readonly Dictionary<string, ISearchable?> _dormant = new(StringComparer.OrdinalIgnoreCase);
+    private AvailableUpdate? _shellUpdate;
+    private readonly ShellPicker _picker;
+    private readonly PopOutWindows _popOuts;
+    private bool _popOutsRestored;
+    private readonly Dictionary<string, AvailableUpdate> _availableUpdates = new(StringComparer.OrdinalIgnoreCase);
     private HistoryViewModel? _history;
+    private HomeViewModel? _home;
+    private TabViewModel? _pluginsTab;
     private SettingsViewModel? _settingsViewModel;
     private TabViewModel? _historyTab;
     private TabViewModel? _settingsTab;
 
     private TabViewModel? _selectedTab;
+    private string? _installNotice;
     private bool _isLogVisible;
     private bool _isNotificationsOpen;
     private bool _isTasksOpen;
@@ -37,9 +47,11 @@ public sealed class MainWindowViewModel : ObservableObject
         BackgroundTaskService background,
         Translations text,
         ShellPreferences preferences,
-        MeowsStore? store = null)
+        MeowsStore? store = null,
+        PluginUpdates? updater = null)
     {
         _store = store;
+        _updater = updater ?? new PluginUpdates(AppVersion);
         _catalog = catalog;
         _settings = settings;
         _log = log;
@@ -47,6 +59,10 @@ public sealed class MainWindowViewModel : ObservableObject
         _background = background;
         _text = text;
         _preferences = preferences;
+        _picker = new ShellPicker(() => Window);
+        _popOuts = new PopOutWindows(() => Window, _preferences, SavePreferences, _log);
+        PopOutCommand = new RelayCommand(p => { if (p is TabViewModel tab) _popOuts.PopOut(tab); });
+        BringBackCommand = new RelayCommand(p => { if (p is TabViewModel tab) _popOuts.BringBack(tab); });
 
         RescanCommand = new RelayCommand(Rescan);
         OpenPluginsFolderCommand = new RelayCommand(OpenPluginsFolder, () => _catalog.PluginsDirectories.Count > 0);
@@ -56,6 +72,7 @@ public sealed class MainWindowViewModel : ObservableObject
         DismissNotificationCommand = new RelayCommand(DismissNotification);
         InvokeNotificationActionCommand = new RelayCommand(InvokeNotificationAction);
         ClearNotificationsCommand = new RelayCommand(() => _notifications.DismissAllEvents());
+        OpenShellUpdateCommand = new RelayCommand(OpenShellUpdate, () => HasShellUpdate);
         CancelTaskCommand = new RelayCommand(CancelTask);
 
         _notifications.Changed += RaiseNotificationState;
@@ -71,6 +88,12 @@ public sealed class MainWindowViewModel : ObservableObject
         Palette = new CommandPaletteViewModel(PaletteItems, PaletteSearch);
         OpenPaletteCommand = new RelayCommand(Palette.Open);
     }
+
+    /// <summary>
+    /// The window this model is showing in, if one is; set by the tray when it makes one and
+    /// cleared when it goes. The plugins' file dialogs are put over it.
+    /// </summary>
+    public Avalonia.Controls.Window? Window { get; set; }
 
     /// <summary>Ctrl+K. Everything the window can do, from one box.</summary>
     public CommandPaletteViewModel Palette { get; }
@@ -95,7 +118,9 @@ public sealed class MainWindowViewModel : ObservableObject
             yield return new PaletteItem(entry.Icon, title, other + entry.Description, () => OpenPlugin(captured), weight: active ? 3 : 2);
         }
 
-        yield return new PaletteItem("⛭", text.Format("palette.goto", text["shell.tab.plugins"]), "", () => SelectedTab = Tabs[0], weight: 1);
+        yield return new PaletteItem("🏠", text.Format("palette.goto", text["shell.tab.home"]), "", () => SelectedTab = Tabs[0], weight: 1);
+        if (_pluginsTab is { } pluginsTab)
+            yield return new PaletteItem("⛭", text.Format("palette.goto", text["shell.tab.plugins"]), "", () => SelectedTab = pluginsTab, weight: 1);
         if (_settingsTab is { } settings)
             yield return new PaletteItem("⚙", text.Format("palette.goto", text["shell.tab.settings"]), "", () => SelectedTab = settings, weight: 1);
         if (_historyTab is { } history)
@@ -103,19 +128,46 @@ public sealed class MainWindowViewModel : ObservableObject
 
         if (_settingsViewModel is { } sv)
         {
-            yield return new PaletteItem("◐", text["palette.theme.dark"], text["settings.theme"], () => sv.SetTheme(Appearance.Dark));
-            yield return new PaletteItem("◑", text["palette.theme.light"], text["settings.theme"], () => sv.SetTheme(Appearance.Light));
-            yield return new PaletteItem("◎", text["palette.theme.system"], text["settings.theme"], () => sv.SetTheme(Appearance.System));
-            yield return new PaletteItem("Aa", text["palette.language.en"], text["settings.language"], () => sv.SetLanguage("en"));
-            yield return new PaletteItem("Aa", text["palette.language.de"], text["settings.language"], () => sv.SetLanguage("de"));
-            yield return new PaletteItem("Aa", text["palette.language.system"], text["settings.language"], () => sv.SetLanguage("system"));
+            yield return new PaletteItem("◐", text["palette.theme.dark"], text["settings.theme"], () => sv.SetTheme(Appearance.Dark)) { IsCommand = true };
+            yield return new PaletteItem("◑", text["palette.theme.light"], text["settings.theme"], () => sv.SetTheme(Appearance.Light)) { IsCommand = true };
+            yield return new PaletteItem("◎", text["palette.theme.system"], text["settings.theme"], () => sv.SetTheme(Appearance.System)) { IsCommand = true };
+            yield return new PaletteItem("Aa", text["palette.language.en"], text["settings.language"], () => sv.SetLanguage("en")) { IsCommand = true };
+            yield return new PaletteItem("Aa", text["palette.language.de"], text["settings.language"], () => sv.SetLanguage("de")) { IsCommand = true };
+            yield return new PaletteItem("Aa", text["palette.language.system"], text["settings.language"], () => sv.SetLanguage("system")) { IsCommand = true };
         }
 
         yield return new PaletteItem("🐾", text[PluginNames.Feline ? "palette.names.plain" : "palette.names.feline"], text["settings.names"],
-            () => PluginNames.Feline = !PluginNames.Feline);
-        yield return new PaletteItem("🔔", text["palette.notifications"], "", () => IsNotificationsOpen = !IsNotificationsOpen);
-        yield return new PaletteItem("⏳", text["palette.tasks"], "", () => IsTasksOpen = !IsTasksOpen);
-        yield return new PaletteItem("≣", text["palette.log"], "", () => IsLogVisible = !IsLogVisible);
+            () => PluginNames.Feline = !PluginNames.Feline) { IsCommand = true };
+        yield return new PaletteItem("🔔", text["palette.notifications"], "", () => IsNotificationsOpen = !IsNotificationsOpen) { IsCommand = true };
+        yield return new PaletteItem("⏳", text["palette.tasks"], "", () => IsTasksOpen = !IsTasksOpen) { IsCommand = true };
+        yield return new PaletteItem("≣", text["palette.log"], "", () => IsLogVisible = !IsLogVisible) { IsCommand = true };
+
+        // Under > only: things to do to the window and the plugins, not places to go.
+        foreach (var tab in Tabs)
+        {
+            var captured = tab;
+            yield return captured.IsPoppedOut
+                ? new PaletteItem("⧉", text.Format("palette.bringback", captured.Header), "", () => _popOuts.BringBack(captured)) { IsCommand = true, CommandOnly = true }
+                : new PaletteItem("⧉", text.Format("palette.popout", captured.Header), "", () => _popOuts.PopOut(captured)) { IsCommand = true, CommandOnly = true };
+        }
+        yield return new PaletteItem("⛭", text["plugins.rescan"], "", Rescan) { IsCommand = true, CommandOnly = true };
+        yield return new PaletteItem("⛭", text["plugins.open"], "", OpenPluginsFolder) { IsCommand = true, CommandOnly = true };
+    }
+
+    /// <summary>Ctrl+Shift+K: the palette over only the tab in front.</summary>
+    public void OpenPaletteForFrontTab()
+    {
+        if (SelectedTab is { } tab)
+            Palette.OpenScoped(tab.Key, tab.Header);
+        else
+            Palette.Open();
+    }
+
+    /// <summary>Ctrl+1 to Ctrl+9: the tabs in the order they are shown.</summary>
+    public void SelectTabByNumber(int number)
+    {
+        if (number >= 1 && number <= Tabs.Count)
+            SelectedTab = Tabs[number - 1];
     }
 
     /// <summary>
@@ -126,8 +178,14 @@ public sealed class MainWindowViewModel : ObservableObject
     /// </summary>
     private IEnumerable<PaletteItem> PaletteSearch(string query)
     {
+        // Scoped to the tab in front: only that plugin's answer, or the history's when that is
+        // the tab, and nothing from the plugins that are off.
+        var scope = Palette.ScopeKey;
+
         foreach (var (id, tab) in _pluginTabs)
         {
+            if (scope is not null && !string.Equals(scope, tab.Key, StringComparison.OrdinalIgnoreCase))
+                continue;
             var searchable = (tab.Content as Avalonia.Controls.Control)?.DataContext as ISearchable
                              ?? tab.Content as ISearchable;
             if (searchable is null)
@@ -163,6 +221,60 @@ public sealed class MainWindowViewModel : ObservableObject
                         _log.Write("shell", $"'{name}' failed to open a search hit: {ex.Message}");
                     }
                 });
+            }
+        }
+
+        if (scope is not null && scope != "shell.tab.history")
+            yield break;
+
+        // Plugins that are off, through what they said they could answer without a view. Asked
+        // once and kept; a plugin that answers null is not asked again until the list is read.
+        foreach (var entry in scope is null ? Plugins.Where(p => p.IsCompatible && !_pluginTabs.ContainsKey(p.Id)) : [])
+        {
+            if (!_dormant.TryGetValue(entry.Id, out var asleep))
+            {
+                try
+                {
+                    var host = new DormantHost(entry.Id, _settings, new HandoffService(entry.Id, CanReach, SendHandoff), _store?.For(entry.Id));
+                    asleep = entry.Descriptor.Plugin!.WhileOff(host);
+                }
+                catch (Exception ex)
+                {
+                    _log.Write("shell", $"'{entry.DisplayName}' failed to offer a search while off: {ex.Message}");
+                    asleep = null;
+                }
+                _dormant[entry.Id] = asleep;
+            }
+
+            if (asleep is null)
+                continue;
+
+            IReadOnlyList<SearchHit> hits;
+            try
+            {
+                hits = asleep.Search(query, 4);
+            }
+            catch (Exception ex)
+            {
+                _log.Write("shell", $"'{entry.DisplayName}' failed to search while off: {ex.Message}");
+                continue;
+            }
+
+            var name = entry.DisplayName;
+            foreach (var hit in hits)
+            {
+                var open = hit.Open;
+                yield return new PaletteItem(entry.Icon, hit.Title, hit.Detail.Length > 0 ? $"{name} · {hit.Detail}" : name, () =>
+                {
+                    try
+                    {
+                        open();
+                    }
+                    catch (Exception ex)
+                    {
+                        _log.Write("shell", $"'{name}' failed to open a search hit while off: {ex.Message}");
+                    }
+                }, weight: -1);
             }
         }
 
@@ -232,6 +344,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private void Retranslate()
     {
         _history?.Retranslate();
+        _home?.Retranslate();
         _logTab?.Retranslate();
         foreach (var entry in Plugins)
             entry.Rename();
@@ -269,6 +382,238 @@ public sealed class MainWindowViewModel : ObservableObject
     public RelayCommand RescanCommand { get; }
 
     public RelayCommand OpenPluginsFolderCommand { get; }
+
+    public RelayCommand OpenShellUpdateCommand { get; }
+
+    /// <summary>A tab into a window of its own, from the button on its header.</summary>
+    public RelayCommand PopOutCommand { get; }
+
+    /// <summary>Back into the tab, from the notice left in its place.</summary>
+    public RelayCommand BringBackCommand { get; }
+
+    /// <summary>
+    /// The tabs that were out when Meows last quit go out again, once, when there is a window
+    /// to measure the screens from. A plugin tab that is not activated yet is simply not there
+    /// to pop; it comes back out the next time it is, if it was still remembered.
+    /// </summary>
+    public void RestorePopOuts()
+    {
+        if (_popOutsRestored)
+            return;
+        _popOutsRestored = true;
+        foreach (var key in _popOuts.RememberedOut.ToList())
+        {
+            if (Tabs.FirstOrDefault(t => t.Key == key) is { } tab)
+                _popOuts.PopOut(tab);
+        }
+    }
+
+    /// <summary>For the tray, which changes the preferences it shares with this model.</summary>
+    public void SavePreferencesNow() => SavePreferences();
+
+    private void SavePreferences()
+    {
+        try
+        {
+            _settings.SavePreferences(_preferences);
+        }
+        catch (Exception ex)
+        {
+            _log.Write("shell", $"Could not save preferences: {ex.Message}", LogLevel.Warning);
+        }
+    }
+
+    /// <summary>What the last install said, under the buttons on the Plugins tab.</summary>
+    public string? InstallNotice
+    {
+        get => _installNotice;
+        private set
+        {
+            if (SetField(ref _installNotice, value))
+                OnPropertyChanged(nameof(HasInstallNotice));
+        }
+    }
+
+    public bool HasInstallNotice => !string.IsNullOrEmpty(_installNotice);
+
+    /// <summary>
+    /// A plugin's zip into the folder the shell scans, then a rescan so its card appears. A
+    /// plugin that is already here is already loaded, so its new version is put beside it and
+    /// the rescan swaps them if Windows lets the old folder be renamed; the notice says which
+    /// happened, since the rescan knows and the install did not.
+    /// </summary>
+    public void InstallPlugin(string zipPath, string? source = null)
+    {
+        if (_catalog.InstallDirectory is not { } directory)
+        {
+            InstallNotice = _text.Format("plugins.install.failed", _text["plugins.nodirectory"]);
+            return;
+        }
+
+        var report = PluginInstaller.Install(zipPath, directory, source);
+        if (!report.Ok)
+        {
+            InstallNotice = _text.Format("plugins.install.failed", report.Error);
+            _log.Write("plugins", $"Could not install {zipPath}: {report.Error}", LogLevel.Warning);
+            return;
+        }
+
+        _log.Write("plugins", report.Pending
+            ? $"Installed {report.Name} from {zipPath} beside the version that is loaded."
+            : $"Installed {report.Name} from {zipPath}.");
+        Rescan();
+
+        var key = !report.Pending ? "plugins.install.done"
+            : PluginInstaller.IsWaiting(directory, report.Name!) ? "plugins.install.pending"
+            : "plugins.install.replaced";
+        InstallNotice = _text.Format(key, report.Name);
+    }
+
+    /// <summary>
+    /// The card's second click. The plugin is switched off first, so its work stops and its
+    /// tab goes, then its folder is moved aside and the list is read again without it. Its
+    /// settings stay where they are: a plugin that comes back finds them.
+    /// </summary>
+    private void Uninstall(PluginEntryViewModel entry)
+    {
+        var name = entry.DisplayName;
+        var folder = entry.Descriptor.Folder;
+
+        if (_pluginTabs.ContainsKey(entry.Id))
+            Deactivate(entry);
+
+        if (PluginInstaller.Uninstall(folder) is { } error)
+        {
+            InstallNotice = _text.Format("plugins.install.failed", error);
+            _log.Write("plugins", $"Could not uninstall {name} from {folder}: {error}", LogLevel.Warning);
+            Rescan();
+            return;
+        }
+
+        _log.Write("plugins", $"Uninstalled {name}; its folder {folder} is gone or goes at the next start.");
+        _availableUpdates.Remove(entry.Id);
+        Rescan();
+        PersistActivations();
+        InstallNotice = _text.Format("plugins.uninstall.done", name);
+    }
+
+    /// <summary>The shell's own id in the update list; never a plugin's.</summary>
+    private const string ShellId = "meows.shell";
+
+    /// <summary>A newer Meows on the releases page, said in the status bar; null until one is found.</summary>
+    public string? ShellUpdateText => _shellUpdate is { } update ? _text.Format("shell.update.available", update.Version) : null;
+
+    public bool HasShellUpdate => _shellUpdate is not null;
+
+    /// <summary>Opens the release page. Replacing a running exe is not something the shell does to itself.</summary>
+    public void OpenShellUpdate()
+    {
+        if (_shellUpdate is not { } update)
+            return;
+        try
+        {
+            Process.Start(new ProcessStartInfo { FileName = update.ReleaseUrl, UseShellExecute = true });
+        }
+        catch (Exception ex)
+        {
+            _log.Write("shell", $"Could not open {update.ReleaseUrl}: {ex.Message}");
+        }
+    }
+
+    /// <summary>
+    /// Once a day, and once now: which of the plugins installed through this tab has a newer
+    /// release on GitHub, and whether Meows itself has. Nothing is fetched here but the answer;
+    /// the card offers a plugin's update and the download waits for a click, and the shell's is
+    /// a line in the status bar that opens the release page.
+    /// </summary>
+    private async Task CheckForUpdates(IBackgroundContext context)
+    {
+        var candidates = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => Plugins
+            .Where(p => p.IsInstalled && p.Provenance.Homepage is not null)
+            .Select(p => new UpdateCandidate(p.Id, p.Provenance.Homepage!, p.Provenance.Version))
+            .ToList());
+
+        // The shell asks about itself the same way, from the repository stamped into its own
+        // assembly, so a fork that changes the csproj asks about the fork.
+        var self = PluginProvenance.Read(typeof(MainWindowViewModel).Assembly, typeof(MainWindowViewModel).Assembly.Location);
+        if (self.Homepage is { } homepage)
+            candidates.Add(new UpdateCandidate(ShellId, homepage, AppVersion));
+
+        if (candidates.Count == 0)
+        {
+            context.Report(_text["plugins.update.none"]);
+            return;
+        }
+
+        var (updates, said) = await _updater.CheckAsync(candidates, context.Token);
+        foreach (var line in said)
+            _log.Write("plugins", line);
+
+        await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            _availableUpdates.Clear();
+            foreach (var (id, update) in updates)
+                _availableUpdates[id] = update;
+            OfferUpdates();
+
+            _shellUpdate = updates.GetValueOrDefault(ShellId);
+            OnPropertyChanged(nameof(ShellUpdateText));
+            OnPropertyChanged(nameof(HasShellUpdate));
+            OpenShellUpdateCommand.RaiseCanExecuteChanged();
+            if (_shellUpdate is { } newer)
+                _log.Write("shell", $"Meows {newer.Version} is on the releases page; this is {AppVersionText}.");
+        });
+
+        var plugins = candidates.Count(c => c.Id != ShellId);
+        context.Report(plugins == 0
+            ? _text[_shellUpdate is null ? "plugins.update.none" : "shell.update.only"]
+            : _text.Format("plugins.update.checked", plugins, updates.Count(u => u.Key != ShellId)));
+    }
+
+    /// <summary>Puts what the last check found onto the cards, and takes it off a card that has caught up.</summary>
+    private void OfferUpdates()
+    {
+        foreach (var entry in Plugins)
+        {
+            if (_availableUpdates.TryGetValue(entry.Id, out var update) && PluginUpdates.IsNewer(update.Version, entry.Provenance.Version))
+                entry.Update = update;
+            else
+            {
+                _availableUpdates.Remove(entry.Id);
+                entry.Update = null;
+            }
+        }
+        // The shell's own line is not a card's; a plugin cannot take that id.
+        if (_shellUpdate is { } shell)
+            _availableUpdates[ShellId] = shell;
+    }
+
+    /// <summary>The card's Update button: fetch the zip as a task, then hand it to the installer.</summary>
+    private void UpdatePlugin(PluginEntryViewModel entry)
+    {
+        if (entry.Update is not { } update)
+            return;
+
+        var name = entry.DisplayName;
+        _background.RunForShell(_text.Format("plugins.update.download", name), async context =>
+        {
+            context.Report(update.ZipName);
+            var path = await _updater.DownloadAsync(update, new ProgressTo(context), context.Token);
+            try
+            {
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => InstallPlugin(path, update.ReleaseUrl));
+            }
+            finally
+            {
+                try { File.Delete(path); } catch (Exception) { }
+            }
+        });
+    }
+
+    private sealed class ProgressTo(IBackgroundContext context) : IProgress<double?>
+    {
+        public void Report(double? value) => context.ReportProgress(value);
+    }
 
     public RelayCommand ToggleLogCommand { get; }
 
@@ -389,6 +734,16 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>Version off the assembly, so the status bar always names the running build.</summary>
+    /// <summary>Just the number, for comparing and for the User-Agent.</summary>
+    public static string AppVersion
+    {
+        get
+        {
+            var v = typeof(MainWindowViewModel).Assembly.GetName().Version;
+            return v is null ? "0.0.0" : $"{v.Major}.{v.Minor}.{Math.Max(v.Build, 0)}";
+        }
+    }
+
     public static string AppVersionText
     {
         get
@@ -410,8 +765,13 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public void Initialize()
     {
-        // Always tab zero, so an empty plugins folder still opens on something useful.
-        Tabs.Add(new TabViewModel("shell.tab.plugins", "⛭", new PluginsView { DataContext = this }));
+        // Home first: the window is opened after hours, and the first thing it shows is what
+        // happened. Plugins second, so an empty plugins folder is still one click from help.
+        _home = new HomeViewModel(Plugins, p => _pluginTabs.ContainsKey(p.Id), OpenPlugin, _notifications, _background,
+            _store, PluginName, () => _preferences.LastSeen, InvokeNotificationAction);
+        Tabs.Add(new TabViewModel("shell.tab.home", "🏠", new HomeView { DataContext = _home }));
+        _pluginsTab = new TabViewModel("shell.tab.plugins", "⛭", new PluginsView { DataContext = this });
+        Tabs.Add(_pluginsTab);
         _settingsViewModel = new SettingsViewModel(_settings, _text, _log, _preferences);
         _settingsTab = new TabViewModel("shell.tab.settings", "⚙", new SettingsView { DataContext = _settingsViewModel });
         Tabs.Add(_settingsTab);
@@ -428,6 +788,12 @@ public sealed class MainWindowViewModel : ObservableObject
         SelectedTab = Tabs[0];
         _background.RestartActionFor = RestartActionFor;
         Rescan();
+
+        _home?.Refresh();
+
+        // Only plugins put there through this tab are asked about, so on most machines this
+        // pass says "nothing to check" and touches no network at all.
+        _background.ScheduleForShell(_text["plugins.update.task"], TimeSpan.FromHours(24), CheckForUpdates, runImmediately: true);
     }
 
     private void Rescan()
@@ -436,6 +802,7 @@ public sealed class MainWindowViewModel : ObservableObject
             Deactivate(entry);
 
         Plugins.Clear();
+        _dormant.Clear();
 
         var activated = _settings.LoadActivatedPlugins();
         foreach (var descriptor in _catalog.Discover())
@@ -446,10 +813,11 @@ public sealed class MainWindowViewModel : ObservableObject
             if (descriptor.Plugin is { } plugin)
                 _text.Add(plugin.GetType().Assembly);
 
-            Plugins.Add(new PluginEntryViewModel(descriptor, OnActivationChanged, HealthOf));
+            Plugins.Add(new PluginEntryViewModel(descriptor, OnActivationChanged, HealthOf, Uninstall, UpdatePlugin));
         }
 
         Regroup();
+        OfferUpdates();
 
         OnPropertyChanged(nameof(PluginsDirectoryText));
         OnPropertyChanged(nameof(HasPlugins));
@@ -532,15 +900,20 @@ public sealed class MainWindowViewModel : ObservableObject
         try
         {
             var host = new PluginHost(entry.Id, entry.DisplayName, _settings, _log, _notifications, _background,
-                new HandoffService(entry.Id, CanReach, SendHandoff), _store?.For(entry.Id));
+                new HandoffService(entry.Id, CanReach, SendHandoff), _store?.For(entry.Id), _picker);
+            _dormant.Remove(entry.Id);
             _sourceById[entry.Id] = entry.DisplayName;
             var view = entry.Descriptor.Plugin!.CreateView(host);
-            var tab = new TabViewModel(() => entry.DisplayName, entry.Icon, view);
+            var tab = new TabViewModel(entry.Id, () => entry.DisplayName, entry.Icon, view);
             _pluginTabs[entry.Id] = tab;
             Tabs.Add(tab);
             SelectedTab = tab;
+            // Was in its own window last time and is switched on again: out it goes.
+            if (_popOutsRestored && _popOuts.RememberedOut.Contains(entry.Id))
+                _popOuts.PopOut(tab);
             entry.Error = null;
             _log.Write("shell", $"Activated '{entry.DisplayName}'.");
+            _home?.Refresh();
         }
         catch (Exception ex)
         {
@@ -723,6 +1096,7 @@ public sealed class MainWindowViewModel : ObservableObject
         if (!_pluginTabs.Remove(entry.Id, out var tab))
             return;
 
+        _popOuts.Forget(tab);
         Tabs.Remove(tab);
         (tab.Content as IDisposable)?.Dispose();
         if ((tab.Content as Avalonia.StyledElement)?.DataContext is IDisposable disposableContext)
@@ -730,15 +1104,39 @@ public sealed class MainWindowViewModel : ObservableObject
 
         SelectedTab ??= Tabs.FirstOrDefault();
         _log.Write("shell", $"Deactivated '{entry.DisplayName}'.");
+        _home?.Refresh();
     }
 
     private void PersistActivations() =>
         _settings.SaveActivatedPlugins(Plugins.Where(p => p.IsActivated).Select(p => p.Id));
 
+    /// <summary>
+    /// The window went away, to the tray or for good: from now is "since you were away". Saved
+    /// at once, because a quit is the other way this happens and there is no later then.
+    /// </summary>
+    public void MarkSeen()
+    {
+        _preferences.LastSeen = DateTime.Now;
+        SavePreferences();
+        _home?.Refresh();
+    }
+
     public void Shutdown()
     {
+        _popOuts.CloseAll();
+        MarkSeen();
         foreach (var entry in Plugins.Where(p => p.IsActivated).ToList())
             Deactivate(entry);
         _background.Dispose();
+        _home?.Dispose();
+
+        // The name switch is a static event; a model that has gone must stop hearing it, or
+        // the next flip reaches into a window that is no longer there.
+        PluginNames.Changed -= OnNamesChanged;
+        _notifications.Changed -= RaiseNotificationState;
+        _background.Changed -= RaiseTaskState;
+        _background.WatchesChanged -= OnWatchesChanged;
+        if (_store is not null)
+            _store.Recorded -= OnRecorded;
     }
 }

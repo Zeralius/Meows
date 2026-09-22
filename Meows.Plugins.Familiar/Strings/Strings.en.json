@@ -66,6 +66,7 @@
   "familiar.grid.squares.long": "{0} × {1} squares, {2} px each. Check the blue lines sit on the map's own lines.",
   "familiar.journal.added": "added {0} picture(s) to {1}",
   "familiar.journal.created": "made the one-shot {0}",
+  "familiar.kit.detail": "One-shot",
   "familiar.kits": "ONE-SHOTS",
   "familiar.name": "Name, as the VTT shows it",
   "familiar.name.plain": "Tabletop pictures",

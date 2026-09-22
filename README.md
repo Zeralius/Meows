@@ -43,18 +43,47 @@ The last four are built around a specific posting bot. The rest are general purp
 
 Download `Meows-<version>-win-x64.zip` from the
 [releases page](https://github.com/Zeralius/Meows/releases), unzip it anywhere, and run
-`Meows.exe`. Nothing else is needed.
+`Meows.exe`. Nothing else is needed. When a newer one is on that page, the status bar says so,
+once a day, with the page one click away; Meows does not replace itself underneath you.
+
+Settings live in `%APPDATA%\Meows`, so the unzipped folder can be thrown away and replaced.
+For a stick, or a folder that moves between machines, put an empty file called `portable` (or
+`portable.txt`) next to `Meows.exe` and start it again: everything then lives in `data\` beside
+the exe and nothing is written to the profile. The Settings tab says which of the two it is.
 
 **Extract the zip properly before running it.** Launching `Meows.exe` from inside the archive
 makes your unzip tool copy it to a temporary folder on its own, and some of the plugins lose
 files they need. Meows will start, but those plugins refuse to open and say so on their card.
 
+The window opens on **Home**: what happened while it was away. The notifications that are up,
+with their buttons; what is running and how many schedules are watching; each switched-on
+plugin's last line with its tab a click away; and what the plugins did since the window was
+last hidden. Meows lives in the tray, so this is the page for opening it after hours.
+
 Every plugin starts switched off. Open the **Plugins** tab, turn on the ones you want, and each
 gets its own tab. Turning one off closes its tab again. Nothing runs until you ask for it.
 
+Any tab can go into a window of its own: the small **⧉** on its header. Familiar's map on the
+television, the run sheet on the laptop, without a second application. Where each window sat
+is remembered per monitor layout, so the tab that lived on the second screen goes back there
+when that screen is plugged in, and which tabs were out is remembered across a restart.
+**Bring it back** where the tab was, or close the window. The main window is remembered the
+same way.
+
+**Keys.** Ctrl+K is the palette: a plugin by either of its names, a setting, something an open
+plugin is showing, a line from the history. Ctrl+Shift+K is the same box over only the tab in
+front. Ctrl+1 to Ctrl+9 pick a tab in the order they are shown. In the palette, `>` lists the
+things to do rather than the places to go: pop a tab out or bring it back, the theme, the
+language, the names, rescan the plugins folder.
+
+Starting `Meows.exe` while one is already running does not start a second: the one that is
+running shows its window and the second start ends.
+
 The cards sit under headings a plugin picks for itself, so the disk tools are together and the two
-built around the posting bot are together. **Open plugins folder** on that tab takes you to where
-they are read from.
+built around the posting bot are together. **Install plugin…** on that tab takes a plugin
+someone else built, as a zip, or drop the zip on the tab; its card then says who made it and
+offers **Uninstall**, and once a day Meows looks at the plugin's repository for a newer release
+and offers that on the card too. **Open plugins folder** takes you to where they are read from.
 
 The **Settings** tab has two choices, and both take effect as you make them:
 
@@ -178,10 +207,56 @@ dotnet new install Meows.Plugins.Template
 dotnet new meows-plugin -n WeatherWatch
 ```
 
-Drop the built DLL into a folder under `plugins/` and Meows picks it up. You do not need to fork
-this repository, or even clone it: reference the
-[`Meows.Plugins.Abstractions`](https://www.nuget.org/packages/Meows.Plugins.Abstractions) package,
-and set `MEOWS_PLUGINS_DIR` to your own folder to load your plugin alongside the built in ones.
+Drop the built DLL into a folder under `plugins/` and Meows picks it up.
+
+### Plugins from outside this repository
+
+A plugin does not have to live here to be a Meows plugin. The contract is on NuGet as
+[`Meows.Plugins.Abstractions`](https://www.nuget.org/packages/Meows.Plugins.Abstractions), the
+template above is [`Meows.Plugins.Template`](https://www.nuget.org/packages/Meows.Plugins.Template),
+and the shell loads whatever it finds in its plugins folder. So a plugin can be its own
+repository, with its own version and its own releases, and nothing in this one has to change for
+it to run. That is the intended way to build one that this repository has no reason to carry.
+
+**Building one:** the two commands above, then
+
+```bash
+dotnet build -c Release -o WeatherWatch
+```
+
+The folder has to be named after the DLL. Zip that folder and it is the whole release. Set
+`MEOWS_PLUGINS_DIR` to a folder of your own while you work, which adds to the search rather than
+replacing it, so your plugin loads beside the built-in ones from wherever your build lands.
+
+The template also writes `.github/workflows/release.yml`: push a tag like `v1.0.0` and GitHub
+builds the plugin at that version, zips the folder and attaches it to a release, which is the
+zip the button wants and the release the update check reads. `--Repository` on `dotnet new`
+sets the `RepositoryUrl` the card links to and the check asks; `Authors` in the csproj is your
+name.
+
+**Installing one somebody else built:** open the **Plugins** tab, press **Install plugin…** and
+pick the zip, or drop the zip on the tab. The plugin's card appears, switched off like every
+other, with its version, author and repository under the description when the build stamped
+them in, and **Uninstall** at the side, which asks once and then takes the folder away, leaving
+the plugin's settings for a return. If it cannot be loaded, the card says why in place of its
+toggle: most often that it was built for a newer contract than this Meows has, which an update
+of Meows fixes. A plugin that throws is caught and marked **Failed**; it cannot take the app
+down with it. Installing a plugin that is already there swaps the new version in, or, if the
+old folder cannot be moved aside because it is in use, leaves the new one waiting until Meows
+next starts; the notice under the buttons says which.
+
+A plugin runs with the same rights as Meows. Install only what you trust.
+
+**Staying current:** once a day, and once at start, Meows asks the GitHub repository of every
+plugin installed this way for its latest release. A newer one shows on the card as *1.3.0 is
+available* with an **Update** button; the download runs as a task and hands the zip to the
+installer. Built-in plugins and folders copied by hand are never asked about, and a plugin whose
+version or repository the build did not stamp in is left alone rather than guessed at.
+
+By hand works too: **Open plugins folder**, unzip the whole folder into it so that
+`plugins\WeatherWatch\WeatherWatch.dll` exists, and **Rescan plugins folder**. A folder that
+arrived that way has no **Uninstall** and is not checked for updates: the shell only takes away
+and replaces what it put there.
 
 For a plugin that lives in this repository and ships with the release, **Kitten** writes it
 instead: `dotnet run --project Meows.Kitten -- Whiskers --plain "Print queue"` makes the project,
@@ -202,7 +277,9 @@ Each plugin lives in its own subfolder of a `plugins` directory. Meows looks for
 3. in any parent directory, which is what makes a source build find the repository's own folder
 
 Inside a plugin folder, Meows prefers `<foldername>.dll` and otherwise scans every `.dll` there.
-Duplicate plugin ids are ignored, and a plugin that throws while starting up is caught, marked
+A folder ending in `.update` is a newer version waiting to replace its neighbour and is swapped in
+before the next scan; `.installing` and `.old` are an install in progress and one just replaced,
+and none of the three is scanned. Duplicate plugin ids are ignored, and a plugin that throws while starting up is caught, marked
 **Failed** on its card and logged, so a broken plugin cannot take the app down with it.
 
 ## Repository layout
@@ -231,13 +308,15 @@ always tell which build you are running.
 `Meows.Plugins.Abstractions` carries its own version and does **not** move with the app, so adding
 a plugin does not make every external plugin look out of date. Its version changes only when the
 contract itself does: **major** if a member is removed or changed, **minor** if one is added,
-**patch** for documentation.
+**patch** for documentation. It reached **1.0.0** with Meows 3.0.0, which is the point from
+which a plugin built against any 1.x loads on any later 1.x shell; plugins built against 0.x
+are refused by a 3.x shell and need a rebuild against 1.0.0.
 
 Meows checks that version when it loads a plugin and refuses anything it cannot honour, with the
 reason on the plugin's card rather than a crash later:
 
-> Built for Meows contract 0.3.0, which is newer than this shell's 0.2.1. Update Meows, or rebuild
-> the plugin against 0.2.1.
+> Built for Meows contract 1.1.0, which is newer than this shell's 1.0.0. Update Meows, or rebuild
+> the plugin against 1.0.0.
 
 A newer contract is refused; an older one is fine, since additions stay backward compatible.
 

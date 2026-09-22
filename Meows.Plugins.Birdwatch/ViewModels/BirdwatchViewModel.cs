@@ -970,4 +970,25 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
         Preview = null;
         _http.Dispose();
     }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _pickIntakeCommand;
+
+    public RelayCommand PickIntakeCommand => _pickIntakeCommand ??= new RelayCommand(() => _ = PickIntakeAsync());
+
+    private async Task PickIntakeAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["birdwatch.dialog.intake"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            SetIntakeFolder(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
 }

@@ -41,9 +41,26 @@ public partial class MainWindow : Window
             return;
 
         var ctrl = e.KeyModifiers.HasFlag(KeyModifiers.Control);
+        var shift = e.KeyModifiers.HasFlag(KeyModifiers.Shift);
+        if (ctrl && shift && e.Key == Key.K)
+        {
+            model.OpenPaletteForFrontTab();
+            e.Handled = true;
+            return;
+        }
+
         if (ctrl && e.Key is Key.K or Key.P)
         {
             model.Palette.Toggle();
+            e.Handled = true;
+            return;
+        }
+
+        // Ctrl+1 to Ctrl+9: the tabs in order. Only when the palette is closed, so a number
+        // typed into its box is a number.
+        if (ctrl && !model.Palette.IsOpen && e.Key >= Key.D1 && e.Key <= Key.D9)
+        {
+            model.SelectTabByNumber(e.Key - Key.D0);
             e.Handled = true;
             return;
         }

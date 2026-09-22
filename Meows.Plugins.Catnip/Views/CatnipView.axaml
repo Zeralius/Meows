@@ -69,7 +69,7 @@
                     <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr catnip.roots}" />
                     <StackPanel DockPanel.Dock="Bottom" Margin="10,6,10,12" Spacing="6">
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="6">
-                            <Button Grid.Column="0" Name="AddRootButton" Content="{m:Tr catnip.roots.add}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <Button Grid.Column="0" Name="AddRootButton" Command="{Binding AddRootCommand}" Content="{m:Tr catnip.roots.add}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                             <Button Grid.Column="1" Content="{m:Tr catnip.roots.remove}" Command="{Binding RemoveRootCommand}" FontSize="11" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                         </Grid>
                         <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr catnip.roots.hint}" />

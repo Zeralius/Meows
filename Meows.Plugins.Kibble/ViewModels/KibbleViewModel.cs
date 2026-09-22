@@ -851,7 +851,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
 
     /// <summary>A folder to go through, from Chonk usually. Files are not taken: Kibble sorts a folder.</summary>
     public bool Accepts(Handoff handoff) =>
-        handoff.Verb == HandoffVerbs.Folder && handoff.Paths.Count == 1 && Directory.Exists(handoff.Paths[0]);
+        (handoff.Verb == KibblePlugin.ShowVerb && handoff.Note is { Length: > 0 }) ||
+        (handoff.Verb == HandoffVerbs.Folder && handoff.Paths.Count == 1 && Directory.Exists(handoff.Paths[0]));
 
     /// <summary>
     /// Ctrl+K reaching into the grid: everything waiting in the folder, not only the tiles built
@@ -902,6 +903,17 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
     {
         if (!Accepts(handoff))
             return;
+
+        // From Ctrl+K while Kibble was off: the file, in its folder if that is not the one open.
+        if (handoff.Verb == KibblePlugin.ShowVerb)
+        {
+            var path = handoff.Note!;
+            var folder = Path.GetDirectoryName(path);
+            if (folder is not null && !string.Equals(folder, SourceFolder, StringComparison.OrdinalIgnoreCase))
+                LoadFolder(folder);
+            ShowFile(path);
+            return;
+        }
 
         LoadFolder(handoff.Paths[0]);
         handoff.Answer(_pending.Count == 1
@@ -1685,5 +1697,45 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         PreviewImage = null;
         foreach (var file in Incoming)
             file.Dispose();
+    }
+
+    // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
+
+    private RelayCommand? _pickFolderCommand;
+
+    public RelayCommand PickFolderCommand => _pickFolderCommand ??= new RelayCommand(() => _ = PickFolderAsync());
+
+    private async Task PickFolderAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["kibble.dialog.openfolder"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            LoadFolder(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
+    }
+
+    private RelayCommand? _chooseBotCommand;
+
+    public RelayCommand ChooseBotCommand => _chooseBotCommand ??= new RelayCommand(() => _ = ChooseBotAsync());
+
+    private async Task ChooseBotAsync()
+    {
+        try
+        {
+            var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["kibble.dialog.botfolder"] });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+            SetBotRoot(picked);
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not pick: {ex.Message}");
+        }
     }
 }

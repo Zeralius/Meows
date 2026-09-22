@@ -132,6 +132,36 @@ public sealed class FakeHost : IMeowsHost
         public void Forget(string name) => _held.Remove(name);
     }
 
+    /// <summary>Answers each dialog with the next scripted path, or nothing when the script has run out.</summary>
+    public sealed class FakePicker : IMeowsPicker
+    {
+        public Queue<string?> Answers { get; } = new();
+
+        public List<string> Asked { get; } = [];
+
+        private string? Next(string what)
+        {
+            Asked.Add(what);
+            return Answers.Count > 0 ? Answers.Dequeue() : null;
+        }
+
+        public Task<string?> File(PickOptions? options = null) => Task.FromResult(Next("file"));
+
+        public Task<IReadOnlyList<string>> Files(PickOptions? options = null) =>
+            Task.FromResult<IReadOnlyList<string>>(Next("files") is { } one ? [one] : []);
+
+        public Task<string?> Folder(PickOptions? options = null) => Task.FromResult(Next("folder"));
+
+        public Task<IReadOnlyList<string>> Folders(PickOptions? options = null) =>
+            Task.FromResult<IReadOnlyList<string>>(Next("folders") is { } one ? [one] : []);
+
+        public Task<string?> Save(PickOptions? options = null) => Task.FromResult(Next("save"));
+    }
+
+    public FakePicker Picks { get; } = new();
+
+    IMeowsPicker IMeowsHost.Pick => Picks;
+
     public sealed class FakeHandoff : IMeowsHandoff
     {
         public HashSet<string> Reachable { get; } = new(StringComparer.OrdinalIgnoreCase);
