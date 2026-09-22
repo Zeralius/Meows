@@ -1,0 +1,20 @@
+{
+  "sniff.name.plain": "Folder tally",
+  "sniff.description": "Counts a folder in the background with progress and a Cancel, and writes the tally out: the shell's dialogs and task panel.",
+  "sniff.title": "Sniff",
+  "sniff.blurb": "Pick a folder and sniff it: how many files, how many bytes, the biggest one. Watch the Tasks panel at the bottom right while it runs; Cancel stops it cleanly. The tally can be saved as a text file.",
+  "sniff.pick": "Pick a folder",
+  "sniff.folder.none": "No folder picked.",
+  "sniff.go": "Sniff",
+  "sniff.cancel": "Cancel",
+  "sniff.save": "Save the tally…",
+  "sniff.save.filter": "Text files",
+  "sniff.task": "Sniffing {0}",
+  "sniff.progress": "{0}… {1} files so far",
+  "sniff.status.start": "Nothing sniffed yet.",
+  "sniff.status.going": "Sniffing. The Tasks panel has the bar.",
+  "sniff.status.done": "Done.",
+  "sniff.status.cancelled": "Cancelled.",
+  "sniff.status.saved": "Written to {0}.",
+  "sniff.result": "{0} files, {1}. The biggest is {2} at {3}."
+}

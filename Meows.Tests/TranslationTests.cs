@@ -156,6 +156,8 @@ public class CatalogueTests
         typeof(Disk.FolderInspector).Assembly,
         typeof(Bot.QueueRunway).Assembly,
         .. ShippedPlugins.Types.Select(t => t.Assembly),
+        // The examples that carry a catalogue. Meow has none on purpose and is left out.
+        .. ExamplePlugins.Types.Select(t => t.Assembly).Where(a => a.GetManifestResourceNames().Length > 0),
     ];
 
     private static Dictionary<string, string> Read(Assembly assembly, string language)

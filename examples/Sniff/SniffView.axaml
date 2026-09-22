@@ -1,0 +1,39 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Sniff"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Sniff.SniffView"
+             x:DataType="vm:SniffViewModel">
+
+    <StackPanel Margin="20" Spacing="14" MaxWidth="600" HorizontalAlignment="Left">
+
+        <TextBlock Text="{m:Tr sniff.title}" FontSize="20" FontWeight="SemiBold" />
+        <TextBlock Text="{m:Tr sniff.blurb}" Opacity="0.7" TextWrapping="Wrap" />
+
+        <Border Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLine}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16,12">
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Content="{m:Tr sniff.pick}" Command="{Binding PickFolderCommand}" />
+                    <TextBlock Text="{Binding FolderText}" VerticalAlignment="Center" Opacity="0.8" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Content="{m:Tr sniff.go}" Command="{Binding SniffCommand}" />
+                    <Button Content="{m:Tr sniff.cancel}" Command="{Binding CancelCommand}" />
+                    <Button Content="{m:Tr sniff.save}" Command="{Binding SaveCommand}" />
+                </StackPanel>
+                <!-- The bar and the running status live in the Tasks panel, bottom right, for
+                     every plugin alike. The tab only says where it stands. -->
+                <TextBlock Text="{Binding Status}" Opacity="0.6" FontSize="12" />
+                <TextBlock Text="{Binding ResultText}"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding HasResult}" />
+            </StackPanel>
+        </Border>
+
+    </StackPanel>
+
+</UserControl>

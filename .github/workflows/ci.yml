@@ -22,6 +22,8 @@ jobs:
       - name: Restore
         run: dotnet restore
 
+      # The whole solution: the shell, every plugin, the tests, and the five under examples/,
+      # which are built and smoke-tested here and never staged into a release.
       - name: Build
         run: dotnet build --no-restore --configuration Release
 

@@ -1,0 +1,20 @@
+{
+  "nudge.name.plain": "Handoffs",
+  "nudge.description": "Hands a folder to Chonk or Purrge and hears back; takes folders and files from anyone.",
+  "nudge.title": "Nudge",
+  "nudge.blurb": "Both halves of a handoff. Pick a folder and nudge a plugin that takes one; its answer lands here when it is done. Anything another plugin sends this way is listed below as it arrives.",
+  "nudge.sending": "Sending",
+  "nudge.receiving": "Receiving",
+  "nudge.pick": "Pick a folder",
+  "nudge.folder.none": "No folder picked.",
+  "nudge.chonk": "Nudge Chonk",
+  "nudge.purrge": "Nudge Purrge",
+  "nudge.note": "from Nudge",
+  "nudge.sent": "Handed to {0}. Waiting to hear back.",
+  "nudge.reply": "{0} says: {1}",
+  "nudge.refused": "{0} is not there, would not open, or does not take folders.",
+  "nudge.arrived.none": "Nothing has arrived yet. Chonk's Send to… and Kibble's pick both reach here.",
+  "nudge.arrived.folder": "a folder: {0}",
+  "nudge.arrived.files": "{0} file(s)",
+  "nudge.answer": "Nudge took {0} path(s)."
+}

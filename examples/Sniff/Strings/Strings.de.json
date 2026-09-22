@@ -1,0 +1,20 @@
+{
+  "sniff.name.plain": "Ordnerzählung",
+  "sniff.description": "Zählt einen Ordner im Hintergrund mit Fortschritt und Abbrechen und schreibt das Ergebnis raus: die Dialoge und das Aufgabenfeld der Shell.",
+  "sniff.title": "Sniff",
+  "sniff.blurb": "Wähle einen Ordner und schnüffle: wie viele Dateien, wie viele Bytes, die größte. Sieh beim Laufen ins Aufgabenfeld unten rechts; Abbrechen hält sauber an. Das Ergebnis lässt sich als Textdatei speichern.",
+  "sniff.pick": "Ordner wählen",
+  "sniff.folder.none": "Kein Ordner gewählt.",
+  "sniff.go": "Schnüffeln",
+  "sniff.cancel": "Abbrechen",
+  "sniff.save": "Ergebnis speichern…",
+  "sniff.save.filter": "Textdateien",
+  "sniff.task": "Schnüffle in {0}",
+  "sniff.progress": "{0}… bisher {1} Dateien",
+  "sniff.status.start": "Noch nichts geschnüffelt.",
+  "sniff.status.going": "Schnüffle. Der Balken ist im Aufgabenfeld.",
+  "sniff.status.done": "Fertig.",
+  "sniff.status.cancelled": "Abgebrochen.",
+  "sniff.status.saved": "Nach {0} geschrieben.",
+  "sniff.result": "{0} Dateien, {1}. Die größte ist {2} mit {3}."
+}

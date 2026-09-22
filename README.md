@@ -57,8 +57,11 @@ files they need. Meows will start, but those plugins refuse to open and say so o
 
 The window opens on **Home**: what happened while it was away. The notifications that are up,
 with their buttons; what is running and how many schedules are watching; each switched-on
-plugin's last line with its tab a click away; and what the plugins did since the window was
-last hidden. Meows lives in the tray, so this is the page for opening it after hours.
+plugin's card with its tab a click away; and what the plugins did since the window was last
+hidden. A plugin that has one sentence to say puts it on its card, "1 have passed, 2 more
+coming up", "2 would fail to post", red when it wants doing; under it is what the plugin last
+did and whether its watches are running. Meows lives in the tray, so this is the page for opening
+it after hours.
 
 Every plugin starts switched off. Open the **Plugins** tab, turn on the ones you want, and each
 gets its own tab. Turning one off closes its tab again. Nothing runs until you ask for it.
@@ -209,6 +212,13 @@ dotnet new meows-plugin -n WeatherWatch
 
 Drop the built DLL into a folder under `plugins/` and Meows picks it up.
 
+Between the template and the plugins above sit the **[examples](examples/README.md)**: five
+small plugins, one part of the contract each. A schedule and a condition with buttons; a
+handoff out and handoffs in; the store, Ctrl+K on or off, and *Put back*; background work with
+progress and Cancel and the save dialog; and the least a plugin can be. They are built and
+smoke-tested with every release and never shipped, and a source build shows them on the
+Plugins tab under **Examples**.
+
 ### Plugins from outside this repository
 
 A plugin does not have to live here to be a Meows plugin. The contract is on NuGet as
@@ -293,6 +303,7 @@ and none of the three is scanned. Duplicate plugin ids are ignored, and a plugin
 | `Meows.Disk/` | Shared: Recycle Bin deletion, folder walking, the drive scan, content hashing and what a folder is |
 | `Meows.Media/` | Shared: metadata stripping and fitting a picture to a limit, on the shell's Skia |
 | `template/` | The `dotnet new` template, published as `Meows.Plugins.Template` |
+| `examples/` | Five small plugins, one part of the contract each; built and tested, never shipped. [README](examples/README.md) |
 | `Meows.Kitten/` | Developer tool: writes a new in-tree plugin from a name and proves it builds. [README](Meows.Kitten/README.md) |
 | `Meows.Tests/` | The test suite |
 
@@ -310,13 +321,14 @@ a plugin does not make every external plugin look out of date. Its version chang
 contract itself does: **major** if a member is removed or changed, **minor** if one is added,
 **patch** for documentation. It reached **1.0.0** with Meows 3.0.0, which is the point from
 which a plugin built against any 1.x loads on any later 1.x shell; plugins built against 0.x
-are refused by a 3.x shell and need a rebuild against 1.0.0.
+are refused by a 3.x shell and need a rebuild against 1.0.0. **1.1.0**, with Meows 3.1.0,
+added the line a plugin can put on its Home card.
 
 Meows checks that version when it loads a plugin and refuses anything it cannot honour, with the
 reason on the plugin's card rather than a crash later:
 
-> Built for Meows contract 1.1.0, which is newer than this shell's 1.0.0. Update Meows, or rebuild
-> the plugin against 1.0.0.
+> Built for Meows contract 1.2.0, which is newer than this shell's 1.1.0. Update Meows, or rebuild
+> the plugin against 1.1.0.
 
 A newer contract is refused; an older one is fine, since additions stay backward compatible.
 
@@ -358,7 +370,7 @@ moment it is switched on, which is exactly how three plugins once shipped broken
 To cut a release:
 
 ```bash
-git tag v0.7.0 && git push origin v0.7.0
+git tag v3.1.0 && git push origin v3.1.0
 ```
 
 ## Licence

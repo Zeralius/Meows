@@ -632,7 +632,37 @@ public sealed class MainWindowViewModel : ObservableObject
     public TabViewModel? SelectedTab
     {
         get => _selectedTab;
-        set => SetField(ref _selectedTab, value);
+        set
+        {
+            // Home is read, not watched: whatever a plugin has to say for itself is asked for
+            // when the tab comes to the front, so a glance is as fresh as the moment it is seen.
+            if (SetField(ref _selectedTab, value) && value is not null && Tabs.Count > 0 && ReferenceEquals(value, Tabs[0]))
+                _home?.Refresh();
+        }
+    }
+
+    /// <summary>
+    /// The plugin's own line for its Home card, if its view model offers one. A glance that
+    /// throws is logged and the card keeps the shell's line; it is one sentence on a summary
+    /// page, not something to fail the page over.
+    /// </summary>
+    private Glance? GlanceAt(PluginEntryViewModel entry)
+    {
+        if (!_pluginTabs.TryGetValue(entry.Id, out var tab))
+            return null;
+        var glanceable = (tab.Content as Avalonia.Controls.Control)?.DataContext as IGlanceable
+                         ?? tab.Content as IGlanceable;
+        if (glanceable is null)
+            return null;
+        try
+        {
+            return glanceable.Glance();
+        }
+        catch (Exception ex)
+        {
+            _log.Write("shell", $"'{entry.DisplayName}' failed to glance: {ex.Message}");
+            return null;
+        }
     }
 
     public bool IsLogVisible
@@ -767,7 +797,7 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         // Home first: the window is opened after hours, and the first thing it shows is what
         // happened. Plugins second, so an empty plugins folder is still one click from help.
-        _home = new HomeViewModel(Plugins, p => _pluginTabs.ContainsKey(p.Id), OpenPlugin, _notifications, _background,
+        _home = new HomeViewModel(Plugins, p => _pluginTabs.ContainsKey(p.Id), GlanceAt, OpenPlugin, _notifications, _background,
             _store, PluginName, () => _preferences.LastSeen, InvokeNotificationAction);
         Tabs.Add(new TabViewModel("shell.tab.home", "🏠", new HomeView { DataContext = _home }));
         _pluginsTab = new TabViewModel("shell.tab.plugins", "⛭", new PluginsView { DataContext = this });

@@ -1,0 +1,20 @@
+{
+  "nudge.name.plain": "Übergaben",
+  "nudge.description": "Reicht einen Ordner an Chonk oder Purrge weiter und hört zurück; nimmt Ordner und Dateien von jedem an.",
+  "nudge.title": "Nudge",
+  "nudge.blurb": "Beide Hälften einer Übergabe. Wähle einen Ordner und stupse ein Plugin an, das einen nimmt; seine Antwort landet hier, wenn es fertig ist. Was ein anderes Plugin hierher schickt, steht unten, sobald es ankommt.",
+  "nudge.sending": "Senden",
+  "nudge.receiving": "Empfangen",
+  "nudge.pick": "Ordner wählen",
+  "nudge.folder.none": "Kein Ordner gewählt.",
+  "nudge.chonk": "Chonk anstupsen",
+  "nudge.purrge": "Purrge anstupsen",
+  "nudge.note": "von Nudge",
+  "nudge.sent": "An {0} übergeben. Warte auf Antwort.",
+  "nudge.reply": "{0} sagt: {1}",
+  "nudge.refused": "{0} ist nicht da, lässt sich nicht öffnen oder nimmt keine Ordner.",
+  "nudge.arrived.none": "Noch nichts angekommen. Chonks Senden an… und Kibbles Auswahl landen beide hier.",
+  "nudge.arrived.folder": "ein Ordner: {0}",
+  "nudge.arrived.files": "{0} Datei(en)",
+  "nudge.answer": "Nudge hat {0} Pfad(e) genommen."
+}

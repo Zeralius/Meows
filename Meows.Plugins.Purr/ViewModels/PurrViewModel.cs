@@ -70,7 +70,7 @@ public sealed class WatchViewModel(WatchInfo watch) : ObservableObject
 /// looked, and which watch quietly stopped. The tray dot says "something happened"; this says
 /// what is still happening.
 /// </summary>
-public sealed class PurrViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class PurrViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
 {
     private readonly IMeowsHost _host;
     private readonly PurrSettings _settings;
@@ -189,6 +189,9 @@ public sealed class PurrViewModel : ObservableObject, IDisposable, ISearchable
             return StoppedCount > 0 ? $"{line} {text.Format("purr.summary.stopped", StoppedCount)}" : line;
         }
     }
+
+    /// <summary>The headline again, on the Home tab, red while a watch has stopped.</summary>
+    public Glance? Glance() => new(SummaryText, HasStopped);
 
     /// <summary>How long this tab has been open, which is the shortest true answer to "since when".</summary>
     public string SinceText => _host.Text.Format("purr.since", _openedAt.ToString("HH:mm"), PurrClock.Span(DateTime.Now - _openedAt));

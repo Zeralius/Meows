@@ -1,0 +1,19 @@
+{
+  "yarn.name.plain": "Things to remember",
+  "yarn.description": "Keeps a list of threads and writes each keep to the journal: store, search on or off, put back.",
+  "yarn.title": "Yarn",
+  "yarn.blurb": "Type something worth remembering and keep it. Ctrl+K finds it whether this tab is open or the plugin is off; a keep on the History tab has Put back while the thread is still here.",
+  "yarn.draft": "Something to remember",
+  "yarn.keep": "Keep",
+  "yarn.forget": "Forget the selected one",
+  "yarn.empty": "Nothing kept yet.",
+  "yarn.count": "{0} thread(s).",
+  "yarn.glance": "{0} thread(s), the newest: {1}",
+  "yarn.journal": "Journal",
+  "yarn.journal.blurb": "What this plugin wrote to the shared store, newest first. The History tab shows the same lines beside every other plugin's.",
+  "yarn.kept.detail": "kept for later",
+  "yarn.forgot.detail": "let go",
+  "yarn.hit.on": "Yarn · a thread",
+  "yarn.hit.off": "Yarn · a thread, plugin off",
+  "yarn.undo.gone": "That thread is not on the list any more."
+}

@@ -1,0 +1,18 @@
+{
+  "yowl.name.plain": "Speicherplatz",
+  "yowl.description": "Jault, wenn das Windows-Laufwerk knapp wird: ein Zeitplan, ein Zustand, zwei Knöpfe.",
+  "yowl.title": "Yowl",
+  "yowl.blurb": "Alle zehn Minuten schaut Yowl nach, wie viel Platz auf dem Windows-Laufwerk noch frei ist. Unter der Linie geht eine Warnung mit zwei Knöpfen hoch und bleibt, bis wieder Platz ist oder du um Ruhe bittest.",
+  "yowl.minimum": "Jaulen unter",
+  "yowl.watch": "Windows-Laufwerk im Blick",
+  "yowl.look": "Jetzt nachsehen",
+  "yowl.checking": "Lese {0}…",
+  "yowl.status.start": "Noch nicht nachgesehen.",
+  "yowl.status": "{0} hat {1} GB frei, Stand {2}.",
+  "yowl.low": "Das ist unter der Linie.",
+  "yowl.quiet": "Ruhe bis morgen.",
+  "yowl.notify.title": "{0} wird knapp",
+  "yowl.notify.message": "{0} GB frei; die Linie liegt bei {1} GB.",
+  "yowl.notify.again": "Nochmal nachsehen",
+  "yowl.notify.quiet": "Heute nicht"
+}

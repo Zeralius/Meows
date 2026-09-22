@@ -67,6 +67,10 @@ each. A plugin carrying its own Avalonia hands back a `Control` of a type the sh
 Meows checks the version of both when it loads a plugin and refuses anything it cannot honour, with
 the reason on the plugin's card rather than a crash later.
 
-Full documentation: **[PLUGIN-GUIDE.md](https://github.com/Zeralius/Meows/blob/main/PLUGIN-GUIDE.md)**
+Full documentation: **[PLUGIN-GUIDE.md](https://github.com/Zeralius/Meows/blob/main/PLUGIN-GUIDE.md)**.
+For one part of the contract at a time, the
+**[examples](https://github.com/Zeralius/Meows/tree/main/examples)**: five small plugins, a
+schedule and a condition, handoffs, the store and Ctrl+K, background work and dialogs, and the
+least a plugin can be.
 
 MIT licensed.

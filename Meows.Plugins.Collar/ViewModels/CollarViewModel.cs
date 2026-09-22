@@ -207,7 +207,7 @@ public sealed class EntryViewModel : ObservableObject
     internal void Reread() => OnEverythingChanged();
 }
 
-public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget
+public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget, IGlanceable
 {
     /// <summary>The condition key. One per plugin scope, so it replaces rather than stacks.</summary>
     private const string DueKey = "due";
@@ -363,6 +363,9 @@ public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable
             return Entries.Count == 0 ? "" : _host.Text.Format("collar.summary.clear", Entries.Count);
         }
     }
+
+    /// <summary>The same line on the Home tab, red while something is late.</summary>
+    public Glance? Glance() => Summary.Length == 0 ? null : new Glance(Summary, Entries.Any(e => e.IsOverdue));
 
     /// <summary>Adds an entry and selects it, because the next thing wanted is to name it.</summary>
     public void Add(CollarEntry entry)

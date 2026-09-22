@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFramework>net10.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+
+        <!-- A Debug build lands in the repository's plugins folder, so a source build of Meows
+             shows every example under an Examples heading, switched off. Release goes to bin. -->
+        <OutputPath Condition="'$(Configuration)' == 'Debug'">$(MSBuildThisFileDirectory)..\..\plugins\Meow\</OutputPath>
+        <OutputPath Condition="'$(Configuration)' != 'Debug'">$(MSBuildThisFileDirectory)bin\$(Configuration)\</OutputPath>
+        <Version>1.0.0</Version>
+        <Authors>Meows examples</Authors>
+    </PropertyGroup>
+
+    <!-- Outside this repository, the ProjectReference becomes
+         <PackageReference Include="Meows.Plugins.Abstractions" Version="1.1.0" ExcludeAssets="runtime" PrivateAssets="all" />
+         and nothing else changes. -->
+    <ItemGroup>
+        <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
+        <ProjectReference Include="..\..\Meows.Plugins.Abstractions\Meows.Plugins.Abstractions.csproj"
+                          Private="false"
+                          ExcludeAssets="runtime" />
+    </ItemGroup>
+
+</Project>

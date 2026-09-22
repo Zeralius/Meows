@@ -36,3 +36,20 @@ internal static class ShippedPlugins
         // kitten: next plugin goes here
     ];
 }
+
+/// <summary>
+/// The five under examples/: not shipped, not on the list above, but built by the solution and
+/// walked by the view smoke test, so an example that drifts from the contract fails here rather
+/// than in front of whoever copied it.
+/// </summary>
+internal static class ExamplePlugins
+{
+    internal static readonly Type[] Types =
+    [
+        typeof(Meow.MeowPlugin),
+        typeof(Yowl.YowlPlugin),
+        typeof(Nudge.NudgePlugin),
+        typeof(Yarn.YarnPlugin),
+        typeof(Sniff.SniffPlugin),
+    ];
+}

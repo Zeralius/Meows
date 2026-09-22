@@ -1,0 +1,45 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Yowl"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Yowl.YowlView"
+             x:DataType="vm:YowlViewModel">
+
+    <StackPanel Margin="20" Spacing="14" MaxWidth="560" HorizontalAlignment="Left">
+
+        <TextBlock Text="{m:Tr yowl.title}" FontSize="20" FontWeight="SemiBold" />
+        <TextBlock Text="{m:Tr yowl.blurb}" Opacity="0.7" TextWrapping="Wrap" />
+
+        <!-- The colours are the shell's, looked up by name, so this follows the theme. -->
+        <Border Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLine}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16,12">
+            <StackPanel Spacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <TextBlock Text="{m:Tr yowl.minimum}" VerticalAlignment="Center" />
+                    <NumericUpDown Value="{Binding MinimumFreeGb}"
+                                   Minimum="1"
+                                   Maximum="10000"
+                                   Increment="1"
+                                   FormatString="0"
+                                   Width="120" />
+                    <TextBlock Text="GB" VerticalAlignment="Center" Opacity="0.6" />
+                </StackPanel>
+                <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
+                <TextBlock Text="{m:Tr yowl.low}"
+                           Foreground="{DynamicResource MeowsWarnText}"
+                           IsVisible="{Binding IsLow}" />
+                <TextBlock Text="{m:Tr yowl.quiet}"
+                           Opacity="0.6"
+                           IsVisible="{Binding IsQuiet}" />
+                <Button Content="{m:Tr yowl.look}"
+                        Command="{Binding LookNowCommand}"
+                        HorizontalAlignment="Left" />
+            </StackPanel>
+        </Border>
+
+    </StackPanel>
+
+</UserControl>

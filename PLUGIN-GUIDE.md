@@ -3,7 +3,9 @@
 Everything useful in Meows lives in a plugin. The shell finds them, lets you activate them, and
 gives each one a tab. That is nearly all it does.
 
-This guide covers the whole contract. For the shape of a finished plugin, read
+This guide covers the whole contract. For one part of it at a time, read the
+**[examples](examples/README.md)**: five small plugins, one host feature each, built and
+smoke-tested with every release. For the shape of a finished plugin, read
 [Telegram Poster](Meows.Plugins.TelegramPoster/README.md),
 [Purrge](Meows.Plugins.Purrge/README.md), [Kibble](Meows.Plugins.Kibble/README.md) or
 [Chonk](Meows.Plugins.Chonk/README.md) alongside it.
@@ -140,7 +142,7 @@ contract version the template was published with. No `ProjectReference`, no Meow
 ```xml
 <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.0.0" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.1.0" ExcludeAssets="runtime" PrivateAssets="all" />
 </ItemGroup>
 ```
 
@@ -231,8 +233,8 @@ The shell checks this for you. At discovery it reads the contract version your a
 compiled against and refuses anything it cannot honour, **before constructing your plugin**, so
 none of your code runs. The reason appears on your plugin's card in place of its toggle:
 
-> Built for Meows contract 1.1.0, which is newer than this shell's 1.0.0. Update Meows, or rebuild
-> the plugin against 1.0.0.
+> Built for Meows contract 1.2.0, which is newer than this shell's 1.1.0. Update Meows, or rebuild
+> the plugin against 1.1.0.
 
 A mismatched **major** is refused either way, since a major bump means members may have been
 removed. A **newer** minor or patch is refused; an older one loads fine, because additive
@@ -454,7 +456,8 @@ plugin, and pick nothing.
 is only ever added, never removed or changed, and the shell loads anything built against an
 older minor. A plugin built against 0.x is refused by a 1.x shell, before any of its code runs,
 with *rebuild against 1.0.0* on its card. The members that came with 1.0.0 are `Pick` below and
-`IMeowsPlugin.WhileOff` in [section 3](#3-the-entry-point); nothing was taken away.
+`IMeowsPlugin.WhileOff` in [section 3](#3-the-entry-point); nothing was taken away. **1.1.0**
+added `IGlanceable`, [a line on the Home tab](#a-line-on-the-home-tab), and nothing else.
 
 ### `DataDirectory`
 
@@ -600,6 +603,28 @@ from the disk or the network, and use `SearchWords.Match` so every plugin answer
 rule the palette ranks by. Only plugins that are switched on are asked, and a hit must never do
 anything but show: Kibble deliberately does not offer its destinations, because the one thing to
 do with a destination is send.
+
+### A line on the Home tab
+
+Home is tab zero, and every switched-on plugin has a card there with what the shell can work
+out by itself: the last journal entry and the state of its watches. A view model that
+implements `IGlanceable` (1.1.0) puts its own line above that:
+
+```csharp
+public Glance? Glance() => Summary.Length == 0 ? null : new Glance(Summary, Entries.Any(e => e.IsOverdue));
+```
+
+One sentence, what the plugin would say if asked "anything?": Collar's "1 have passed, 2 more
+coming up", Portion's "2 would fail to post, 1 of them shrinkable", Purr's "9 watches across 6
+plugins 1 stopped".
+`IsTrouble` paints it red, which is for something that wants doing, not for something that
+merely happened. Null means nothing worth a line right now, and the card falls back to the
+shell's words; Portion answers null before its first scan, because "press Scan" is not news.
+
+It is read on the UI thread whenever Home comes to the front or is refreshed, so answer from
+what is in memory, the way `Search` does. Most plugins already have the sentence: it is the
+header line of the tab. A plugin that is off has no view model and no line; that is what the
+shell's own line is for.
 
 ### `Watches`
 
@@ -1025,6 +1050,7 @@ Private dependencies are fine. Ship them in your folder and the resolver finds t
 - [ ] Strings come from a catalogue, with `WithCulture` and `LogicalName` set on the resource
 - [ ] A `LanguageWatch` is held and disposed, so an open tab follows a language change
 - [ ] No translated text captured into a field at construction
+- [ ] `IGlanceable`, if the tab has a header line worth repeating on Home
 - [ ] `Dispose` can be called twice: the shell disposes the view and then its `DataContext`, and
       most views dispose their `DataContext` themselves
 - [ ] Added to `ViewSmokeTests` in `Meows.Tests`, which builds every plugin's view headless in

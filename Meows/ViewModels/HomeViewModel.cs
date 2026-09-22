@@ -4,8 +4,11 @@ using Meows.Services;
 
 namespace Meows.ViewModels;
 
-/// <summary>One plugin's line on the Home tab: its name, what it last did, and a way in.</summary>
-public sealed class HomePluginLine(PluginEntryViewModel entry, Action<PluginEntryViewModel> open)
+/// <summary>
+/// One plugin's line on the Home tab: its name, what it says about itself if it says anything,
+/// what it last did, and a way in.
+/// </summary>
+public sealed class HomePluginLine(PluginEntryViewModel entry, Glance? glance, Action<PluginEntryViewModel> open)
 {
     public PluginEntryViewModel Entry { get; } = entry;
 
@@ -13,9 +16,20 @@ public sealed class HomePluginLine(PluginEntryViewModel entry, Action<PluginEntr
 
     public string Name => Entry.DisplayName;
 
+    /// <summary>
+    /// The plugin's own line, through <see cref="IGlanceable"/>, when it has one. It stands
+    /// above the shell's line rather than in place of it: "2 queues would fail tonight" and
+    /// "shrank IMG_0412.jpg, 3 hours ago" are both worth having.
+    /// </summary>
+    public string GlanceText => glance?.Text ?? "";
+
+    public bool HasGlance => glance is { Text.Length: > 0 };
+
     public string Health => Entry.HasHealth ? Entry.HealthText : MeowsText.Current["home.plugin.quiet"];
 
     public bool IsTrouble => Entry.HealthIsTrouble;
+
+    public bool GlanceIsTrouble => glance is { IsTrouble: true };
 
     public RelayCommand OpenCommand { get; } = new(() => open(entry));
 }
@@ -31,6 +45,7 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
 {
     private readonly ObservableCollection<PluginEntryViewModel> _plugins;
     private readonly Func<PluginEntryViewModel, bool> _isOn;
+    private readonly Func<PluginEntryViewModel, Glance?> _glance;
     private readonly Action<PluginEntryViewModel> _open;
     private readonly MeowsStore? _store;
     private readonly Func<string, string> _pluginName;
@@ -41,6 +56,7 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
     public HomeViewModel(
         ObservableCollection<PluginEntryViewModel> plugins,
         Func<PluginEntryViewModel, bool> isOn,
+        Func<PluginEntryViewModel, Glance?> glance,
         Action<PluginEntryViewModel> open,
         NotificationCenter notifications,
         BackgroundTaskService background,
@@ -53,6 +69,7 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
         RevealCommand = new RelayCommand(Reveal);
         _plugins = plugins;
         _isOn = isOn;
+        _glance = glance;
         _open = open;
         _notifications = notifications;
         _background = background;
@@ -143,7 +160,7 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
     {
         Plugins.Clear();
         foreach (var entry in _plugins.Where(_isOn))
-            Plugins.Add(new HomePluginLine(entry, _open));
+            Plugins.Add(new HomePluginLine(entry, _glance(entry), _open));
 
         Recent.Clear();
         if (_store is not null)

@@ -1,0 +1,19 @@
+{
+  "yarn.name.plain": "Merkzettel",
+  "yarn.description": "Führt eine Liste von Fäden und schreibt jedes Merken ins Journal: Speicher, Suche an oder aus, Zurücklegen.",
+  "yarn.title": "Yarn",
+  "yarn.blurb": "Tipp etwas ein, das du behalten willst, und merk es dir. Strg+K findet es, ob dieser Tab offen ist oder das Plugin aus; ein Merken auf dem Verlauf-Tab hat Zurücklegen, solange der Faden noch hier ist.",
+  "yarn.draft": "Etwas zum Merken",
+  "yarn.keep": "Merken",
+  "yarn.forget": "Ausgewählten vergessen",
+  "yarn.empty": "Noch nichts gemerkt.",
+  "yarn.count": "{0} Faden/Fäden.",
+  "yarn.glance": "{0} Faden/Fäden, der neueste: {1}",
+  "yarn.journal": "Journal",
+  "yarn.journal.blurb": "Was dieses Plugin in den gemeinsamen Speicher geschrieben hat, neueste zuerst. Der Verlauf-Tab zeigt dieselben Zeilen neben denen aller anderen Plugins.",
+  "yarn.kept.detail": "für später gemerkt",
+  "yarn.forgot.detail": "losgelassen",
+  "yarn.hit.on": "Yarn · ein Faden",
+  "yarn.hit.off": "Yarn · ein Faden, Plugin aus",
+  "yarn.undo.gone": "Dieser Faden steht nicht mehr auf der Liste."
+}

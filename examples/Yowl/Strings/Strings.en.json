@@ -1,0 +1,18 @@
+{
+  "yowl.name.plain": "Drive space",
+  "yowl.description": "Yowls when the Windows drive runs low on room: a schedule, a condition, two buttons.",
+  "yowl.title": "Yowl",
+  "yowl.blurb": "Every ten minutes Yowl looks at how much room the Windows drive has left. Under the line, a warning goes up with two buttons and stays until there is room again or you ask for quiet.",
+  "yowl.minimum": "Yowl under",
+  "yowl.watch": "Watching the Windows drive",
+  "yowl.look": "Look now",
+  "yowl.checking": "Reading {0}…",
+  "yowl.status.start": "Not looked yet.",
+  "yowl.status": "{0} has {1} GB free, as of {2}.",
+  "yowl.low": "That is under the line.",
+  "yowl.quiet": "Quiet until tomorrow.",
+  "yowl.notify.title": "{0} is running out of room",
+  "yowl.notify.message": "{0} GB free; the line is {1} GB.",
+  "yowl.notify.again": "Look again",
+  "yowl.notify.quiet": "Not today"
+}

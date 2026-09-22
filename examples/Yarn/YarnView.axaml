@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Yarn"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Yarn.YarnView"
+             x:DataType="vm:YarnViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid Margin="20" ColumnDefinitions="*,*" ColumnSpacing="18" MaxWidth="900" HorizontalAlignment="Left">
+
+        <!-- The threads: kept in settings, searched from Ctrl+K on or off. -->
+        <StackPanel Grid.Column="0" Spacing="12">
+            <TextBlock Text="{m:Tr yarn.title}" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Text="{m:Tr yarn.blurb}" Opacity="0.7" TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBox Text="{Binding Draft}" Watermark="{m:Tr yarn.draft}" Width="260" />
+                <Button Content="{m:Tr yarn.keep}" Command="{Binding KeepCommand}" IsDefault="True" />
+            </StackPanel>
+            <TextBlock Text="{Binding CountText}" Opacity="0.5" FontSize="12" />
+            <TextBlock Text="{m:Tr yarn.empty}" Opacity="0.5" IsVisible="{Binding IsEmpty}" />
+            <ListBox ItemsSource="{Binding Threads}"
+                     SelectedItem="{Binding Selected}"
+                     Background="{DynamicResource MeowsCard}"
+                     BorderBrush="{DynamicResource MeowsLine}"
+                     BorderThickness="1"
+                     CornerRadius="8"
+                     MaxHeight="320"
+                     IsVisible="{Binding !IsEmpty}" />
+            <Button Content="{m:Tr yarn.forget}" Command="{Binding ForgetCommand}" HorizontalAlignment="Left" />
+        </StackPanel>
+
+        <!-- The journal: what this plugin wrote to the shared store, as History shows it. -->
+        <StackPanel Grid.Column="1" Spacing="12">
+            <TextBlock Text="{m:Tr yarn.journal}" FontSize="20" FontWeight="SemiBold" />
+            <TextBlock Text="{m:Tr yarn.journal.blurb}" Opacity="0.7" TextWrapping="Wrap" />
+            <Border Background="{DynamicResource MeowsSunken}"
+                    BorderBrush="{DynamicResource MeowsLine}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="12,10">
+                <ItemsControl ItemsSource="{Binding Journal}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <TextBlock Text="{Binding}" FontFamily="Consolas, monospace" FontSize="12" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Border>
+        </StackPanel>
+
+    </Grid>
+
+</UserControl>

@@ -146,7 +146,7 @@ public sealed class HeavyViewModel : ObservableObject, IDisposable
     public void Dispose() => Thumbnail = null;
 }
 
-public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget
+public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget, IGlanceable
 {
     private const int ThumbnailWidth = 56;
     private const int PreviewWidth = 720;
@@ -334,6 +334,12 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
     }
 
     public bool HasError => !string.IsNullOrEmpty(_errorMessage);
+
+    /// <summary>
+    /// On the Home tab: what the last scan found, red while something would fail tonight.
+    /// Nothing before the first scan, since "press Scan" is not news.
+    /// </summary>
+    public Glance? Glance() => _scanned ? new Glance(Status, Heavies.Any(h => h.WillFail)) : null;
 
     public HeavyViewModel? Selected
     {

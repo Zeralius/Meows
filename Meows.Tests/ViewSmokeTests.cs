@@ -115,7 +115,7 @@ public class ViewSmokeTests : IDisposable
         return data;
     }
 
-    private static Type[] PluginTypes => ShippedPlugins.Types;
+    private static Type[] PluginTypes => [.. ShippedPlugins.Types, .. ExamplePlugins.Types];
 
     [Fact]
     public void Every_plugin_that_ships_is_on_the_list()

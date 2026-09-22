@@ -97,7 +97,7 @@ public sealed class GrowthViewModel(Growth growth, long driveDelta) : Observable
 /// useful question, because nobody notices a drive filling until it is full. One reading of
 /// every drive a day, kept to a fixed depth, and the tab says what moved between then and now.
 /// </summary>
-public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
 {
     private readonly IMeowsHost _host;
     private readonly WeighInSettings _settings;
@@ -238,6 +238,12 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
             return text.Format("weighin.summary", last.At.ToString("d MMM HH:mm"), _readings.Count, _readings[0].At.ToString("d MMM"));
         }
     }
+
+    /// <summary>
+    /// On the Home tab: the selected drive's headline when there is one to tell, else when the
+    /// last reading was. Nothing here is trouble; a full drive is Chonk's word to say.
+    /// </summary>
+    public Glance? Glance() => new(DriveHeadline.Length > 0 ? DriveHeadline : SummaryText);
 
     /// <summary>The selected drive over the window: "F lost 200 GB since 7 Sep; the three folders responsible".</summary>
     public string DriveHeadline

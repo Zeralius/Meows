@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Nudge"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Nudge.NudgeView"
+             x:DataType="vm:NudgeViewModel">
+
+    <StackPanel Margin="20" Spacing="14" MaxWidth="640" HorizontalAlignment="Left">
+
+        <TextBlock Text="{m:Tr nudge.title}" FontSize="20" FontWeight="SemiBold" />
+        <TextBlock Text="{m:Tr nudge.blurb}" Opacity="0.7" TextWrapping="Wrap" />
+
+        <!-- Sending: a folder, two plugins that take one, and what they said back. -->
+        <Border Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLine}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16,12">
+            <StackPanel Spacing="10">
+                <TextBlock Text="{m:Tr nudge.sending}" FontWeight="SemiBold" />
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Content="{m:Tr nudge.pick}" Command="{Binding PickFolderCommand}" />
+                    <TextBlock Text="{Binding FolderText}" VerticalAlignment="Center" Opacity="0.8" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Content="{m:Tr nudge.chonk}" Command="{Binding NudgeChonkCommand}" />
+                    <Button Content="{m:Tr nudge.purrge}" Command="{Binding NudgePurrgeCommand}" />
+                </StackPanel>
+                <TextBlock Text="{Binding ReplyText}"
+                           Foreground="{DynamicResource MeowsInfoText}"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding HasReply}" />
+            </StackPanel>
+        </Border>
+
+        <!-- Receiving: whatever Chonk's "Send to…" or Kibble's pick sent here. -->
+        <Border Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLine}"
+                BorderThickness="1"
+                CornerRadius="8"
+                Padding="16,12">
+            <StackPanel Spacing="10">
+                <TextBlock Text="{m:Tr nudge.receiving}" FontWeight="SemiBold" />
+                <TextBlock Text="{m:Tr nudge.arrived.none}" Opacity="0.5" IsVisible="{Binding !HasArrived}" />
+                <ItemsControl ItemsSource="{Binding Arrived}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="x:String">
+                            <TextBlock Text="{Binding}" FontFamily="Consolas, monospace" FontSize="12" TextWrapping="Wrap" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+    </StackPanel>
+
+</UserControl>
