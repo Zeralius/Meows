@@ -479,4 +479,39 @@ public sealed class ShellPreferences
     /// regardless; this is about the pane and the Log tab.
     /// </summary>
     public Dictionary<string, string> LogLevels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The groups on the tab strip, in the order they are shown. Only groups somebody has
+    /// touched are in here: the rest are worked out from what each plugin says its category is,
+    /// so a fresh install is grouped correctly without anything being written down.
+    /// </summary>
+    public List<TabGroupSetting> TabGroups { get; set; } = [];
+
+    /// <summary>
+    /// Tabs that were moved out of the group they declared, by tab key. A tab in here is in the
+    /// group named here whatever its plugin says.
+    /// </summary>
+    public Dictionary<string, string> TabGroupOf { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// The order of the tabs themselves, by tab key, across every group. Anything not in here
+    /// keeps the order it was switched on in, at the end.
+    /// </summary>
+    public List<string> TabOrder { get; set; } = [];
+}
+
+/// <summary>One group on the tab strip, as it is remembered.</summary>
+public sealed class TabGroupSetting
+{
+    /// <summary>The category key: <c>group.disk</c>, the shell's own, or one somebody made.</summary>
+    public string Key { get; set; } = "";
+
+    /// <summary>What it was renamed to, or null to read the key through the string table.</summary>
+    public string? Name { get; set; }
+
+    /// <summary>A name from the palette: slate, blue, green, amber, rose, violet, teal.</summary>
+    public string Colour { get; set; } = "slate";
+
+    /// <summary>Shut, so its tabs are behind one chip.</summary>
+    public bool Collapsed { get; set; }
 }

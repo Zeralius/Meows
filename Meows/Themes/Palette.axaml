@@ -59,6 +59,17 @@
             <SolidColorBrush x:Key="MeowsBadge" Color="#E63E6C90" />
             <SolidColorBrush x:Key="MeowsDangerBadge" Color="#CC5C2B30" />
 
+            <!-- A group on the tab strip. Enough apart to tell at a glance, all of them quiet
+                 enough that seven of them along one strip is not a paint chart. The Line is the
+                 chip's edge and the underline on a tab that belongs to it. -->
+            <SolidColorBrush x:Key="MeowsGroupSlate" Color="#6B7280" />
+            <SolidColorBrush x:Key="MeowsGroupBlue" Color="#5B8DB8" />
+            <SolidColorBrush x:Key="MeowsGroupGreen" Color="#5E9E6E" />
+            <SolidColorBrush x:Key="MeowsGroupAmber" Color="#B8925B" />
+            <SolidColorBrush x:Key="MeowsGroupRose" Color="#B8697A" />
+            <SolidColorBrush x:Key="MeowsGroupViolet" Color="#8B7AB8" />
+            <SolidColorBrush x:Key="MeowsGroupTeal" Color="#5BA8A0" />
+
             <!-- Dims the window behind a confirmation. -->
             <SolidColorBrush x:Key="MeowsVeil" Color="#C0000000" />
 
@@ -100,6 +111,16 @@
 
             <SolidColorBrush x:Key="MeowsBadge" Color="#E62E6088" />
             <SolidColorBrush x:Key="MeowsDangerBadge" Color="#CC9E3A42" />
+
+            <!-- Darker than the dark theme's, for the same reason every text colour here is:
+                 these sit on a light window and have to hold against it. -->
+            <SolidColorBrush x:Key="MeowsGroupSlate" Color="#5A606B" />
+            <SolidColorBrush x:Key="MeowsGroupBlue" Color="#2E6389" />
+            <SolidColorBrush x:Key="MeowsGroupGreen" Color="#2E7043" />
+            <SolidColorBrush x:Key="MeowsGroupAmber" Color="#8A6320" />
+            <SolidColorBrush x:Key="MeowsGroupRose" Color="#8C3B4C" />
+            <SolidColorBrush x:Key="MeowsGroupViolet" Color="#5E4C8C" />
+            <SolidColorBrush x:Key="MeowsGroupTeal" Color="#2E7A72" />
 
             <!-- Lighter than the dark theme's. A near opaque black over a white window reads as
                  the lights going out rather than as a dialog. -->

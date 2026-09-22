@@ -87,6 +87,11 @@ public sealed class MainWindowViewModel : ObservableObject
 
         Palette = new CommandPaletteViewModel(PaletteItems, PaletteSearch);
         OpenPaletteCommand = new RelayCommand(Palette.Open);
+        SelectTabCommand = new RelayCommand(tab =>
+        {
+            if (tab is TabViewModel picked)
+                SelectedTab = picked;
+        });
     }
 
     /// <summary>
@@ -99,6 +104,9 @@ public sealed class MainWindowViewModel : ObservableObject
     public CommandPaletteViewModel Palette { get; }
 
     public RelayCommand OpenPaletteCommand { get; }
+
+    /// <summary>Clicking a tab on the strip. Its own button rather than a TabControl's selection.</summary>
+    public RelayCommand SelectTabCommand { get; }
 
     /// <summary>
     /// What the palette offers before anything is typed: every plugin under both its names,
@@ -150,6 +158,17 @@ public sealed class MainWindowViewModel : ObservableObject
                 ? new PaletteItem("⧉", text.Format("palette.bringback", captured.Header), "", () => _popOuts.BringBack(captured)) { IsCommand = true, CommandOnly = true }
                 : new PaletteItem("⧉", text.Format("palette.popout", captured.Header), "", () => _popOuts.PopOut(captured)) { IsCommand = true, CommandOnly = true };
         }
+        // The groups on the strip, so shutting one is a keystroke rather than a right-click.
+        foreach (var group in Strip.Groups)
+        {
+            var key = group.Key;
+            var name = Strip.NameOf(key);
+            yield return new PaletteItem("●",
+                text.Format(group.IsCollapsed ? "strip.expand.one" : "strip.collapse.one", name), "",
+                () => Strip.SetCollapsed(key, !group.IsCollapsed)) { IsCommand = true, CommandOnly = true };
+        }
+
+        yield return new PaletteItem("●", text["palette.strip.reset"], "", () => Strip.ResetAll()) { IsCommand = true, CommandOnly = true };
         yield return new PaletteItem("⛭", text["plugins.rescan"], "", Rescan) { IsCommand = true, CommandOnly = true };
         yield return new PaletteItem("⛭", text["plugins.open"], "", OpenPluginsFolder) { IsCommand = true, CommandOnly = true };
     }
@@ -163,11 +182,16 @@ public sealed class MainWindowViewModel : ObservableObject
             Palette.Open();
     }
 
-    /// <summary>Ctrl+1 to Ctrl+9: the tabs in the order they are shown.</summary>
+    /// <summary>
+    /// Ctrl+1 to Ctrl+9: the tabs in the order they are shown, which since groups arrived means
+    /// the ones that can be seen. Counting past a collapsed group would make the number depend
+    /// on something not on screen.
+    /// </summary>
     public void SelectTabByNumber(int number)
     {
-        if (number >= 1 && number <= Tabs.Count)
-            SelectedTab = Tabs[number - 1];
+        var visible = Strip.Visible;
+        if (number >= 1 && number <= visible.Count)
+            SelectedTab = visible[number - 1];
     }
 
     /// <summary>
@@ -356,6 +380,7 @@ public sealed class MainWindowViewModel : ObservableObject
             entry.Retranslate();
 
         Regroup();
+        Strip?.Retranslate();
 
         OnPropertyChanged(nameof(ContractVersionText));
         OnPropertyChanged(nameof(PluginsDirectoryText));
@@ -364,6 +389,13 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     public ObservableCollection<TabViewModel> Tabs { get; } = new();
+
+    /// <summary>
+    /// The strip over those tabs: Home, then a coloured chip and its tabs per group. Twenty-three
+    /// tabs in one flat row wrapped onto three of them, so the strip groups by the same category
+    /// a plugin already declares for its card on the Plugins tab.
+    /// </summary>
+    public TabStripViewModel Strip { get; private set; } = null!;
 
     public ObservableCollection<PluginEntryViewModel> Plugins { get; } = new();
 
@@ -634,12 +666,37 @@ public sealed class MainWindowViewModel : ObservableObject
         get => _selectedTab;
         set
         {
+            var was = _selectedTab;
+            if (!SetField(ref _selectedTab, value))
+                return;
+
+            // The strip is an ItemsControl now, so nothing marks the item in front for us.
+            if (was is not null)
+                was.IsSelected = false;
+            if (value is not null)
+                value.IsSelected = true;
+
+            if (value is null)
+                return;
+
+            // Landing on a tab whose group is shut opens that group: a selection nobody can see
+            // is worse than a group that opened itself.
+            Strip?.Reveal(value.Key);
+
             // Home is read, not watched: whatever a plugin has to say for itself is asked for
             // when the tab comes to the front, so a glance is as fresh as the moment it is seen.
-            if (SetField(ref _selectedTab, value) && value is not null && Tabs.Count > 0 && ReferenceEquals(value, Tabs[0]))
+            if (Tabs.Count > 0 && ReferenceEquals(value, Tabs[0]))
                 _home?.Refresh();
         }
     }
+
+    /// <summary>
+    /// What a tab says its group is: the plugin's own category, the same one its card sits under
+    /// on the Plugins tab. Null for anything that is not a plugin's tab, which the strip reads as
+    /// the shell's own group or as everything else.
+    /// </summary>
+    private string? CategoryOf(string tabKey) =>
+        Plugins.FirstOrDefault(p => string.Equals(p.Id, tabKey, StringComparison.OrdinalIgnoreCase))?.Descriptor.Category;
 
     /// <summary>
     /// The plugin's own line for its Home card, if its view model offers one. A glance that
@@ -795,6 +852,9 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public void Initialize()
     {
+        // The strip watches the tabs, so it exists before any of them are added.
+        Strip = new TabStripViewModel(Tabs, _preferences, CategoryOf, SavePreferences);
+
         // Home first: the window is opened after hours, and the first thing it shows is what
         // happened. Plugins second, so an empty plugins folder is still one click from help.
         _home = new HomeViewModel(Plugins, p => _pluginTabs.ContainsKey(p.Id), GlanceAt, OpenPlugin, _notifications, _background,

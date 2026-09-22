@@ -17,6 +17,9 @@ public partial class MainWindow : Window
         // palette's own keys are answered before a list or a text box gets them.
         AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
         DataContextChanged += (_, _) => Hook();
+
+        // Dragging on the strip: a tab anywhere on it, a chip to reorder the groups.
+        _ = new TabStripDrag(this.FindControl<ItemsControl>("Strip")!, () => Model?.Strip);
     }
 
     private void InitializeComponent() => AvaloniaXamlLoader.Load(this);

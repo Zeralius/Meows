@@ -11,6 +11,37 @@
         MinWidth="900" MinHeight="560">
 
     <Window.Styles>
+        <!-- The strip's own two buttons. Flat, so the strip reads as a strip rather than as a
+             row of controls, with the selected tab raised and underlined. -->
+        <Style Selector="Button.tab, Button.chip">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="Margin" Value="1,0" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+        <Style Selector="Button.tab:pointerover /template/ ContentPresenter, Button.chip:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsRaised}" />
+        </Style>
+        <Style Selector="Button.tab.selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+        </Style>
+        <Style Selector="Button.tab.selected">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Button.chip">
+            <Setter Property="Padding" Value="8,5" />
+        </Style>
+        <!-- The insertion marker while something is dragged over the strip. -->
+        <Style Selector="Border.marker">
+            <Setter Property="Width" Value="2" />
+            <Setter Property="MinHeight" Value="16" />
+            <Setter Property="CornerRadius" Value="1" />
+            <Setter Property="Margin" Value="1,0" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="{DynamicResource MeowsSelectionLine}" />
+        </Style>
         <!-- The severity of a notification, as a colour. Set from two flags on the item rather
              than a brush it hands us, so the theme gets to decide the actual colour. -->
         <Style Selector="TextBlock.severity">
@@ -241,56 +272,179 @@
             </ScrollViewer>
         </Border>
 
-        <TabControl ItemsSource="{Binding Tabs}"
-                    SelectedItem="{Binding SelectedTab}"
-                    Padding="0">
-            <TabControl.ItemTemplate>
-                <DataTemplate x:DataType="vm:TabViewModel">
-                    <StackPanel Orientation="Horizontal" Spacing="7">
-                        <!-- Named rather than left to fallback. Windows has two fonts holding
-                             these characters, Segoe UI Symbol in monochrome outlines and Segoe UI
-                             Emoji in colour, and left to itself the first layout picks the outline
-                             for some of them. Hovering a tab lays it out again, it comes back in
-                             colour and stays that way, so the icons changed under the pointer. -->
-                        <TextBlock Text="{Binding Icon}"
-                                   FontFamily="Segoe UI Emoji"
-                                   VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding Header}" VerticalAlignment="Center" />
-                        <!-- Into a window of its own. Shown faintly so the strip stays a strip. -->
-                        <Button Content="⧉"
-                                FontSize="11"
-                                Padding="3,0"
-                                MinHeight="0"
-                                Background="Transparent"
-                                BorderThickness="0"
-                                Opacity="0.4"
-                                VerticalAlignment="Center"
-                                ToolTip.Tip="{m:Tr shell.popout}"
-                                IsVisible="{Binding !IsPoppedOut}"
-                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).PopOutCommand}"
-                                CommandParameter="{Binding}" />
-                    </StackPanel>
-                </DataTemplate>
-            </TabControl.ItemTemplate>
-            <TabControl.ContentTemplate>
-                <DataTemplate x:DataType="vm:TabViewModel">
-                    <ContentControl Content="{Binding Shown}">
-                        <ContentControl.DataTemplates>
-                            <!-- What stands in for a tab while its content is in its own window. -->
-                            <DataTemplate x:DataType="vm:PoppedOutNotice">
-                                <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
-                                    <TextBlock Text="{m:Tr shell.popout.away}" Opacity="0.55" HorizontalAlignment="Center" />
-                                    <Button Content="{m:Tr shell.popout.back}"
-                                            HorizontalAlignment="Center"
-                                            Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).BringBackCommand}"
-                                            CommandParameter="{Binding Tab}" />
+        <!-- The strip, and under it whatever tab is selected.
+             It was a TabControl over one flat list until 4.0.0, when twenty-three tabs wrapped
+             onto three rows. A TabControl cannot interleave a group's chip with its own tabs, so
+             the strip is built here and the content is an ordinary ContentControl; selection was
+             already driven by SelectedTab and the number keys were already ours, so nothing was
+             lost along with the control. -->
+        <DockPanel>
+
+            <Border DockPanel.Dock="Top"
+                    Background="{DynamicResource MeowsBar}"
+                    BorderBrush="{DynamicResource MeowsLine}"
+                    BorderThickness="0,0,0,1"
+                    Padding="6,4">
+                <ItemsControl Name="Strip" ItemsSource="{Binding Strip.Items}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <WrapPanel Orientation="Horizontal" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.DataTemplates>
+
+                        <!-- A group: a coloured chip that opens and shuts it, with everything
+                             that can be done to the group on its right-click menu. -->
+                        <DataTemplate x:DataType="vm:GroupChipViewModel">
+                            <Button Classes="chip"
+                                    Command="{Binding ToggleCommand}"
+                                    ToolTip.Tip="{Binding Name}">
+                                <StackPanel Orientation="Horizontal" Spacing="5">
+                                    <!-- Where a drop would land. A line either side rather than a
+                                         highlight on the whole thing, because "into this group"
+                                         and "in front of this group" are different answers. -->
+                                    <Border Classes="marker" IsVisible="{Binding HintBefore}" />
+                                    <Border Width="8"
+                                            Height="8"
+                                            CornerRadius="4"
+                                            VerticalAlignment="Center"
+                                            Background="{Binding Paint}" />
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" FontWeight="SemiBold" />
+                                    <Border Background="{DynamicResource MeowsInset}"
+                                            CornerRadius="7"
+                                            Padding="5,0"
+                                            VerticalAlignment="Center"
+                                            IsVisible="{Binding IsCollapsed}">
+                                        <TextBlock Text="{Binding CountText}" FontSize="11" Opacity="0.8" />
+                                    </Border>
+                                    <TextBlock Text="{Binding Arrow}" VerticalAlignment="Center" Opacity="0.5" FontSize="10" />
+                                    <Border Classes="marker" IsVisible="{Binding HintAfter}" />
                                 </StackPanel>
-                            </DataTemplate>
-                        </ContentControl.DataTemplates>
-                    </ContentControl>
-                </DataTemplate>
-            </TabControl.ContentTemplate>
-        </TabControl>
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{Binding CollapseText}" Command="{Binding ToggleCommand}" />
+                                        <Separator />
+                                        <MenuItem Header="{m:Tr strip.rename}">
+                                            <MenuItem StaysOpenOnClick="True">
+                                                <MenuItem.Header>
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <TextBox Text="{Binding RenameTo}" Width="160" />
+                                                        <Button Content="{m:Tr strip.rename.go}" Command="{Binding RenameCommand}" />
+                                                    </StackPanel>
+                                                </MenuItem.Header>
+                                            </MenuItem>
+                                        </MenuItem>
+                                        <MenuItem Header="{m:Tr strip.colour}" ItemsSource="{Binding Colours}">
+                                            <MenuItem.ItemContainerTheme>
+                                                <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}" x:DataType="vm:GroupColourChoice">
+                                                    <Setter Property="Header" Value="{Binding Name}" />
+                                                    <Setter Property="Command" Value="{Binding PickCommand}" />
+                                                </ControlTheme>
+                                            </MenuItem.ItemContainerTheme>
+                                        </MenuItem>
+                                        <Separator />
+                                        <MenuItem Header="{m:Tr strip.group.left}" Command="{Binding MoveLeftCommand}" />
+                                        <MenuItem Header="{m:Tr strip.group.right}" Command="{Binding MoveRightCommand}" />
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                        </DataTemplate>
+
+                        <!-- A tab: the icon, the name, the pop-out, and its group's colour as a
+                             line underneath, so the eye can follow a group across a wrap. -->
+                        <DataTemplate x:DataType="vm:TabViewModel">
+                            <Button Classes="tab"
+                                    Classes.selected="{Binding IsSelected}"
+                                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SelectTabCommand}"
+                                    CommandParameter="{Binding}">
+                                <StackPanel Spacing="3">
+                                    <StackPanel Orientation="Horizontal" Spacing="7">
+                                        <Border Classes="marker" IsVisible="{Binding HintBefore}" />
+                                        <!-- Named rather than left to fallback. Windows has two fonts holding
+                                             these characters, Segoe UI Symbol in monochrome outlines and Segoe UI
+                                             Emoji in colour, and left to itself the first layout picks the outline
+                                             for some of them. Hovering a tab lays it out again, it comes back in
+                                             colour and stays that way, so the icons changed under the pointer. -->
+                                        <TextBlock Text="{Binding Icon}"
+                                                   FontFamily="Segoe UI Emoji"
+                                                   VerticalAlignment="Center" />
+                                        <TextBlock Text="{Binding Header}" VerticalAlignment="Center" />
+                                        <!-- Into a window of its own. Shown faintly so the strip stays a strip. -->
+                                        <Button Content="⧉"
+                                                FontSize="11"
+                                                Padding="3,0"
+                                                MinHeight="0"
+                                                Background="Transparent"
+                                                BorderThickness="0"
+                                                Opacity="0.4"
+                                                VerticalAlignment="Center"
+                                                ToolTip.Tip="{m:Tr shell.popout}"
+                                                IsVisible="{Binding !IsPoppedOut}"
+                                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).PopOutCommand}"
+                                                CommandParameter="{Binding}" />
+                                        <Border Classes="marker" IsVisible="{Binding HintAfter}" />
+                                    </StackPanel>
+                                    <Border Height="2"
+                                            CornerRadius="1"
+                                            IsVisible="{Binding HasGroup}"
+                                            Background="{Binding Paint}" />
+                                </StackPanel>
+                                <Button.ContextMenu>
+                                    <ContextMenu>
+                                        <MenuItem Header="{m:Tr strip.tab.left}" Command="{Binding Menu.MoveLeftCommand}" />
+                                        <MenuItem Header="{m:Tr strip.tab.right}" Command="{Binding Menu.MoveRightCommand}" />
+                                        <Separator />
+                                        <MenuItem Header="{m:Tr strip.tab.moveto}"
+                                                  ItemsSource="{Binding Menu.Groups}"
+                                                  IsEnabled="{Binding Menu.HasGroups}">
+                                            <MenuItem.ItemContainerTheme>
+                                                <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}" x:DataType="vm:GroupChoice">
+                                                    <Setter Property="Header" Value="{Binding Name}" />
+                                                    <Setter Property="Command" Value="{Binding PickCommand}" />
+                                                </ControlTheme>
+                                            </MenuItem.ItemContainerTheme>
+                                        </MenuItem>
+                                        <MenuItem Header="{m:Tr strip.tab.newgroup}">
+                                            <MenuItem StaysOpenOnClick="True">
+                                                <MenuItem.Header>
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <TextBox Text="{Binding Menu.NewGroupName}" Width="160" Watermark="{m:Tr strip.tab.newgroup.name}" />
+                                                        <Button Content="{m:Tr strip.tab.newgroup.go}" Command="{Binding Menu.NewGroupCommand}" />
+                                                    </StackPanel>
+                                                </MenuItem.Header>
+                                            </MenuItem>
+                                        </MenuItem>
+                                        <Separator />
+                                        <MenuItem Header="{m:Tr strip.tab.reset}" Command="{Binding Menu.ResetCommand}" />
+                                        <MenuItem Header="{m:Tr shell.popout}"
+                                                  Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).PopOutCommand}"
+                                                  CommandParameter="{Binding}"
+                                                  IsVisible="{Binding !IsPoppedOut}" />
+                                    </ContextMenu>
+                                </Button.ContextMenu>
+                            </Button>
+                        </DataTemplate>
+
+                    </ItemsControl.DataTemplates>
+                </ItemsControl>
+            </Border>
+
+            <ContentControl Content="{Binding SelectedTab.Shown}">
+                <ContentControl.DataTemplates>
+                    <!-- What stands in for a tab while its content is in its own window. -->
+                    <DataTemplate x:DataType="vm:PoppedOutNotice">
+                        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
+                            <TextBlock Text="{m:Tr shell.popout.away}" Opacity="0.55" HorizontalAlignment="Center" />
+                            <Button Content="{m:Tr shell.popout.back}"
+                                    HorizontalAlignment="Center"
+                                    Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).BringBackCommand}"
+                                    CommandParameter="{Binding Tab}" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ContentControl.DataTemplates>
+            </ContentControl>
+
+        </DockPanel>
 
     </DockPanel>
 

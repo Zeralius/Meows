@@ -68,6 +68,23 @@ it after hours.
 Every plugin starts switched off. Open the **Plugins** tab, turn on the ones you want, and each
 gets its own tab. Turning one off closes its tab again. Nothing runs until you ask for it.
 
+**Tabs come in groups.** Each group is a coloured chip on the strip with its tabs after it, and
+clicking the chip shuts the group behind it, which is what keeps twenty-odd tabs on one row. The
+groups are the same ones the Plugins tab has always used, the category each plugin declares for
+itself, so a fresh install is already sorted: the disk tools together, the four built around the
+posting bot together, Meows' own tabs under one chip. Home is never in a group and always first.
+
+**Drag a tab** anywhere on the strip: a line shows which side of what it would land on, and
+letting go on another group's tabs or on its chip moves it into that group. **Drag a chip** to
+move a whole group along the strip. Nothing moves until the pointer has travelled far enough to
+mean it, so a slightly shaky click still just selects the tab.
+
+Right-click a chip to rename the group, give it one of seven colours, or move it along the strip.
+Right-click a tab to step it left or right, drop it into another group, or start a group of its
+own; a tab stepped off the end of its group joins the next one. *Put it back where its plugin
+says* undoes it for one tab, and the palette has the same for all of them. What you arrange is
+remembered, and a group whose plugins are all switched off waits rather than showing empty.
+
 Any tab can go into a window of its own: the small **⧉** on its header. Familiar's map on the
 television, the run sheet on the laptop, without a second application. Where each window sat
 is remembered per monitor layout, so the tab that lived on the second screen goes back there
@@ -77,7 +94,8 @@ same way.
 
 **Keys.** Ctrl+K is the palette: a plugin by either of its names, a setting, something an open
 plugin is showing, a line from the history. Ctrl+Shift+K is the same box over only the tab in
-front. Ctrl+1 to Ctrl+9 pick a tab in the order they are shown. In the palette, `>` lists the
+front. Ctrl+1 to Ctrl+9 pick a tab in the order they are shown, counting only the tabs that can
+be seen, so a shut group does not make the numbers skip. In the palette, `>` lists the
 things to do rather than the places to go: pop a tab out or bring it back, the theme, the
 language, the names, rescan the plugins folder.
 
