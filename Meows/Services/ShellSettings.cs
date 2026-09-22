@@ -481,6 +481,12 @@ public sealed class ShellPreferences
     public Dictionary<string, string> LogLevels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// How big the tab strip is drawn: "compact", "normal" or "large". Twenty-odd tabs at the
+    /// normal size are small to hit, and a strip that wraps anyway has room to be taller.
+    /// </summary>
+    public string TabSize { get; set; } = TabSizes.Normal;
+
+    /// <summary>
     /// The groups on the tab strip, in the order they are shown. Only groups somebody has
     /// touched are in here: the rest are worked out from what each plugin says its category is,
     /// so a fresh install is grouped correctly without anything being written down.

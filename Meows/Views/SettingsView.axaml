@@ -53,6 +53,24 @@
 
             <Border Classes="section">
                 <StackPanel Spacing="10">
+                    <TextBlock Classes="heading" Text="{m:Tr settings.tabsize}" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.tabsize.hint}" />
+                    <StackPanel Spacing="4" Margin="0,4,0,0">
+                        <RadioButton GroupName="tabsize"
+                                     Content="{m:Tr settings.tabsize.compact}"
+                                     IsChecked="{Binding IsTabsCompact}" />
+                        <RadioButton GroupName="tabsize"
+                                     Content="{m:Tr settings.tabsize.normal}"
+                                     IsChecked="{Binding IsTabsNormal}" />
+                        <RadioButton GroupName="tabsize"
+                                     Content="{m:Tr settings.tabsize.large}"
+                                     IsChecked="{Binding IsTabsLarge}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="section">
+                <StackPanel Spacing="10">
                     <TextBlock Classes="heading" Text="{m:Tr settings.language}" />
                     <TextBlock Classes="hint" Text="{m:Tr settings.language.hint}" />
                     <StackPanel Spacing="4" Margin="0,4,0,0">

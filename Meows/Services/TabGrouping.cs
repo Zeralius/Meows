@@ -34,6 +34,20 @@ public static class GroupColours
     }
 }
 
+/// <summary>How big the strip is drawn. Three steps rather than a number, so it cannot be silly.</summary>
+public static class TabSizes
+{
+    public const string Compact = "compact";
+    public const string Normal = "normal";
+    public const string Large = "large";
+
+    public static readonly string[] All = [Compact, Normal, Large];
+
+    /// <summary>Anything unrecognised reads as the middle one rather than throwing.</summary>
+    public static string Tidy(string? size) =>
+        All.Contains(size?.Trim().ToLowerInvariant()) ? size!.Trim().ToLowerInvariant() : Normal;
+}
+
 /// <summary>
 /// Where the shell's own tabs go. A plugin names its own group through <c>IMeowsPlugin.Category</c>
 /// and the Plugins tab has been grouping cards by it since 1.3.0; the strip uses the same keys, so

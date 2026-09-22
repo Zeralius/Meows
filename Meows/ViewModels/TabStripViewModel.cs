@@ -220,6 +220,21 @@ public sealed class TabStripViewModel : ObservableObject
         Rebuild();
     }
 
+    /// <summary>
+    /// How big to draw it. Read as flags rather than a string because a style class is what
+    /// actually changes the size, and a class binds to a bool.
+    /// </summary>
+    public bool IsCompact => TabSizes.Tidy(_preferences.TabSize) == TabSizes.Compact;
+
+    public bool IsLarge => TabSizes.Tidy(_preferences.TabSize) == TabSizes.Large;
+
+    /// <summary>Told by the Settings tab when the size changed, so the strip redraws at it.</summary>
+    public void Resize()
+    {
+        OnPropertyChanged(nameof(IsCompact));
+        OnPropertyChanged(nameof(IsLarge));
+    }
+
     /// <summary>Chips and tabs interleaved, which is what the strip binds to.</summary>
     public ObservableCollection<object> Items { get; } = [];
 

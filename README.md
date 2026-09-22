@@ -110,6 +110,8 @@ and offers that on the card too. **Open plugins folder** takes you to where they
 
 The **Settings** tab has two choices, and both take effect as you make them:
 
+- **Tab strip**: compact, normal or large. How big the tabs and group chips along the top are
+  drawn; larger ones are easier to hit and take another row when the strip wraps.
 - **Theme**: light, dark, or follow the system. Following the system means Meows changes with
   Windows, including when Windows switches itself at sunset.
 - **Language**: English, German, or follow the system. It applies to the shell and to every plugin

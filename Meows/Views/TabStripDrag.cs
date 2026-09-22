@@ -105,6 +105,13 @@ public sealed class TabStripDrag
         if (!moved || dragging is null || model is null)
             return;
 
+        // Past here the pointer travelled, so this release ends a drag and is not a click,
+        // whatever it landed on. Swallowed before the landing is worked out rather than after:
+        // a drag taken out and brought back to where it started ends on the very button it began
+        // on, which is the one case where Avalonia would otherwise raise a Click and select the
+        // tab that was being dragged.
+        e.Handled = true;
+
         var (target, before) = TargetUnder(e.GetPosition(_strip));
         if (target is null || ReferenceEquals(target, dragging))
             return;
@@ -123,10 +130,6 @@ public sealed class TabStripDrag
                 model.DropGroup(chip.Key, onto.Key, after: !before);
                 break;
         }
-
-        // The release finished a drag rather than a click, so the button under it must not also
-        // be pressed: dropping a tab should not select whatever it was dropped on.
-        e.Handled = true;
     }
 
     private void Stop()

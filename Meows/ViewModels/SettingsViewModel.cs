@@ -16,6 +16,9 @@ public sealed class SettingsViewModel : ObservableObject
     private readonly ShellLog _log;
     private readonly ShellPreferences _preferences;
 
+    /// <summary>Told after the tab size changes, so the strip redraws at the new one.</summary>
+    public Action? TabSizeChanged { get; set; }
+
     public SettingsViewModel(ShellSettings settings, Translations text, ShellLog log, ShellPreferences preferences)
     {
         _settings = settings;
@@ -211,6 +214,24 @@ public sealed class SettingsViewModel : ObservableObject
         set { if (value) SetTheme(Appearance.Dark); }
     }
 
+    public bool IsTabsCompact
+    {
+        get => TabSizes.Tidy(_preferences.TabSize) == TabSizes.Compact;
+        set { if (value) SetTabSize(TabSizes.Compact); }
+    }
+
+    public bool IsTabsNormal
+    {
+        get => TabSizes.Tidy(_preferences.TabSize) == TabSizes.Normal;
+        set { if (value) SetTabSize(TabSizes.Normal); }
+    }
+
+    public bool IsTabsLarge
+    {
+        get => TabSizes.Tidy(_preferences.TabSize) == TabSizes.Large;
+        set { if (value) SetTabSize(TabSizes.Large); }
+    }
+
     public bool IsLanguageSystem
     {
         get => _preferences.Language == "system";
@@ -248,6 +269,21 @@ public sealed class SettingsViewModel : ObservableObject
         OnPropertyChanged(nameof(IsThemeSystem));
         OnPropertyChanged(nameof(IsThemeLight));
         OnPropertyChanged(nameof(IsThemeDark));
+    }
+
+    public void SetTabSize(string choice)
+    {
+        choice = TabSizes.Tidy(choice);
+        if (TabSizes.Tidy(_preferences.TabSize) == choice)
+            return;
+
+        _preferences.TabSize = choice;
+        Save();
+        TabSizeChanged?.Invoke();
+
+        OnPropertyChanged(nameof(IsTabsCompact));
+        OnPropertyChanged(nameof(IsTabsNormal));
+        OnPropertyChanged(nameof(IsTabsLarge));
     }
 
     public void SetLanguage(string choice)

@@ -33,6 +33,32 @@
         <Style Selector="Button.chip">
             <Setter Property="Padding" Value="8,5" />
         </Style>
+        <!-- How big the strip is drawn. The size is a class on the ItemsControl rather than a
+             number bound into every element, so one setting moves the tabs, the chips, the icons
+             and the emoji together: everything inside a tab inherits the button's font size. -->
+        <Style Selector="ItemsControl.strip Button.tab, ItemsControl.strip Button.chip">
+            <Setter Property="FontSize" Value="13" />
+            <Setter Property="Padding" Value="10,5" />
+        </Style>
+        <Style Selector="ItemsControl.strip.compact Button.tab, ItemsControl.strip.compact Button.chip">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="7,3" />
+        </Style>
+        <Style Selector="ItemsControl.strip.large Button.tab, ItemsControl.strip.large Button.chip">
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Padding" Value="14,9" />
+        </Style>
+        <!-- The pop-out corner and the underline keep their proportion to the rest. -->
+        <Style Selector="ItemsControl.strip.large Button.tab Button">
+            <Setter Property="FontSize" Value="13" />
+        </Style>
+        <Style Selector="ItemsControl.strip.large Border.groupline">
+            <Setter Property="Height" Value="3" />
+        </Style>
+        <Style Selector="ItemsControl.strip.compact Button.tab Button">
+            <Setter Property="FontSize" Value="10" />
+        </Style>
+
         <!-- The insertion marker while something is dragged over the strip. -->
         <Style Selector="Border.marker">
             <Setter Property="Width" Value="2" />
@@ -285,7 +311,11 @@
                     BorderBrush="{DynamicResource MeowsLine}"
                     BorderThickness="0,0,0,1"
                     Padding="6,4">
-                <ItemsControl Name="Strip" ItemsSource="{Binding Strip.Items}">
+                <ItemsControl Name="Strip"
+                              Classes="strip"
+                              Classes.compact="{Binding Strip.IsCompact}"
+                              Classes.large="{Binding Strip.IsLarge}"
+                              ItemsSource="{Binding Strip.Items}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
                             <WrapPanel Orientation="Horizontal" />
@@ -384,7 +414,8 @@
                                                 CommandParameter="{Binding}" />
                                         <Border Classes="marker" IsVisible="{Binding HintAfter}" />
                                     </StackPanel>
-                                    <Border Height="2"
+                                    <Border Classes="groupline"
+                                            Height="2"
                                             CornerRadius="1"
                                             IsVisible="{Binding HasGroup}"
                                             Background="{Binding Paint}" />

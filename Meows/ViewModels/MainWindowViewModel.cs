@@ -157,6 +157,12 @@ public sealed class MainWindowViewModel : ObservableObject
             yield return new PaletteItem("Aa", text["palette.language.en"], text["settings.language"], () => sv.SetLanguage("en")) { IsCommand = true };
             yield return new PaletteItem("Aa", text["palette.language.de"], text["settings.language"], () => sv.SetLanguage("de")) { IsCommand = true };
             yield return new PaletteItem("Aa", text["palette.language.system"], text["settings.language"], () => sv.SetLanguage("system")) { IsCommand = true };
+            foreach (var size in TabSizes.All)
+            {
+                var pick = size;
+                yield return new PaletteItem("↕", text["settings.tabsize." + pick], text["settings.tabsize"],
+                    () => sv.SetTabSize(pick)) { IsCommand = true };
+            }
         }
 
         yield return new PaletteItem("🐾", text[PluginNames.Feline ? "palette.names.plain" : "palette.names.feline"], text["settings.names"],
@@ -404,6 +410,9 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     public ObservableCollection<TabViewModel> Tabs { get; } = new();
+
+    /// <summary>The Settings tab's own model, for the palette and for the tests that drive it.</summary>
+    public SettingsViewModel? Settings => _settingsViewModel;
 
     /// <summary>
     /// The strip over those tabs: Home, then a coloured chip and its tabs per group. Twenty-three
@@ -877,7 +886,10 @@ public sealed class MainWindowViewModel : ObservableObject
         Tabs.Add(new TabViewModel("shell.tab.home", "🏠", new HomeView { DataContext = _home }));
         _pluginsTab = new TabViewModel("shell.tab.plugins", "⛭", new PluginsView { DataContext = this });
         Tabs.Add(_pluginsTab);
-        _settingsViewModel = new SettingsViewModel(_settings, _text, _log, _preferences);
+        _settingsViewModel = new SettingsViewModel(_settings, _text, _log, _preferences)
+        {
+            TabSizeChanged = () => Strip.Resize(),
+        };
         _settingsTab = new TabViewModel("shell.tab.settings", "⚙", new SettingsView { DataContext = _settingsViewModel });
         Tabs.Add(_settingsTab);
         if (_store is not null)
