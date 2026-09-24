@@ -32,6 +32,7 @@ public sealed class FamiliarPlugin : IMeowsPlugin
         new("token", "familiar.records.token"),
         new("exported-foundry", "familiar.records.exported-foundry"),
         new("exported-roll20", "familiar.records.exported-roll20"),
+        new("sent", "familiar.records.sent"),
     ];
 
     public Control CreateView(IMeowsHost host) => new FamiliarView

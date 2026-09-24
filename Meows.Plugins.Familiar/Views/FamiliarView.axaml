@@ -301,6 +301,9 @@
                         <StackPanel Spacing="6" IsVisible="{Binding CanExport}">
                             <Button Content="{m:Tr familiar.export.foundry}" Command="{Binding ExportFoundryCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                             <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr familiar.export.foundry.hint}" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{Binding ServerText}" />
+                            <TextBox Text="{Binding ServerKits}" FontSize="11" IsVisible="{Binding CanReachServer}"
+                                     ToolTip.Tip="{m:Tr familiar.server.kits}" />
                             <Button Content="{m:Tr familiar.export.roll20}" Command="{Binding ExportRoll20Command}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
                                 <TextBlock Grid.Column="0" Classes="label" Text="{m:Tr familiar.export.roll20.limit}" VerticalAlignment="Center" TextWrapping="Wrap" />

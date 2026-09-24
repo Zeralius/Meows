@@ -12,7 +12,7 @@
 
         <!-- The app version. Moves independently of the plugin contract version;
              see the versioning section in README.md. -->
-        <Version>4.2.0</Version>
+        <Version>4.3.0</Version>
         <!-- Where the shell looks for its own newer release, the same way it does for a plugin. -->
         <RepositoryUrl>https://github.com/Zeralius/Meows</RepositoryUrl>
         <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
@@ -26,6 +26,9 @@
       <!-- The shared store. The shell carries SQLite once, for every plugin, and plugins reach it
            through the host rather than shipping a second copy. -->
       <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+      <!-- Reach over SFTP. The shell owns the connection so a plugin only ever names a place on
+           the server; a share or a mapped drive needs nothing but the file system. -->
+      <PackageReference Include="SSH.NET" Version="2026.0.0" />
     </ItemGroup>
 
     <!-- One file per language, merged into the string table at startup. Plugins ship their own

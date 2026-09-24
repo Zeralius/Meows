@@ -142,7 +142,7 @@ contract version the template was published with. No `ProjectReference`, no Meow
 ```xml
 <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.2.0" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.3.0" ExcludeAssets="runtime" PrivateAssets="all" />
 </ItemGroup>
 ```
 
@@ -233,8 +233,8 @@ The shell checks this for you. At discovery it reads the contract version your a
 compiled against and refuses anything it cannot honour, **before constructing your plugin**, so
 none of your code runs. The reason appears on your plugin's card in place of its toggle:
 
-> Built for Meows contract 1.3.0, which is newer than this shell's 1.2.0. Update Meows, or rebuild
-> the plugin against 1.2.0.
+> Built for Meows contract 1.4.0, which is newer than this shell's 1.3.0. Update Meows, or rebuild
+> the plugin against 1.3.0.
 
 A mismatched **major** is refused either way, since a major bump means members may have been
 removed. A **newer** minor or patch is refused; an older one loads fine, because additive
@@ -504,6 +504,7 @@ public interface IMeowsHost
     IMeowsStore Store { get; }          // 0.5.0
     IMeowsWatches Watches { get; }      // 0.7.0
     IMeowsPicker Pick { get; }          // 1.0.0
+    IMeowsReach Reach { get; }          // 1.3.0
 }
 ```
 
@@ -520,7 +521,8 @@ with *rebuild against 1.0.0* on its card. The members that came with 1.0.0 are `
 `IMeowsPlugin.WhileOff` in [section 3](#3-the-entry-point); nothing was taken away. **1.1.0**
 added `IGlanceable`, [a line on the Home tab](#a-line-on-the-home-tab), and nothing else.
 **1.2.0** added `IMeowsPlugin.Actions` and `IMeowsPlugin.Records`, `IActionTarget` and
-`ActionDeclinedException`, for [being asked by a rule](#being-asked-by-a-rule).
+`ActionDeclinedException`, for [being asked by a rule](#being-asked-by-a-rule). **1.3.0** added
+[`Reach`](#reach), the server a plugin can copy a folder to.
 
 ### `DataDirectory`
 
@@ -726,6 +728,39 @@ code-behinds opens a dialog any more; `ChonkViewModel.PickFolderCommand` is the 
 tests, `FakeHost.Picks` answers each dialog with the next scripted path, so the whole flow runs
 without a window. Reaching for `TopLevel.GetTopLevel(this)?.StorageProvider` in code-behind
 still works, if a plugin would rather.
+
+### `Reach`
+
+The server set on the Settings tab, the machine the bot and Foundry run on, reached either as a
+folder (a share, a mapped drive) or over SFTP with a key the shell keeps sealed. A plugin never
+learns which: it names a place under the server's root and hands over a folder.
+
+```csharp
+if (!_host.Reach.IsSet)
+    return;   // keep the button off, and say where to set a server
+
+_host.Background.Run("Putting the kit on the server", async context =>
+{
+    var progress = new Progress<ReachProgress>(p => context.ReportProgress((double)p.Done / p.Total));
+    var result = await _host.Reach.CopyFolder(kitFolder, "Data/modules/meows-kit/kits/tavern", progress, context.Token);
+    if (!result.Ok)
+        _host.Notifications.Post(NotificationSeverity.Warning, "Did not reach the server", result.Error ?? "");
+});
+```
+
+The remote path is relative with forward slashes; anything rooted or climbing out with `..` is
+refused. Subfolders come along, missing folders are made, a file already there under the same
+name is replaced and anything else there is left alone. Each file is written under a temporary
+name and moved into place once its size checks out, so a copy cut off halfway never leaves half
+a file under the real name. The server's own troubles, unplugged, refused, full, come back in the
+result rather than as an exception; only cancelling throws. `Where` names the server for a
+person, and is what to show beside the button.
+
+For SFTP the shell will not connect until a person has tested the server on the Settings tab,
+compared the key it answered with, and pressed Trust; a server that later answers with another
+key is refused with both keys in the error. None of that reaches a plugin, and the key itself
+never leaves the shell. Familiar is the worked example: `SendToServer` in `FamiliarViewModel`.
+The default, and a shell with nothing set, reaches nothing and says so.
 
 ### `Explorer`
 

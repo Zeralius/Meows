@@ -17,9 +17,11 @@ public sealed class PluginHost : IMeowsHost
         BackgroundTaskService background,
         IMeowsHandoff? handoff = null,
         IMeowsStore? store = null,
-        IMeowsPicker? picker = null)
+        IMeowsPicker? picker = null,
+        IMeowsReach? reach = null)
     {
         Pick = picker ?? NoPicker.Instance;
+        Reach = reach ?? NoReach.Instance;
         PluginId = pluginId;
         _settings = settings;
         _log = log;
@@ -36,6 +38,8 @@ public sealed class PluginHost : IMeowsHost
     public IMeowsWatches Watches { get; }
 
     public IMeowsPicker Pick { get; }
+
+    public IMeowsReach Reach { get; }
 
     public IMeowsSecrets Secrets { get; }
 

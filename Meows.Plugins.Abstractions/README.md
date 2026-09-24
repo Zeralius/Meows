@@ -31,7 +31,7 @@ cannot host the control you hand back.
 
 ```xml
 <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-<PackageReference Include="Meows.Plugins.Abstractions" Version="1.2.0" ExcludeAssets="runtime" PrivateAssets="all" />
+<PackageReference Include="Meows.Plugins.Abstractions" Version="1.3.0" ExcludeAssets="runtime" PrivateAssets="all" />
 ```
 
 There is a `dotnet new` template that writes all of this for you:
@@ -54,6 +54,12 @@ yours can be asked for in `IMeowsPlugin.Actions`, name the kinds of event it rec
 `IMeowsPlugin.Records`, and have the view model implement `IActionTarget`, which returns one
 sentence for the History tab. The shell keeps a rule from starting another rule, so a plugin
 never has to think about loops. See [PLUGIN-GUIDE.md](https://github.com/Zeralius/Meows/blob/main/PLUGIN-GUIDE.md#being-asked-by-a-rule).
+
+## Reaching the server
+
+`IMeowsHost.Reach` is the server set on Meows' Settings tab, a share or SFTP. Name a place under
+its root, hand over a folder, and read what came back: `await host.Reach.CopyFolder(folder,
+"Data/modules/my-module/drop")`. Which of the two it is, and the key for SFTP, stay with the shell.
 
 ## Colours and language
 

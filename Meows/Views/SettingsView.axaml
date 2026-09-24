@@ -129,6 +129,51 @@
                 </StackPanel>
             </Border>
 
+            <!-- Where plugins can copy to. A folder is anything Windows can already open; SFTP is
+                 a key, kept sealed, and a server key a person has looked at and trusted. -->
+            <Border Classes="section" IsVisible="{Binding HasServer}">
+                <StackPanel Spacing="10" DataContext="{Binding Server}" x:DataType="vm:ServerViewModel">
+                    <TextBlock Classes="heading" Text="{m:Tr settings.server}" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.server.hint}" />
+                    <StackPanel Spacing="4" Margin="0,4,0,0">
+                        <RadioButton GroupName="reach" Content="{m:Tr settings.server.none}" IsChecked="{Binding IsNone}" />
+                        <RadioButton GroupName="reach" Content="{m:Tr settings.server.folder}" IsChecked="{Binding IsFolder}" />
+                        <RadioButton GroupName="reach" Content="{m:Tr settings.server.sftp}" IsChecked="{Binding IsSftp}" />
+                    </StackPanel>
+
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" IsVisible="{Binding IsFolder}">
+                        <TextBox Text="{Binding Folder}" PlaceholderText="{m:Tr settings.server.folder.placeholder}" />
+                        <Button Grid.Column="1" Content="{m:Tr settings.server.browse}" Command="{Binding BrowseFolderCommand}" />
+                    </Grid>
+
+                    <StackPanel Spacing="8" IsVisible="{Binding IsSftp}">
+                        <Grid ColumnDefinitions="2*,Auto,*" ColumnSpacing="8">
+                            <TextBox Text="{Binding Host}" PlaceholderText="{m:Tr settings.server.host}" />
+                            <TextBlock Grid.Column="1" Text=":" VerticalAlignment="Center" Opacity="0.5" />
+                            <NumericUpDown Grid.Column="2" Value="{Binding Port}" Minimum="1" Maximum="65535" Increment="1" FormatString="0" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                            <TextBox Text="{Binding User}" PlaceholderText="{m:Tr settings.server.user}" />
+                            <TextBox Grid.Column="1" Text="{Binding RemoteRoot}" PlaceholderText="{m:Tr settings.server.root}" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                            <TextBlock Classes="hint" Text="{Binding KeyText}" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Content="{m:Tr settings.server.key.choose}" Command="{Binding ChooseKeyCommand}" />
+                            <Button Grid.Column="2" Content="{m:Tr settings.server.key.forget}" Command="{Binding ForgetKeyCommand}" />
+                        </Grid>
+                        <TextBox Text="{Binding Passphrase}" PasswordChar="•" PlaceholderText="{Binding PassphraseHint}" />
+                        <TextBlock Classes="hint" Text="{Binding TrustedKeyText}" />
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding !IsNone}">
+                        <Button Content="{m:Tr settings.server.test}" Command="{Binding TestCommand}" />
+                        <Button Content="{m:Tr settings.server.trust}" Command="{Binding TrustCommand}" IsVisible="{Binding HasOfferedKey}" />
+                    </StackPanel>
+                    <TextBlock Classes="hint" Text="{Binding TestResult}" IsVisible="{Binding HasTestResult}" />
+                    <TextBlock Classes="hint" Text="{Binding StateText}" />
+                </StackPanel>
+            </Border>
+
             <Border Classes="section">
                 <StackPanel Spacing="10">
                     <TextBlock Classes="heading" Text="{m:Tr settings.startup}" />

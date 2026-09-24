@@ -19,6 +19,11 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>Told after the tab size changes, so the strip redraws at the new one.</summary>
     public Action? TabSizeChanged { get; set; }
 
+    /// <summary>The Server section: where plugins can copy to. Null in a test that did not give one.</summary>
+    public ServerViewModel? Server { get; init; }
+
+    public bool HasServer => Server is not null;
+
     public SettingsViewModel(ShellSettings settings, Translations text, ShellLog log, ShellPreferences preferences)
     {
         _settings = settings;

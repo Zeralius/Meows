@@ -122,6 +122,13 @@ The **Settings** tab has two choices, and both take effect as you make them:
   scan you started, carries on while the window is hidden, and the icon shows a dot when there is
   something to read and a ring while something is still working. *Quit* is in the icon's menu. Untick the setting and the close button quits,
   as it did before 2.0.
+- **Server**: the machine the bot and Foundry run on, for the plugins that can put something
+  there. A folder, meaning a share, a mapped drive or anything Windows can already open, or SFTP
+  with an SSH key, kept sealed to your Windows account rather than pointed at. For SFTP, **Test**
+  shows the key the server answers with; compare it with the server and press **Trust**, and
+  from then on a server answering with any other key is refused. Nothing is copied until a
+  plugin asks. Familiar is the first to ask: a Foundry export goes to the server too, straight
+  into the meows-kit module's kits folder.
 - **Starting up**: whether Meows starts when you log in, and whether it starts in the tray or
   with the window open. It writes one entry to the per-user startup list, which needs no admin
   rights and shows up in the Task Manager's Startup tab like anything else.
@@ -369,13 +376,14 @@ which a plugin built against any 1.x loads on any later 1.x shell; plugins built
 are refused by a 3.x shell and need a rebuild against 1.0.0. **1.1.0**, with Meows 3.1.0,
 added the line a plugin can put on its Home card. **1.2.0**, with Meows 4.2.0, added the two
 lists a plugin gives the Rules tab, what it can be asked to do and what it records, and the
-interface its view model does the asking through.
+interface its view model does the asking through. **1.3.0**, with Meows 4.3.0, added the server
+a plugin can copy a folder to.
 
 Meows checks that version when it loads a plugin and refuses anything it cannot honour, with the
 reason on the plugin's card rather than a crash later:
 
-> Built for Meows contract 1.3.0, which is newer than this shell's 1.2.0. Update Meows, or rebuild
-> the plugin against 1.2.0.
+> Built for Meows contract 1.4.0, which is newer than this shell's 1.3.0. Update Meows, or rebuild
+> the plugin against 1.3.0.
 
 A newer contract is refused; an older one is fine, since additions stay backward compatible.
 
