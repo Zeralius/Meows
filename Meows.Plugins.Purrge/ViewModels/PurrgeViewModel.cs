@@ -33,6 +33,9 @@ public sealed class PurrgeSettings
     /// <summary>How many of 64 bits two pictures may differ in and still count as looking alike.</summary>
     public int LookalikeThreshold { get; set; } = Services.LookalikeScanner.DefaultThreshold;
 
+    /// <summary>Whether look-alikes also looks at videos, which needs ffmpeg and takes far longer.</summary>
+    public bool LookalikeVideos { get; set; }
+
     /// <summary>The fourth job: renaming. Only one of the modes is ever on.</summary>
     public bool GroomMode { get; set; }
 

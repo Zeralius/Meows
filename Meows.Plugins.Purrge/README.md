@@ -135,6 +135,20 @@ opinion, and two pages of one comic can look as close as two copies of one page.
   the Recycle Bin one at a time, and only once it and the one being kept are both on screen at
   full size, side by side.
 
+### Videos too
+
+Ticking **Videos too** asks the same question of videos: the same clip re-encoded, resized, or
+remuxed into another container. It needs ffmpeg installed (on PATH, or where winget or a plain
+`C:\ffmpeg` put it); without it videos are left out and the status line says so, rather than
+anything being guessed from file names. Each video gives five frames, at 10, 30, 50, 70 and 90 per
+cent of its length, each hashed the way pictures are, and two videos are alike when their lengths
+agree to within a second or two per cent and their frames are, on average, as close as the
+strictness allows. A clip cut from a longer video never matches it, because the lengths disagree
+first. Groups are all pictures or all videos, never both; the copy with the most pixels is
+suggested as the keeper, and the side-by-side panel shows each video's middle frame, so nothing is
+binned without both on screen. Frames are decoded two videos at a time, and access times are put
+back as for pictures.
+
 ## Rename: tidy the names
 
 The duplicates show how they got there: a browser's `(1)`, a `- Copy`, a transposed digit, a

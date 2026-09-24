@@ -119,6 +119,8 @@
                               SelectedIndex="{Binding Lookalikes.StrictnessIndex}"
                               FontSize="11"
                               VerticalAlignment="Center" />
+                    <CheckBox Content="{m:Tr purrge.lookalike.videos}" IsChecked="{Binding Lookalikes.IncludeVideos}" FontSize="11" VerticalAlignment="Center"
+                              ToolTip.Tip="{m:Tr purrge.lookalike.videos.hint}" />
                     <Button Content="{m:Tr purrge.lookalike.find}" Command="{Binding FindLookalikesCommand}" FontWeight="SemiBold" />
                     <Button Content="{m:Tr purrge.cancel}" Command="{Binding Lookalikes.CancelCommand}" />
                 </StackPanel>
