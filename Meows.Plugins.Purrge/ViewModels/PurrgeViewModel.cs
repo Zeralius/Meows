@@ -26,6 +26,12 @@ public sealed class PurrgeSettings
 
     /// <summary>Whether a copy with the same size and date is taken as identical without being read.</summary>
     public bool TrustTimestamps { get; set; }
+
+    /// <summary>The third job: pictures that look alike. Only one of this and <see cref="CompareMode"/> is ever on.</summary>
+    public bool LookalikeMode { get; set; }
+
+    /// <summary>How many of 64 bits two pictures may differ in and still count as looking alike.</summary>
+    public int LookalikeThreshold { get; set; } = Services.LookalikeScanner.DefaultThreshold;
 }
 
 public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable, IActionTarget
@@ -70,6 +76,13 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         RevealCommand = new RelayCommand(RevealSelected, () => SelectedFile is not null);
         SelectFileCommand = new RelayCommand(SelectFile);
         Compare = new CompareViewModel(host, () => _settings, SaveSettings);
+        Lookalikes = new LookalikeViewModel(host, () => _settings, SaveSettings);
+        FindLookalikesCommand = new RelayCommand(() => Lookalikes.Start(ScanRoot), () => ScanRoot.Length > 0 && !Lookalikes.IsRunning);
+        Lookalikes.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(LookalikeViewModel.IsRunning))
+                FindLookalikesCommand.RaiseCanExecuteChanged();
+        };
         UseAsSourceCommand = new RelayCommand(() => Compare.Source = ScanRoot, () => ScanRoot.Length > 0);
         UseAsCopyCommand = new RelayCommand(() => Compare.Copy = ScanRoot, () => ScanRoot.Length > 0);
 
@@ -77,11 +90,18 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         {
             OnEverythingChanged();
             Compare.Reread();
+            Lookalikes.Reread();
         });
     }
 
     /// <summary>The other thing this tab does: check that a copy is really a copy.</summary>
     public CompareViewModel Compare { get; }
+
+    /// <summary>And the third: pictures that look alike without being the same bytes.</summary>
+    public LookalikeViewModel Lookalikes { get; }
+
+    /// <summary>Looks for look-alikes under the folder picked in the tree.</summary>
+    public RelayCommand FindLookalikesCommand { get; }
 
     public RelayCommand UseAsSourceCommand { get; }
 
@@ -94,21 +114,35 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
     public bool IsCompareMode
     {
         get => _settings.CompareMode;
-        set
-        {
-            if (_settings.CompareMode == value)
-                return;
-            _settings.CompareMode = value;
-            SaveSettings();
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(IsDuplicatesMode));
-        }
+        set => SetMode(compare: value, lookalike: value ? false : _settings.LookalikeMode);
+    }
+
+    public bool IsLookalikeMode
+    {
+        get => _settings.LookalikeMode;
+        set => SetMode(compare: value ? false : _settings.CompareMode, lookalike: value);
     }
 
     public bool IsDuplicatesMode
     {
-        get => !IsCompareMode;
-        set => IsCompareMode = !value;
+        get => !_settings.CompareMode && !_settings.LookalikeMode;
+        set
+        {
+            if (value)
+                SetMode(compare: false, lookalike: false);
+        }
+    }
+
+    private void SetMode(bool compare, bool lookalike)
+    {
+        if (_settings.CompareMode == compare && _settings.LookalikeMode == lookalike)
+            return;
+        _settings.CompareMode = compare;
+        _settings.LookalikeMode = lookalike;
+        SaveSettings();
+        OnPropertyChanged(nameof(IsCompareMode));
+        OnPropertyChanged(nameof(IsLookalikeMode));
+        OnPropertyChanged(nameof(IsDuplicatesMode));
     }
 
     public ObservableCollection<FolderNodeViewModel> Roots { get; }
@@ -186,6 +220,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
                 return;
             ScanCommand.RaiseCanExecuteChanged();
             UseAsSourceCommand.RaiseCanExecuteChanged();
+            FindLookalikesCommand.RaiseCanExecuteChanged();
             UseAsCopyCommand.RaiseCanExecuteChanged();
         }
     }
@@ -724,6 +759,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
     {
         _language.Dispose();
         Compare.Dispose();
+        Lookalikes.Dispose();
         _scanTask?.Dispose();
         CancelThumbnails();
         PreviewImage = null;

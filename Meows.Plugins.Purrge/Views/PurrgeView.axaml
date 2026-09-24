@@ -76,6 +76,7 @@
             <StackPanel Orientation="Horizontal" Spacing="4">
                 <RadioButton Classes="mode" GroupName="purrge-mode" Content="{m:Tr purrge.mode.duplicates}" IsChecked="{Binding IsDuplicatesMode}" />
                 <RadioButton Classes="mode" GroupName="purrge-mode" Content="{m:Tr purrge.mode.compare}" IsChecked="{Binding IsCompareMode}" />
+                <RadioButton Classes="mode" GroupName="purrge-mode" Content="{m:Tr purrge.mode.lookalike}" IsChecked="{Binding IsLookalikeMode}" />
             </StackPanel>
         </Border>
 
@@ -95,6 +96,30 @@
                     <TextBlock Text="{Binding ResultSummary}" VerticalAlignment="Center" Opacity="0.65" />
                     <Button Content="{m:Tr purrge.scan}" Command="{Binding ScanCommand}" />
                     <Button Content="{m:Tr purrge.cancel}" Command="{Binding CancelScanCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Look-alike controls: the folder from the tree, how close counts, and one question -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10"
+                IsVisible="{Binding IsLookalikeMode}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding ScanRoot}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="label" Text="{Binding Lookalikes.Status}" TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Classes="label" VerticalAlignment="Center" Text="{m:Tr purrge.lookalike.how}" />
+                    <ComboBox ItemsSource="{Binding Lookalikes.StrictnessChoices}"
+                              SelectedIndex="{Binding Lookalikes.StrictnessIndex}"
+                              FontSize="11"
+                              VerticalAlignment="Center" />
+                    <Button Content="{m:Tr purrge.lookalike.find}" Command="{Binding FindLookalikesCommand}" FontWeight="SemiBold" />
+                    <Button Content="{m:Tr purrge.cancel}" Command="{Binding Lookalikes.CancelCommand}" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -151,7 +176,7 @@
             <!-- Folder tree -->
             <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.foldertoscan}" IsVisible="{Binding IsDuplicatesMode}" />
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.foldertoscan}" IsVisible="{Binding !IsCompareMode}" />
                     <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.folderpick}" IsVisible="{Binding IsCompareMode}" />
                     <TreeView ItemsSource="{Binding Roots}"
                               SelectedItem="{Binding SelectedFolder}"
@@ -259,6 +284,64 @@
                 </ScrollViewer>
             </DockPanel>
 
+            <!-- Look-alike groups: each file with its own size and pixels, the keeper marked -->
+            <DockPanel Grid.Column="2" IsVisible="{Binding IsLookalikeMode}">
+                <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.lookalike.grouped}" />
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,0,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding !Lookalikes.HasSets}"
+                           Text="{m:Tr purrge.lookalike.empty}" />
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding Lookalikes.Sets}" Margin="10,0,10,10">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LookalikeSetViewModel">
+                                <Border Background="{DynamicResource MeowsCard}"
+                                        BorderBrush="{DynamicResource MeowsLine}"
+                                        BorderThickness="1"
+                                        CornerRadius="7"
+                                        Padding="12,10"
+                                        Margin="0,0,0,10">
+                                    <StackPanel Spacing="6">
+                                        <TextBlock Text="{Binding Header}" FontWeight="SemiBold" />
+                                        <ItemsControl ItemsSource="{Binding Files}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:LookalikeFileViewModel">
+                                                    <Button Classes="row"
+                                                            Classes.selected="{Binding IsSelected}"
+                                                            HorizontalAlignment="Stretch"
+                                                            HorizontalContentAlignment="Left"
+                                                            BorderThickness="1"
+                                                            CornerRadius="4"
+                                                            Padding="6,4"
+                                                            Margin="0,0,0,2"
+                                                            Command="{Binding $parent[UserControl].((vm:PurrgeViewModel)DataContext).Lookalikes.SelectFileCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="10">
+                                                            <StackPanel Grid.Column="0" Spacing="1" VerticalAlignment="Center">
+                                                                <TextBlock Text="{Binding FileName}" TextTrimming="CharacterEllipsis" />
+                                                                <TextBlock Text="{Binding Folder}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                                            </StackPanel>
+                                                            <TextBlock Grid.Column="1" Text="{Binding PixelsText}" FontSize="11" VerticalAlignment="Center" />
+                                                            <TextBlock Grid.Column="2" Text="{Binding SizeText}" FontSize="11" VerticalAlignment="Center" />
+                                                            <Border Grid.Column="3" Classes="mark" Background="{DynamicResource MeowsInfo}" IsVisible="{Binding IsKeeper}">
+                                                                <TextBlock Text="{m:Tr purrge.lookalike.keeper}" FontSize="10" Foreground="{DynamicResource MeowsInfoText}" />
+                                                            </Border>
+                                                            <TextBlock Grid.Column="3" Text="{Binding DistanceText}" Classes="label" VerticalAlignment="Center" IsVisible="{Binding !IsKeeper}" />
+                                                        </Grid>
+                                                    </Button>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+
             <!-- Duplicate sets -->
             <DockPanel Grid.Column="2" IsVisible="{Binding IsDuplicatesMode}">
                 <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.grouped}" />
@@ -337,6 +420,52 @@
             </DockPanel>
 
             <GridSplitter Grid.Column="3" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <!-- Look-alikes side by side: the one kept above, the one looked at below, both at full
+                 size before anything can go. -->
+            <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0" IsVisible="{Binding IsLookalikeMode}">
+                <ScrollViewer Padding="16,12">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="{m:Tr purrge.lookalike.side}" FontWeight="SemiBold" FontSize="13" />
+                        <TextBlock Classes="label" Text="{m:Tr purrge.lookalike.nothing}" TextWrapping="Wrap" IsVisible="{Binding !Lookalikes.HasSelection}" />
+                        <StackPanel Spacing="6" IsVisible="{Binding Lookalikes.HasSelection}">
+                            <TextBlock Classes="label" Text="{m:Tr purrge.lookalike.kept}" />
+                            <Border Background="{DynamicResource MeowsSunken}" CornerRadius="4" MinHeight="120">
+                                <Image Source="{Binding Lookalikes.KeeperPreview}" Stretch="Uniform" MaxHeight="360" />
+                            </Border>
+                            <TextBlock Text="{Binding Lookalikes.Keeper.FileName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Classes="label" TextWrapping="Wrap">
+                                <Run Text="{Binding Lookalikes.Keeper.PixelsText}" />
+                                <Run Text=" · " />
+                                <Run Text="{Binding Lookalikes.Keeper.SizeText}" />
+                            </TextBlock>
+
+                            <TextBlock Classes="label" Text="{m:Tr purrge.lookalike.this}" Margin="0,10,0,0" />
+                            <Border Background="{DynamicResource MeowsSunken}" CornerRadius="4" MinHeight="120">
+                                <Image Source="{Binding Lookalikes.SelectedPreview}" Stretch="Uniform" MaxHeight="360" />
+                            </Border>
+                            <TextBlock Text="{Binding Lookalikes.SelectedFile.FileName}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Classes="label" TextWrapping="Wrap">
+                                <Run Text="{Binding Lookalikes.SelectedFile.PixelsText}" />
+                                <Run Text=" · " />
+                                <Run Text="{Binding Lookalikes.SelectedFile.SizeText}" />
+                                <Run Text=" · " />
+                                <Run Text="{Binding Lookalikes.SelectedFile.DistanceText}" />
+                            </TextBlock>
+
+                            <Button Content="{m:Tr purrge.lookalike.keepthis}" Command="{Binding Lookalikes.KeepThisCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,6,0,0" />
+                            <Button Content="{m:Tr purrge.explore}" Command="{Binding Lookalikes.RevealCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <Button Content="{m:Tr purrge.lookalike.recycle}"
+                                    Command="{Binding Lookalikes.RecycleCommand}"
+                                    Background="{DynamicResource MeowsDanger}"
+                                    BorderBrush="{DynamicResource MeowsDangerLine}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr purrge.lookalike.rule}" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
 
             <!-- The compare side: a look, and two ways into Explorer. Nothing that writes. -->
             <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0" IsVisible="{Binding IsCompareMode}">

@@ -111,6 +111,30 @@ The moment it fixed what it found it would be a backup tool with all of a backup
 modes, and the honest scope that makes it worth having would be gone. The two buttons under the
 preview open Explorer on the source and on the copy; fix things with the tool that made the copy.
 
+## Look-alikes: the same picture, saved differently
+
+Exact duplicates are identical bytes. Most duplication in a collection of downloaded pictures is
+not: the same image saved twice at different sizes, re-encoded by a site, watermarked, converted
+from PNG to JPEG. **Look-alikes** is a third mode for those. Every picture under the folder is
+decoded small, once, and given a perceptual hash, and pictures within the chosen closeness of
+each other form a group. Hashing, like everything else here, puts the access time back.
+
+It is kept apart from the other two on purpose. An exact match is a fact; a look-alike is an
+opinion, and two pages of one comic can look as close as two copies of one page. So:
+
+- **The results are never mixed.** Byte-for-byte copies are left to Duplicates, and a group here
+  never holds two identical files.
+- **Closeness defaults to boring.** *Very close*, four bits in sixty-four, with *nearly identical*
+  and *close* either side of it.
+- **Groups do not chain.** Each group forms around one picture and holds what is close to that
+  picture, so A like B and B like C does not make A like C.
+- **Every file carries its own size and pixels**, since near copies differ by definition. The one
+  suggested to keep has the most pixels, then the most bytes. **Keep this one instead** lets the
+  better copy win.
+- **Nothing is binned without looking.** There is no keep-one-bin-the-rest. A picture goes to
+  the Recycle Bin one at a time, and only once it and the one being kept are both on screen at
+  full size, side by side.
+
 ## Not in this version
 
 **Hardlinks and junctions.** Several paths can point at one file. Deleting one is harmless
