@@ -309,6 +309,13 @@
                                     HorizontalContentAlignment="Center"
                                     Margin="0,6,0,0" />
 
+                            <!-- An archive: unpack it beside itself and check the result. -->
+                            <Button Content="{m:Tr chonk.extract}"
+                                    Command="{Binding ExtractCommand}"
+                                    IsVisible="{Binding CanExtract}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
+
                             <!-- The other tools, one click away, when they are installed. -->
                             <Button Content="{m:Tr chonk.handoff.purrge}"
                                     Command="{Binding FindDuplicatesCommand}"
@@ -378,6 +385,36 @@
                                 Command="{Binding ConfirmDeleteCommand}"
                                 Background="{DynamicResource MeowsDanger}"
                                 BorderBrush="{DynamicResource MeowsDangerLine}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+
+        <!-- Unpacking asks too: the cost is the thing worth seeing before it starts. -->
+        <Border IsVisible="{Binding IsAskingExtract}" Background="{DynamicResource MeowsVeil}">
+            <Border Background="{DynamicResource MeowsCard}"
+                    BorderBrush="{DynamicResource MeowsLine}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="20,16"
+                    MaxWidth="440"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="{Binding ExtractPrompt}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding ExtractDetail}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+                    <TextBlock Text="{m:Tr chonk.extract.promise}" Opacity="0.55" FontSize="11" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="*,8,*">
+                        <Button Grid.Column="0"
+                                Content="{m:Tr chonk.cancel}"
+                                Command="{Binding CancelExtractCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="2"
+                                Content="{m:Tr chonk.extract.go}"
+                                Command="{Binding ConfirmExtractCommand}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center" />
                     </Grid>

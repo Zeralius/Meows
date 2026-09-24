@@ -105,6 +105,21 @@ Only zip archives, `.cbz` included, are opened. A `.rar` or `.7z` is still shown
 still pairs by name, but the panel says plainly that it cannot be compared here; 7-Zip can. There
 is no extract and no repack: 7-Zip does both, and a Chonk that produces files is a different tool.
 
+## Extract and check
+
+A zip or cbz with nothing of its name beside it carries **Extract and check**. It asks first,
+with the cost: how many files, how big unpacked, the new folder's name and the room left on the
+drive. It refuses without writing anything when a folder of that name is already there, when the
+archive wants a password, when there is nothing in it, or when the drive has no room for it.
+
+The files go into a folder with a temporary name, which only gets the real one once every entry
+is out, so a cancel or a failure halfway leaves the archive and nothing else. An entry whose name
+would land outside the folder stops the whole thing. Afterwards every listed file is held up
+against the folder with the same comparison that finds twins. When all of them are there byte
+for byte, the archive says it is a twin, and the Recycle Bin button beside it, with its warning,
+is how it goes. The history gets an *extracted* line either way, so a rule can follow it. Other
+formats stay with 7-Zip.
+
 ## Removing things
 
 **It asks first.** The confirmation says what is about to go, how big it is, and for a folder how

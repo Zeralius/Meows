@@ -140,6 +140,9 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable
         FindDuplicatesCommand = new RelayCommand(() => HandTo(KnownPlugins.Purrge), () => Selected is { CanDrillInto: true });
         SortWithKibbleCommand = new RelayCommand(() => HandTo(KnownPlugins.Kibble), () => Selected is { CanDrillInto: true });
         ConfirmDeleteCommand = new RelayCommand(() => Remove(PendingDelete), () => PendingDelete is not null);
+        ExtractCommand = new RelayCommand(() => _ = PlanExtractAsync(), () => CanExtract);
+        ConfirmExtractCommand = new RelayCommand(RunExtract, () => PendingExtract is { CanGo: true });
+        CancelExtractCommand = new RelayCommand(() => PendingExtract = null, () => PendingExtract is not null);
         CancelDeleteCommand = new RelayCommand(() => PendingDelete = null, () => PendingDelete is not null);
 
         LoadDrives();
@@ -443,6 +446,8 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable
                 return;
             DeleteCommand.RaiseCanExecuteChanged();
             ExploreCommand.RaiseCanExecuteChanged();
+            ExtractCommand.RaiseCanExecuteChanged();
+            OnPropertyChanged(nameof(CanExtract));
         FindDuplicatesCommand.RaiseCanExecuteChanged();
         SortWithKibbleCommand.RaiseCanExecuteChanged();
             Identify(value);
@@ -550,6 +555,138 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable
                 IsIdentifying = false;
             }
         }
+    }
+
+    // ---- extract and check ----
+
+    private ExtractPlan? _pendingExtract;
+    private IBackgroundTask? _extracting;
+
+    /// <summary>
+    /// Unpacks the selected archive beside itself and checks the result against its listing.
+    /// Asks first, with what it will cost; refuses what it cannot do without writing anything.
+    /// </summary>
+    public RelayCommand ExtractCommand { get; }
+
+    public RelayCommand ConfirmExtractCommand { get; }
+
+    public RelayCommand CancelExtractCommand { get; }
+
+    /// <summary>A zip-family archive with nothing of its name beside it, and nothing else under way.</summary>
+    public bool CanExtract =>
+        Selected is { IsArchive: true } archive && Archives.CanRead(archive.Path) && !IsScanning && _extracting is not { IsRunning: true };
+
+    /// <summary>The extraction waiting for a yes: where it lands and what it costs.</summary>
+    public ExtractPlan? PendingExtract
+    {
+        get => _pendingExtract;
+        private set
+        {
+            if (!SetField(ref _pendingExtract, value))
+                return;
+            OnPropertyChanged(nameof(IsAskingExtract));
+            OnPropertyChanged(nameof(ExtractPrompt));
+            OnPropertyChanged(nameof(ExtractDetail));
+            ConfirmExtractCommand.RaiseCanExecuteChanged();
+            CancelExtractCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool IsAskingExtract => _pendingExtract is not null;
+
+    public string ExtractPrompt => _pendingExtract is { } plan
+        ? _host.Text.Format("chonk.extract.prompt", System.IO.Path.GetFileName(plan.Archive))
+        : "";
+
+    public string ExtractDetail => _pendingExtract is not { } plan
+        ? ""
+        : plan.Free is { } free
+            ? _host.Text.Format("chonk.extract.cost.free", plan.Files, DiskScan.Humanise(plan.Bytes), System.IO.Path.GetFileName(plan.Folder), DiskScan.Humanise(free))
+            : _host.Text.Format("chonk.extract.cost", plan.Files, DiskScan.Humanise(plan.Bytes), System.IO.Path.GetFileName(plan.Folder));
+
+    /// <summary>What a refused plan means, in words.</summary>
+    private string Refused(ExtractPlan plan) => plan.Refusal switch
+    {
+        ArchiveExtractor.Refusal.FolderThere => _host.Text.Format("chonk.extract.refused.there", System.IO.Path.GetFileName(plan.Folder)),
+        ArchiveExtractor.Refusal.Password => _host.Text["chonk.extract.refused.password"],
+        ArchiveExtractor.Refusal.Empty => _host.Text["chonk.extract.refused.empty"],
+        ArchiveExtractor.Refusal.NoRoom => _host.Text.Format("chonk.extract.refused.room", DiskScan.Humanise(plan.Bytes), DiskScan.Humanise(plan.Free ?? 0)),
+        ArchiveExtractor.Refusal.NotZip => _host.Text["chonk.extract.refused.notzip"],
+        _ => _host.Text["chonk.extract.refused.unreadable"],
+    };
+
+    private async Task PlanExtractAsync()
+    {
+        if (!CanExtract || Selected is not { } archive)
+            return;
+        ErrorMessage = null;
+        var path = archive.Path;
+        var plan = await Task.Run(() => ArchiveExtractor.Plan(path));
+        if (!ReferenceEquals(Selected, archive))
+            return;
+        if (plan.CanGo)
+            PendingExtract = plan;
+        else
+            ErrorMessage = Refused(plan);
+    }
+
+    /// <summary>
+    /// Unpacks as background work, then checks. When every listed file is there with its bytes
+    /// intact, the archive's identity is worked out again, and it now says it is a twin: the
+    /// Recycle Bin button beside it is the offer, with the twin warning that already goes with it.
+    /// </summary>
+    private void RunExtract()
+    {
+        if (PendingExtract is not { CanGo: true } plan)
+            return;
+        PendingExtract = null;
+        var name = System.IO.Path.GetFileName(plan.Archive);
+        var selected = Selected;
+
+        _extracting = _host.Background.Run(_host.Text.Format("chonk.extract.task", name), async context =>
+        {
+            var progress = new Progress<(int Done, int Total)>(p =>
+            {
+                context.Report(_host.Text.Format("chonk.extract.progress", p.Done, p.Total));
+                context.ReportProgress(p.Total == 0 ? null : (double)p.Done / p.Total);
+            });
+            var report = await Task.Run(() => ArchiveExtractor.Extract(plan, progress, context.Token), context.Token);
+
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => Extracted(plan, report, selected));
+        });
+        ExtractCommand.RaiseCanExecuteChanged();
+        OnPropertyChanged(nameof(CanExtract));
+    }
+
+    private void Extracted(ExtractPlan plan, ExtractReport report, EntryViewModel? selected)
+    {
+        var name = System.IO.Path.GetFileName(plan.Archive);
+        var folder = System.IO.Path.GetFileName(plan.Folder);
+
+        if (report.Check is null)
+        {
+            ErrorMessage = _host.Text.Format("chonk.extract.failed", name, report.Error ?? "");
+        }
+        else
+        {
+            Status = report.Verified
+                ? _host.Text.Format("chonk.extract.verified", name, report.Files, folder)
+                : _host.Text.Format("chonk.extract.unverified", name, folder, report.Error ?? "");
+            _host.Store.Record("extracted", plan.Archive, Status, new Dictionary<string, string>
+            {
+                [ActionRequest.DestinationKey] = plan.Folder,
+                ["files"] = report.Files.ToString(),
+                ["verified"] = report.Verified ? "yes" : "no",
+            });
+            _host.Log($"Chonk unpacked {plan.Archive} into {plan.Folder}: {report.Files} file(s), {(report.Verified ? "every one checked" : report.Error)}.");
+
+            // The pair is new, so what the archive is has changed: it now has a twin beside it.
+            if (selected is not null && ReferenceEquals(Selected, selected))
+                Identify(selected);
+        }
+
+        ExtractCommand.RaiseCanExecuteChanged();
+        OnPropertyChanged(nameof(CanExtract));
     }
 
     public string Status
