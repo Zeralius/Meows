@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using Meows.Disk;
 using Meows.Media;
 
 namespace Meows.Bot;
@@ -33,6 +34,14 @@ public enum Trouble
 
     /// <summary>Long enough to go out as many separate posts rather than the one that was expected.</summary>
     ManyBatches,
+
+    /// <summary>
+    /// The name says one thing and the bytes another: a .jpg that is a PNG, a .cbz that is a RAR,
+    /// a .png that is a login page. A failure when the bytes are a different kind of file from
+    /// the one the name promises, since the bot sends it the wrong way; a note when it is only
+    /// the wrong picture format, which Telegram reads regardless.
+    /// </summary>
+    WrongExtension,
 }
 
 /// <summary>One file in a queue that will not go as it is.</summary>
@@ -48,8 +57,15 @@ public sealed record Heavy(
     int Pages,
     int HeavyPageCount,
     int BadPageCount = 0,
-    int ForeignCount = 0)
+    int ForeignCount = 0,
+    Mismatch? Lie = null)
 {
+    /// <summary>What the name would say if it told the truth, when that is something the bot posts.</summary>
+    public string? HonestPath => Lie is { } lie && MediaRules.IsPostable(lie.RenamedPath(Path)) ? lie.RenamedPath(Path) : null;
+
+    /// <summary>The bytes are a different kind of file from the one the name promises.</summary>
+    public bool LieChangesKind => Lie is { } lie && MediaRules.KindOf(lie.RenamedPath(Path)) != Kind;
+
     /// <summary>
     /// Whether Portion can do anything about it. Pictures and comic pages can be made smaller;
     /// a video needs ffmpeg, which is a different tool, a picture with an odd ratio needs
@@ -57,7 +73,7 @@ public sealed record Heavy(
     /// pages needs a person to look inside it.
     /// </summary>
     public bool CanShrink =>
-        Kind switch
+        !LieChangesKind && Kind switch
         {
             MediaKind.Photo => !Troubles.Contains(Trouble.OddRatio),
             MediaKind.Comic => Troubles.Contains(Trouble.HeavyPages) &&
@@ -67,7 +83,7 @@ public sealed record Heavy(
         };
 
     /// <summary>Whether the bot would fail on it, as opposed to merely doing something surprising.</summary>
-    public bool WillFail => Troubles.Any(t => t is Trouble.OverBytes or Trouble.TooManyPixels or Trouble.OddRatio
+    public bool WillFail => LieChangesKind || Troubles.Any(t => t is Trouble.OverBytes or Trouble.TooManyPixels or Trouble.OddRatio
         or Trouble.HeavyPages or Trouble.EmptyComic or Trouble.BadPages);
 
     public int Batches => Pages == 0 ? 0 : (int)Math.Ceiling(Pages / (double)MediaRules.MediaGroupLimit);
@@ -127,7 +143,15 @@ public static class Weigher
             return null;
         }
 
-        return kind switch
+        // The name is checked against the bytes first. A lie that changes the kind of file is
+        // the whole verdict: a .cbz that is a RAR cannot be opened as a comic to weigh its
+        // pages, and a .jpg that is a video is not a photo to measure.
+        var lie = FileSniff.Check(path);
+        var limitFor = MediaRules.ByteLimit(kind) ?? MediaRules.PhotoLimitBytes;
+        if (lie is not null && MediaRules.KindOf(lie.RenamedPath(path)) != kind)
+            return new Heavy(group, path, kind, size, limitFor, [Trouble.WrongExtension], null, null, 0, 0, Lie: lie);
+
+        var heavy = kind switch
         {
             MediaKind.Comic => InspectComic(group, path, size),
             MediaKind.Photo => InspectPhoto(group, path, size),
@@ -135,6 +159,42 @@ public static class Weigher
                 new Heavy(group, path, kind, size, limit, [Trouble.OverBytes], null, null, 0, 0),
             _ => null,
         };
+
+        if (lie is null)
+            return heavy;
+        return heavy is null
+            ? new Heavy(group, path, kind, size, limitFor, [Trouble.WrongExtension], null, null, 0, 0, Lie: lie)
+            : heavy with { Troubles = [.. heavy.Troubles, Trouble.WrongExtension], Lie = lie };
+    }
+
+    /// <summary>
+    /// Gives a file the extension its bytes call for, in the same folder, keeping its modified
+    /// time so its place in a queue does not change. Refused when something already has that
+    /// name, or when the honest name is not one the bot posts; for those, holding it back is the
+    /// way out. Returns the new path, or null with the reason.
+    /// </summary>
+    public static (string? Path, string? Error) RenameToMatch(string path)
+    {
+        if (FileSniff.Check(path) is not { } lie)
+            return (null, Meows.Plugins.Abstractions.MeowsText.Current["bot.rename.honest"]);
+
+        var target = lie.RenamedPath(path);
+        if (!MediaRules.IsPostable(target))
+            return (null, Meows.Plugins.Abstractions.MeowsText.Current.Format("bot.rename.notpostable", lie.Is.Name));
+        if (File.Exists(target))
+            return (null, Meows.Plugins.Abstractions.MeowsText.Current.Format("bot.rename.clash", Path.GetFileName(target)));
+
+        try
+        {
+            var modified = File.GetLastWriteTimeUtc(path);
+            File.Move(path, target);
+            File.SetLastWriteTimeUtc(target, modified);
+            return (target, null);
+        }
+        catch (Exception ex)
+        {
+            return (null, ex.Message);
+        }
     }
 
     private static Heavy? InspectPhoto(GroupConfig group, string path, long size)

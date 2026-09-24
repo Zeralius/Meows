@@ -168,6 +168,7 @@
   "tp.trouble.emptycomic": "No page inside that the bot can post, so it would fail outright.",
   "tp.trouble.foreign": "{0} file(s) inside are neither photo nor video, and the bot skips them without a word.",
   "tp.trouble.heavypages": "{0} page(s) inside are over the photo limit, so the batch holding them would fail.",
+  "tp.trouble.lie": "Says {0}, is {1}.",
   "tp.trouble.overbytes": "Over the Bot API's {0} MB limit for this kind of file, so the post would fail when it fired.",
   "tp.trouble.pixels": "Wider plus taller than sendPhoto allows, so the post would fail when it fired.",
   "tp.trouble.ratio": "More than twenty times as wide as it is tall, or the other way, which sendPhoto refuses. Scaling does not fix that; cropping would.",

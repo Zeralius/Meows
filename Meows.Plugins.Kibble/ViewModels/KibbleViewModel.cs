@@ -1219,8 +1219,9 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         }
         else
         {
-            StatusMessage = _host.Text.Format("kibble.status.sent", destination.Name, destination.RunwayText);
-            _host.Log($"Queued {Path.GetFileName(result.Destination!)} into {destination.Name}");
+            StatusMessage = _host.Text.Format("kibble.status.sent", destination.Name, destination.RunwayText)
+                            + (result.Detail is { } renamed ? " " + renamed : "");
+            _host.Log($"Queued {Path.GetFileName(result.Destination!)} into {destination.Name}{(result.Detail is null ? "" : $" ({result.Detail})")}");
         }
         RaiseGridState();
     }

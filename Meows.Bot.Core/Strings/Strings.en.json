@@ -1,4 +1,7 @@
 {
+  "bot.rename.clash": "{0} is already there, so nothing was renamed.",
+  "bot.rename.honest": "Its name already matches what it is.",
+  "bot.rename.notpostable": "It is really {0}, which the bot does not post under any name. Hold it back instead.",
   "bot.runway.days": "{0} days left",
   "bot.runway.dry": "dry",
   "bot.runway.hours": "{0} hours left",

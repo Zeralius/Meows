@@ -168,6 +168,7 @@
   "tp.trouble.emptycomic": "Keine Seite darin, die der Bot posten kann, es würde also glatt scheitern.",
   "tp.trouble.foreign": "{0} Datei(en) darin sind weder Foto noch Video, und der Bot überspringt sie wortlos.",
   "tp.trouble.heavypages": "{0} Seite(n) darin liegen über dem Fotolimit, der Stapel mit ihnen würde also scheitern.",
+  "tp.trouble.lie": "Heißt {0}, ist {1}.",
   "tp.trouble.overbytes": "Über dem {0}-MB-Limit der Bot-API für diese Art Datei, der Post würde also beim Abschicken scheitern.",
   "tp.trouble.pixels": "Breite plus Höhe übersteigen, was sendPhoto erlaubt, der Post würde also beim Abschicken scheitern.",
   "tp.trouble.ratio": "Mehr als zwanzigmal so breit wie hoch oder umgekehrt, was sendPhoto ablehnt. Skalieren hilft da nicht; Beschneiden schon.",

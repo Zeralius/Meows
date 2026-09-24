@@ -131,6 +131,7 @@ public sealed class MediaItemViewModel : ObservableObject, IDisposable
             Meows.Bot.Trouble.BadPages => text.Format("tp.trouble.badpages", heavy.BadPageCount),
             Meows.Bot.Trouble.ForeignFiles => text.Format("tp.trouble.foreign", heavy.ForeignCount),
             Meows.Bot.Trouble.ManyBatches => text.Format("tp.trouble.batches", heavy.Batches),
+            Meows.Bot.Trouble.WrongExtension when heavy.Lie is { } lie => text.Format("tp.trouble.lie", lie.Says, lie.Is.Name),
             _ => "",
         };
         return heavy.CanShrink ? $"{line} {text["tp.trouble.shrinkable"]}" : line;
