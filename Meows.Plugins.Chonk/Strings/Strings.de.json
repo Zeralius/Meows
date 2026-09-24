@@ -41,6 +41,7 @@
   "chonk.files.many": "{0} Dateien darin",
   "chonk.files.one": "1 Datei darin",
   "chonk.folder": "Ordner…",
+  "chonk.handoff.carry": "Auf ein anderes Laufwerk",
   "chonk.handoff.kibble": "Mit Kibble sortieren",
   "chonk.handoff.purrge": "Duplikate darin finden (Purrge)",
   "chonk.identifying": "Wird gerade eingeordnet…",
