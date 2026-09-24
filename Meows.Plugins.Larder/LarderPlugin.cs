@@ -16,7 +16,7 @@ public sealed class LarderPlugin : IMeowsPlugin
 
     public string Description => "larder.description";
 
-    public string Icon => "🥫";
+    public string Icon => "🧀";
 
     public string Category => "group.disk";
 
