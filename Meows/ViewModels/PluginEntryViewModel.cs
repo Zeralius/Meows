@@ -151,8 +151,29 @@ public sealed class PluginEntryViewModel : ObservableObject
 
     public bool HealthIsTrouble => Health.StoppedWatches > 0;
 
+    /// <summary>How the card finds out what this plugin has cost since Meows started. Null on a card nothing measures.</summary>
+    public Func<string, PluginCost>? CostOf { get; init; }
+
+    public PluginCost Cost => CostOf?.Invoke(Id) ?? PluginCost.Nothing;
+
+    /// <summary>"opened in 120 ms · 14 runs, 3 min busy": what it has cost, where its switch is.</summary>
+    public string CostText => PluginCosts.Describe(Cost, MeowsText.Current);
+
+    public bool HasCost => CostText.Length > 0;
+
+    public bool CostIsTrouble => Cost.SlowToOpen;
+
+    public void RefreshCost()
+    {
+        OnPropertyChanged(nameof(Cost));
+        OnPropertyChanged(nameof(CostText));
+        OnPropertyChanged(nameof(HasCost));
+        OnPropertyChanged(nameof(CostIsTrouble));
+    }
+
     public void RefreshHealth()
     {
+        RefreshCost();
         OnPropertyChanged(nameof(Health));
         OnPropertyChanged(nameof(HealthText));
         OnPropertyChanged(nameof(HasHealth));

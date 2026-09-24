@@ -63,6 +63,8 @@ public sealed class MainWindowViewModel : ObservableObject
         _log = log;
         _notifications = notifications;
         _background = background;
+        _background.Costs ??= new PluginCosts();
+        Costs = _background.Costs;
         _text = text;
         _preferences = preferences;
         _picker = new ShellPicker(() => Window);
@@ -86,6 +88,12 @@ public sealed class MainWindowViewModel : ObservableObject
 
         _notifications.Changed += RaiseNotificationState;
         _background.Changed += RaiseTaskState;
+        // A run starting or ending is when what a plugin has cost moves; only the cost line is read again.
+        _background.Changed += () =>
+        {
+            foreach (var entry in Plugins)
+                entry.RefreshCost();
+        };
         _background.WatchesChanged += OnWatchesChanged;
         if (_store is not null)
         {
@@ -958,7 +966,7 @@ public sealed class MainWindowViewModel : ObservableObject
             if (descriptor.Plugin is { } plugin)
                 _text.Add(plugin.GetType().Assembly);
 
-            Plugins.Add(new PluginEntryViewModel(descriptor, OnActivationChanged, HealthOf, Uninstall, UpdatePlugin));
+            Plugins.Add(new PluginEntryViewModel(descriptor, OnActivationChanged, HealthOf, Uninstall, UpdatePlugin) { CostOf = Costs.For });
         }
 
         Regroup();
@@ -1049,7 +1057,10 @@ public sealed class MainWindowViewModel : ObservableObject
                 new HandoffService(entry.Id, CanReach, SendHandoff), _store?.For(entry.Id), _picker, _reach);
             _dormant.Remove(entry.Id);
             _sourceById[entry.Id] = entry.DisplayName;
+            var opening = System.Diagnostics.Stopwatch.StartNew();
             var view = entry.Descriptor.Plugin!.CreateView(host);
+            Costs.Opened(entry.Id, opening.Elapsed);
+            entry.RefreshCost();
             var tab = new TabViewModel(entry.Id, () => entry.DisplayName, entry.Icon, view) { IsPlugin = true };
             _pluginTabs[entry.Id] = tab;
             Tabs.Add(tab);
@@ -1105,6 +1116,9 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         Plugins.FirstOrDefault(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase))?.RefreshHealth();
     });
+
+    /// <summary>What each plugin has cost since Meows started, on its card on the Plugins tab.</summary>
+    public PluginCosts Costs { get; }
 
     private void OnWatchesChanged()
     {
