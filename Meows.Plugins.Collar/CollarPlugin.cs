@@ -56,6 +56,12 @@ public sealed class CollarPlugin : IMeowsPlugin
         return settings is null || settings.Entries.Count == 0 ? null : new SleepingCollar(host, settings.Entries);
     }
 
+    /// <summary>The dates are in the settings file, so the Home line needs nothing else.</summary>
+    public Glance? GlanceWhileOff(IMeowsDormantHost host) =>
+        host.LoadSettings<CollarSettings>() is { } settings
+            ? CollarViewModel.GlanceOf(settings.Entries, settings.LeadDays, DateTime.Today, host.Text)
+            : null;
+
     private sealed class SleepingCollar(IMeowsDormantHost host, IReadOnlyList<Services.CollarEntry> entries) : ISearchable
     {
         public IReadOnlyList<SearchHit> Search(string query, int limit)

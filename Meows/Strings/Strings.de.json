@@ -3,6 +3,8 @@
   "contract.newer": "Gebaut für Meows-Schnittstelle {0} und damit neuer als die hier vorhandene {1}. Entweder Meows aktualisieren oder das Plugin gegen {1} neu bauen.",
   "contract.ui.major": "Gebaut gegen Avalonia {0}, diese Anwendung nutzt aber {1}. Beide teilen sich eine einzige Kopie von Avalonia, also muss die Hauptversion passen, sonst sind die erzeugten Steuerelemente keine, die hier angezeigt werden können.",
   "contract.ui.newer": "Gebaut gegen Avalonia {0} und damit neuer als das hier vorhandene {1}. Entweder Meows aktualisieren oder das Plugin gegen Avalonia {1} neu bauen.",
+  "glance.none": "Keine Plugins sind eingeschaltet.",
+  "glance.nothing": "noch nichts eingetragen",
   "group.bot": "Posting-Bot",
   "group.disk": "Platte und Aufräumen",
   "group.everyday": "Alltag",

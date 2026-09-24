@@ -15,7 +15,7 @@ internal static class Program
     /// Attaches to the console of whatever launched us.
     ///
     /// This is a WinExe, so it has no console of its own and standard output goes nowhere when
-    /// run from a terminal. Only matters for --list-plugins, which exists to be read.
+    /// run from a terminal. Only matters for --list-plugins and --glance, which exist to be read.
     /// </summary>
     private static void UseParentConsole()
     {
@@ -59,6 +59,15 @@ internal static class Program
         {
             UseParentConsole();
             Environment.ExitCode = ListPlugins();
+            return;
+        }
+
+        // The Home tab's lines with no window, for a terminal or a status bar. Read-only, so it
+        // runs beside a Meows that is already open rather than handing itself over to it.
+        if (args.Contains("--glance", StringComparer.OrdinalIgnoreCase))
+        {
+            UseParentConsole();
+            Environment.ExitCode = Glance(json: args.Contains("--json", StringComparer.OrdinalIgnoreCase));
             return;
         }
 
@@ -122,6 +131,47 @@ internal static class Program
         catch (Exception ex)
         {
             Console.Error.WriteLine($"Listing plugins failed: {ex}");
+            return 2;
+        }
+    }
+
+    /// <summary>
+    /// Every switched-on plugin's line from the Home tab, as text or as JSON, in the language the
+    /// window is set to. Nothing is switched on or started: each plugin answers from its settings
+    /// and its journal, and one that has nothing to say gets the last thing it recorded.
+    /// </summary>
+    private static int Glance(bool json)
+    {
+        try
+        {
+            var settings = new ShellSettings();
+            Environment.SetEnvironmentVariable(ShellSettings.RootVariable, settings.Root);
+            var preferences = settings.LoadPreferences();
+            var log = new ShellLog(Path.Combine(Path.GetTempPath(), "meows-glance.log"));
+
+            var text = new Translations(message => log.Write("strings", message));
+            text.Add(typeof(App).Assembly);
+            text.Use(preferences.Language);
+            Plugins.Abstractions.MeowsText.Use(text);
+            Plugins.Abstractions.PluginNames.Feline = preferences.FelineNames;
+
+            var found = new Plugins.PluginCatalog(log).Discover();
+            foreach (var plugin in found.Where(d => d.Plugin is not null))
+                text.Add(plugin.Plugin!.GetType().Assembly);
+
+            // Only a store that is already there: asking for a glance should not be what makes one.
+            var store = File.Exists(Path.Combine(settings.Root, "meows.db"))
+                ? new MeowsStore(settings.Root, message => log.Write("store", message))
+                : null;
+
+            var lines = GlanceReport.Gather(found, settings.LoadActivatedPlugins(), settings, store, message => log.Write("glance", message));
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Console.WriteLine(json ? GlanceReport.AsJson(lines, DateTimeOffset.Now) : GlanceReport.AsText(lines));
+            return 0;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Glancing failed: {ex}");
             return 2;
         }
     }
