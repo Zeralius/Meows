@@ -9,6 +9,7 @@ public enum DeadKind
     EmptyFile,
     BrokenShortcut,
     Leftover,
+    Orphan,
 }
 
 /// <summary>
@@ -24,6 +25,9 @@ public sealed record Finding(string Path, string Name, DeadKind Kind, string Det
 public sealed record MouserOptions
 {
     public bool SkipSystemFolders { get; init; } = true;
+
+    /// <summary>The pairing rules switched on, by id. See <see cref="Shadow"/>.</summary>
+    public IReadOnlySet<string> ShadowRules { get; init; } = new HashSet<string>(Shadow.DefaultOn);
 
     /// <summary>Files Windows and macOS leave behind and nothing needs.</summary>
     public static readonly string[] LeftoverNames = ["Thumbs.db", "ehthumbs.db", ".DS_Store"];
@@ -129,6 +133,7 @@ public static class MouserScan
             }
 
             var files = FolderWalk.Files(current);
+            var judged = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
             foreach (var file in files)
             {
@@ -142,11 +147,26 @@ public static class MouserScan
 
                 var finding = Inspect(file);
                 if (finding is not null)
+                {
                     findings.Add(finding);
+                    judged.Add(file.FullName);
+                }
             }
 
             if (gaveUpAt is not null)
                 break;
+
+            // Orphans are judged against the whole folder, so only once every file in it is known.
+            var sizes = files.ToDictionary(f => f.FullName, SafeLength, StringComparer.OrdinalIgnoreCase);
+            foreach (var (path, rule, expected) in Shadow.In(current.FullName, files.Select(f => f.Name).ToList(), options.ShadowRules))
+            {
+                if (judged.Contains(path))
+                    continue;
+                findings.Add(new Finding(path, Path.GetFileName(path), DeadKind.Orphan, rule.DetailKey, sizes.GetValueOrDefault(path))
+                {
+                    DetailValues = [expected],
+                });
+            }
 
             var children = FolderWalk.Into(current, options.SkipSystemFolders);
 
@@ -290,6 +310,7 @@ public static class MouserScan
         DeadKind.EmptyFolder => "mouser.kind.emptyfolder",
         DeadKind.EmptyFile => "mouser.kind.emptyfile",
         DeadKind.BrokenShortcut => "mouser.kind.brokenshortcut",
+        DeadKind.Orphan => "mouser.kind.orphan",
         _ => "mouser.kind.leftover",
     };
 }

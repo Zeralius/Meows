@@ -13,6 +13,29 @@ public sealed class MouserSettings
     public bool SkipSystemFolders { get; set; } = true;
 
     public bool ConfirmDeletes { get; set; } = true;
+
+    /// <summary>Shadow's pairing rules that are on, by id.</summary>
+    public List<string> ShadowRules { get; set; } = [.. Shadow.DefaultOn];
+}
+
+/// <summary>One of Shadow's pairing rules, shown with its switch so none of them is applied unseen.</summary>
+public sealed class ShadowRuleViewModel(ShadowRule rule, bool isOn, Action<ShadowRuleViewModel> changed) : ObservableObject
+{
+    private bool _isOn = isOn;
+
+    public ShadowRule Rule { get; } = rule;
+
+    public string Name => MeowsText.Current[Rule.NameKey];
+
+    public bool IsOn
+    {
+        get => _isOn;
+        set
+        {
+            if (SetField(ref _isOn, value))
+                changed(this);
+        }
+    }
 }
 
 public sealed class FindingViewModel(Finding finding) : ObservableObject
@@ -34,6 +57,7 @@ public sealed class FindingViewModel(Finding finding) : ObservableObject
         DeadKind.EmptyFolder => "📁",
         DeadKind.EmptyFile => "📄",
         DeadKind.BrokenShortcut => "🔗",
+        DeadKind.Orphan => "🌘",
         _ => "🧹",
     };
 }
@@ -93,6 +117,9 @@ public sealed class MouserViewModel : ObservableObject, IDisposable, ISearchable
         CancelDeleteCommand = new RelayCommand(() => PendingCount = 0, () => IsAsking);
         ExploreCommand = new RelayCommand(() => Open(SelectedOne?.Folder), () => SelectedOne is not null);
 
+        foreach (var rule in Shadow.Rules)
+            ShadowRules.Add(new ShadowRuleViewModel(rule, _settings.ShadowRules.Contains(rule.Id), OnShadowRuleChanged));
+
         if (HasRoot)
             StartScan();
         _language = new LanguageWatch(OnEverythingChanged);
@@ -101,6 +128,16 @@ public sealed class MouserViewModel : ObservableObject, IDisposable, ISearchable
     public ObservableCollection<FindingViewModel> Findings { get; } = new();
 
     public ObservableCollection<KindViewModel> Kinds { get; } = new();
+
+    public ObservableCollection<ShadowRuleViewModel> ShadowRules { get; } = new();
+
+    /// <summary>A rule switched on or off changes the answer, so the folder is looked at again.</summary>
+    private void OnShadowRuleChanged(ShadowRuleViewModel rule)
+    {
+        _settings.ShadowRules = ShadowRules.Where(r => r.IsOn).Select(r => r.Rule.Id).ToList();
+        Save();
+        StartScan();
+    }
 
     public List<FindingViewModel> Selected { get; } = [];
 
@@ -282,7 +319,11 @@ public sealed class MouserViewModel : ObservableObject, IDisposable, ISearchable
         Status = _host.Text["mouser.status.looking"];
 
         var root = Root;
-        var options = new MouserOptions { SkipSystemFolders = SkipSystemFolders };
+        var options = new MouserOptions
+        {
+            SkipSystemFolders = SkipSystemFolders,
+            ShadowRules = new HashSet<string>(_settings.ShadowRules),
+        };
 
         _scan = _host.Background.Run(_host.Text.Format("mouser.task.look", root), async context =>
         {
