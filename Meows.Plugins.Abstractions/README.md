@@ -31,7 +31,7 @@ cannot host the control you hand back.
 
 ```xml
 <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-<PackageReference Include="Meows.Plugins.Abstractions" Version="1.0.0" ExcludeAssets="runtime" PrivateAssets="all" />
+<PackageReference Include="Meows.Plugins.Abstractions" Version="1.2.0" ExcludeAssets="runtime" PrivateAssets="all" />
 ```
 
 There is a `dotnet new` template that writes all of this for you:
@@ -46,6 +46,14 @@ dotnet new meows-plugin -n MyPlugin
 `IMeowsHost` provides a private data directory, JSON settings, the shared log, the notification
 surface, background work the shell cancels when your plugin is switched off, and the language the
 window is in.
+
+## Joining in with rules
+
+The Rules tab says *when* one plugin records something, *then* ask another to act. Offer what
+yours can be asked for in `IMeowsPlugin.Actions`, name the kinds of event it records in
+`IMeowsPlugin.Records`, and have the view model implement `IActionTarget`, which returns one
+sentence for the History tab. The shell keeps a rule from starting another rule, so a plugin
+never has to think about loops. See [PLUGIN-GUIDE.md](https://github.com/Zeralius/Meows/blob/main/PLUGIN-GUIDE.md#being-asked-by-a-rule).
 
 ## Colours and language
 

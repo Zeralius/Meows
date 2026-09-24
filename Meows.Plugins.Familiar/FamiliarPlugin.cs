@@ -23,6 +23,17 @@ public sealed class FamiliarPlugin : IMeowsPlugin
     /// <summary>A handoff Familiar sends itself: open this kit. The note carries the kit's folder.</summary>
     public const string KitVerb = "familiar.kit";
 
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("created", "familiar.records.created"),
+        new("added", "familiar.records.added"),
+        new("fitted", "familiar.records.fitted"),
+        new("framed", "familiar.records.framed"),
+        new("token", "familiar.records.token"),
+        new("exported-foundry", "familiar.records.exported-foundry"),
+        new("exported-roll20", "familiar.records.exported-roll20"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new FamiliarView
     {
         DataContext = new FamiliarViewModel(host),

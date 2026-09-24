@@ -27,6 +27,10 @@ public sealed class MainWindowViewModel : ObservableObject
     private bool _popOutsRestored;
     private readonly Dictionary<string, AvailableUpdate> _availableUpdates = new(StringComparer.OrdinalIgnoreCase);
     private HistoryViewModel? _history;
+    private InstinctEngine? _instinct;
+    private RulesViewModel? _rules;
+    private TabViewModel? _rulesTab;
+    private readonly Dictionary<string, CancellationTokenSource> _actionStops = new(StringComparer.OrdinalIgnoreCase);
     private HomeViewModel? _home;
     private TabViewModel? _pluginsTab;
     private SettingsViewModel? _settingsViewModel;
@@ -79,7 +83,14 @@ public sealed class MainWindowViewModel : ObservableObject
         _background.Changed += RaiseTaskState;
         _background.WatchesChanged += OnWatchesChanged;
         if (_store is not null)
+        {
             _store.Recorded += OnRecorded;
+            _instinct = new InstinctEngine(_preferences.Rules, InstinctPlugins, PerformAction,
+                _store.For(InstinctEngine.PluginId), SavePreferences,
+                (line, level) => _log.Write("instinct", line, level),
+                work => Avalonia.Threading.Dispatcher.UIThread.Post(work));
+            _store.Stored += _instinct.Consider;
+        }
         _text.PropertyChanged += (_, _) => Retranslate();
 
         PluginNames.Feline = preferences.FelineNames;
@@ -148,6 +159,8 @@ public sealed class MainWindowViewModel : ObservableObject
             yield return new PaletteItem("⚙", text.Format("palette.goto", text["shell.tab.settings"]), "", () => SelectedTab = settings, weight: 1);
         if (_historyTab is { } history)
             yield return new PaletteItem("≡", text.Format("palette.goto", text["shell.tab.history"]), "", () => SelectedTab = history, weight: 1);
+        if (_rulesTab is { } rules)
+            yield return new PaletteItem("⚡", text.Format("palette.goto", text["shell.tab.rules"]), "", () => SelectedTab = rules, weight: 1);
 
         if (_settingsViewModel is { } sv)
         {
@@ -389,6 +402,7 @@ public sealed class MainWindowViewModel : ObservableObject
     private void Retranslate()
     {
         _history?.Retranslate();
+        _rules?.Refresh();
         _home?.Retranslate();
         _logTab?.Retranslate();
         foreach (var entry in Plugins)
@@ -898,6 +912,13 @@ public sealed class MainWindowViewModel : ObservableObject
             _historyTab = new TabViewModel("shell.tab.history", "≡", new HistoryView { DataContext = _history });
             Tabs.Add(_historyTab);
         }
+        if (_instinct is not null && _store is not null)
+        {
+            var store = _store;
+            _rules = new RulesViewModel(_instinct, InstinctPlugins, id => store.Kinds(id));
+            _rulesTab = new TabViewModel("shell.tab.rules", "⚡", new RulesView { DataContext = _rules });
+            Tabs.Add(_rulesTab);
+        }
 
         _logTab = new LogViewModel(_log, ReadLogLevels(), SaveLogLevels);
         Tabs.Add(new TabViewModel("shell.tab.log", "≣", new LogView { DataContext = _logTab }));
@@ -935,6 +956,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
         Regroup();
         OfferUpdates();
+        _rules?.Refresh();
 
         OnPropertyChanged(nameof(PluginsDirectoryText));
         OnPropertyChanged(nameof(HasPlugins));
@@ -1002,7 +1024,7 @@ public sealed class MainWindowViewModel : ObservableObject
         PersistActivations();
     }
 
-    private void Activate(PluginEntryViewModel entry)
+    private void Activate(PluginEntryViewModel entry, bool bringToFront = true)
     {
         if (_pluginTabs.ContainsKey(entry.Id))
             return;
@@ -1024,7 +1046,8 @@ public sealed class MainWindowViewModel : ObservableObject
             var tab = new TabViewModel(entry.Id, () => entry.DisplayName, entry.Icon, view) { IsPlugin = true };
             _pluginTabs[entry.Id] = tab;
             Tabs.Add(tab);
-            SelectedTab = tab;
+            if (bringToFront)
+                SelectedTab = tab;
             // Was in its own window last time and is switched on again: out it goes.
             if (_popOutsRestored && _popOuts.RememberedOut.Contains(entry.Id))
                 _popOuts.PopOut(tab);
@@ -1122,7 +1145,72 @@ public sealed class MainWindowViewModel : ObservableObject
 
     /// <summary>A plugin's name for its id, for the History tab; the id itself when it is not installed any more.</summary>
     private string PluginName(string pluginId) =>
-        Plugins.FirstOrDefault(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? pluginId;
+        string.Equals(pluginId, InstinctEngine.PluginId, StringComparison.OrdinalIgnoreCase)
+            ? _text["instinct.name"]
+            : Plugins.FirstOrDefault(p => string.Equals(p.Id, pluginId, StringComparison.OrdinalIgnoreCase))?.DisplayName ?? pluginId;
+
+    /// <summary>
+    /// What the rules can see of each installed plugin: its name, what it can be asked to do and
+    /// what it says it records. Read from the plugin object, which exists whether it is on or
+    /// off; a plugin that throws on being asked simply offers nothing.
+    /// </summary>
+    private IReadOnlyList<InstinctPlugin> InstinctPlugins()
+    {
+        var found = new List<InstinctPlugin>();
+        foreach (var entry in Plugins.Where(p => p.IsCompatible && p.Descriptor.Plugin is not null))
+        {
+            IReadOnlyList<PluginAction> actions;
+            IReadOnlyList<RecordedKind> records;
+            try
+            {
+                actions = entry.Descriptor.Plugin!.Actions;
+                records = entry.Descriptor.Plugin!.Records;
+            }
+            catch (Exception ex)
+            {
+                _log.Write("instinct", $"'{entry.DisplayName}' failed to say what it can do: {ex.Message}", LogLevel.Warning);
+                actions = [];
+                records = [];
+            }
+            found.Add(new InstinctPlugin(entry.Id, entry.DisplayName, actions, records));
+        }
+        return found;
+    }
+
+    /// <summary>
+    /// A rule asking a plugin to act. Switched on if it is off, without its tab coming to the
+    /// front, since a rule is not somebody looking; then its view model is asked. What it says
+    /// back, or why it could not be asked, goes to the history through the engine.
+    /// </summary>
+    private async Task<string> PerformAction(string targetId, ActionRequest request, CancellationToken token)
+    {
+        var entry = Plugins.FirstOrDefault(p => string.Equals(p.Id, targetId, StringComparison.OrdinalIgnoreCase));
+        if (entry is null || !entry.IsCompatible)
+            throw new InvalidOperationException(_text.Format("instinct.outcome.notinstalled", targetId));
+
+        if (!_pluginTabs.ContainsKey(entry.Id))
+        {
+            Activate(entry, bringToFront: false);
+            if (!_pluginTabs.ContainsKey(entry.Id))
+                throw new InvalidOperationException(_text.Format("instinct.outcome.wouldnotopen", entry.DisplayName));
+            entry.SetActivatedSilently(true);
+            PersistActivations();
+            _log.Write("instinct", $"Switched on '{entry.DisplayName}' because a rule asked it to '{request.Action}'.");
+        }
+
+        var tab = _pluginTabs[entry.Id];
+        var target = (tab.Content as Avalonia.Controls.Control)?.DataContext as IActionTarget
+                     ?? tab.Content as IActionTarget
+                     ?? throw new InvalidOperationException(_text.Format("instinct.outcome.notarget", entry.DisplayName));
+
+        // Switching the plugin off stops what it was asked to do, the same as its own work.
+        if (!_actionStops.TryGetValue(entry.Id, out var stop))
+            _actionStops[entry.Id] = stop = new CancellationTokenSource();
+        using var both = CancellationTokenSource.CreateLinkedTokenSource(token, stop.Token);
+
+        _log.Write("instinct", $"Asking '{entry.DisplayName}' to '{request.Action}' for {request.Subject}.");
+        return await target.Perform(request, both.Token);
+    }
 
     /// <summary>Installed and loadable. Whether it takes a particular handoff is only known once it is open.</summary>
     private bool CanReach(string pluginId) =>
@@ -1207,6 +1295,11 @@ public sealed class MainWindowViewModel : ObservableObject
         // Order matters. Stop its work and take down its notifications before the view goes,
         // or a cancelled task can post into a shell that has forgotten the plugin.
         _background.CancelAllFor(entry.Id);
+        if (_actionStops.Remove(entry.Id, out var stop))
+        {
+            stop.Cancel();
+            stop.Dispose();
+        }
         if (_sourceById.TryGetValue(entry.Id, out var source))
             _notifications.RemoveAllFrom(source);
 
@@ -1244,6 +1337,9 @@ public sealed class MainWindowViewModel : ObservableObject
         MarkSeen();
         foreach (var entry in Plugins.Where(p => p.IsActivated).ToList())
             Deactivate(entry);
+        if (_instinct is not null && _store is not null)
+            _store.Stored -= _instinct.Consider;
+        _instinct?.Dispose();
         _background.Dispose();
         _home?.Dispose();
 

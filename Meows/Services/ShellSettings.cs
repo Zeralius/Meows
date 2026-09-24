@@ -504,6 +504,13 @@ public sealed class ShellPreferences
     /// keeps the order it was switched on in, at the end.
     /// </summary>
     public List<string> TabOrder { get; set; } = [];
+
+    /// <summary>
+    /// The standing rules on the Rules tab: when one plugin records something, ask another to
+    /// act. A rule whose plugin has been uninstalled stays in here and is shown as unable to
+    /// run, so putting the plugin back brings the rule back with it.
+    /// </summary>
+    public List<InstinctRule> Rules { get; set; } = [];
 }
 
 /// <summary>One group on the tab strip, as it is remembered.</summary>

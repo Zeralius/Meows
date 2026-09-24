@@ -1,4 +1,9 @@
 {
+  "purrge.action.busy": "Purrge war schon mitten in einer Suche, also durfte die zu Ende laufen.",
+  "purrge.action.gone": "{0} ist nicht mehr da, also gab es nichts zu durchsuchen.",
+  "purrge.action.scan": "Im Ordner nach Duplikaten suchen",
+  "purrge.action.scan.hint": "Durchsucht den Ordner, um den es ging, oder den Ordner der Datei, und antwortet mit der Zahl der Gruppen und Kopien.",
+  "purrge.action.unknown": "Purrge weiß nicht, wie man „{0}“ macht.",
   "purrge.basis.created": "Erstellungszeit",
   "purrge.basis.modified": "Änderungszeit",
   "purrge.cancel": "Abbrechen",
@@ -50,6 +55,7 @@
   "purrge.preview": "Vorschau",
   "purrge.progress.comparing": "Inhalte werden verglichen… {0}",
   "purrge.progress.listing": "Dateien werden erfasst… {0} gesehen",
+  "purrge.records.recycled": "eine Kopie in den Papierkorb gelegt hat",
   "purrge.sanity": "Treffer sind Byte für Byte gleich, die Vorschau ist also eine Gegenprobe und kein Beweis. Alles Entfernte geht in den Papierkorb.",
   "purrge.scan": "Suchen",
   "purrge.side.absent": "nicht da",

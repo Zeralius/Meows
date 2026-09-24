@@ -38,11 +38,17 @@ public sealed class ShellViewSmokeTests : IDisposable
             Task.FromResult(new HttpResponseMessage(HttpStatusCode.NotFound));
     }
 
-    private (MainWindowViewModel Model, ShellSettings Settings) Build()
+    private (MainWindowViewModel Model, ShellSettings Settings) Build(Action<ShellPreferences>? before = null)
     {
         Directory.CreateDirectory(_root);
         var log = new ShellLog(Path.Combine(_root, "meows.log"));
         var settings = new ShellSettings(_root, Path.Combine(_root, "no-mews"));
+        if (before is not null)
+        {
+            var saved = settings.LoadPreferences();
+            before(saved);
+            settings.SavePreferences(saved);
+        }
         var text = TestStrings.Load();
         MeowsText.Use(text);
         var notifications = new NotificationCenter();
@@ -145,6 +151,43 @@ public sealed class ShellViewSmokeTests : IDisposable
             window?.Close();
             Settle();
         }
+    }
+
+    [AvaloniaFact]
+    public void A_rule_whose_plugins_are_not_installed_is_shown_with_the_reason_and_kept()
+    {
+        var complaints = new BindingComplaints(Logger.Sink);
+        var previousSink = Logger.Sink;
+        Logger.Sink = complaints;
+
+        var (model, settings) = Build(p => p.Rules.Add(new InstinctRule
+        {
+            Source = "meows.birdwatch", Kind = "saved", Target = "meows.portion", Action = "check", Matching = "paws",
+        }));
+        Window? window = null;
+        try
+        {
+            window = new MainWindow { DataContext = model };
+            model.Window = window;
+            window.Show();
+            model.SelectedTab = model.Tabs.Single(t => t.Key == "shell.tab.rules");
+            Settle();
+
+            var rows = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
+            Assert.Contains(rows, t => t is not null && t.Contains("meows.birdwatch") && t.Contains("paws"));
+            Assert.Contains(rows, t => t is not null && t.StartsWith("Waiting for meows.birdwatch"));
+        }
+        finally
+        {
+            model.Shutdown();
+            window?.Close();
+            Settle();
+            Logger.Sink = previousSink;
+        }
+
+        Assert.Single(settings.LoadPreferences().Rules);
+        Assert.True(complaints.Lines.Count == 0,
+            $"The rules tab raised {complaints.Lines.Count} complaint(s):\n" + string.Join("\n", complaints.Lines.Distinct()));
     }
 
     private static void Settle()

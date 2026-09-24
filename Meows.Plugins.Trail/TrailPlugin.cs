@@ -20,6 +20,12 @@ public sealed class TrailPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("tidied", "trail.records.tidied"),
+        new("restored", "trail.records.restored"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new TrailView
     {
         DataContext = new TrailViewModel(host),

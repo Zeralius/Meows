@@ -146,7 +146,7 @@ public sealed class HeavyViewModel : ObservableObject, IDisposable
     public void Dispose() => Thumbnail = null;
 }
 
-public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget, IGlanceable
+public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget, IGlanceable, IActionTarget
 {
     private const int ThumbnailWidth = 56;
     private const int PreviewWidth = 720;
@@ -448,9 +448,46 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
                     _scanned = true;
                     IsScanning = false;
                     OnPropertyChanged(nameof(AllClear));
+                    AnswerWaiters();
                 });
             }
         });
+    }
+
+    /// <summary>Rules waiting to hear how the walk went. Answered by whichever walk is the current one when it ends.</summary>
+    private readonly List<TaskCompletionSource<string>> _scanWaiters = [];
+
+    private void AnswerWaiters()
+    {
+        var said = ErrorMessage ?? Status;
+        foreach (var waiter in _scanWaiters)
+            waiter.TrySetResult(said);
+        _scanWaiters.Clear();
+    }
+
+    /// <summary>
+    /// A rule's "check the queues": the same walk as the Scan button, and the sentence the tab
+    /// ends on is the answer. A walk already under way is started again, as the button would;
+    /// a shrink in progress is left alone and the rule is told so.
+    /// </summary>
+    public async Task<string> Perform(ActionRequest request, CancellationToken token)
+    {
+        if (request.Action != PortionPlugin.CheckAction)
+            throw new ActionDeclinedException(_host.Text.Format("portion.action.unknown", request.Action));
+        if (_isShrinking)
+            throw new ActionDeclinedException(_host.Text["portion.action.busy"]);
+
+        var done = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _scanWaiters.Add(done);
+        StartScan();
+        if (!IsScanning)
+        {
+            _scanWaiters.Remove(done);
+            throw new ActionDeclinedException(ErrorMessage ?? _host.Text["portion.error.nobot"]);
+        }
+
+        await using (token.Register(() => done.TrySetCanceled(token)))
+            return await done.Task;
     }
 
     private void Apply(IReadOnlyList<Heavy> found)

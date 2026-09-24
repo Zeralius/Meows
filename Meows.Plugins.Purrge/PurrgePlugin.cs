@@ -19,6 +19,19 @@ public sealed class PurrgePlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    /// <summary>A rule's "look for duplicates in its folder".</summary>
+    public const string ScanAction = "scan";
+
+    public IReadOnlyList<PluginAction> Actions =>
+    [
+        new(ScanAction, "purrge.action.scan", "purrge.action.scan.hint"),
+    ];
+
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("recycled", "purrge.records.recycled"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new PurrgeView
     {
         DataContext = new PurrgeViewModel(host),

@@ -97,7 +97,7 @@ public sealed class GrowthViewModel(Growth growth, long driveDelta) : Observable
 /// useful question, because nobody notices a drive filling until it is full. One reading of
 /// every drive a day, kept to a fixed depth, and the tab says what moved between then and now.
 /// </summary>
-public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
+public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable, IActionTarget
 {
     private readonly IMeowsHost _host;
     private readonly WeighInSettings _settings;
@@ -374,8 +374,40 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
         }
         finally
         {
-            await Dispatcher.UIThread.InvokeAsync(() => IsReading = false);
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                IsReading = false;
+                var said = ErrorMessage ?? Status;
+                foreach (var waiter in _readingWaiters)
+                    waiter.TrySetResult(said);
+                _readingWaiters.Clear();
+            });
         }
+    }
+
+    /// <summary>Rules waiting on the reading under way.</summary>
+    private readonly List<TaskCompletionSource<string>> _readingWaiters = [];
+
+    /// <summary>
+    /// A rule's "take a reading now": the same pass as the button, and the answer is the line
+    /// the tab ends on. A reading already under way is the one the rule gets, rather than a
+    /// second walk of every drive straight after the first.
+    /// </summary>
+    public async Task<string> Perform(ActionRequest request, CancellationToken token)
+    {
+        if (request.Action != WeighInPlugin.MeasureAction)
+            throw new ActionDeclinedException(_host.Text.Format("weighin.action.unknown", request.Action));
+
+        var done = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _readingWaiters.Add(done);
+        if (!IsReading)
+        {
+            ErrorMessage = null;
+            TakeReading(byHand: true);
+        }
+
+        await using (token.Register(() => done.TrySetCanceled(token)))
+            return await done.Task;
     }
 
     /// <summary>One line per drive in the history: what it holds and what moved since the last reading.</summary>

@@ -33,6 +33,9 @@ the only thing here that writes anything, and closing Meows forgets the lot.
 Images are always saved as **PNG**, even though the clipboard hands over an uncompressed bitmap.
 A 400 by 260 clipboard bitmap is about 416 KB of raw pixels and lands as roughly 1 KB.
 
+A picture saved into the intake folder is also a line in the history, *saved*, so a rule on the
+Rules tab can act on it. Text is never written down, for the same reason as above.
+
 ## How it watches
 
 By asking Windows for the clipboard's sequence number a couple of times a second. That number

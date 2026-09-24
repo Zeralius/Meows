@@ -1,4 +1,8 @@
 {
+  "portion.action.busy": "Portion verkleinert gerade Dateien, also wurden die Warteschlangen in Ruhe gelassen.",
+  "portion.action.check": "Warteschlangen prüfen",
+  "portion.action.check.hint": "Wiegt jede Warteschlange wie der Scan-Knopf und antwortet mit dem, was beim Posten scheitern würde.",
+  "portion.action.unknown": "Portion weiß nicht, wie man „{0}“ macht.",
   "portion.allclear": "Jede Datei in jeder Warteschlange liegt unter den Grenzen der Bot-API, jeder Comic hat postbare Seiten, und nichts darin gibt sich als Bild aus.",
   "portion.botfolder": "Bot-Ordner…",
   "portion.cancel": "Abbrechen",
@@ -29,6 +33,8 @@
   "portion.outcome.done": "Von {0} auf {1} verkleinert. Das Original liegt im Papierkorb.",
   "portion.outcome.failed": "Ließ sich nicht verkleinern.",
   "portion.progress": "Wiege {0}",
+  "portion.records.held": "eine Datei zurückgehalten hat",
+  "portion.records.shrunk": "eine Datei verkleinert hat",
   "portion.remedy.badpages": "Eine Seite, deren Bytes kein Bild sind, lässt den ganzen Schub scheitern, in dem sie steckt. Das Archiv öffnen und sie ersetzen oder entfernen; Portion rät nicht, welche.",
   "portion.remedy.comic": "Die schweren Seiten werden verkleinert und das Archiv darum neu gebaut, gleiche Namen, gleiche Reihenfolge, damit der Wiederaufnahmestand des Bots weiter gilt.",
   "portion.remedy.comic.note": "Nichts hiervon hindert ihn am Posten. Dateien, die der Bot überspringt, bleiben, wo sie sind, und ein langer Comic braucht eben mehrere Beiträge.",

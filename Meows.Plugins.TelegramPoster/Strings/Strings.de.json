@@ -95,6 +95,7 @@
   "tp.openfolder": "Ordner öffnen",
   "tp.queue.empty": "Warteschlange leer · {0} archiviert",
   "tp.queue.some": "{0} in der Warteschlange · {1} archiviert",
+  "tp.records.held": "eine Datei zurückgehalten hat",
   "tp.refresh": "Neu einlesen",
   "tp.reload": "Neu laden",
   "tp.saved": "config.json gespeichert. Damit es greift, den Bot neu starten",

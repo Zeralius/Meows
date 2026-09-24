@@ -1,5 +1,8 @@
 {
   "weighin.about": "A reading keeps folder totals to that depth, a few thousand numbers on a full drive, and the last sixty readings are kept. A drive under 10% free and still shrinking is said on the notification surface until it is not.",
+  "weighin.action.measure": "Take a reading now",
+  "weighin.action.measure.hint": "Measures every drive the way the button does, so what grew is known now rather than at the next daily pass.",
+  "weighin.action.unknown": "Weigh-In does not know how to “{0}”.",
   "weighin.chonk": "Measure it in Chonk",
   "weighin.depth": "Folder levels kept per drive",
   "weighin.description": "Measures every drive once a day and says what grew: which drive lost how much since last week, and the folders responsible.",
@@ -28,6 +31,7 @@
   "weighin.nothingselected": "Nothing selected",
   "weighin.progress": "Walking {0}",
   "weighin.readnow": "Read now",
+  "weighin.records.reading": "took a reading of a drive",
   "weighin.selected": "Selected",
   "weighin.status.cancelled": "Reading stopped. The last one stands.",
   "weighin.status.read": "{0} drives read at {1}.",

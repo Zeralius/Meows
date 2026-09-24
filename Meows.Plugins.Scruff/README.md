@@ -153,6 +153,15 @@ kept in the ordinary settings, because it is shown on the card and is not a secr
 DeviantArt and Tumblr the sealed file holds the app's id and secret together with the tokens,
 since neither half is any use without the other.
 
+## When a rule asks
+
+On the Rules tab Scruff offers **Take the metadata out of it, where it is**: the one picture the
+other plugin's event was about, whatever is in the tab's own pile. For a file Kibble queued that
+is the file in the queue, not where it came from. A picture that carries nothing is left exactly
+as it was. One that carries something is cleaned the way *Clean in place* cleans, the original
+to the Recycle Bin, and the clean copy is given the original's modified time, because the bot
+orders a queue by it and a cleaned file must not jump the queue.
+
 ## What it does not do
 
 - **It does not post video.** Every one of these places treats video differently and several of

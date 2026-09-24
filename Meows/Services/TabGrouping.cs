@@ -69,7 +69,7 @@ public static class TabGroups
     public const string HomeKey = "shell.tab.home";
 
     public static readonly string[] ShellTabs =
-        ["shell.tab.plugins", "shell.tab.settings", "shell.tab.history", "shell.tab.log"];
+        ["shell.tab.plugins", "shell.tab.settings", "shell.tab.history", "shell.tab.rules", "shell.tab.log"];
 }
 
 /// <summary>One group as the strip needs it: who is in it, what colour, and whether it is shut.</summary>
