@@ -1,0 +1,114 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Nest.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Nest.Views.NestView"
+             x:DataType="vm:NestViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="14,12,14,6" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
+        </Style>
+        <Style Selector="TextBlock.waiting">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsWarnText}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Total}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Classes="label" Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="{m:Tr nest.stop}" Command="{Binding StopCommand}" IsVisible="{Binding IsWorking}" />
+                    <Button Content="{m:Tr nest.measure}" Command="{Binding MeasureCommand}" />
+                    <Button Content="{m:Tr nest.copy}" Command="{Binding CopyCommand}" FontWeight="SemiBold" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="*,4,300">
+
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr nest.places}" />
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding Places}" Margin="14,0,14,14">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PlaceViewModel">
+                                <Border Padding="10,8" Margin="0,0,0,6" CornerRadius="6"
+                                        Background="{DynamicResource MeowsCard}" BorderBrush="{DynamicResource MeowsLine}" BorderThickness="1">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                        <CheckBox Grid.Column="0" IsChecked="{Binding IsOn}" VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" Spacing="2">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding Path}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock FontSize="12">
+                                                <Run Text="{Binding SizeText}" />
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding StandingText}" FontSize="12" TextWrapping="Wrap" Classes.waiting="{Binding NeedsCopy}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center">
+                                            <Button Content="{m:Tr nest.open}" FontSize="11"
+                                                    Command="{Binding $parent[UserControl].((vm:NestViewModel)DataContext).OpenCommand}"
+                                                    CommandParameter="{Binding}" />
+                                            <Button Content="{m:Tr nest.remove}" FontSize="11" IsVisible="{Binding IsAdded}"
+                                                    Command="{Binding $parent[UserControl].((vm:NestViewModel)DataContext).RemovePlaceCommand}"
+                                                    CommandParameter="{Binding}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <Border Grid.Column="2" Classes="panel" BorderThickness="1,0,0,0">
+                <ScrollViewer>
+                    <StackPanel>
+                        <TextBlock Classes="section" Text="{m:Tr nest.copyto}" />
+                        <TextBlock Margin="14,0" TextWrapping="Wrap" FontWeight="SemiBold" Text="{Binding CopyRoot}" IsVisible="{Binding HasCopyRoot}" />
+                        <TextBlock Margin="14,0" TextWrapping="Wrap" Opacity="0.45" Text="{m:Tr nest.copyto.none}" IsVisible="{Binding !HasCopyRoot}" />
+                        <Button Content="{m:Tr nest.copyto.pick}" Command="{Binding PickCopyRootCommand}" Margin="14,8" FontSize="11" />
+                        <TextBlock Classes="label" Margin="14,0,14,8" TextWrapping="Wrap" Text="{m:Tr nest.copyto.how}" />
+
+                        <TextBlock Classes="section" Text="{m:Tr nest.more}" />
+                        <Button Content="{m:Tr nest.add}" Command="{Binding AddPlaceCommand}" Margin="14,0,14,8" FontSize="11" />
+                        <TextBlock Classes="label" Margin="14,0,14,14" TextWrapping="Wrap" Text="{m:Tr nest.notcomplete}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

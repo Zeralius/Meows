@@ -72,6 +72,7 @@
     <ProjectReference Include="..\Meows.Plugins.Larder\Meows.Plugins.Larder.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Carry\Meows.Plugins.Carry.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Cattery\Meows.Plugins.Cattery.csproj" />
+    <ProjectReference Include="..\Meows.Plugins.Nest\Meows.Plugins.Nest.csproj" />
     <!-- The examples under examples/, so their views are smoke-tested like every plugin's. -->
     <ProjectReference Include="..\examples\Meow\Meow.csproj" />
     <ProjectReference Include="..\examples\Yowl\Yowl.csproj" />

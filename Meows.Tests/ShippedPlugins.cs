@@ -38,6 +38,7 @@ internal static class ShippedPlugins
         typeof(Plugins.Larder.LarderPlugin),
         typeof(Plugins.Carry.CarryPlugin),
         typeof(Plugins.Cattery.CatteryPlugin),
+        typeof(Plugins.Nest.NestPlugin),
         // kitten: next plugin goes here
     ];
 }

@@ -37,6 +37,7 @@ to install.
 | **[Larder](Meows.Plugins.Larder/README.md)** | Every installed Steam game with its size, when it was last played and which library it is in, the never-touched largest first |
 | **[Carry](Meows.Plugins.Carry/README.md)** | Moves a folder to a drive with room, checks every file, and leaves a junction behind so every path that pointed at it still works |
 | **[Cattery](Meows.Plugins.Cattery/README.md)** | Every git repository under your project folders: its branch, uncommitted work, what is not pushed, and how long since anyone committed, the most neglected first |
+| **[Nest](Meows.Plugins.Nest/README.md)** | Game saves, maps, project files and keys: the few things that cannot be downloaded again, how much there is, and how long since each was copied somewhere else |
 | **[Kibble](Meows.Plugins.Kibble/README.md)** | Sorts a folder of new material into queues, one key press at a time, and can bundle a pick into a comic |
 | **[Perch](Meows.Plugins.Perch/README.md)** | One timeline of what the posting bot will send and when, every group merged, out as far as the queues last |
 | **[Portion](Meows.Plugins.Portion/README.md)** | Finds what the bot will fail on in every queue before it fails at night, and shrinks the pictures that can be shrunk |
