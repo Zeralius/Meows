@@ -99,6 +99,44 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
 
     public ObservableCollection<HistoryLineViewModel> Recent { get; } = [];
 
+    /// <summary>The last seven days, counted from the history: the weekly recap.</summary>
+    public ObservableCollection<string> Week { get; } = [];
+
+    public bool HasWeek => Week.Count > 0;
+
+    private DateTime _weekCountedAt = DateTime.MinValue;
+
+    /// <summary>
+    /// Counted again at most every five minutes: Home refreshes on every notification and every
+    /// task, and a week of history is more than the dozen lines the rest of the page asks for.
+    /// </summary>
+    private void CountWeek(bool force)
+    {
+        if (_store is null || (!force && DateTime.UtcNow - _weekCountedAt < TimeSpan.FromMinutes(5)))
+            return;
+        _weekCountedAt = DateTime.UtcNow;
+        var now = DateTime.UtcNow;
+        var recap = WeeklyRecap.Of(_store.Between(now - WeeklyRecap.Week, now), now - WeeklyRecap.Week, now);
+        Week.Clear();
+        foreach (var line in WeeklyRecap.Lines(recap, _pluginName, KindLabel, MeowsText.Current))
+            Week.Add(line);
+        OnPropertyChanged(nameof(HasWeek));
+    }
+
+    /// <summary>The words a plugin gave the Rules tab for one kind of line, when it gave any.</summary>
+    private string? KindLabel(string plugin, string kind)
+    {
+        var entry = _plugins.FirstOrDefault(p => string.Equals(p.Id, plugin, StringComparison.OrdinalIgnoreCase));
+        try
+        {
+            return entry?.Descriptor.Plugin?.Records.FirstOrDefault(r => r.Kind == kind)?.Label;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
     public bool HasRecent => Recent.Count > 0;
 
     public RelayCommand RefreshCommand { get; }
@@ -173,6 +211,8 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
                 Recent.Add(new HistoryLineViewModel(stored, _pluginName(stored.Plugin)));
         }
 
+        CountWeek(force: false);
+
         OnPropertyChanged(nameof(HasNotifications));
         OnPropertyChanged(nameof(HasRunning));
         OnPropertyChanged(nameof(HasPlugins));
@@ -182,7 +222,11 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(WatchesInTrouble));
     }
 
-    public void Retranslate() => Refresh();
+    public void Retranslate()
+    {
+        _weekCountedAt = DateTime.MinValue;
+        Refresh();
+    }
 
     private void OnRecorded(string pluginId) => Avalonia.Threading.Dispatcher.UIThread.Post(Refresh);
 

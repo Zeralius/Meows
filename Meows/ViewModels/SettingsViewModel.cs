@@ -119,6 +119,20 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>The week counted from the history, as one notification a week.</summary>
+    public bool WeeklyRecap
+    {
+        get => _preferences.WeeklyRecap;
+        set
+        {
+            if (_preferences.WeeklyRecap == value)
+                return;
+            _preferences.WeeklyRecap = value;
+            _settings.SavePreferences(_preferences);
+            OnPropertyChanged();
+        }
+    }
+
     /// <summary>Which surface this machine got, said rather than failed quietly.</summary>
     public string OutsideHow => MeowsText.Current[Toasts.Surface switch
     {

@@ -176,6 +176,39 @@ public sealed class MeowsStore
         return kinds;
     }
 
+    /// <summary>Every event between two times, oldest first, up to a limit: what a week's recap is counted from.</summary>
+    public IReadOnlyList<StoredEvent> Between(DateTime fromUtc, DateTime toUtc, int limit = 50_000)
+    {
+        var events = new List<StoredEvent>();
+        try
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT id, at, plugin, kind, subject, detail, data FROM events WHERE at >= $from AND at < $to ORDER BY id LIMIT $limit";
+            command.Parameters.AddWithValue("$from", Stamp(fromUtc));
+            command.Parameters.AddWithValue("$to", Stamp(toUtc));
+            command.Parameters.AddWithValue("$limit", limit);
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+            {
+                var json = reader.IsDBNull(6) ? null : reader.GetString(6);
+                events.Add(new StoredEvent(
+                    reader.GetInt64(0),
+                    Parse(reader.GetString(1)),
+                    reader.GetString(2),
+                    reader.GetString(3),
+                    reader.GetString(4),
+                    reader.IsDBNull(5) ? null : reader.GetString(5),
+                    json is null ? new Dictionary<string, string>() : JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? []));
+            }
+        }
+        catch (Exception ex)
+        {
+            _log($"Could not read a week of events: {ex.Message}");
+        }
+        return events;
+    }
+
     /// <summary>Events, newest first. Plugin, kind and text are each optional filters.</summary>
     public IReadOnlyList<StoredEvent> Events(string? plugin, string? kind, string? text, int limit)
     {

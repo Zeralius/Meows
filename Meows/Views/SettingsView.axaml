@@ -131,6 +131,11 @@
                         <RadioButton GroupName="HistoryKeep" Content="{m:Tr settings.history.month}" IsChecked="{Binding KeepAMonth}" />
                     </StackPanel>
                     <TextBlock Classes="hint" Text="{m:Tr settings.history.note}" />
+
+                    <CheckBox Content="{m:Tr settings.recap}"
+                              IsChecked="{Binding WeeklyRecap}"
+                              Margin="0,4,0,0" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.recap.hint}" />
                 </StackPanel>
             </Border>
 

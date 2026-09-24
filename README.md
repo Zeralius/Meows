@@ -69,6 +69,12 @@ coming up", "2 would fail to post", red when it wants doing; under it is what th
 did and whether its watches are running. Meows lives in the tray, so this is the page for opening
 it after hours.
 
+**This week**, on Home, counts the last seven days of the history: how many things were done, what
+went to the Recycle Bin, what Carry moved to another drive, how much rules set off, and the five
+things done most, in each plugin's own words. Once a week the same comes as one notification,
+unless the Settings tab turns it off; the first week only starts the clock. Every number is read
+back from what the plugins already recorded, so it is exactly as true as the history.
+
 Every plugin starts switched off. Open the **Plugins** tab, turn on the ones you want, and each
 gets its own tab. Turning one off closes its tab again. Nothing runs until you ask for it.
 
