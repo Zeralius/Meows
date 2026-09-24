@@ -39,6 +39,12 @@ orders, narrowed to uncommitted work or not pushed if wanted. Home's card says h
 sitting in them and which has sat longest. **Open folder** and **Terminal here** (Windows Terminal,
 or PowerShell when that is not installed) are the way in.
 
+## With no window
+
+`Meows.exe --do cattery.read` asks git about every repository from Task Scheduler and keeps the
+answer, so the list the tab opens on is from this morning rather than from whenever it was last
+open.
+
 ## What it refuses to do
 
 Anything that writes. No commit, stash, pull, push, fetch or checkout: it is a list of what needs

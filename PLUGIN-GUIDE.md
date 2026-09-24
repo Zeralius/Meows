@@ -142,7 +142,7 @@ contract version the template was published with. No `ProjectReference`, no Meow
 ```xml
 <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.4.0" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.5.0" ExcludeAssets="runtime" PrivateAssets="all" />
 </ItemGroup>
 ```
 
@@ -233,8 +233,8 @@ The shell checks this for you. At discovery it reads the contract version your a
 compiled against and refuses anything it cannot honour, **before constructing your plugin**, so
 none of your code runs. The reason appears on your plugin's card in place of its toggle:
 
-> Built for Meows contract 1.5.0, which is newer than this shell's 1.4.0. Update Meows, or rebuild
-> the plugin against 1.4.0.
+> Built for Meows contract 1.6.0, which is newer than this shell's 1.5.0. Update Meows, or rebuild
+> the plugin against 1.5.0.
 
 A mismatched **major** is refused either way, since a major bump means members may have been
 removed. A **newer** minor or patch is refused; an older one loads fine, because additive
@@ -523,7 +523,9 @@ added `IGlanceable`, [a line on the Home tab](#a-line-on-the-home-tab), and noth
 **1.2.0** added `IMeowsPlugin.Actions` and `IMeowsPlugin.Records`, `IActionTarget` and
 `ActionDeclinedException`, for [being asked by a rule](#being-asked-by-a-rule). **1.3.0** added
 [`Reach`](#reach), the server a plugin can copy a folder to. **1.4.0** added
-`IMeowsPlugin.GlanceWhileOff`, [the Home line with no window](#a-line-on-the-home-tab).
+`IMeowsPlugin.GlanceWhileOff`, [the Home line with no window](#a-line-on-the-home-tab). **1.5.0**
+added `IMeowsPlugin.Jobs` and `RunJob`, `IMeowsJobHost`, `JobDeclinedException` and
+`IMeowsHost.RunsFromOutside`, for [work without a window](#work-without-a-window).
 
 ### `DataDirectory`
 
@@ -711,6 +713,41 @@ Weigh-In use: a static method that works the sentence out from the kept data, ca
 `Glance()` and `GlanceWhileOff`. Null, the default, gets the shell's own line in the output, the
 last thing the plugin recorded; Portion and Purr answer null, because what they would say only
 exists once they have looked.
+
+### Work without a window
+
+Since 1.5.0 a plugin can declare work it does with no view: `Meows.exe --do weighin.measure`, one
+line in Task Scheduler, so the nightly pass happens whether or not anyone opened Meows. Windows
+owns the trigger and Meows owns the work; nothing runs as a service or with nobody logged in.
+
+```csharp
+public IReadOnlyList<PluginJob> Jobs =>
+[
+    new("measure", "weighin.job.measure", "weighin.job.measure.hint") { StandsInForSchedule = true },
+];
+
+public async Task<string> RunJob(string jobId, IMeowsJobHost host, CancellationToken token)
+{
+    var settings = host.LoadSettings<WeighInSettings>() ?? new();
+    var reading = await Task.Run(() => Readings.Take(/* ... */), token);
+    // save it, journal it through host.Store, host.Notify if something wants doing
+    return host.Text.Format("weighin.status.read", reading.Drives.Count, reading.At.ToString("HH:mm"));
+}
+```
+
+The job runs in a process of its own, with no window and no UI thread, beside a Meows that may be
+open; it touches nothing a view model owns. The host is the dormant one plus `SaveSettings`,
+`Log`, `Report` for progress in the terminal, and `Notify` for something worth saying with no
+window to say it in. The sentence returned is printed and is the task's result. Throw
+`JobDeclinedException` for a job that should not run as asked, "no copy folder is set"; anything
+else thrown is a failure. The exit codes are 0 done, 1 failed or declined, 2 no such job, 3 the
+plugin is switched off, since off means off whoever asks. `--do` with nothing after it lists the
+jobs there are.
+
+**A job and a schedule are the same work with two owners.** A job that also runs on the plugin's
+own schedule says `StandsInForSchedule`, and the plugin asks `host.RunsFromOutside(jobId)` before
+its own pass and stands down when Windows has run the job in the last eight days. Weigh-In does
+exactly that. Keep the work in a static method both call, as Weigh-In, Nest and Cattery do.
 
 ### `Watches`
 
@@ -943,6 +980,12 @@ pasted into a bug report.
 
 Use these when the user needs to know something. The point is that the shell owns one surface,
 so a problem raised by a tab in the background is still seen.
+
+Since Meows 4.17.0 a one-off event posted while the window is not in front also becomes a Windows
+notification, buttons and all, unless the Settings tab turns that off; a condition never does,
+since a state true all week should not announce itself every pass. A portable Meows, which writes
+nothing into the Start menu, uses a tray balloon without buttons instead. Nothing changes for a
+plugin: post as before.
 
 ```csharp
 public interface IMeowsNotifications

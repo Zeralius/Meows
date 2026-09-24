@@ -84,4 +84,20 @@ public interface IMeowsPlugin
     /// Since 1.4.0.
     /// </summary>
     Glance? GlanceWhileOff(IMeowsDormantHost host) => null;
+
+    /// <summary>
+    /// What this plugin can do with no window, for <c>Meows.exe --do</c>. Read while the plugin
+    /// is off, so answer with a fixed list. Empty, the default, keeps the plugin off the command
+    /// line. Since 1.5.0.
+    /// </summary>
+    IReadOnlyList<PluginJob> Jobs => [];
+
+    /// <summary>
+    /// Does one of <see cref="Jobs"/>, in a process of its own with no window, and says in a
+    /// sentence what it did; the sentence is printed and becomes the task's result. Throw
+    /// <see cref="JobDeclinedException"/> for a job that should not run as asked; anything else
+    /// thrown is a failure. Only asked of a plugin that is switched on. Since 1.5.0.
+    /// </summary>
+    Task<string> RunJob(string jobId, IMeowsJobHost host, CancellationToken token) =>
+        throw new JobDeclinedException($"No job called '{jobId}'.");
 }

@@ -71,12 +71,38 @@ public partial class App : Application
 
             desktop.ShutdownRequested += (_, _) => tray.Dispose();
 
+            // Saying it outside the window: a one-off event becomes a Windows notification while
+            // the window is not in front. A condition does not, since a state true all week
+            // should not announce itself every pass. The surface is decided once, here.
+            var surface = Toasts.Prepare(ShellSettings.IsPortable, message => log.Write("toast", message));
+            log.Write("toast", $"Saying it outside the window as: {surface}");
+            var buttons = new ToastButtons();
+            notifications.Posted += item =>
+            {
+                if (!preferences.SayOutside || tray.IsWindowActive)
+                    return;
+                var pressable = item.Actions
+                    .Select(action => (action.Label, buttons.Remember(() =>
+                    {
+                        action.Invoke();
+                        if (action.DismissesAfter)
+                            notifications.Dismiss(item);
+                    })))
+                    .ToList();
+                Toasts.Show($"{item.SourceName} · {item.Title}", item.Message,
+                    item.Severity >= Meows.Plugins.Abstractions.NotificationSeverity.Warning,
+                    message => log.Write("toast", message), pressable);
+            };
+
             // A second Meows started while this one runs: its arguments arrive here, and the
             // window comes up unless that start only wanted the tray.
             Program.Instance?.Listen(args => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
                 log.Write("shell", "Another start asked for the running Meows" +
                     (args.Length == 0 ? "." : ": " + string.Join(' ', args)));
+                // A toast's button: pressed here, without bringing the window up for it.
+                if (args.Count(buttons.Press) > 0)
+                    return;
                 if (!args.Contains(StartWithWindows.TrayArgument, StringComparer.OrdinalIgnoreCase))
                     tray.Show();
             }));

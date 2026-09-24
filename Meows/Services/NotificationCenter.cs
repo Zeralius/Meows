@@ -73,6 +73,9 @@ public sealed class NotificationCenter
 
     public event Action? Changed;
 
+    /// <summary>A one-off event, as it arrives: what the shell turns into a Windows notification when the window is not in front.</summary>
+    public event Action<NotificationItem>? Posted;
+
     public int Count => Items.Count;
 
     public bool HasAny => Items.Count > 0;
@@ -90,14 +93,15 @@ public sealed class NotificationCenter
     {
         OnUiThread(() =>
         {
-            Items.Insert(0, new NotificationItem
+            var item = new NotificationItem
             {
                 Source = source,
                 Severity = severity,
                 Title = title,
                 Message = message,
                 Actions = actions,
-            });
+            };
+            Items.Insert(0, item);
 
             // Only trim events. Conditions stay until their plugin clears them.
             while (Items.Count(i => !i.IsCondition) > MaxEvents)
@@ -107,6 +111,7 @@ public sealed class NotificationCenter
             }
 
             Changed?.Invoke();
+            Posted?.Invoke(item);
         });
     }
 

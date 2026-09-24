@@ -222,6 +222,20 @@ anything, and for the rest the last thing each recorded. `--json` is the same fo
 a terminal greeting or a scheduled task, with a `trouble` flag at the top and each plugin's id.
 Nothing is switched on or started, and it runs beside a Meows that is already open.
 
+To have a plugin do its work with no window, from Task Scheduler:
+
+```bash
+Meows.exe --do
+Meows.exe --do weighin.measure
+```
+
+With nothing after it, `--do` lists the jobs there are: `weighin.measure` takes Weigh-In's
+reading, `nest.copy` copies what cannot be downloaded again, `cattery.read` asks git about every
+repository. With a name it runs that one and prints what it did. The exit code is 0 done, 1 failed,
+2 no such job, 3 the plugin is switched off. While Windows runs Weigh-In's reading, the tab's own
+schedule stands down so the reading happens once, and anything worth knowing comes up as a
+Windows notification.
+
 ## Building it yourself
 
 ```bash
@@ -395,13 +409,14 @@ added the line a plugin can put on its Home card. **1.2.0**, with Meows 4.2.0, a
 lists a plugin gives the Rules tab, what it can be asked to do and what it records, and the
 interface its view model does the asking through. **1.3.0**, with Meows 4.3.0, added the server
 a plugin can copy a folder to. **1.4.0**, with Meows 4.4.0, added a plugin's Home line with no
-window, for `--glance`.
+window, for `--glance`. **1.5.0**, with Meows 4.17.0, added the jobs a plugin can do with no
+window, for `--do`.
 
 Meows checks that version when it loads a plugin and refuses anything it cannot honour, with the
 reason on the plugin's card rather than a crash later:
 
-> Built for Meows contract 1.5.0, which is newer than this shell's 1.4.0. Update Meows, or rebuild
-> the plugin against 1.4.0.
+> Built for Meows contract 1.6.0, which is newer than this shell's 1.5.0. Update Meows, or rebuild
+> the plugin against 1.5.0.
 
 A newer contract is refused; an older one is fine, since additions stay backward compatible.
 

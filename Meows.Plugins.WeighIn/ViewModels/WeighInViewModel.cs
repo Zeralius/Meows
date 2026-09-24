@@ -192,8 +192,11 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
         // The reading itself, on the shell's clock. It waits its interval first: the tab
         // opening is not a reason to walk six drives, and a reading from earlier today is on
         // disk already if there was one.
+        // Unless Task Scheduler has been running the same reading with --do, in which case this
+        // pass stands down: the same work with two owners would happen twice.
         _schedule = _host.Background.Schedule(_host.Text["weighin.task.daily"], TimeSpan.FromHours(Math.Max(1, _settings.EveryHours)),
-            context => RunReading(context, byHand: false), runImmediately: false);
+            context => _host.RunsFromOutside(WeighInPlugin.MeasureJob) ? StandDown(context) : RunReading(context, byHand: false),
+            runImmediately: false);
 
         // Unless there has never been one, in which case the first is now.
         if (_readings.Count == 0)
@@ -322,13 +325,16 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
     /// A line in the history the first reading a folder is found over its budget, so a rule can
     /// act on the crossing; not again every day it stays over.
     /// </summary>
-    private void JournalCrossings(Reading reading)
+    private void JournalCrossings(Reading reading) =>
+        JournalCrossings(_host.Store, _host.Text, _settings.Budgets, reading, _readings.Count >= 2 ? _readings[^2] : null);
+
+    /// <summary>An "over-budget" line for each folder this reading took over its line. Shared with the job.</summary>
+    public static void JournalCrossings(IMeowsStore store, IMeowsText text, IReadOnlyList<FolderBudget> budgets, Reading reading, Reading? before)
     {
-        var before = _readings.Count >= 2 ? _readings[^2] : null;
-        foreach (var crossed in Budgets.Crossed(_settings.Budgets, reading, before))
+        foreach (var crossed in Budgets.Crossed(budgets, reading, before))
         {
-            _host.Store.Record("over-budget", crossed.Budget.Path,
-                _host.Text.Format("weighin.budget.line", Path.GetFileName(crossed.Budget.Path), Readings.Humanise(crossed.Over), Readings.Humanise(crossed.Budget.Bytes)),
+            store.Record("over-budget", crossed.Budget.Path,
+                text.Format("weighin.budget.line", Path.GetFileName(crossed.Budget.Path), Readings.Humanise(crossed.Over), Readings.Humanise(crossed.Budget.Bytes)),
                 new Dictionary<string, string>
                 {
                     ["size"] = crossed.Size.ToString() ?? "",
@@ -493,10 +499,13 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
     // ---- readings ----
 
     /// <summary>The drives to read: what the settings say, or every ready fixed drive.</summary>
-    private IReadOnlyList<string> Roots()
+    private IReadOnlyList<string> Roots() => RootsFor(_settings);
+
+    /// <summary>The drives a reading covers: the ones picked, or every fixed drive that is ready.</summary>
+    public static IReadOnlyList<string> RootsFor(WeighInSettings settings)
     {
-        if (_settings.Drives.Count > 0)
-            return _settings.Drives;
+        if (settings.Drives.Count > 0)
+            return settings.Drives;
         try
         {
             return DriveInfo.GetDrives()
@@ -517,6 +526,12 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
         IsReading = true;
         Status = _host.Text["weighin.status.reading"];
         _reading = _host.Background.Run(_host.Text["weighin.task.reading"], context => RunReading(context, byHand));
+    }
+
+    private Task StandDown(IBackgroundContext context)
+    {
+        context.Report(_host.Text["weighin.outside"]);
+        return Dispatcher.UIThread.InvokeAsync(Reload).GetTask();
     }
 
     /// <summary>One reading, off the UI thread, saved, pruned, journaled, and the tab rebuilt.</summary>
@@ -596,16 +611,19 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
     }
 
     /// <summary>One line per drive in the history: what it holds and what moved since the last reading.</summary>
-    private void Journal(Reading reading)
+    private void Journal(Reading reading) =>
+        JournalReading(_host.Store, _host.Text, reading, _readings.Count >= 2 ? _readings[^2] : null);
+
+    /// <summary>One "reading" line per drive, against the reading before it. Shared with the job run from Task Scheduler.</summary>
+    public static void JournalReading(IMeowsStore store, IMeowsText text, Reading reading, Reading? previous)
     {
-        var previous = _readings.Count >= 2 ? _readings[^2] : null;
         foreach (var drive in reading.Drives)
         {
             var before = previous?.Drive(drive.Root);
             var detail = before is null
-                ? _host.Text.Format("weighin.journal.first", Readings.Humanise(drive.Used), Readings.Humanise(drive.Total))
-                : _host.Text.Format("weighin.journal.reading", Readings.Humanise(drive.Used), Readings.Signed(drive.Used - before.Used));
-            _host.Store.Record("reading", drive.Root, detail, new Dictionary<string, string>
+                ? text.Format("weighin.journal.first", Readings.Humanise(drive.Used), Readings.Humanise(drive.Total))
+                : text.Format("weighin.journal.reading", Readings.Humanise(drive.Used), Readings.Signed(drive.Used - before.Used));
+            store.Record("reading", drive.Root, detail, new Dictionary<string, string>
             {
                 ["used"] = drive.Used.ToString(),
                 ["free"] = drive.Free.ToString(),

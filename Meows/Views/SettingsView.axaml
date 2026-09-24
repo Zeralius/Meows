@@ -110,6 +110,11 @@
                               IsChecked="{Binding CloseToTray}"
                               Margin="0,4,0,0" />
                     <TextBlock Classes="hint" Text="{m:Tr settings.tray.close.hint}" />
+
+                    <CheckBox Content="{m:Tr settings.outside}"
+                              IsChecked="{Binding SayOutside}"
+                              Margin="0,4,0,0" />
+                    <TextBlock Classes="hint" Text="{Binding OutsideHow}" />
                 </StackPanel>
             </Border>
 

@@ -33,7 +33,7 @@ Copy the folder out of the repository, and in the `.csproj` replace
 with
 
 ```xml
-<PackageReference Include="Meows.Plugins.Abstractions" Version="1.4.0" ExcludeAssets="runtime" PrivateAssets="all" />
+<PackageReference Include="Meows.Plugins.Abstractions" Version="1.5.0" ExcludeAssets="runtime" PrivateAssets="all" />
 ```
 
 Then rename, change the `Id`, and go. The rest of the file is what the template writes.

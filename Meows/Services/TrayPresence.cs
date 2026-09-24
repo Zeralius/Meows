@@ -81,6 +81,9 @@ public sealed class TrayPresence : IDisposable
     }
 
     /// <summary>The window, brought to the front, created on first showing when Meows started in the tray.</summary>
+    /// <summary>Whether the window is open and in front, when a notification is already being seen.</summary>
+    public bool IsWindowActive => _shown is { IsVisible: true, IsActive: true };
+
     public void Show()
     {
         if (_shown is null)
