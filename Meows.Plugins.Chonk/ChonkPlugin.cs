@@ -19,6 +19,11 @@ public sealed class ChonkPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("extracted", "chonk.records.extracted"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new ChonkView
     {
         DataContext = new ChonkViewModel(host),
