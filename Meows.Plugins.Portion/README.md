@@ -20,6 +20,18 @@ batch it is in.
 None of that is visible in a folder listing, and the bot does not check ahead. Portion does, and
 Kibble now refuses an oversized file at the click for the same reason.
 
+## Names that lie
+
+Every file's first bytes are checked against its extension: *says jpg, is PNG*. When the bytes
+are a different kind of file from the one the name promises, a video called `.jpg`, a login page
+called `.png`, a RAR called `.cbz`, the bot sends it the wrong way and the post fails, so it is a
+failure. When it is only the wrong picture format, Telegram reads it regardless, so it is a note.
+**Rename to match** gives the file the extension its bytes call for, in the same queue, keeping
+its modified time so its place in the line does not move, and refuses if that name is taken.
+What the bot posts under no name at all has no honest name to go to, so for those the way out is
+Hold it back. Only the container is judged, never the stream inside it. Kibble runs the same
+check on the way in.
+
 ## What will post, but not as expected
 
 Two things that are not failures but are worth knowing before rather than after. Files inside a

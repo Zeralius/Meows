@@ -31,6 +31,7 @@ public sealed class PortionPlugin : IMeowsPlugin
     [
         new("shrunk", "portion.records.shrunk"),
         new("held", "portion.records.held"),
+        new("renamed", "portion.records.renamed"),
     ];
 
     public Control CreateView(IMeowsHost host) => new PortionView

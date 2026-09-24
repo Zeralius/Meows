@@ -100,17 +100,26 @@ public static class Intake
     /// </summary>
     public static IntakeResult? Inspect(string source, BotWorkspace workspace, GroupConfig group)
     {
-        if (!MediaRules.IsPostable(source))
+        // Judged by what it really is. A name that lies about something the bot posts is put
+        // right as it goes in; one hiding something the bot never posts, a login page saved as
+        // a .png, a RAR called .cbz, is refused here rather than sitting in the queue failing.
+        var lie = Meows.Disk.FileSniff.Check(source);
+        if (lie is not null && !MediaRules.IsPostable(lie.RenamedPath(source)))
+            return new IntakeResult(IntakeOutcome.NotPostable, source, null,
+                MeowsText.Current.Format("kibble.refuse.lie", lie.Says, lie.Is.Name));
+        var honest = HonestName(source);
+
+        if (!MediaRules.IsPostable(honest))
             return new IntakeResult(IntakeOutcome.NotPostable, source, null,
                 MeowsText.Current["kibble.refuse.notpostable"]);
 
-        if (MediaRules.IsComic(source) && MediaRules.ComicPages(source, group.ComicOrder ?? "name").Count == 0)
+        if (MediaRules.IsComic(honest) && MediaRules.ComicPages(source, group.ComicOrder ?? "name").Count == 0)
             return new IntakeResult(IntakeOutcome.EmptyComic, source, null,
                 MeowsText.Current["kibble.refuse.emptycomic"]);
 
         // Refused here, at the click, because the alternative is the post failing at three in
         // the morning. Portion is the tool for what is already sitting in a queue.
-        if (MediaRules.ByteLimit(MediaRules.KindOf(source)) is { } limit && SafeSize(source) > limit)
+        if (MediaRules.ByteLimit(MediaRules.KindOf(honest)) is { } limit && SafeSize(source) > limit)
             return new IntakeResult(IntakeOutcome.TooBig, source, null,
                 MeowsText.Current.Format("kibble.refuse.toobig", limit / 1_000_000));
 
@@ -133,6 +142,13 @@ public static class Intake
         return null;
     }
 
+    /// <summary>
+    /// The path with the extension its bytes call for, when its own lies about something the bot
+    /// posts; the path as it is otherwise. Only the name changes: the file goes in as it is.
+    /// </summary>
+    public static string HonestName(string source) =>
+        Meows.Disk.FileSniff.Check(source) is { } lie && MediaRules.IsPostable(lie.RenamedPath(source)) ? lie.RenamedPath(source) : source;
+
     /// <summary>Moves the file into the group's To_Send, having checked it first.</summary>
     public static IntakeResult Send(
         string source,
@@ -154,7 +170,8 @@ public static class Intake
             var folder = workspace.ToSendFolder(group);
             Directory.CreateDirectory(folder);
 
-            var target = UniquePath(folder, Path.GetFileName(source));
+            var honest = HonestName(source);
+            var target = UniquePath(folder, Path.GetFileName(honest));
             var sourceWritten = File.GetLastWriteTimeUtc(source);
 
             File.Move(source, target);
@@ -163,7 +180,8 @@ public static class Intake
             // few hundred files with the clock stamped and "oldest" stops meaning anything.
             File.SetLastWriteTimeUtc(target, stamp == IntakeStamp.KeepSource ? sourceWritten : DateTime.UtcNow);
 
-            return new IntakeResult(IntakeOutcome.Sent, source, target, null);
+            return new IntakeResult(IntakeOutcome.Sent, source, target,
+                honest == source ? null : MeowsText.Current.Format("kibble.sent.renamed", Path.GetFileName(target)));
         }
         catch (Exception ex)
         {
@@ -261,6 +279,14 @@ public static class Intake
         if (offender is not null)
             return new IntakeResult(IntakeOutcome.NotPostable, offender, null,
                 MeowsText.Current.Format("kibble.refuse.notacomicpage", Path.GetFileName(offender)));
+
+        // A page named as a picture that is something else fails the whole batch it lands in.
+        foreach (var page in sources)
+        {
+            if (Meows.Disk.FileSniff.Check(page) is { } lie && !MediaRules.CanBeComicPage(lie.RenamedPath(page)))
+                return new IntakeResult(IntakeOutcome.NotPostable, page, null,
+                    MeowsText.Current.Format("kibble.refuse.lie", lie.Says, lie.Is.Name));
+        }
 
         return null;
     }

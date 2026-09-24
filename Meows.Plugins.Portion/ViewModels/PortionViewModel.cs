@@ -43,6 +43,12 @@ public sealed class HeavyViewModel : ObservableObject, IDisposable
 
     public bool CanShrink => Heavy.CanShrink && !_isBusy && _outcome is null;
 
+    /// <summary>The name lies and the honest one is something the bot posts, so a rename is the fix.</summary>
+    public bool CanRename => Heavy.HonestPath is not null && !_isBusy && _outcome is null;
+
+    /// <summary>The name it would get: "page.png".</summary>
+    public string HonestName => Heavy.HonestPath is { } honest ? Path.GetFileName(honest) : "";
+
     /// <summary>What is wrong, in words.</summary>
     public string TroubleText
     {
@@ -61,6 +67,8 @@ public sealed class HeavyViewModel : ObservableObject, IDisposable
                     Trouble.EmptyComic => text["portion.trouble.empty"],
                     Trouble.BadPages => text.Format("portion.trouble.badpages", Heavy.BadPageCount),
                     Trouble.ForeignFiles => text.Format("portion.trouble.foreign", Heavy.ForeignCount),
+                    Trouble.WrongExtension when Heavy.Lie is { } lie => text.Format(
+                        Heavy.LieChangesKind ? "portion.trouble.lie.fails" : "portion.trouble.lie", lie.Says, lie.Is.Name),
                     _ => text.Format("portion.trouble.batches", Heavy.Pages, Heavy.Batches),
                 });
             }
@@ -72,6 +80,7 @@ public sealed class HeavyViewModel : ObservableObject, IDisposable
     /// <summary>What Portion would do, or why it will not.</summary>
     public string RemedyText => MeowsText.Current[Heavy.Kind switch
     {
+        _ when Heavy.LieChangesKind => Heavy.HonestPath is null ? "portion.remedy.lie.hold" : "portion.remedy.lie",
         _ when Heavy.Troubles.Contains(Trouble.OddRatio) => "portion.remedy.ratio",
         MediaKind.Photo => "portion.remedy.photo",
         MediaKind.Comic when Heavy.Troubles.Contains(Trouble.EmptyComic) => "portion.remedy.empty",
@@ -178,6 +187,7 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
         SelectCommand = new RelayCommand(p => Selected = p as HeavyViewModel);
         RevealCommand = new RelayCommand(Reveal, () => Selected is not null);
         HoldCommand = new RelayCommand(HoldSelected, () => !IsBusy && Selected is { WillFail: true });
+        RenameCommand = new RelayCommand(RenameSelected, () => !IsBusy && Selected is { CanRename: true });
 
         _language = new LanguageWatch(() =>
         {
@@ -208,6 +218,42 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
     /// queue, where the bot never looks. Not a delete. The file is a decision for later.
     /// </summary>
     public RelayCommand HoldCommand { get; }
+
+    /// <summary>
+    /// A name that lies, put right: the same file under the extension its bytes call for, in the
+    /// same queue, keeping its date so its place in the line is the same. Through the same path
+    /// Kibble uses on the way in, so the two cannot disagree about what honest looks like.
+    /// </summary>
+    public RelayCommand RenameCommand { get; }
+
+    private void RenameSelected()
+    {
+        if (Selected is not { CanRename: true } row)
+            return;
+
+        var (renamed, error) = Weigher.RenameToMatch(row.Heavy.Path);
+        if (renamed is null)
+        {
+            ErrorMessage = _host.Text.Format("portion.error.rename", error ?? "");
+            return;
+        }
+
+        _host.Store.Record("renamed", row.Heavy.Path, _host.Text.Format("portion.journal.renamed", Path.GetFileName(renamed)),
+            new Dictionary<string, string> { [ActionRequest.DestinationKey] = renamed, ["group"] = row.GroupName });
+        _host.Log($"Portion renamed {row.Heavy.Path} -> {renamed}: its name said {row.Heavy.Lie?.Says}, its bytes {row.Heavy.Lie?.Is.Name}.");
+
+        // Weighed again under its honest name: the lie may have been hiding something else.
+        var index = Heavies.IndexOf(row);
+        Heavies.Remove(row);
+        row.Dispose();
+        if (Weigher.Inspect(row.Heavy.Group, renamed) is { } still)
+            Heavies.Insert(Math.Min(index, Heavies.Count), new HeavyViewModel(still));
+        Selected = Heavies.ElementAtOrDefault(Math.Min(index, Heavies.Count - 1));
+        Status = _host.Text.Format("portion.status.renamed", row.FileName, Path.GetFileName(renamed));
+        OnPropertyChanged(nameof(IsEmpty));
+        OnPropertyChanged(nameof(AllClear));
+        RaiseCommands();
+    }
 
     private void HoldSelected()
     {
@@ -665,6 +711,7 @@ public sealed class PortionViewModel : ObservableObject, IDisposable, ISearchabl
         ShrinkAllCommand.RaiseCanExecuteChanged();
         RevealCommand.RaiseCanExecuteChanged();
         HoldCommand.RaiseCanExecuteChanged();
+        RenameCommand.RaiseCanExecuteChanged();
     }
 
     private void Save()
