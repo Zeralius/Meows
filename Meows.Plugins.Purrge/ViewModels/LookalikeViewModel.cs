@@ -24,7 +24,11 @@ public sealed class LookalikeFileViewModel(LookalikeFile file) : ObservableObjec
 
     public string SizeText => DuplicateSetViewModel.Format(File.Size);
 
-    public string PixelsText => $"{File.Width} × {File.Height}";
+    public string PixelsText => File.Duration is { } length
+        ? $"{File.Width} × {File.Height} · {(length.TotalHours >= 1 ? length.ToString(@"h\:mm\:ss") : length.ToString(@"m\:ss"))}"
+        : $"{File.Width} × {File.Height}";
+
+    public bool IsVideo => File.IsVideo;
 
     public string DistanceText => File.Distance == 0 ? "" : MeowsText.Current.Format("purrge.lookalike.distance", File.Distance);
 
@@ -253,6 +257,9 @@ public sealed class LookalikeViewModel : ObservableObject, IDisposable
         var settings = _settings();
         var options = new Services.ScanOptions(settings.MinimumBytes, settings.SkipSystemFolders);
         var threshold = settings.LookalikeThreshold;
+        var videos = settings.LookalikeVideos;
+        var tools = videos ? VideoLooks.Tools() : null;
+        _videosSkipped = videos && tools is null;
 
         _task = _host.Background.Run(_host.Text.Format("purrge.lookalike.task", Path.GetFileName(root.TrimEnd(Path.DirectorySeparatorChar))), async context =>
         {
@@ -260,6 +267,8 @@ public sealed class LookalikeViewModel : ObservableObject, IDisposable
             try
             {
                 var found = await _scanner.ScanAsync(root, options, threshold, progress, context.Token);
+                if (tools is { } both)
+                    found = [.. found, .. await _scanner.ScanVideosAsync(root, options, threshold, both, progress, context.Token)];
                 await Dispatcher.UIThread.InvokeAsync(() => Show(found));
             }
             catch (OperationCanceledException)
@@ -285,6 +294,8 @@ public sealed class LookalikeViewModel : ObservableObject, IDisposable
         Status = found.Count == 0
             ? _host.Text["purrge.lookalike.none"]
             : _host.Text.Format("purrge.lookalike.found", found.Count, DuplicateSetViewModel.Format(found.Sum(s => s.OthersBytes)));
+        if (_videosSkipped)
+            Status += " " + _host.Text["purrge.lookalike.noffmpeg"];
         _host.Log($"Look-alikes: {found.Count} group(s).");
 
         if (Sets.FirstOrDefault() is { } first)
@@ -318,17 +329,15 @@ public sealed class LookalikeViewModel : ObservableObject, IDisposable
 
         SelectedSet = set;
         SelectedFile = file;
-        _ = LoadPreviewsAsync(set.Keeper.Path, file.Path);
+        _ = LoadPreviewsAsync(set.Keeper.File, file.File);
     }
 
-    private async Task LoadPreviewsAsync(string keeper, string other)
+    private async Task LoadPreviewsAsync(LookalikeFile keeper, LookalikeFile other)
     {
         var generation = ++_previewGeneration;
         KeeperPreview = null;
         SelectedPreview = null;
-        var (left, right) = await Task.Run(() => (
-            AccessTime.Preserving(keeper, () => Thumbnails.FromFile(keeper, PreviewWidth)),
-            AccessTime.Preserving(other, () => Thumbnails.FromFile(other, PreviewWidth))));
+        var (left, right) = await Task.Run(() => (Preview(keeper), Preview(other)));
         if (generation != _previewGeneration)
         {
             left?.Dispose();
@@ -337,6 +346,34 @@ public sealed class LookalikeViewModel : ObservableObject, IDisposable
         }
         KeeperPreview = left;
         SelectedPreview = right;
+    }
+
+    /// <summary>A picture at full preview size; a video by its middle frame, so the two are still looked at side by side.</summary>
+    private static Bitmap? Preview(LookalikeFile file)
+    {
+        if (!file.IsVideo)
+            return AccessTime.Preserving(file.Path, () => Thumbnails.FromFile(file.Path, PreviewWidth));
+        if (VideoLooks.Tools() is not { } tools)
+            return null;
+        var frame = AccessTime.Preserving(file.Path, () => VideoLooks.Frame(file.Path, file.Duration!.Value / 2, tools.Ffmpeg, PreviewWidth));
+        return Thumbnails.FromBytes(frame, PreviewWidth);
+    }
+
+    /// <summary>Whether the last search wanted videos and could not have them, which the status line says.</summary>
+    private bool _videosSkipped;
+
+    /// <summary>Videos too: slower, and only with ffmpeg installed.</summary>
+    public bool IncludeVideos
+    {
+        get => _settings().LookalikeVideos;
+        set
+        {
+            if (_settings().LookalikeVideos == value)
+                return;
+            _settings().LookalikeVideos = value;
+            _save();
+            OnPropertyChanged();
+        }
     }
 
     private void KeepSelected()

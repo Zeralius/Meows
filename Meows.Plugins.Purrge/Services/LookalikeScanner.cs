@@ -9,6 +9,11 @@ namespace Meows.Plugins.Purrge.Services;
 public sealed record LookalikeFile(string Path, long Size, int Width, int Height, DateTime ModifiedUtc, int Distance)
 {
     public long Pixels => (long)Width * Height;
+
+    /// <summary>A video's length, set only for a video; a group is all pictures or all videos, never both.</summary>
+    public TimeSpan? Duration { get; init; }
+
+    public bool IsVideo => Duration is not null;
 }
 
 /// <summary>
@@ -86,6 +91,91 @@ public sealed class LookalikeScanner
         });
 
         return Group(looks.Where(l => l is not null).Select(l => l!.Value).ToList(), threshold, token);
+    }
+
+    /// <summary>
+    /// The same question of videos, through ffmpeg: five frames each, at the same fractions of
+    /// their length, and lengths that agree. Asked apart from pictures and never mixed with them.
+    /// </summary>
+    public Task<IReadOnlyList<LookalikeSet>> ScanVideosAsync(string root, ScanOptions options, int threshold, (string Ffmpeg, string Ffprobe) tools,
+        IProgress<ScanProgress>? progress, CancellationToken token) =>
+        Task.Run(() => ScanVideos(root, options, threshold, tools, progress, token), token);
+
+    public static IReadOnlyList<LookalikeSet> ScanVideos(string root, ScanOptions options, int threshold, (string Ffmpeg, string Ffprobe) tools,
+        IProgress<ScanProgress>? progress, CancellationToken token)
+    {
+        var videos = new List<(string Path, long Size, DateTime Modified)>();
+        foreach (var path in DuplicateScanner.EnumerateFiles(root, options, token))
+        {
+            token.ThrowIfCancellationRequested();
+            if (!VideoLooks.IsVideo(path))
+                continue;
+            try
+            {
+                var info = new FileInfo(path);
+                if (info.Length >= options.MinimumBytes)
+                    videos.Add((path, info.Length, info.LastWriteTimeUtc));
+            }
+            catch (Exception)
+            {
+            }
+        }
+
+        // Decoding frames is the slow part; two at a time keeps the machine usable.
+        var looks = new (string Path, long Size, DateTime Modified, VideoLook Look)?[videos.Count];
+        var done = 0;
+        Parallel.For(0, videos.Count, new ParallelOptions { CancellationToken = token, MaxDegreeOfParallelism = 2 }, i =>
+        {
+            var (path, size, modified) = videos[i];
+            var look = AccessTime.Preserving(path, () => VideoLooks.Of(path, tools, token));
+            if (look is not null)
+                looks[i] = (path, size, modified, look);
+            var count = Interlocked.Increment(ref done);
+            progress?.Report(new ScanProgress(ScanPhase.Hashing, videos.Count, videos.Count - count, MeowsText.Current.Format("purrge.lookalike.progress.video", count, videos.Count)));
+        });
+
+        return GroupVideos(looks.Where(l => l is not null).Select(l => l!.Value).ToList(), threshold, token);
+    }
+
+    /// <summary>Stars, as for pictures: the most pixels first, each group around the copy worth keeping.</summary>
+    public static IReadOnlyList<LookalikeSet> GroupVideos(IReadOnlyList<(string Path, long Size, DateTime Modified, VideoLook Look)> looks, int threshold, CancellationToken token = default)
+    {
+        var order = looks
+            .OrderByDescending(l => l.Look.Pixels)
+            .ThenByDescending(l => l.Size)
+            .ThenBy(l => l.Modified)
+            .ToList();
+        var taken = new bool[order.Count];
+        var sets = new List<LookalikeSet>();
+
+        static LookalikeFile Video((string Path, long Size, DateTime Modified, VideoLook Look) l, int distance) =>
+            new(l.Path, l.Size, l.Look.Width, l.Look.Height, l.Modified, distance) { Duration = l.Look.Duration };
+
+        for (var i = 0; i < order.Count; i++)
+        {
+            token.ThrowIfCancellationRequested();
+            if (taken[i])
+                continue;
+            var centre = order[i];
+            var members = new List<LookalikeFile> { Video(centre, 0) };
+            for (var j = i + 1; j < order.Count; j++)
+            {
+                if (taken[j])
+                    continue;
+                if (VideoLooks.Distance(centre.Look, order[j].Look) is not { } distance || distance > threshold)
+                    continue;
+                if (centre.Size == order[j].Size && ContentHash.Full(centre.Path) is { } x && x == ContentHash.Full(order[j].Path))
+                    continue;
+                members.Add(Video(order[j], distance));
+                taken[j] = true;
+            }
+            if (members.Count > 1)
+            {
+                taken[i] = true;
+                sets.Add(new LookalikeSet(members));
+            }
+        }
+        return sets.OrderByDescending(s => s.OthersBytes).ToList();
     }
 
     /// <summary>
