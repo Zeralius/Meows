@@ -12,7 +12,7 @@
 
         <!-- The app version. Moves independently of the plugin contract version;
              see the versioning section in README.md. -->
-        <Version>4.9.0</Version>
+        <Version>4.10.0</Version>
         <!-- Where the shell looks for its own newer release, the same way it does for a plugin. -->
         <RepositoryUrl>https://github.com/Zeralius/Meows</RepositoryUrl>
         <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>

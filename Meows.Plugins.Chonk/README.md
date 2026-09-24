@@ -120,6 +120,16 @@ for byte, the archive says it is a twin, and the Recycle Bin button beside it, w
 is how it goes. The history gets an *extracted* line either way, so a rule can follow it. Other
 formats stay with 7-Zip.
 
+## Wound up inside
+
+The same table of contents answers two smaller questions, and the archive's panel says so when
+either comes up. **An archive inside the archive**: a download of a download is packed twice, and
+the line names it, or counts them, with how much of the archive they are. **One file and nothing
+else**: the zip may be only a wrapper an upload tool put round it, and the file on its own would
+do. A cbz of a single page is said more softly, because a comic of one page is sometimes meant.
+Nothing is unpacked or changed; the finding is the point, and Extract and check is there when the
+answer is to unwrap it.
+
 ## Removing things
 
 **It asks first.** The confirmation says what is about to go, how big it is, and for a folder how
