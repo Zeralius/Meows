@@ -139,6 +139,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable
         ExploreCommand = new RelayCommand(() => OpenInExplorer(Selected?.Path), () => Selected is not null);
         FindDuplicatesCommand = new RelayCommand(() => HandTo(KnownPlugins.Purrge), () => Selected is { CanDrillInto: true });
         SortWithKibbleCommand = new RelayCommand(() => HandTo(KnownPlugins.Kibble), () => Selected is { CanDrillInto: true });
+        CarryElsewhereCommand = new RelayCommand(() => HandTo(CarryPlugin), () => Selected is { CanDrillInto: true });
         ConfirmDeleteCommand = new RelayCommand(() => Remove(PendingDelete), () => PendingDelete is not null);
         ExtractCommand = new RelayCommand(() => _ = PlanExtractAsync(), () => CanExtract);
         ConfirmExtractCommand = new RelayCommand(RunExtract, () => PendingExtract is { CanGo: true });
@@ -184,6 +185,14 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable
     public bool CanReachPurrge => _host.Handoff.CanReach(KnownPlugins.Purrge);
 
     public bool CanReachKibble => _host.Handoff.CanReach(KnownPlugins.Kibble);
+
+    /// <summary>Carry's id, spelled here rather than in the contract, which has not changed for it.</summary>
+    private const string CarryPlugin = "meows.carry";
+
+    /// <summary>And a big folder worth keeping, but not on this drive, is Carry's.</summary>
+    public RelayCommand CarryElsewhereCommand { get; }
+
+    public bool CanReachCarry => _host.Handoff.CanReach(CarryPlugin);
 
     private void HandTo(string pluginId)
     {
@@ -450,6 +459,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable
             OnPropertyChanged(nameof(CanExtract));
         FindDuplicatesCommand.RaiseCanExecuteChanged();
         SortWithKibbleCommand.RaiseCanExecuteChanged();
+        CarryElsewhereCommand.RaiseCanExecuteChanged();
             Identify(value);
         }
     }

@@ -1,0 +1,172 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Carry.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Carry.Views.CarryView"
+             x:DataType="vm:CarryViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="0,12,0,6" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
+        </Style>
+        <Style Selector="Button.drive">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Background" Value="{DynamicResource MeowsCard}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Margin" Value="0,0,0,5" />
+        </Style>
+        <Style Selector="Button.drive.on">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsSelectionLine}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{m:Tr carry.title}" FontWeight="SemiBold" />
+                    <TextBlock Classes="label" Text="{Binding Status}" TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="{m:Tr carry.stop}" Command="{Binding StopCommand}" IsVisible="{Binding IsWorking}" />
+                    <Button Content="{m:Tr carry.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="*,4,380">
+
+            <ScrollViewer Grid.Column="0">
+                <StackPanel Margin="14,4,14,14" Spacing="4">
+                    <TextBlock Classes="section" Text="{m:Tr carry.what}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBlock Grid.Column="0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"
+                                   Text="{Binding Source}" IsVisible="{Binding HasSource}" />
+                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Opacity="0.45" Text="{m:Tr carry.nosource}"
+                                   IsVisible="{Binding !HasSource}" />
+                        <Button Grid.Column="1" Content="{m:Tr carry.pick}" Command="{Binding PickSourceCommand}" />
+                    </Grid>
+
+                    <TextBlock Classes="section" Text="{m:Tr carry.where}" />
+                    <ItemsControl ItemsSource="{Binding Drives}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DriveChoiceViewModel">
+                                <Button Classes="drive" Classes.on="{Binding IsSelected}"
+                                        Command="{Binding $parent[UserControl].((vm:CarryViewModel)DataContext).ChooseDriveCommand}"
+                                        CommandParameter="{Binding}">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Text="{Binding Root}" FontWeight="SemiBold" />
+                                        <TextBlock Grid.Column="1" Text="{Binding FreeText}" Classes="label" />
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr carry.fixedonly}" />
+
+                    <Border Margin="0,14,0,0" Padding="12,10" CornerRadius="6"
+                            Background="{DynamicResource MeowsCard}" BorderBrush="{DynamicResource MeowsLine}" BorderThickness="1"
+                            IsVisible="{Binding HasSource}">
+                        <StackPanel Spacing="6">
+                            <TextBlock Classes="label" Text="{m:Tr carry.measuring}" IsVisible="{Binding IsPlanning}" />
+                            <TextBlock Text="{Binding PlanText}" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding RefusalText}" TextWrapping="Wrap" Foreground="{DynamicResource MeowsDangerText}"
+                                       IsVisible="{Binding HasRefusal}" />
+                            <Button Content="{m:Tr carry.go}" Command="{Binding CarryCommand}" FontWeight="SemiBold"
+                                    HorizontalAlignment="Left" IsVisible="{Binding !IsAsking}" />
+                            <Border Padding="10,8" CornerRadius="5" IsVisible="{Binding IsAsking}"
+                                    Background="{DynamicResource MeowsWarn}" BorderBrush="{DynamicResource MeowsWarnLine}" BorderThickness="1">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Text="{Binding AskText}" TextWrapping="Wrap" Foreground="{DynamicResource MeowsWarnText}" />
+                                    <TextBlock Text="{m:Tr carry.ask.backups}" TextWrapping="Wrap" FontSize="12" Foreground="{DynamicResource MeowsWarnText}" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Content="{m:Tr carry.confirm}" Command="{Binding ConfirmCommand}" FontWeight="SemiBold" />
+                                        <Button Content="{m:Tr carry.cancel}" Command="{Binding CancelAskCommand}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Classes="label" Margin="0,14,0,0" TextWrapping="Wrap" Text="{m:Tr carry.how}" />
+                </StackPanel>
+            </ScrollViewer>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <Border Grid.Column="2" Classes="panel" BorderThickness="1,0,0,0">
+                <DockPanel Margin="14,0">
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr carry.carried}" />
+                    <TextBlock DockPanel.Dock="Top" Opacity="0.45" TextWrapping="Wrap" Text="{m:Tr carry.carried.none}"
+                               IsVisible="{Binding !HasCarried}" />
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding Carried}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CarriedViewModel">
+                                    <Border Padding="10,8" Margin="0,0,0,6" CornerRadius="6"
+                                            Background="{DynamicResource MeowsCard}" BorderBrush="{DynamicResource MeowsLine}" BorderThickness="1">
+                                        <StackPanel Spacing="3">
+                                            <TextBlock Text="{Binding Source}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                            <TextBlock Classes="label" TextWrapping="Wrap">
+                                                <Run Text="→" />
+                                                <Run Text="{Binding Target}" />
+                                            </TextBlock>
+                                            <TextBlock FontSize="12">
+                                                <Run Text="{Binding SizeText}" />
+                                                <Run Text="·" />
+                                                <Run Text="{Binding StandingText}" />
+                                            </TextBlock>
+                                            <StackPanel Orientation="Horizontal" Spacing="6" Margin="0,4,0,0">
+                                                <Button Content="{m:Tr carry.reveal}" FontSize="11"
+                                                        Command="{Binding $parent[UserControl].((vm:CarryViewModel)DataContext).RevealCommand}"
+                                                        CommandParameter="{Binding}" />
+                                                <Button Content="{m:Tr carry.back}" FontSize="11"
+                                                        Command="{Binding $parent[UserControl].((vm:CarryViewModel)DataContext).BringBackCommand}"
+                                                        CommandParameter="{Binding}" />
+                                                <Button Content="{m:Tr carry.forget}" FontSize="11" IsVisible="{Binding IsBroken}"
+                                                        Command="{Binding $parent[UserControl].((vm:CarryViewModel)DataContext).ForgetCommand}"
+                                                        CommandParameter="{Binding}" />
+                                            </StackPanel>
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

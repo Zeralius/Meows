@@ -35,6 +35,7 @@ to install.
 | **[Scoop](Meows.Plugins.Scoop/README.md)** | Every drive's Recycle Bin in one list: what is in it, how big, how old, put back one at a time or emptied per drive |
 | **[Trail](Meows.Plugins.Trail/README.md)** | PATH read and explained: entries pointing nowhere, the same tool on there twice, and which one actually wins |
 | **[Larder](Meows.Plugins.Larder/README.md)** | Every installed Steam game with its size, when it was last played and which library it is in, the never-touched largest first |
+| **[Carry](Meows.Plugins.Carry/README.md)** | Moves a folder to a drive with room, checks every file, and leaves a junction behind so every path that pointed at it still works |
 | **[Kibble](Meows.Plugins.Kibble/README.md)** | Sorts a folder of new material into queues, one key press at a time, and can bundle a pick into a comic |
 | **[Perch](Meows.Plugins.Perch/README.md)** | One timeline of what the posting bot will send and when, every group merged, out as far as the queues last |
 | **[Portion](Meows.Plugins.Portion/README.md)** | Finds what the bot will fail on in every queue before it fails at night, and shrinks the pictures that can be shrunk |

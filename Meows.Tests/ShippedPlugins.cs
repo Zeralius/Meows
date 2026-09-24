@@ -36,6 +36,7 @@ internal static class ShippedPlugins
         typeof(Plugins.Scoop.ScoopPlugin),
         typeof(Plugins.Trail.TrailPlugin),
         typeof(Plugins.Larder.LarderPlugin),
+        typeof(Plugins.Carry.CarryPlugin),
         // kitten: next plugin goes here
     ];
 }

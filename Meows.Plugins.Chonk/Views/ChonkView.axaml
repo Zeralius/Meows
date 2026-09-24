@@ -327,6 +327,11 @@
                                     IsVisible="{Binding CanReachKibble}"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center" />
+                            <Button Content="{m:Tr chonk.handoff.carry}"
+                                    Command="{Binding CarryElsewhereCommand}"
+                                    IsVisible="{Binding CanReachCarry}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
 
                             <Button Content="{m:Tr chonk.recycle}"
                                     Command="{Binding DeleteCommand}"
