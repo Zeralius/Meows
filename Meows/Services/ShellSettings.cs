@@ -448,6 +448,12 @@ public sealed class ShellPreferences
     /// <summary>One-off notifications as Windows notifications while the window is not in front.</summary>
     public bool SayOutside { get; set; } = true;
 
+    /// <summary>A notification once a week counting what the week's history holds.</summary>
+    public bool WeeklyRecap { get; set; } = true;
+
+    /// <summary>When that notification last went out; null until the first week has passed.</summary>
+    public DateTime? LastRecapUtc { get; set; }
+
     /// <summary>Purrge and Chonk, or Duplicates and Disk usage. On, because it is the app's character.</summary>
     public bool FelineNames { get; set; } = true;
 

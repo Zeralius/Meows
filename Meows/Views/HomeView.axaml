@@ -182,6 +182,18 @@
                         </ItemsControl.ItemTemplate>
                     </ItemsControl>
 
+                    <!-- The last seven days, counted from the history. -->
+                    <TextBlock Classes="heading" Text="{m:Tr home.week}" IsVisible="{Binding HasWeek}" />
+                    <Border Classes="card" Padding="12,8" Margin="0,0,0,14" IsVisible="{Binding HasWeek}">
+                        <ItemsControl ItemsSource="{Binding Week}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <TextBlock Text="{Binding}" FontSize="12" TextWrapping="Wrap" Margin="0,1" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+
                     <!-- What the plugins did since the window was last hidden. -->
                     <TextBlock Classes="heading" Text="{m:Tr home.recent}" />
                     <TextBlock Opacity="0.4"

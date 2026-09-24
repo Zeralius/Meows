@@ -94,6 +94,27 @@ public partial class App : Application
                     message => log.Write("toast", message), pressable);
             };
 
+            // The weekly recap: checked hourly, posted once a week from the week's history. The
+            // first week only starts the clock, since a recap of the week before is a recap of nothing.
+            if (preferences.LastRecapUtc is null)
+            {
+                preferences.LastRecapUtc = DateTime.UtcNow;
+                settings.SavePreferences(preferences);
+            }
+            background.ScheduleForShell(text["recap.task"], TimeSpan.FromHours(1), _ =>
+            {
+                var now = DateTime.UtcNow;
+                if (preferences.WeeklyRecap && WeeklyRecap.IsDue(preferences.LastRecapUtc, now))
+                {
+                    var recap = WeeklyRecap.Of(store.Between(now - WeeklyRecap.Week, now), now - WeeklyRecap.Week, now);
+                    preferences.LastRecapUtc = now;
+                    settings.SavePreferences(preferences);
+                    notifications.Post("Meows", Meows.Plugins.Abstractions.NotificationSeverity.Info,
+                        text["recap.title"], WeeklyRecap.Summary(recap, text), []);
+                }
+                return Task.CompletedTask;
+            }, runImmediately: true);
+
             // A second Meows started while this one runs: its arguments arrive here, and the
             // window comes up unless that start only wanted the tray.
             Program.Instance?.Listen(args => Avalonia.Threading.Dispatcher.UIThread.Post(() =>
