@@ -66,6 +66,12 @@ public interface IPostTarget
     /// <summary>Whether a post here can be words alone.</summary>
     bool TakesTextOnly { get; }
 
+    /// <summary>Whether this place sends each picture's alt text, so a picture without one is worth a word before posting.</summary>
+    bool CarriesAltText => false;
+
+    /// <summary>How this place writes the draft's tags, which decides whether one can be lost on the way.</summary>
+    TagSpelling Spelling => TagSpelling.None;
+
     /// <summary>
     /// What this place would be sent, worked out from the draft and the pictures. Pure, so the
     /// tab can show it as the draft is typed and a test can check it without a network.

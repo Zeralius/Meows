@@ -237,6 +237,10 @@ public abstract class OAuthTarget : IApiTarget
 
     public abstract bool TakesTextOnly { get; }
 
+    public virtual bool CarriesAltText => false;
+
+    public virtual TagSpelling Spelling => TagSpelling.None;
+
     public OAuthApp? App { get; set; }
 
     public OAuthTokens? Tokens { get; set; }

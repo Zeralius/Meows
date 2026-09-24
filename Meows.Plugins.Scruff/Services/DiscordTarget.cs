@@ -30,6 +30,8 @@ public sealed class DiscordTarget : IApiTarget
 
     public string Name => "Discord";
 
+    public bool CarriesAltText => true;
+
     public MediaLimits Limits { get; } = new(10, 10_000_000, 0, [ImageFormat.Jpeg, ImageFormat.Png, ImageFormat.WebP, ImageFormat.Gif]);
 
     public bool PostsItself => true;
