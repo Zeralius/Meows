@@ -1,0 +1,123 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Cattery.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Cattery.Views.CatteryView"
+             x:DataType="vm:CatteryViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="14,12,14,6" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+        <Style Selector="TextBlock.dirty">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsWarnText}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Summary}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="label" Text="{Binding Status}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <ComboBox ItemsSource="{Binding FilterChoices}" SelectedIndex="{Binding FilterIndex}" FontSize="11" />
+                    <ComboBox ItemsSource="{Binding SortChoices}" SelectedIndex="{Binding SortIndex}" FontSize="11" />
+                    <Button Content="{m:Tr cattery.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="*,4,280">
+
+            <DockPanel Grid.Column="0">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="14,10,14,6" HorizontalAlignment="Right">
+                    <Button Content="{m:Tr cattery.openfolder}" Command="{Binding OpenFolderCommand}" FontSize="11" />
+                    <Button Content="{m:Tr cattery.terminal}" Command="{Binding OpenTerminalCommand}" FontSize="11" />
+                </StackPanel>
+                <TextBlock DockPanel.Dock="Top" Margin="14,12" Opacity="0.45" TextWrapping="Wrap"
+                           Text="{m:Tr cattery.empty}" IsVisible="{Binding IsEmpty}" />
+                <ListBox ItemsSource="{Binding Repositories}" SelectedItem="{Binding Selected}" Margin="8,0,8,8" Background="Transparent">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:RepoViewModel">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                                <StackPanel Grid.Column="0" Spacing="1">
+                                    <TextBlock FontWeight="SemiBold" TextTrimming="CharacterEllipsis">
+                                        <Run Text="{Binding Name}" />
+                                        <Run Text="  " />
+                                        <Run Text="{Binding BranchText}" FontWeight="Normal" FontSize="11" />
+                                    </TextBlock>
+                                    <TextBlock Text="{Binding WorkText}" FontSize="12" Classes.dirty="{Binding IsDirty}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Path}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding RemoteText}" FontSize="12" TextAlignment="Right" Classes.dirty="{Binding HasUnpushed}" />
+                                    <TextBlock Text="{Binding LastCommitText}" Classes="label" TextAlignment="Right" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <Border Grid.Column="2" Classes="panel" BorderThickness="1,0,0,0">
+                <ScrollViewer>
+                    <StackPanel>
+                        <TextBlock Classes="section" Text="{m:Tr cattery.roots}" />
+                        <ItemsControl ItemsSource="{Binding Roots}" Margin="14,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="0,0,0,4">
+                                        <TextBlock Text="{Binding}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        <Button Grid.Column="1" Content="✕" FontSize="10" Padding="6,2"
+                                                Command="{Binding $parent[UserControl].((vm:CatteryViewModel)DataContext).RemoveRootCommand}"
+                                                CommandParameter="{Binding}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Content="{m:Tr cattery.addroot}" Command="{Binding AddRootCommand}" Margin="14,4,14,14" FontSize="11" />
+                        <TextBlock Classes="label" Margin="14,0,14,14" TextWrapping="Wrap" Text="{m:Tr cattery.why}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>
