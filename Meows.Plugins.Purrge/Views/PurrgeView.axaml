@@ -77,6 +77,7 @@
                 <RadioButton Classes="mode" GroupName="purrge-mode" Content="{m:Tr purrge.mode.duplicates}" IsChecked="{Binding IsDuplicatesMode}" />
                 <RadioButton Classes="mode" GroupName="purrge-mode" Content="{m:Tr purrge.mode.compare}" IsChecked="{Binding IsCompareMode}" />
                 <RadioButton Classes="mode" GroupName="purrge-mode" Content="{m:Tr purrge.mode.lookalike}" IsChecked="{Binding IsLookalikeMode}" />
+                <RadioButton Classes="mode" GroupName="purrge-mode" Content="{m:Tr purrge.mode.groom}" IsChecked="{Binding IsGroomMode}" />
             </StackPanel>
         </Border>
 
@@ -120,6 +121,25 @@
                               VerticalAlignment="Center" />
                     <Button Content="{m:Tr purrge.lookalike.find}" Command="{Binding FindLookalikesCommand}" FontWeight="SemiBold" />
                     <Button Content="{m:Tr purrge.cancel}" Command="{Binding Lookalikes.CancelCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Groom: the folder from the tree, what would change, and one button -->
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10"
+                IsVisible="{Binding IsGroomMode}">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding ScanRoot}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="label" Text="{Binding Groom.Summary}" TextWrapping="Wrap" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="{m:Tr purrge.groom.refresh}" Command="{Binding Groom.RefreshCommand}" />
+                    <Button Content="{m:Tr purrge.groom.run}" Command="{Binding Groom.RunCommand}" FontWeight="SemiBold" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -284,6 +304,36 @@
                 </ScrollViewer>
             </DockPanel>
 
+            <!-- Groom's preview: every file's name now and after, clashes first -->
+            <DockPanel Grid.Column="2" IsVisible="{Binding IsGroomMode}">
+                <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.groom.preview}" />
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,0,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding !Groom.HasRows}"
+                           Text="{m:Tr purrge.groom.empty}" />
+                <ScrollViewer>
+                    <ItemsControl ItemsSource="{Binding Groom.Rows}" Margin="10,0,10,10">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:GroomRowViewModel">
+                                <Border Padding="8,4" Margin="0,1" CornerRadius="4"
+                                        Background="{DynamicResource MeowsCard}">
+                                    <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="10">
+                                        <TextBlock Grid.Column="0" Text="{Binding From}" TextTrimming="CharacterEllipsis" Opacity="0.7" FontSize="12" />
+                                        <TextBlock Grid.Column="1" Text="→" Opacity="0.45" IsVisible="{Binding Changes}" />
+                                        <StackPanel Grid.Column="2" Spacing="1">
+                                            <TextBlock Text="{Binding To}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" FontSize="12" IsVisible="{Binding Changes}" />
+                                            <TextBlock Text="{Binding ProblemText}" Foreground="{DynamicResource MeowsDangerText}" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding IsProblem}" />
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </DockPanel>
+
             <!-- Look-alike groups: each file with its own size and pixels, the keeper marked -->
             <DockPanel Grid.Column="2" IsVisible="{Binding IsLookalikeMode}">
                 <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.lookalike.grouped}" />
@@ -423,6 +473,44 @@
 
             <!-- Look-alikes side by side: the one kept above, the one looked at below, both at full
                  size before anything can go. -->
+            <!-- Groom's rule, and the last run to take back -->
+            <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0" IsVisible="{Binding IsGroomMode}">
+                <ScrollViewer>
+                    <StackPanel Margin="14,12" Spacing="6">
+                        <TextBlock Classes="section" Margin="0" Text="{m:Tr purrge.groom.rule}" />
+                        <TextBlock Classes="label" Text="{m:Tr purrge.groom.filter}" />
+                        <TextBox Text="{Binding Groom.Filter}" Watermark="*.jpg; *.png" />
+                        <CheckBox Content="{m:Tr purrge.groom.dropcounter}" IsChecked="{Binding Groom.DropCopyCounter}" />
+                        <TextBlock Classes="label" Text="{m:Tr purrge.groom.find}" />
+                        <TextBox Text="{Binding Groom.Find}" />
+                        <TextBlock Classes="label" Text="{m:Tr purrge.groom.replace}" />
+                        <TextBox Text="{Binding Groom.Replace}" />
+                        <CheckBox Content="{m:Tr purrge.groom.regex}" IsChecked="{Binding Groom.UseRegex}" />
+                        <TextBlock Classes="label" Text="{m:Tr purrge.groom.case}" />
+                        <ComboBox ItemsSource="{Binding Groom.CaseChoices}" SelectedIndex="{Binding Groom.CaseIndex}" HorizontalAlignment="Stretch" />
+                        <TextBlock Classes="label" Text="{m:Tr purrge.groom.template}" />
+                        <TextBox Text="{Binding Groom.Template}" />
+                        <TextBlock Classes="label" TextWrapping="Wrap" Opacity="0.7" Text="{m:Tr purrge.groom.template.hint}" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                            <StackPanel Grid.Column="0" Spacing="2">
+                                <TextBlock Classes="label" Text="{m:Tr purrge.groom.start}" />
+                                <NumericUpDown Value="{Binding Groom.Start}" Minimum="0" Maximum="999999" Increment="1" FormatString="0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="2">
+                                <TextBlock Classes="label" Text="{m:Tr purrge.groom.digits}" />
+                                <NumericUpDown Value="{Binding Groom.Digits}" Minimum="1" Maximum="9" Increment="1" FormatString="0" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{Binding Groom.Status}" IsVisible="{Binding Groom.HasStatus}" Margin="0,8,0,0" />
+                        <StackPanel Spacing="4" Margin="0,10,0,0" IsVisible="{Binding Groom.CanUndo}">
+                            <TextBlock Classes="section" Margin="0" Text="{m:Tr purrge.groom.last}" />
+                            <TextBlock Classes="label" TextWrapping="Wrap" Text="{Binding Groom.UndoText}" />
+                            <Button Content="{m:Tr purrge.groom.undo}" Command="{Binding Groom.UndoCommand}" HorizontalAlignment="Left" />
+                        </StackPanel>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
             <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0" IsVisible="{Binding IsLookalikeMode}">
                 <ScrollViewer Padding="16,12">
                     <StackPanel Spacing="8">

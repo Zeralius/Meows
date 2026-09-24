@@ -135,6 +135,27 @@ opinion, and two pages of one comic can look as close as two copies of one page.
   the Recycle Bin one at a time, and only once it and the one being kept are both on screen at
   full size, side by side.
 
+## Rename: tidy the names
+
+The duplicates show how they got there: a browser's `(1)`, a `- Copy`, a transposed digit, a
+hash-named re-save. **Rename** works on the files directly in the folder picked in the tree, in
+this order: only the files matching the filter, the `(1)` and `- Copy` taken off, find and
+replace (plain, or a regular expression), the case changed, and then the new name put together
+from a template where `{name}` is what the steps left, `{n}` a number counted in name order and
+`{date}` the day the file last changed. The extension is never touched; a name that lies about
+its kind is Portion's to fix.
+
+Every file is in the preview with its name now and after, before anything moves. A new name that
+another file already has, two files heading for the same name, a name Windows would refuse, or a
+regular expression that does not parse is marked on its row and sorted to the top, and **nothing
+moves while any row clashes**. A file that is itself being renamed is no obstacle, so names can
+swap or a sequence can shift: every file first steps aside under a temporary name and then takes
+its new one. Dates stay as they were.
+
+The last run is kept, across a restart too, and *Put the old names back* undoes it as far as the
+files let it: a file that has gone, or whose old name something else now has, keeps its new one
+and is named in the result. Each run and each undo is a *renamed* line in the history.
+
 ## Not in this version
 
 **Hardlinks and junctions.** Several paths can point at one file. Deleting one is harmless

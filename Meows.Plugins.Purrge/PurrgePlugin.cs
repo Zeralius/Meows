@@ -30,6 +30,7 @@ public sealed class PurrgePlugin : IMeowsPlugin
     public IReadOnlyList<RecordedKind> Records =>
     [
         new("recycled", "purrge.records.recycled"),
+        new("renamed", "purrge.records.renamed"),
     ];
 
     public Control CreateView(IMeowsHost host) => new PurrgeView
