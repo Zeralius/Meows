@@ -1,0 +1,147 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Views.RulesView"
+             x:DataType="vm:RulesViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Border.section">
+            <Setter Property="Background" Value="{DynamicResource MeowsCard}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="18,15" />
+            <Setter Property="Margin" Value="0,0,0,14" />
+        </Style>
+        <Style Selector="Border.card">
+            <Setter Property="Background" Value="{DynamicResource MeowsCard}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="12,9" />
+            <Setter Property="Margin" Value="0,0,0,6" />
+        </Style>
+        <Style Selector="TextBlock.heading">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="FontSize" Value="15" />
+        </Style>
+        <Style Selector="TextBlock.hint">
+            <Setter Property="Opacity" Value="0.55" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="TextBlock.word">
+            <Setter Property="Opacity" Value="0.6" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+        <Style Selector="TextBlock.trouble">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsDangerText}" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="TextWrapping" Value="Wrap" />
+        </Style>
+        <Style Selector="Button.small">
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Padding" Value="8,2" />
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer>
+        <StackPanel Margin="20" MaxWidth="820" HorizontalAlignment="Left">
+
+            <StackPanel Spacing="4" Margin="0,0,0,18">
+                <TextBlock Text="{m:Tr rules.title}" FontSize="24" FontWeight="SemiBold" />
+                <TextBlock Classes="hint" Text="{m:Tr rules.subtitle}" />
+            </StackPanel>
+
+            <!-- The one sentence that makes a rule. -->
+            <Border Classes="section">
+                <StackPanel Spacing="10">
+                    <TextBlock Classes="heading" Text="{m:Tr rules.new}" />
+                    <TextBlock Classes="hint"
+                               Text="{m:Tr rules.notargets}"
+                               IsVisible="{Binding HasNoTargets}" />
+
+                    <WrapPanel Orientation="Horizontal">
+                        <TextBlock Classes="word" Text="{m:Tr rules.when}" Margin="0,0,8,6" />
+                        <ComboBox ItemsSource="{Binding Sources}"
+                                  SelectedItem="{Binding SelectedSource}"
+                                  PlaceholderText="{m:Tr rules.pick.source}"
+                                  MinWidth="150"
+                                  Margin="0,0,8,6" />
+                        <ComboBox ItemsSource="{Binding Kinds}"
+                                  SelectedItem="{Binding SelectedKind}"
+                                  PlaceholderText="{m:Tr rules.pick.kind}"
+                                  MinWidth="170"
+                                  Margin="0,0,8,6" />
+                        <TextBox Text="{Binding Matching}"
+                                 PlaceholderText="{m:Tr rules.matching}"
+                                 Width="170"
+                                 Margin="0,0,8,6" />
+                    </WrapPanel>
+
+                    <WrapPanel Orientation="Horizontal">
+                        <TextBlock Classes="word" Text="{m:Tr rules.then}" Margin="0,0,8,6" />
+                        <ComboBox ItemsSource="{Binding Targets}"
+                                  SelectedItem="{Binding SelectedTarget}"
+                                  PlaceholderText="{m:Tr rules.pick.target}"
+                                  MinWidth="150"
+                                  Margin="0,0,8,6" />
+                        <ComboBox ItemsSource="{Binding Actions}"
+                                  SelectedItem="{Binding SelectedAction}"
+                                  PlaceholderText="{m:Tr rules.pick.action}"
+                                  MinWidth="200"
+                                  Margin="0,0,8,6" />
+                        <Button Content="{m:Tr rules.add}"
+                                Command="{Binding AddCommand}"
+                                Margin="0,0,0,6" />
+                    </WrapPanel>
+
+                    <TextBlock Classes="hint"
+                               Text="{Binding ActionDescription}"
+                               IsVisible="{Binding HasActionDescription}" />
+                    <TextBlock Classes="hint" Text="{m:Tr rules.onehop}" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Classes="heading" Text="{m:Tr rules.list}" Margin="2,0,0,8" />
+            <TextBlock Classes="hint"
+                       Text="{m:Tr rules.empty}"
+                       Margin="2,0,0,8"
+                       IsVisible="{Binding !HasRules}" />
+
+            <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RuleRowViewModel">
+                        <Border Classes="card">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                                <CheckBox Grid.Column="0"
+                                          IsChecked="{Binding Enabled}"
+                                          VerticalAlignment="Top"
+                                          ToolTip.Tip="{m:Tr rules.enabled}" />
+                                <StackPanel Grid.Column="1" Spacing="3">
+                                    <TextBlock Text="{Binding Sentence}" TextWrapping="Wrap" FontWeight="SemiBold" />
+                                    <TextBlock Classes="trouble" Text="{Binding Problem}" IsVisible="{Binding HasProblem}" />
+                                    <TextBlock Text="{Binding LastText}" Opacity="0.55" FontSize="11" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+                                    <Button Classes="small"
+                                            Content="{m:Tr rules.resume}"
+                                            IsVisible="{Binding IsPaused}"
+                                            Command="{Binding $parent[UserControl].((vm:RulesViewModel)DataContext).ResumeCommand}"
+                                            CommandParameter="{Binding}" />
+                                    <Button Classes="small"
+                                            Content="{m:Tr rules.remove}"
+                                            Command="{Binding $parent[UserControl].((vm:RulesViewModel)DataContext).RemoveCommand}"
+                                            CommandParameter="{Binding}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

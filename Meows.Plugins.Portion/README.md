@@ -75,6 +75,12 @@ Portion also takes files handed over from another tab, Telegram Poster's queue r
 particular: each is weighed on its own and listed if the bot would object, and the status line
 says how many were fine as they were.
 
+## When a rule asks
+
+On the Rules tab Portion offers **Check the queues**: the same walk as the Scan button, and the
+line the tab ends on is what History shows beside the rule. A shrink in progress is left alone
+and the rule is told so. Portion's shrinks and holds are events a rule can wait for.
+
 ## Settings
 
 `%APPDATA%\Meows\plugins\meows.portion\settings.json` holds the bot folder if it was chosen by

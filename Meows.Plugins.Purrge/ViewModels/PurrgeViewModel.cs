@@ -28,7 +28,7 @@ public sealed class PurrgeSettings
     public bool TrustTimestamps { get; set; }
 }
 
-public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable
+public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable, IActionTarget
 {
     private const int ThumbnailWidth = 96;
     private const int PreviewWidth = 720;
@@ -387,9 +387,20 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
                     await Dispatcher.UIThread.InvokeAsync(() => StatusMessage = _host.Text["purrge.status.cancelled"]);
                     throw;
                 }
+                catch (Exception ex)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => ErrorMessage = ex.Message);
+                    throw;
+                }
                 finally
                 {
-                    await Dispatcher.UIThread.InvokeAsync(() => IsScanning = false);
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        IsScanning = false;
+                        // A rule waiting on a walk that ended without results hears why.
+                        _ruleWaiting?.TrySetResult(ErrorMessage ?? StatusMessage ?? "");
+                        _ruleWaiting = null;
+                    });
                 }
             });
 
@@ -662,6 +673,40 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
 
     /// <summary>Set by a Files handoff for the scan that follows: the files whose copies are wanted.</summary>
     private IReadOnlyList<string>? _copiesOf;
+
+    /// <summary>A rule waiting to hear what the walk it asked for found.</summary>
+    private TaskCompletionSource<string>? _ruleWaiting;
+
+    /// <summary>
+    /// A rule's "look for duplicates": the folder the event was about, or the folder of the file
+    /// it was about, walked the way the Scan button walks it. The answer is the summary the tab
+    /// ends on. A walk already running is not interrupted; the rule is told so.
+    /// </summary>
+    public async Task<string> Perform(ActionRequest request, CancellationToken token)
+    {
+        if (request.Action != PurrgePlugin.ScanAction)
+            throw new ActionDeclinedException(_host.Text.Format("purrge.action.unknown", request.Action));
+
+        var path = request.Path;
+        var folder = Directory.Exists(path) ? path
+            : File.Exists(path) ? Path.GetDirectoryName(path)
+            : null;
+        if (folder is null)
+            throw new ActionDeclinedException(_host.Text.Format("purrge.action.gone", path));
+        if (IsScanning)
+            throw new ActionDeclinedException(_host.Text["purrge.action.busy"]);
+
+        var done = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        IsCompareMode = false;
+        _askedBy = new Handoff(HandoffVerbs.Folder, [folder]) { Reply = found => done.TrySetResult(found) };
+        _ruleWaiting = done;
+        _copiesOf = null;
+        ScanRoot = folder;
+        StartScan();
+
+        await using (token.Register(() => done.TrySetCanceled(token)))
+            return await done.Task;
+    }
 
     private void SaveSettings()
     {

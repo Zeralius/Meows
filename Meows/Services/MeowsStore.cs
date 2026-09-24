@@ -43,6 +43,12 @@ public sealed class MeowsStore
     /// <summary>Raised after a line lands, on whatever thread wrote it, with the plugin's id.</summary>
     public event Action<string>? Recorded;
 
+    /// <summary>
+    /// The same moment, with the whole line, for the rule engine. Also on whatever thread wrote
+    /// it; a listener that touches anything on screen posts to the UI thread itself.
+    /// </summary>
+    public event Action<StoredEvent>? Stored;
+
     private SqliteConnection Open()
     {
         var connection = new SqliteConnection(new SqliteConnectionStringBuilder
@@ -112,18 +118,30 @@ public sealed class MeowsStore
 
     public void Record(string plugin, string kind, string subject, string? detail, IReadOnlyDictionary<string, string>? data)
     {
+        // A line written while a rule's action is running says which rule, so the rule engine
+        // can refuse to be started by it. That is the whole of "one hop": the mark is put on
+        // here, where every line passes, rather than trusted to each plugin to add.
+        if (InstinctScope.Rule is { } rule)
+        {
+            var marked = data is null ? new Dictionary<string, string>() : new Dictionary<string, string>(data);
+            marked[InstinctScope.DataKey] = rule;
+            data = marked;
+        }
+
+        long id;
+        var at = DateTime.UtcNow;
         try
         {
             using var connection = Open();
             using var command = connection.CreateCommand();
-            command.CommandText = "INSERT INTO events (at, plugin, kind, subject, detail, data) VALUES ($at, $plugin, $kind, $subject, $detail, $data)";
-            command.Parameters.AddWithValue("$at", Stamp(DateTime.UtcNow));
+            command.CommandText = "INSERT INTO events (at, plugin, kind, subject, detail, data) VALUES ($at, $plugin, $kind, $subject, $detail, $data); SELECT last_insert_rowid();";
+            command.Parameters.AddWithValue("$at", Stamp(at));
             command.Parameters.AddWithValue("$plugin", plugin);
             command.Parameters.AddWithValue("$kind", kind);
             command.Parameters.AddWithValue("$subject", subject);
             command.Parameters.AddWithValue("$detail", (object?)detail ?? DBNull.Value);
             command.Parameters.AddWithValue("$data", data is null ? DBNull.Value : JsonSerializer.Serialize(data));
-            command.ExecuteNonQuery();
+            id = Convert.ToInt64(command.ExecuteScalar());
         }
         catch (Exception ex)
         {
@@ -132,6 +150,30 @@ public sealed class MeowsStore
         }
 
         Recorded?.Invoke(plugin);
+        Stored?.Invoke(new StoredEvent(id, at.ToLocalTime(), plugin, kind, subject, detail,
+            data ?? new Dictionary<string, string>()));
+    }
+
+    /// <summary>The kinds one plugin has ever written, for the Rules tab to offer.</summary>
+    public IReadOnlyList<string> Kinds(string plugin)
+    {
+        var kinds = new List<string>();
+        try
+        {
+            using var connection = Open();
+            using var command = connection.CreateCommand();
+            command.CommandText = "SELECT DISTINCT kind FROM events WHERE plugin = $plugin ORDER BY kind";
+            command.Parameters.AddWithValue("$plugin", plugin);
+            using var reader = command.ExecuteReader();
+            while (reader.Read())
+                kinds.Add(reader.GetString(0));
+        }
+        catch (Exception ex)
+        {
+            _log($"Could not list what {plugin} records: {ex.Message}");
+        }
+
+        return kinds;
     }
 
     /// <summary>Events, newest first. Plugin, kind and text are each optional filters.</summary>

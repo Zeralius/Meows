@@ -20,6 +20,12 @@ public sealed class CatnipPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("scan", "catnip.records.scan"),
+        new("recycled", "catnip.records.recycled"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new CatnipView
     {
         DataContext = new CatnipViewModel(host),

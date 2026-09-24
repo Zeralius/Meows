@@ -95,6 +95,7 @@
   "tp.openfolder": "Open folder",
   "tp.queue.empty": "queue empty · {0} archived",
   "tp.queue.some": "{0} queued · {1} archived",
+  "tp.records.held": "held a file back",
   "tp.refresh": "Refresh",
   "tp.reload": "Reload",
   "tp.saved": "Saved config.json. Restart the bot for it to take effect",

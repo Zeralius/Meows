@@ -146,6 +146,29 @@ by default, or a year, six months, three months or a month, applied when Meows s
 day while it runs; Purr lists that pass under Meows. Neither forgetting ever touches the facts a
 plugin keeps or the hashes anything has seen.
 
+The **Rules** tab joins the plugins up: *when* one plugin records something, *then* ask another
+to act. When Birdwatch saves a picture, check Portion's queues; when Kibble queues a file, have
+Scruff take the metadata out of it where it now sits; when Purrge sends a copy to the bin, put
+it on Collar's list for a week from now. A rule is one sentence of dropdowns, with an optional
+word the event has to mention, and runs whether or not the window is open: a plugin a rule asks
+is switched on if it is off, and its tab is not brought to the front. Every firing is a line in
+the History tab under *Instinct*, saying what fired, what was asked and what came back, so the
+first surprising night can be read rather than guessed at.
+
+Three things keep it from being the surprise. **One hop**: whatever a plugin does because a rule
+asked never starts another rule, so nothing can set off a chain. **One at a time**: five pictures
+saved in a burst are five checks in a row, not five at once. **A rule that runs away is paused**:
+more than thirty firings in ten minutes stops it with the reason on its row and a *Resume*
+button. A rule whose plugin has been uninstalled is never dropped; its row says what is missing,
+and it runs again the day the plugin is back.
+
+What can be asked for so far: Collar puts it on the list, for today or a week out; Portion checks
+the queues; Purrge looks for duplicates in the folder; Scruff cleans the picture in place, the
+original to the Recycle Bin and the clean copy keeping its date so a queue keeps its order; and
+Weigh-In takes a reading. Anything any plugin records can start a rule, and every plugin that
+writes to the history says in words what it records, so a rule can wait for something that has
+not happened yet.
+
 Every card on the **Plugins** tab carries a line of health: the last thing that plugin recorded
 and how long ago, and how many of its watches are running, a stopped one in red.
 
@@ -344,13 +367,15 @@ contract itself does: **major** if a member is removed or changed, **minor** if 
 **patch** for documentation. It reached **1.0.0** with Meows 3.0.0, which is the point from
 which a plugin built against any 1.x loads on any later 1.x shell; plugins built against 0.x
 are refused by a 3.x shell and need a rebuild against 1.0.0. **1.1.0**, with Meows 3.1.0,
-added the line a plugin can put on its Home card.
+added the line a plugin can put on its Home card. **1.2.0**, with Meows 4.2.0, added the two
+lists a plugin gives the Rules tab, what it can be asked to do and what it records, and the
+interface its view model does the asking through.
 
 Meows checks that version when it loads a plugin and refuses anything it cannot honour, with the
 reason on the plugin's card rather than a crash later:
 
-> Built for Meows contract 1.2.0, which is newer than this shell's 1.1.0. Update Meows, or rebuild
-> the plugin against 1.1.0.
+> Built for Meows contract 1.3.0, which is newer than this shell's 1.2.0. Update Meows, or rebuild
+> the plugin against 1.2.0.
 
 A newer contract is refused; an older one is fine, since additions stay backward compatible.
 

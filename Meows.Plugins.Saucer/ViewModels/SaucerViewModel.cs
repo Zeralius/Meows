@@ -309,6 +309,7 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable, ISearchable
 
             Status = _host.Text.Format("saucer.status.saved", Path.GetFileName(path));
             _host.Log($"Saucer saved a clipping to {path}");
+            _host.Store.Record("saved", path, _host.Text["saucer.journal.saved"]);
             return path;
         }
         catch (Exception ex)

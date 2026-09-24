@@ -207,7 +207,7 @@ public sealed class EntryViewModel : ObservableObject
     internal void Reread() => OnEverythingChanged();
 }
 
-public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget, IGlanceable
+public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget, IGlanceable, IActionTarget
 {
     /// <summary>The condition key. One per plugin scope, so it replaces rather than stacks.</summary>
     private const string DueKey = "due";
@@ -425,6 +425,49 @@ public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable
         handoff.Answer(added == 0
             ? _host.Text["collar.reply.attached"]
             : _host.Text.Format("collar.reply.added", added));
+    }
+
+    /// <summary>
+    /// A rule's "put it on the list": a one-off entry named after what the rule was about, due
+    /// today or in a week, with the file attached when there is one and the other plugin's words
+    /// as the note. Nothing is selected, since nobody is necessarily looking. The same thing
+    /// asked twice for the same day is one entry, not two.
+    /// </summary>
+    public Task<string> Perform(ActionRequest request, CancellationToken token)
+    {
+        var days = request.Action switch
+        {
+            CollarPlugin.RemindToday => 0,
+            CollarPlugin.RemindWeek => 7,
+            _ => throw new ActionDeclinedException(_host.Text.Format("collar.action.unknown", request.Action)),
+        };
+
+        var path = request.Path;
+        var isFile = System.IO.File.Exists(path);
+        var title = isFile ? System.IO.Path.GetFileName(path) : request.Subject.Trim();
+        if (title.Length == 0)
+            title = _host.Text["collar.untitled"];
+        var due = DateTime.Today.AddDays(days);
+        var shown = due.ToString("d", Culture);
+
+        if (_settings.Entries.Any(e => !e.Done && e.Due.Date == due && string.Equals(e.Title, title, StringComparison.CurrentCultureIgnoreCase)))
+            return Task.FromResult(_host.Text.Format("collar.action.already", title, shown));
+
+        _settings.Entries.Add(new CollarEntry
+        {
+            Title = title,
+            Kind = Kind.Other,
+            Due = due,
+            Note = request.Cause.Detail ?? "",
+            File = isFile ? path : null,
+        });
+        Save();
+
+        var keep = Selected?.Id;
+        Rebuild();
+        Selected = keep is null ? null : Entries.FirstOrDefault(e => e.Id == keep);
+
+        return Task.FromResult(_host.Text.Format("collar.action.added", title, shown));
     }
 
     /// <summary>Dealt with: a repeat moves to its next date, a one-off is finished.</summary>

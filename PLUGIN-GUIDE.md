@@ -142,7 +142,7 @@ contract version the template was published with. No `ProjectReference`, no Meow
 ```xml
 <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.1.0" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.2.0" ExcludeAssets="runtime" PrivateAssets="all" />
 </ItemGroup>
 ```
 
@@ -233,8 +233,8 @@ The shell checks this for you. At discovery it reads the contract version your a
 compiled against and refuses anything it cannot honour, **before constructing your plugin**, so
 none of your code runs. The reason appears on your plugin's card in place of its toggle:
 
-> Built for Meows contract 1.2.0, which is newer than this shell's 1.1.0. Update Meows, or rebuild
-> the plugin against 1.1.0.
+> Built for Meows contract 1.3.0, which is newer than this shell's 1.2.0. Update Meows, or rebuild
+> the plugin against 1.2.0.
 
 A mismatched **major** is refused either way, since a major bump means members may have been
 removed. A **newer** minor or patch is refused; an older one loads fine, because additive
@@ -420,6 +420,67 @@ with the files waiting in its last folder, one listing when first asked, and Fam
 one-shots by name; a plugin whose data only exists once it is on, Tin's accounts or Birdwatch's
 posts, answers nothing and is left out, which is the honest default.
 
+### Being asked by a rule
+
+The shell's **Rules** tab joins plugins up: *when* one records an event, *then* ask another to
+do something. Since 1.2.0 a plugin takes part through two lists on the plugin class and one
+interface on its view model. Both lists are read while the plugin is off, so they are fixed
+lists, never read from settings or the disk.
+
+```csharp
+public IReadOnlyList<PluginAction> Actions =>
+[
+    new("check", "myplugin.action.check", "myplugin.action.check.hint"),
+];
+
+public IReadOnlyList<RecordedKind> Records =>
+[
+    new("found", "myplugin.records.found"),    // the kind you pass to Store.Record
+];
+```
+
+`Actions` is what a rule can ask for: a stable id, which is what rules are saved by, and a label
+and an optional sentence, both keys from your catalogue. `Records` names the kinds of event you
+already write to the store, with a past-tense phrase that follows your plugin's name on the
+Rules tab, "Birdwatch *saved a picture*", so a rule can wait for one before it has ever happened.
+A kind you record but do not list can still start a rule once it is in the history; it is shown
+by its bare word. Both default to empty, and a plugin with no actions is simply not on the
+"then" side.
+
+The asking goes to the view model:
+
+```csharp
+public sealed class MyViewModel : ObservableObject, IActionTarget
+{
+    public async Task<string> Perform(ActionRequest request, CancellationToken token)
+    {
+        if (request.Action != "check")
+            throw new ActionDeclinedException($"My plugin does not know how to {request.Action}.");
+        if (!File.Exists(request.Path))
+            throw new ActionDeclinedException($"{request.Path} is not there any more.");
+
+        var found = await CheckAsync(request.Path, token);
+        return $"{found} things found";              // the line History shows
+    }
+}
+```
+
+The shell switches the plugin on if it is off, without bringing its tab to the front, and calls
+`Perform` on the UI thread. Do the work the way the tab would, through background work if it
+is long, and return one sentence saying how it went. `request.Cause` is the whole event that set
+the rule off; `request.Path` is where the thing is now, which is the cause's subject unless the
+recording plugin moved it and wrote the new place as `destination` in its data, as Kibble does.
+Throw `ActionDeclinedException` for "not this time", the file has gone or the tab is busy, and
+anything else for a real failure; History tells the two apart. The token is cancelled when
+Meows quits, when your plugin is switched off, and when an action has run for an hour.
+
+Whatever you record while performing is marked as the rule's doing and never starts another
+rule. That is the one-hop rule, and it is kept by the shell, not by you: the store marks every
+line written from inside `Perform`, including from work it awaited on another thread, and
+treats any line from a plugin that is busy with a rule the same way. Collar, Portion, Purrge,
+Scruff and Weigh-In are the worked examples; Collar's is the smallest, and Weigh-In's shows
+several rules asking at once sharing one pass.
+
 ---
 
 ## 4. `IMeowsHost`
@@ -458,6 +519,8 @@ older minor. A plugin built against 0.x is refused by a 1.x shell, before any of
 with *rebuild against 1.0.0* on its card. The members that came with 1.0.0 are `Pick` below and
 `IMeowsPlugin.WhileOff` in [section 3](#3-the-entry-point); nothing was taken away. **1.1.0**
 added `IGlanceable`, [a line on the Home tab](#a-line-on-the-home-tab), and nothing else.
+**1.2.0** added `IMeowsPlugin.Actions` and `IMeowsPlugin.Records`, `IActionTarget` and
+`ActionDeclinedException`, for [being asked by a rule](#being-asked-by-a-rule).
 
 ### `DataDirectory`
 

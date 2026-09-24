@@ -22,6 +22,15 @@ public sealed class KibblePlugin : IMeowsPlugin
     /// <summary>A handoff Kibble sends itself: show this waiting file. The note carries the path.</summary>
     public const string ShowVerb = "kibble.show";
 
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("sent", "kibble.records.sent"),
+        new("set-aside", "kibble.records.set-aside"),
+        new("held", "kibble.records.held"),
+        new("shrunk", "kibble.records.shrunk"),
+        new("undone", "kibble.records.undone"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new KibbleView
     {
         DataContext = new KibbleViewModel(host),

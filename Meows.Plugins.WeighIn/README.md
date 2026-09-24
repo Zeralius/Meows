@@ -30,6 +30,12 @@ folder across, and *Open in Explorer*; and the dials, the threshold in megabytes
 leaves a line per drive in History, and a drive under ten percent free that is still shrinking
 against last week is a standing condition on the notification surface, cleared the day it is not.
 
+## When a rule asks
+
+On the Rules tab Weigh-In offers **Take a reading now**, the same pass as the button. Several
+rules asking while a reading runs all get that one reading's answer, rather than a second walk
+of every drive straight after the first. Each drive's reading is an event a rule can wait for.
+
 ## What it refuses to do
 
 It does not walk on opening when a reading exists, and it does not walk more than once a day

@@ -1,4 +1,8 @@
 {
+  "portion.action.busy": "Portion is shrinking files right now, so the queues were left alone.",
+  "portion.action.check": "Check the queues",
+  "portion.action.check.hint": "Weighs every queue the way the Scan button does and answers with what would fail to post.",
+  "portion.action.unknown": "Portion does not know how to “{0}”.",
   "portion.allclear": "Every file in every queue is under the Bot API's limits, every comic has postable pages, and nothing inside them is pretending to be a picture.",
   "portion.botfolder": "Bot folder…",
   "portion.cancel": "Cancel",
@@ -29,6 +33,8 @@
   "portion.outcome.done": "Shrunk from {0} to {1}. The original is in the Recycle Bin.",
   "portion.outcome.failed": "Could not be shrunk.",
   "portion.progress": "Weighing {0}",
+  "portion.records.held": "held a file back",
+  "portion.records.shrunk": "shrank a file",
   "portion.remedy.badpages": "A page whose bytes are not a picture fails the whole batch it is in. Open the archive and replace or remove it; Portion will not guess which.",
   "portion.remedy.comic": "The heavy pages will be made smaller and the archive rebuilt around them, same names, same order, so the bot's resume state still applies.",
   "portion.remedy.comic.note": "Nothing here stops it posting. Files the bot skips are left where they are, and a long comic simply takes several posts.",

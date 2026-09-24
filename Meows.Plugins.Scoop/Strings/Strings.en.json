@@ -12,6 +12,8 @@
   "scoop.name.plain": "Recycle Bin",
   "scoop.origin": "Show where it came from",
   "scoop.origin.gone": "{0} is not there any more.",
+  "scoop.records.emptied": "emptied a drive's bin",
+  "scoop.records.restored": "put something back from the bin",
   "scoop.refresh": "Read again",
   "scoop.restore": "Put it back",
   "scoop.restore.done": "Put {0} back in {1}.",

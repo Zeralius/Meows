@@ -58,4 +58,19 @@ public interface IMeowsPlugin
     /// <see cref="IMeowsDormantHost"/>. Since 1.0.0.
     /// </summary>
     ISearchable? WhileOff(IMeowsDormantHost host) => null;
+
+    /// <summary>
+    /// What a rule can ask this plugin to do, performed by the view model through
+    /// <see cref="IActionTarget"/>. Read while the plugin is off, so answer with a fixed list,
+    /// never from settings or the disk. Empty, the default, keeps the plugin out of the "then"
+    /// half of a rule. Since 1.2.0.
+    /// </summary>
+    IReadOnlyList<PluginAction> Actions => [];
+
+    /// <summary>
+    /// The kinds of event this plugin records, so a rule can wait for one before it has ever
+    /// happened. A kind not listed here can still start a rule once it is in the history; this
+    /// is the list with words for people, and it is read while the plugin is off. Since 1.2.0.
+    /// </summary>
+    IReadOnlyList<RecordedKind> Records => [];
 }

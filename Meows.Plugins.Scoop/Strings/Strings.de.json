@@ -12,6 +12,8 @@
   "scoop.name.plain": "Papierkorb",
   "scoop.origin": "Herkunft zeigen",
   "scoop.origin.gone": "{0} gibt es nicht mehr.",
+  "scoop.records.emptied": "den Papierkorb eines Laufwerks geleert hat",
+  "scoop.records.restored": "etwas aus dem Papierkorb zurückgelegt hat",
   "scoop.refresh": "Neu lesen",
   "scoop.restore": "Zurücklegen",
   "scoop.restore.done": "{0} liegt wieder in {1}.",

@@ -20,6 +20,19 @@ public sealed class WeighInPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    /// <summary>A rule's "take a reading now".</summary>
+    public const string MeasureAction = "measure";
+
+    public IReadOnlyList<PluginAction> Actions =>
+    [
+        new(MeasureAction, "weighin.action.measure", "weighin.action.measure.hint"),
+    ];
+
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("reading", "weighin.records.reading"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new WeighInView
     {
         DataContext = new WeighInViewModel(host),

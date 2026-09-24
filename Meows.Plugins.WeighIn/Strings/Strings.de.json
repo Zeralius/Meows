@@ -1,5 +1,8 @@
 {
   "weighin.about": "Eine Messung behält Ordnersummen bis zu dieser Tiefe, ein paar tausend Zahlen auf einer vollen Platte, und die letzten sechzig Messungen bleiben. Eine Platte unter 10% frei, die weiter schrumpft, wird auf der Mitteilungsfläche gesagt, bis sie es nicht mehr tut.",
+  "weighin.action.measure": "Jetzt messen",
+  "weighin.action.measure.hint": "Misst jedes Laufwerk wie der Knopf, damit man jetzt weiß, was gewachsen ist, und nicht erst beim nächsten täglichen Durchgang.",
+  "weighin.action.unknown": "Weigh-In weiß nicht, wie man „{0}“ macht.",
   "weighin.chonk": "In Chonk messen",
   "weighin.depth": "Ordnerebenen pro Platte behalten",
   "weighin.description": "Misst jede Platte einmal am Tag und sagt, was gewachsen ist: welche Platte seit letzter Woche wie viel verloren hat, und welche Ordner schuld sind.",
@@ -28,6 +31,7 @@
   "weighin.nothingselected": "Nichts ausgewählt",
   "weighin.progress": "Gehe {0} durch",
   "weighin.readnow": "Jetzt messen",
+  "weighin.records.reading": "ein Laufwerk gemessen hat",
   "weighin.selected": "Ausgewählt",
   "weighin.status.cancelled": "Messung abgebrochen. Die letzte bleibt stehen.",
   "weighin.status.read": "{0} Platten um {1} gemessen.",

@@ -22,6 +22,24 @@ public sealed class CollarPlugin : IMeowsPlugin
     /// <summary>A handoff Collar sends itself: show this entry. The note carries the entry's id.</summary>
     public const string ShowVerb = "collar.show";
 
+    /// <summary>A rule's "put it on the list", for today.</summary>
+    public const string RemindToday = "remind";
+
+    /// <summary>The same, a week out: for things that want looking at, not today.</summary>
+    public const string RemindWeek = "remind-week";
+
+    public IReadOnlyList<PluginAction> Actions =>
+    [
+        new(RemindToday, "collar.action.today", "collar.action.today.hint"),
+        new(RemindWeek, "collar.action.week", "collar.action.week.hint"),
+    ];
+
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("handled", "collar.records.handled"),
+        new("snoozed", "collar.records.snoozed"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new CollarView
     {
         DataContext = new CollarViewModel(host),

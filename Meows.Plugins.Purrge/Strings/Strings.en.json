@@ -1,4 +1,9 @@
 {
+  "purrge.action.busy": "Purrge was already in the middle of a scan, so it was left to finish.",
+  "purrge.action.gone": "{0} is not there any more, so there was nothing to look in.",
+  "purrge.action.scan": "Look for duplicates in its folder",
+  "purrge.action.scan.hint": "Walks the folder the event was about, or the folder of the file it was about, and answers with how many sets and copies it found.",
+  "purrge.action.unknown": "Purrge does not know how to “{0}”.",
   "purrge.basis.created": "Created time",
   "purrge.basis.modified": "Modified time",
   "purrge.cancel": "Cancel",
@@ -50,6 +55,7 @@
   "purrge.preview": "Preview",
   "purrge.progress.comparing": "Comparing content… {0}",
   "purrge.progress.listing": "Listing files… {0} seen",
+  "purrge.records.recycled": "sent a copy to the Recycle Bin",
   "purrge.sanity": "Matches are byte-identical, so the preview is a sanity check rather than proof. Every removal goes to the Recycle Bin.",
   "purrge.scan": "Scan",
   "purrge.side.absent": "not there",

@@ -119,6 +119,13 @@ because the data survives through the others, but it frees nothing, so those set
 **Perceptual matching.** Only exact content matches are found today. A re-encode, a resize or a
 re-save at different quality is a different file and will not be grouped.
 
+## When a rule asks
+
+On the Rules tab Purrge offers **Look for duplicates in its folder**: the folder the other
+plugin's event was about, or the folder of the file it was about, walked the way the Scan button
+walks it, with the summary as the answer. A scan already running is left to finish. Each copy
+Purrge sends to the Recycle Bin is an event a rule can wait for.
+
 ## Settings
 
 `%APPDATA%\Meows\plugins\meows.purrge\settings.json` holds the last scan root, the size floor, the
