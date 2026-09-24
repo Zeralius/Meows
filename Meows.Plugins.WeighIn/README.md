@@ -30,6 +30,21 @@ folder across, and *Open in Explorer*; and the dials, the threshold in megabytes
 leaves a line per drive in History, and a drive under ten percent free that is still shrinking
 against last week is a standing condition on the notification surface, cleared the day it is not.
 
+## Budgets
+
+A line a folder is not meant to cross: Downloads at 20 GB, Recordings at 200 GB, the intake folder
+at 5. **Give it a budget** on a folder selected in what grew, or **Budget another folder…** for
+one that has not shown up there; the box on its row is the line in gigabytes, the same gigabytes
+every size on the tab is shown in. A new budget starts at the folder's size today rounded up to
+the next five, and is there to be changed.
+
+A budgeted folder is measured at every reading at whatever depth it sits, out of the same walk,
+so it costs nothing extra. Over its line, a warning stays up on the notification surface with
+the number in it and Chonk one button away, the Home card turns red, and the history gets one
+*over-budget* line the reading it crosses, so a rule can act on the crossing. The warning clears
+the day the folder is under again, and changing a budget checks it at once. A folder meant to be
+full, the games drive, simply is not given one: a budget is only ever set by hand.
+
 ## When a rule asks
 
 On the Rules tab Weigh-In offers **Take a reading now**, the same pass as the button. Several

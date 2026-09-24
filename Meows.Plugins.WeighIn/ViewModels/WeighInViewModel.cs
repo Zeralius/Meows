@@ -27,6 +27,55 @@ public sealed class WeighInSettings
 
     /// <summary>Say so on the notification surface when a drive is under this many percent free and shrinking.</summary>
     public int WarnBelowPercentFree { get; set; } = 10;
+
+    /// <summary>Folders with a line they are not meant to cross. Set by hand; a folder without one is never warned about.</summary>
+    public List<FolderBudget> Budgets { get; set; } = [];
+}
+
+/// <summary>One budget on the tab: the folder, its line, and where the last reading put it.</summary>
+public sealed class BudgetRowViewModel(BudgetStanding standing, Action<BudgetRowViewModel, long> changed) : ObservableObject
+{
+    public BudgetStanding Standing { get; private set; } = standing;
+
+    public FolderBudget Budget => Standing.Budget;
+
+    public string Path => Budget.Path;
+
+    public string Name => System.IO.Path.GetFileName(Budget.Path.TrimEnd(System.IO.Path.DirectorySeparatorChar)) is { Length: > 0 } n ? n : Budget.Path;
+
+    public bool IsOver => Standing.IsOver;
+
+    /// <summary>"12.4 GB of 20 GB", "3.1 GB over 20 GB", or that the last reading did not reach it.</summary>
+    public string StandingText
+    {
+        get
+        {
+            var text = MeowsText.Current;
+            if (Standing.Size is not { } size)
+                return text.Format("weighin.budget.unmeasured", Readings.Humanise(Budget.Bytes));
+            return Standing.IsOver
+                ? text.Format("weighin.budget.over", Readings.Humanise(Standing.Over), Readings.Humanise(Budget.Bytes))
+                : text.Format("weighin.budget.under", Readings.Humanise(size), Readings.Humanise(Budget.Bytes));
+        }
+    }
+
+    /// <summary>
+    /// A gigabyte the way every size on this tab is shown, and Explorer shows them: 1024 cubed.
+    /// A budget typed in one unit and shown in the other would read 18.63 GB for a 20 set.
+    /// </summary>
+    public const long Gigabyte = 1024L * 1024 * 1024;
+
+    /// <summary>The line in gigabytes, for the box on the row. Changing it is saved and checked at once.</summary>
+    public double Gigabytes
+    {
+        get => Math.Round(Budget.Bytes / (double)Gigabyte, 1);
+        set
+        {
+            var bytes = (long)Math.Round(Math.Max(0.1, value) * Gigabyte);
+            if (bytes != Budget.Bytes)
+                changed(this, bytes);
+        }
+    }
 }
 
 /// <summary>How far back the comparison looks.</summary>
@@ -132,6 +181,10 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
         ReadNowCommand = new RelayCommand(() => TakeReading(byHand: true), () => !IsReading);
         CancelCommand = new RelayCommand(() => _reading?.Cancel(), () => IsReading);
         MeasureInChonkCommand = new RelayCommand(MeasureInChonk, () => SelectedGrowth is not null && CanReachChonk);
+        BudgetSelectedCommand = new RelayCommand(() => AddBudget(SelectedGrowth?.Path),
+            () => SelectedGrowth is { Growth.IsGone: false } g && !HasBudget(g.Path));
+        AddBudgetCommand = new RelayCommand(() => _ = PickBudgetAsync());
+        RemoveBudgetCommand = new RelayCommand(p => { if (p is BudgetRowViewModel row) RemoveBudget(row); });
         ExploreCommand = new RelayCommand(() => Open(SelectedGrowth?.Path), () => SelectedGrowth is not null);
 
         Reload();
@@ -167,6 +220,134 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
     public RelayCommand MeasureInChonkCommand { get; }
 
     public RelayCommand ExploreCommand { get; }
+
+    // ---- budgets ----
+
+    /// <summary>The folders with a budget, the ones over it first.</summary>
+    public ObservableCollection<BudgetRowViewModel> BudgetRows { get; } = [];
+
+    public bool HasBudgets => BudgetRows.Count > 0;
+
+    /// <summary>Gives the folder selected in what grew a budget of its own.</summary>
+    public RelayCommand BudgetSelectedCommand { get; }
+
+    /// <summary>A budget on any folder, picked, for one that has not shown up in what grew.</summary>
+    public RelayCommand AddBudgetCommand { get; }
+
+    public RelayCommand RemoveBudgetCommand { get; }
+
+    private bool HasBudget(string path) => _settings.Budgets.Any(b => Budgets.Same(b.Path, path));
+
+    private async Task PickBudgetAsync()
+    {
+        var picked = await _host.Pick.Folder(new PickOptions { Title = _host.Text["weighin.budget.pick"] });
+        if (picked is not null)
+            AddBudget(picked);
+    }
+
+    /// <summary>
+    /// A new budget starts at the folder's size today rounded up to the next five gigabytes, or
+    /// ten when it has not been measured, and is there to be changed: the point is the number a
+    /// person types, not the one this suggests.
+    /// </summary>
+    public void AddBudget(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || HasBudget(path))
+            return;
+
+        var latest = _readings.Count > 0 ? _readings[^1] : null;
+        var size = latest?.SizeOf(path)
+                   ?? latest?.Drives.SelectMany(d => d.Folders).FirstOrDefault(f => Budgets.Same(f.Path, path))?.Size;
+        const long five = 5 * BudgetRowViewModel.Gigabyte;
+        var start = size is { } known ? (known / five + 1) * five : 2 * five;
+        var trimmed = path.Length > 3 ? path.TrimEnd(Path.DirectorySeparatorChar) : path;
+
+        _settings.Budgets.Add(new FolderBudget { Path = trimmed, Bytes = start });
+        SaveSettings();
+        _host.Log($"Weigh-In keeps {trimmed} under {Readings.Humanise(start)}; it is measured at every reading from now on.");
+        if (latest?.SizeOf(trimmed) is null)
+            Status = _host.Text.Format("weighin.budget.next", Path.GetFileName(trimmed));
+        RebuildBudgets();
+        BudgetSelectedCommand.RaiseCanExecuteChanged();
+    }
+
+    public void RemoveBudget(BudgetRowViewModel row)
+    {
+        _settings.Budgets.RemoveAll(b => Budgets.Same(b.Path, row.Path));
+        SaveSettings();
+        RebuildBudgets();
+        BudgetSelectedCommand.RaiseCanExecuteChanged();
+    }
+
+    private void ChangeBudget(BudgetRowViewModel row, long bytes)
+    {
+        row.Budget.Bytes = bytes;
+        SaveSettings();
+        RebuildBudgets();
+    }
+
+    /// <summary>
+    /// The rows from the latest reading, and the standing condition with them: up while a folder
+    /// is over its line, cleared the day none is. Called after every reading and every change to
+    /// a budget, so lowering a line past where a folder already is says so at once.
+    /// </summary>
+    private void RebuildBudgets()
+    {
+        var latest = _readings.Count > 0 ? _readings[^1] : null;
+        var standings = Budgets.Check(_settings.Budgets, latest);
+        BudgetRows.Clear();
+        foreach (var standing in standings)
+            BudgetRows.Add(new BudgetRowViewModel(standing, ChangeBudget));
+        OnPropertyChanged(nameof(HasBudgets));
+
+        var over = standings.Where(s => s.IsOver).ToList();
+        if (over.Count == 0)
+        {
+            _host.Notifications.ClearCondition("budget");
+            return;
+        }
+
+        var lines = over.Select(s => _host.Text.Format("weighin.budget.line",
+            Path.GetFileName(s.Budget.Path), Readings.Humanise(s.Over), Readings.Humanise(s.Budget.Bytes)));
+        var first = over[0].Budget.Path;
+        NotificationAction[] actions = CanReachChonk
+            ? [new NotificationAction(_host.Text["weighin.budget.chonk"], () => _host.Handoff.Send(KnownPlugins.Chonk, Handoff.Folder(first)))]
+            : [];
+        _host.Notifications.SetCondition("budget", NotificationSeverity.Warning,
+            over.Count == 1 ? _host.Text.Format("weighin.budget.one", Path.GetFileName(first)) : _host.Text.Format("weighin.budget.many", over.Count),
+            string.Join("\n", lines), actions);
+    }
+
+    /// <summary>
+    /// A line in the history the first reading a folder is found over its budget, so a rule can
+    /// act on the crossing; not again every day it stays over.
+    /// </summary>
+    private void JournalCrossings(Reading reading)
+    {
+        var before = _readings.Count >= 2 ? _readings[^2] : null;
+        foreach (var crossed in Budgets.Crossed(_settings.Budgets, reading, before))
+        {
+            _host.Store.Record("over-budget", crossed.Budget.Path,
+                _host.Text.Format("weighin.budget.line", Path.GetFileName(crossed.Budget.Path), Readings.Humanise(crossed.Over), Readings.Humanise(crossed.Budget.Bytes)),
+                new Dictionary<string, string>
+                {
+                    ["size"] = crossed.Size.ToString() ?? "",
+                    ["budget"] = crossed.Budget.Bytes.ToString(),
+                });
+        }
+    }
+
+    /// <summary>The Home line when a folder is over its line; null otherwise, so the drive's line stands.</summary>
+    public static Glance? BudgetGlance(IReadOnlyList<FolderBudget> budgets, Reading? latest, IMeowsText text)
+    {
+        var over = Budgets.Check(budgets, latest).Where(s => s.IsOver).ToList();
+        return over.Count switch
+        {
+            0 => null,
+            1 => new Glance(text.Format("weighin.budget.glance.one", Path.GetFileName(over[0].Budget.Path), Readings.Humanise(over[0].Over)), IsTrouble: true),
+            _ => new Glance(text.Format("weighin.budget.glance.many", over.Count), IsTrouble: true),
+        };
+    }
 
     public bool CanReachChonk => _host.Handoff.CanReach(KnownPlugins.Chonk);
 
@@ -205,6 +386,7 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
             OnPropertyChanged(nameof(HasGrowth));
             MeasureInChonkCommand.RaiseCanExecuteChanged();
             ExploreCommand.RaiseCanExecuteChanged();
+            BudgetSelectedCommand.RaiseCanExecuteChanged();
         }
     }
 
@@ -242,7 +424,9 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
     /// On the Home tab: the selected drive's headline when there is one to tell, else when the
     /// last reading was. Nothing here is trouble; a full drive is Chonk's word to say.
     /// </summary>
-    public Glance? Glance() => new(DriveHeadline.Length > 0 ? DriveHeadline : SummaryText);
+    public Glance? Glance() =>
+        BudgetGlance(_settings.Budgets, _readings.Count > 0 ? _readings[^1] : null, _host.Text)
+        ?? new(DriveHeadline.Length > 0 ? DriveHeadline : SummaryText);
 
     /// <summary>The selected drive over the window: "F lost 200 GB since 7 Sep; the three folders responsible".</summary>
     public string DriveHeadline
@@ -344,8 +528,9 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
             var roots = Roots();
             var depth = _settings.Depth;
             var skip = _settings.SkipSystemFolders;
+            var budgeted = _settings.Budgets.Select(b => b.Path).ToList();
             var reading = await Task.Run(
-                () => Readings.Take(roots, depth, skip, root => context.Report(_host.Text.Format("weighin.progress", root)), context.Token),
+                () => Readings.Take(roots, depth, skip, root => context.Report(_host.Text.Format("weighin.progress", root)), context.Token, budgeted),
                 context.Token);
 
             Readings.Save(_folder, reading);
@@ -355,6 +540,7 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
             {
                 Reload();
                 Journal(reading);
+                JournalCrossings(reading);
                 Warn(reading);
                 Status = _host.Text.Format("weighin.status.read", reading.Drives.Count, reading.At.ToString("HH:mm"));
             });
@@ -460,6 +646,7 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
     {
         _readings = Readings.Load(_folder);
         Rebuild();
+        RebuildBudgets();
     }
 
     private void Rebuild()
