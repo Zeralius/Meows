@@ -31,6 +31,7 @@ public sealed class WeighInPlugin : IMeowsPlugin
     public IReadOnlyList<RecordedKind> Records =>
     [
         new("reading", "weighin.records.reading"),
+        new("over-budget", "weighin.records.overbudget"),
     ];
 
     /// <summary>
@@ -38,8 +39,13 @@ public sealed class WeighInPlugin : IMeowsPlugin
     /// last reading was, the same one the tab falls back to. The readings are small files; the
     /// drives themselves are never touched for this.
     /// </summary>
-    public Glance? GlanceWhileOff(IMeowsDormantHost host) =>
-        new(WeighInViewModel.SummaryOf(Services.Readings.Load(System.IO.Path.Combine(host.DataDirectory, "readings")), host.Text));
+    public Glance? GlanceWhileOff(IMeowsDormantHost host)
+    {
+        var readings = Services.Readings.Load(System.IO.Path.Combine(host.DataDirectory, "readings"));
+        var budgets = host.LoadSettings<WeighInSettings>()?.Budgets ?? [];
+        return WeighInViewModel.BudgetGlance(budgets, readings.Count > 0 ? readings[^1] : null, host.Text)
+               ?? new(WeighInViewModel.SummaryOf(readings, host.Text));
+    }
 
     public Control CreateView(IMeowsHost host) => new WeighInView
     {
