@@ -28,6 +28,10 @@ public abstract class ManualTarget : IManualTarget
 
     public virtual bool TakesTextOnly => true;
 
+    public virtual bool CarriesAltText => false;
+
+    public virtual TagSpelling Spelling => TagSpelling.None;
+
     public abstract Composed Compose(Draft draft, IReadOnlyList<Outgoing> images);
 
     public abstract HandoffSheet Sheet(Draft draft, IReadOnlyList<Outgoing> images);
@@ -59,6 +63,8 @@ public sealed class FurAffinityTarget : ManualTarget
     public override string Id => "furaffinity";
 
     public override string Name => "FurAffinity";
+
+    public override TagSpelling Spelling => TagSpelling.Keywords;
 
     public override MediaLimits Limits { get; } = new(0, 10_000_000, 0, [ImageFormat.Jpeg, ImageFormat.Png, ImageFormat.Gif]);
 
@@ -102,6 +108,8 @@ public sealed class XTarget : ManualTarget
 
     public override string Name => "X";
 
+    public override TagSpelling Spelling => TagSpelling.Hashtags;
+
     public override MediaLimits Limits { get; } = new(4, 5_000_000, 4096, [ImageFormat.Jpeg, ImageFormat.Png, ImageFormat.WebP, ImageFormat.Gif]);
 
     public override Composed Compose(Draft draft, IReadOnlyList<Outgoing> images)
@@ -139,6 +147,8 @@ public sealed class InstagramTarget : ManualTarget
     public override string Id => "instagram";
 
     public override string Name => "Instagram";
+
+    public override TagSpelling Spelling => TagSpelling.Hashtags;
 
     public override MediaLimits Limits { get; } = new(10, 8_000_000, 1440, [ImageFormat.Jpeg, ImageFormat.Png]);
 

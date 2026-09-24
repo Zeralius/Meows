@@ -41,6 +41,10 @@ public sealed class BlueskyTarget : IApiTarget
 
     public string Name => "Bluesky";
 
+    public bool CarriesAltText => true;
+
+    public TagSpelling Spelling => TagSpelling.Hashtags;
+
     public MediaLimits Limits { get; } = new(4, MaxBlobBytes, 2000, [ImageFormat.Jpeg, ImageFormat.Png, ImageFormat.WebP, ImageFormat.Gif]);
 
     public bool PostsItself => true;

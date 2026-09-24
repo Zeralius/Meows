@@ -32,6 +32,8 @@ public sealed class TumblrTarget : OAuthTarget
 
     public override string Name => "Tumblr";
 
+    public override bool CarriesAltText => true;
+
     public override MediaLimits Limits { get; } = new(10, 20_000_000, 0, [ImageFormat.Jpeg, ImageFormat.Png, ImageFormat.WebP, ImageFormat.Gif]);
 
     public override OAuthEndpoints Endpoints { get; } = new(

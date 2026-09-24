@@ -55,6 +55,9 @@ public sealed class Choice(string key, string tag)
     public TranslatedString Label { get; } = MeowsText.Entry(key);
 }
 
+/// <summary>One line in the strip above Post: which places, what about them, and whether it would stop them.</summary>
+public sealed record BeforePostingLine(string Places, string Text, bool IsProblem);
+
 public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable, IActionTarget
 {
     private static string DefaultOutput() => Path.Combine(
@@ -570,6 +573,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
         foreach (var target in Targets)
             target.Recompose(draft, images, _host.Text);
         PostCommand.RaiseCanExecuteChanged();
+        RebuildBeforePosting();
     }
 
     private void OnTargetsChanged()
@@ -577,6 +581,37 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
         _settings.EnabledTargets = Targets.Where(t => t.IsEnabled).Select(t => t.Id).ToList();
         Save();
         PostCommand.RaiseCanExecuteChanged();
+        RebuildBeforePosting();
+    }
+
+    /// <summary>
+    /// The strip above Post: every switched-on place's problems and notes in one list, one line
+    /// per thing to say, with the places it applies to in front, so the same missing alt text on
+    /// three places is one line and not three. Post stays as it was: most of these are notes, and
+    /// the ones that are not are refused by their place at posting anyway.
+    /// </summary>
+    public ObservableCollection<BeforePostingLine> BeforePosting { get; } = [];
+
+    /// <summary>Somewhere is switched on and nothing about the post is worth a word.</summary>
+    public bool IsAllClear => Targets.Any(t => t.IsEnabled) && BeforePosting.Count == 0;
+
+    public bool HasBeforePosting => BeforePosting.Count > 0;
+
+    private void RebuildBeforePosting()
+    {
+        BeforePosting.Clear();
+        var on = Targets.Where(t => t.IsEnabled).ToList();
+        var lines = on.SelectMany(t => t.ProblemLines.Select(l => (t.Name, Line: l, Problem: true)))
+            .Concat(on.SelectMany(t => t.NoteLines.Select(l => (t.Name, Line: l, Problem: false))));
+
+        foreach (var group in lines.GroupBy(l => (l.Line, l.Problem)).OrderByDescending(g => g.Key.Problem))
+        {
+            var places = string.Join(", ", group.Select(g => g.Name).Distinct());
+            BeforePosting.Add(new BeforePostingLine(places, group.Key.Line, group.Key.Problem));
+        }
+
+        OnPropertyChanged(nameof(IsAllClear));
+        OnPropertyChanged(nameof(HasBeforePosting));
     }
 
     // ---- Cleaning ------------------------------------------------------------------------------

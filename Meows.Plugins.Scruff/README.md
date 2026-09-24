@@ -153,6 +153,20 @@ kept in the ordinary settings, because it is shown on the card and is not a secr
 DeviantArt and Tumblr the sealed file holds the app's id and secret together with the tokens,
 since neither half is any use without the other.
 
+## Before posting
+
+A strip above the Post button gathers what every switched-on place would say about the post as
+it stands: what it would refuse, first, and then what it would take but not as meant. Each thing
+is said once, with the places it applies to in front, so a missing alt text on three places is
+one line. Nothing to say is a tick. Post stays as it was; the strip is for reading, and a place
+that would refuse still refuses at posting.
+
+Beyond each place's own limits, it says two things nobody would see otherwise. A picture with no
+alt text, only where the place carries alt text (Bluesky, Mastodon, Discord and Tumblr). And a
+tag the place's spelling would lose: one with nothing a hashtag can hold, or, on DeviantArt,
+which takes plain letters and digits only, one that would go as something else. All of it is
+worked out from what is in memory as the draft is typed; nothing is asked of the network.
+
 ## When a rule asks
 
 On the Rules tab Scruff offers **Take the metadata out of it, where it is**: the one picture the

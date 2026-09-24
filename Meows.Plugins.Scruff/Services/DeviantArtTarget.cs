@@ -35,6 +35,8 @@ public sealed class DeviantArtTarget : OAuthTarget
 
     public override string Name => "DeviantArt";
 
+    public override TagSpelling Spelling => TagSpelling.AsciiKeywords;
+
     public override MediaLimits Limits { get; } = new(0, 30_000_000, 0, [ImageFormat.Jpeg, ImageFormat.Png, ImageFormat.Gif]);
 
     public override OAuthEndpoints Endpoints { get; } = new(
