@@ -32,6 +32,15 @@ public sealed class PurrgeSettings
 
     /// <summary>How many of 64 bits two pictures may differ in and still count as looking alike.</summary>
     public int LookalikeThreshold { get; set; } = Services.LookalikeScanner.DefaultThreshold;
+
+    /// <summary>The fourth job: renaming. Only one of the modes is ever on.</summary>
+    public bool GroomMode { get; set; }
+
+    /// <summary>The rename last set up, kept so the tab opens on it.</summary>
+    public Services.GroomRule GroomRule { get; set; } = new();
+
+    /// <summary>The last rename carried out, kept until it is undone or replaced.</summary>
+    public Services.GroomRun? LastGroomRun { get; set; }
 }
 
 public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable, IActionTarget
@@ -77,6 +86,9 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         SelectFileCommand = new RelayCommand(SelectFile);
         Compare = new CompareViewModel(host, () => _settings, SaveSettings);
         Lookalikes = new LookalikeViewModel(host, () => _settings, SaveSettings);
+        Groom = new GroomViewModel(host, () => _settings, SaveSettings);
+        if (_settings.GroomMode)
+            Groom.Folder = _scanRoot;
         FindLookalikesCommand = new RelayCommand(() => Lookalikes.Start(ScanRoot), () => ScanRoot.Length > 0 && !Lookalikes.IsRunning);
         Lookalikes.PropertyChanged += (_, e) =>
         {
@@ -91,6 +103,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
             OnEverythingChanged();
             Compare.Reread();
             Lookalikes.Reread();
+            Groom.Reread();
         });
     }
 
@@ -99,6 +112,9 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
 
     /// <summary>And the third: pictures that look alike without being the same bytes.</summary>
     public LookalikeViewModel Lookalikes { get; }
+
+    /// <summary>And the fourth: tidying the names in the folder picked in the tree.</summary>
+    public GroomViewModel Groom { get; }
 
     /// <summary>Looks for look-alikes under the folder picked in the tree.</summary>
     public RelayCommand FindLookalikesCommand { get; }
@@ -114,34 +130,48 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
     public bool IsCompareMode
     {
         get => _settings.CompareMode;
-        set => SetMode(compare: value, lookalike: value ? false : _settings.LookalikeMode);
+        set { if (value) SetMode(compare: true, lookalike: false, groom: false); }
     }
 
     public bool IsLookalikeMode
     {
         get => _settings.LookalikeMode;
-        set => SetMode(compare: value ? false : _settings.CompareMode, lookalike: value);
+        set { if (value) SetMode(compare: false, lookalike: true, groom: false); }
+    }
+
+    public bool IsGroomMode
+    {
+        get => _settings.GroomMode;
+        set { if (value) SetMode(compare: false, lookalike: false, groom: true); }
     }
 
     public bool IsDuplicatesMode
     {
-        get => !_settings.CompareMode && !_settings.LookalikeMode;
+        get => !_settings.CompareMode && !_settings.LookalikeMode && !_settings.GroomMode;
         set
         {
             if (value)
-                SetMode(compare: false, lookalike: false);
+                SetMode(compare: false, lookalike: false, groom: false);
         }
     }
 
-    private void SetMode(bool compare, bool lookalike)
+    /// <summary>
+    /// A radio button going off is only ever the other half of one going on, so a mode is only
+    /// ever switched on here, never off; turning Compare off from code means turning another on.
+    /// </summary>
+    private void SetMode(bool compare, bool lookalike, bool groom)
     {
-        if (_settings.CompareMode == compare && _settings.LookalikeMode == lookalike)
+        if (_settings.CompareMode == compare && _settings.LookalikeMode == lookalike && _settings.GroomMode == groom)
             return;
         _settings.CompareMode = compare;
         _settings.LookalikeMode = lookalike;
+        _settings.GroomMode = groom;
         SaveSettings();
+        if (groom)
+            Groom.Folder = ScanRoot;
         OnPropertyChanged(nameof(IsCompareMode));
         OnPropertyChanged(nameof(IsLookalikeMode));
+        OnPropertyChanged(nameof(IsGroomMode));
         OnPropertyChanged(nameof(IsDuplicatesMode));
     }
 
@@ -222,6 +252,8 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
             UseAsSourceCommand.RaiseCanExecuteChanged();
             FindLookalikesCommand.RaiseCanExecuteChanged();
             UseAsCopyCommand.RaiseCanExecuteChanged();
+            if (IsGroomMode)
+                Groom.Folder = value;
         }
     }
 
@@ -656,7 +688,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
                 var chosenFile = file;
                 hits.Add(new SearchHit(file.FileName, $"{set.Header} · {file.Folder}", () =>
                 {
-                    IsCompareMode = false;
+                    IsDuplicatesMode = true;
                     SelectedSet = chosenSet;
                     SelectedFile = chosenFile;
                 }));
@@ -689,7 +721,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         if (!Accepts(handoff) || IsScanning)
             return;
 
-        IsCompareMode = false;
+        IsDuplicatesMode = true;
         _askedBy = handoff.WantsReply ? handoff : null;
         if (handoff.Verb == HandoffVerbs.Files)
         {
@@ -732,7 +764,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
             throw new ActionDeclinedException(_host.Text["purrge.action.busy"]);
 
         var done = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
-        IsCompareMode = false;
+        IsDuplicatesMode = true;
         _askedBy = new Handoff(HandoffVerbs.Folder, [folder]) { Reply = found => done.TrySetResult(found) };
         _ruleWaiting = done;
         _copiesOf = null;
