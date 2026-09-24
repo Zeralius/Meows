@@ -66,4 +66,6 @@ public sealed class PluginHost : IMeowsHost
     public T? LoadSettings<T>() where T : class => _settings.LoadPluginSettings<T>(PluginId);
 
     public void SaveSettings<T>(T settings) where T : class => _settings.SavePluginSettings(PluginId, settings);
+
+    public bool RunsFromOutside(string jobId) => OutsideRuns.IsFresh(_settings.Root, PluginId, jobId, DateTime.UtcNow);
 }

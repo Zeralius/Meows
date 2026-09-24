@@ -43,6 +43,12 @@ With no copy folder, the card says how much cannot be downloaded again and that 
 copied. With one, it turns red once changes have gone uncopied for a month. Each copy is a
 *copied* line in the history, so a rule can follow it.
 
+## With no window
+
+`Meows.exe --do nest.copy` does Copy now from Task Scheduler: a memory stick left in overnight, or
+a drive that is only plugged in on Sundays. It declines, with the reason, when no copy folder is
+set or its drive is not there, and a file it could not copy comes up as a Windows notification.
+
 ## What it is not
 
 Not a backup program: no schedule of its own, no versions, no restore. It is the short list of what

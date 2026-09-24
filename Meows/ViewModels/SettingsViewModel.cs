@@ -105,6 +105,28 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>One-off notifications as Windows notifications while the window is not in front.</summary>
+    public bool SayOutside
+    {
+        get => _preferences.SayOutside;
+        set
+        {
+            if (_preferences.SayOutside == value)
+                return;
+            _preferences.SayOutside = value;
+            _settings.SavePreferences(_preferences);
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Which surface this machine got, said rather than failed quietly.</summary>
+    public string OutsideHow => MeowsText.Current[Toasts.Surface switch
+    {
+        ToastSurface.Toast => "settings.outside.toast",
+        ToastSurface.Balloon => ShellSettings.IsPortable ? "settings.outside.balloon.portable" : "settings.outside.balloon",
+        _ => "settings.outside.none",
+    }];
+
     /// <summary>
     /// Rewrites the startup entry with or without --tray. Kept in the preferences too, so the tick
     /// reads right even while startup itself is off.

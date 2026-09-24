@@ -28,6 +28,46 @@ public sealed class WeighInPlugin : IMeowsPlugin
         new(MeasureAction, "weighin.action.measure", "weighin.action.measure.hint"),
     ];
 
+    /// <summary>The reading as a job: Meows.exe --do weighin.measure, from Task Scheduler.</summary>
+    public const string MeasureJob = "measure";
+
+    public IReadOnlyList<PluginJob> Jobs =>
+    [
+        new(MeasureJob, "weighin.job.measure", "weighin.job.measure.hint") { StandsInForSchedule = true },
+    ];
+
+    /// <summary>
+    /// The same reading the tab takes on its schedule, saved, pruned and journaled the same way,
+    /// with no window. A folder over its budget is said as a notification, since nobody is
+    /// looking at the tab. While Windows runs this, the tab's own schedule stands down.
+    /// </summary>
+    public async Task<string> RunJob(string jobId, IMeowsJobHost host, CancellationToken token)
+    {
+        if (jobId != MeasureJob)
+            throw new JobDeclinedException(host.Text.Format("weighin.job.unknown", jobId));
+
+        var settings = host.LoadSettings<WeighInSettings>() ?? new WeighInSettings();
+        var folder = System.IO.Path.Combine(host.DataDirectory, "readings");
+        var roots = WeighInViewModel.RootsFor(settings);
+        if (roots.Count == 0)
+            throw new JobDeclinedException(host.Text["weighin.job.nodrives"]);
+
+        var before = Services.Readings.Load(folder);
+        var reading = await Task.Run(() => Services.Readings.Take(roots, settings.Depth, settings.SkipSystemFolders,
+            root => host.Report(host.Text.Format("weighin.progress", root)), token, settings.Budgets.Select(b => b.Path).ToList()), token);
+
+        Services.Readings.Save(folder, reading);
+        Services.Readings.Prune(folder, Math.Max(2, settings.KeepReadings));
+        var previous = before.Count > 0 ? before[^1] : null;
+        WeighInViewModel.JournalReading(host.Store, host.Text, reading, previous);
+        WeighInViewModel.JournalCrossings(host.Store, host.Text, settings.Budgets, reading, previous);
+
+        if (WeighInViewModel.BudgetGlance(settings.Budgets, reading, host.Text) is { IsTrouble: true } over)
+            host.Notify(DisplayName, over.Text, isTrouble: true);
+
+        return host.Text.Format("weighin.status.read", reading.Drives.Count, reading.At.ToString("HH:mm"));
+    }
+
     public IReadOnlyList<RecordedKind> Records =>
     [
         new("reading", "weighin.records.reading"),

@@ -51,6 +51,13 @@ On the Rules tab Weigh-In offers **Take a reading now**, the same pass as the bu
 rules asking while a reading runs all get that one reading's answer, rather than a second walk
 of every drive straight after the first. Each drive's reading is an event a rule can wait for.
 
+## With no window
+
+`Meows.exe --do weighin.measure` takes the same reading from Task Scheduler, saved, pruned and
+journaled the same way, whether or not Meows is open. A folder over its budget comes up as a
+Windows notification, since nobody is looking at the tab. While Windows has run it in the last
+eight days, the tab's own schedule stands down, so the reading happens once.
+
 ## What it refuses to do
 
 It does not walk on opening when a reading exists, and it does not walk more than once a day

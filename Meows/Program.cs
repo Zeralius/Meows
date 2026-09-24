@@ -71,6 +71,18 @@ internal static class Program
             return;
         }
 
+        // A plugin's job with no window, for Task Scheduler: Meows.exe --do weighin.measure.
+        // Runs beside a Meows that is already open, like --glance, and with nothing after it
+        // lists the jobs there are.
+        var doAt = Array.FindIndex(args, a => a.Equals("--do", StringComparison.OrdinalIgnoreCase));
+        if (doAt >= 0)
+        {
+            UseParentConsole();
+            var name = doAt + 1 < args.Length && !args[doAt + 1].StartsWith("--", StringComparison.Ordinal) ? args[doAt + 1] : null;
+            Environment.ExitCode = Do(name);
+            return;
+        }
+
         // One Meows per user. A second start hands its arguments to the first and leaves; the
         // first shows its window, unless the second was only asked for the tray.
         Instance = Meows.Services.SingleInstance.TryClaim();
@@ -173,6 +185,76 @@ internal static class Program
         {
             Console.Error.WriteLine($"Glancing failed: {ex}");
             return 2;
+        }
+    }
+
+    /// <summary>
+    /// Runs one plugin's job, or lists them all. The exit code is what a scheduled task sees:
+    /// 0 done, 1 failed or declined, 2 no such job, 3 the plugin is switched off.
+    /// </summary>
+    private static int Do(string? name)
+    {
+        try
+        {
+            var settings = new ShellSettings();
+            Environment.SetEnvironmentVariable(ShellSettings.RootVariable, settings.Root);
+            var preferences = settings.LoadPreferences();
+            var log = new ShellLog(Path.Combine(settings.Root, "meows-do.log"));
+
+            var text = new Translations(message => log.Write("strings", message));
+            text.Add(typeof(App).Assembly);
+            text.Use(preferences.Language);
+            Plugins.Abstractions.MeowsText.Use(text);
+            Plugins.Abstractions.PluginNames.Feline = preferences.FelineNames;
+
+            var found = new Plugins.PluginCatalog(log).Discover();
+            foreach (var plugin in found.Where(d => d.Plugin is not null))
+                text.Add(plugin.Plugin!.GetType().Assembly);
+            var switchedOn = settings.LoadActivatedPlugins();
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+
+            if (name is null)
+            {
+                var jobs = JobRunner.All(found);
+                if (jobs.Count == 0)
+                    Console.WriteLine(text["do.none"]);
+                var width = jobs.Count == 0 ? 0 : jobs.Max(j => JobRunner.NameOf(j.Plugin, j.Job).Length);
+                foreach (var (plugin, job) in jobs)
+                {
+                    var off = switchedOn.Contains(plugin.Id) ? "" : "  " + text["do.list.off"];
+                    Console.WriteLine($"{JobRunner.NameOf(plugin, job).PadRight(width)}  {text[job.Label]}{off}");
+                }
+                return JobRunner.Done;
+            }
+
+            // A job does work, so unlike a glance it may be what makes the store.
+            var store = new MeowsStore(settings.Root, message => log.Write("store", message));
+            using var stop = new CancellationTokenSource();
+            Console.CancelKeyPress += (_, e) =>
+            {
+                e.Cancel = true;
+                stop.Cancel();
+            };
+
+            Toasts.Prepare(ShellSettings.IsPortable, message => log.Write("toast", message));
+            log.Write("do", $"Running {name}");
+            var result = JobRunner.RunAsync(found, switchedOn, name,
+                plugin => new JobHost(plugin.Id, settings, store.For(plugin.Id), log,
+                    status => Console.WriteLine($"  {status}"),
+                    (title, said, trouble) => Toasts.Show(title, said, trouble, message => log.Write("toast", message))),
+                settings.Root, stop.Token).GetAwaiter().GetResult();
+            log.Write("do", $"{name} ended {result.ExitCode}: {result.Said}");
+
+            (result.ExitCode == JobRunner.Done ? Console.Out : Console.Error).WriteLine(result.Said);
+
+            // A balloon lives on this process's own icon, so it has to be seen before the process goes.
+            Toasts.Settle(TimeSpan.FromSeconds(10));
+            return result.ExitCode;
+        }
+        catch (Exception ex)
+        {
+            Console.Error.WriteLine($"Running the job failed: {ex}");
+            return JobRunner.Failed;
         }
     }
 
