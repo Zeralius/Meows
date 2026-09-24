@@ -511,6 +511,9 @@ public sealed class ShellPreferences
     /// run, so putting the plugin back brings the rule back with it.
     /// </summary>
     public List<InstinctRule> Rules { get; set; } = [];
+
+    /// <summary>The server plugins can copy to, from the Settings tab. Its key is in the secrets, not here.</summary>
+    public ReachSettings Reach { get; set; } = new();
 }
 
 /// <summary>One group on the tab strip, as it is remembered.</summary>

@@ -31,6 +31,8 @@ public sealed class MainWindowViewModel : ObservableObject
     private RulesViewModel? _rules;
     private TabViewModel? _rulesTab;
     private readonly Dictionary<string, CancellationTokenSource> _actionStops = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ShellReach _reach;
+    private readonly SecretStore _shellSecrets;
     private HomeViewModel? _home;
     private TabViewModel? _pluginsTab;
     private SettingsViewModel? _settingsViewModel;
@@ -64,6 +66,9 @@ public sealed class MainWindowViewModel : ObservableObject
         _text = text;
         _preferences = preferences;
         _picker = new ShellPicker(() => Window);
+        // The shell's own sealed secrets, beside the settings: for now only the server's key.
+        _shellSecrets = new SecretStore(settings.Root);
+        _reach = new ShellReach(() => _preferences.Reach, _shellSecrets, (line, level) => _log.Write("reach", line, level));
         _popOuts = new PopOutWindows(() => Window, _preferences, SavePreferences, _log);
         PopOutCommand = new RelayCommand(p => { if (p is TabViewModel tab) _popOuts.PopOut(tab); });
         BringBackCommand = new RelayCommand(p => { if (p is TabViewModel tab) _popOuts.BringBack(tab); });
@@ -903,6 +908,8 @@ public sealed class MainWindowViewModel : ObservableObject
         _settingsViewModel = new SettingsViewModel(_settings, _text, _log, _preferences)
         {
             TabSizeChanged = () => Strip.Resize(),
+            Server = new ServerViewModel(_preferences.Reach, _reach, _shellSecrets, _picker, SavePreferences,
+                line => _log.Write("reach", line)),
         };
         _settingsTab = new TabViewModel("shell.tab.settings", "⚙", new SettingsView { DataContext = _settingsViewModel });
         Tabs.Add(_settingsTab);
@@ -1039,7 +1046,7 @@ public sealed class MainWindowViewModel : ObservableObject
         try
         {
             var host = new PluginHost(entry.Id, entry.DisplayName, _settings, _log, _notifications, _background,
-                new HandoffService(entry.Id, CanReach, SendHandoff), _store?.For(entry.Id), _picker);
+                new HandoffService(entry.Id, CanReach, SendHandoff), _store?.For(entry.Id), _picker, _reach);
             _dormant.Remove(entry.Id);
             _sourceById[entry.Id] = entry.DisplayName;
             var view = entry.Descriptor.Plugin!.CreateView(host);
