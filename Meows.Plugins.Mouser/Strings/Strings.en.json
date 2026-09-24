@@ -32,7 +32,7 @@
   "mouser.recycle": "Send to Recycle Bin",
   "mouser.selected": "{0} picked",
   "mouser.shadow.gcode": "G-code with no model beside it",
-  "mouser.shadow.heading": "Left on their own",
+  "mouser.shadow.heading": "LEFT ON THEIR OWN",
   "mouser.shadow.hint": "Files that only make sense beside another one. Each rule is its own; switch off any that gets it wrong here.",
   "mouser.shadow.json": "Download notes (.jpg.json, .info.json) with nothing beside them",
   "mouser.shadow.meta": "Unity .meta files with no asset",
