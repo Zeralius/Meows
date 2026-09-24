@@ -1,0 +1,133 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Larder.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Larder.Views.LarderView"
+             x:DataType="vm:LarderViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Margin" Value="14,12,14,6" />
+        </Style>
+        <Style Selector="Border.panel">
+            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,6" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Summary}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="label" Text="{Binding NeverLine}" />
+                    <TextBlock Classes="label" Text="{Binding UnknownLine}" IsVisible="{Binding HasUnknown}" />
+                    <TextBlock Classes="label" Text="{Binding Status}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
+                    <TextBlock Classes="label" VerticalAlignment="Center" Text="{m:Tr larder.show}" />
+                    <ComboBox ItemsSource="{Binding FilterChoices}" SelectedIndex="{Binding FilterIndex}" FontSize="11" />
+                    <ComboBox ItemsSource="{Binding SortChoices}" SelectedIndex="{Binding SortIndex}" FontSize="11" />
+                    <Button Content="{m:Tr larder.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="*,4,300">
+
+            <DockPanel Grid.Column="0">
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="14,10,14,6" ColumnSpacing="8">
+                    <TextBlock Grid.Column="0" Classes="label" VerticalAlignment="Center" TextWrapping="Wrap" Text="{m:Tr larder.hint}" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <Button Content="{m:Tr larder.reveal}" Command="{Binding RevealCommand}" FontSize="11" />
+                        <Button Content="{m:Tr larder.uninstall}" Command="{Binding UninstallCommand}" FontSize="11" />
+                    </StackPanel>
+                </Grid>
+                <TextBlock DockPanel.Dock="Top" Margin="14,12" Opacity="0.45" TextWrapping="Wrap"
+                           Text="{Binding EmptyText}" IsVisible="{Binding IsEmpty}" />
+                <ListBox ItemsSource="{Binding Games}" SelectedItem="{Binding Selected}" Margin="8,0,8,8" Background="Transparent">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GameViewModel">
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="14">
+                                <StackPanel Grid.Column="0" Spacing="1">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Library}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <TextBlock Grid.Column="1" Text="{Binding PlayedText}" VerticalAlignment="Center" FontSize="12"
+                                           Opacity="0.75" MinWidth="120" TextAlignment="Right" />
+                                <TextBlock Grid.Column="2" Text="{Binding SizeText}" VerticalAlignment="Center" FontSize="12"
+                                           FontWeight="SemiBold" MinWidth="80" TextAlignment="Right" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <Border Grid.Column="2" Classes="panel" BorderThickness="1,0,0,0">
+                <ScrollViewer>
+                    <StackPanel>
+                        <TextBlock Classes="section" Text="{m:Tr larder.libraries}" />
+                        <ItemsControl ItemsSource="{Binding Libraries}" Margin="14,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:LibraryLine">
+                                    <StackPanel Spacing="1" Margin="0,0,0,10">
+                                        <TextBlock Text="{Binding Path}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding Text}" FontSize="12" TextWrapping="Wrap" />
+                                        <TextBlock Text="{Binding FreeText}" Classes="label" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Classes="section" Text="{m:Tr larder.extra}" />
+                        <ItemsControl ItemsSource="{Binding ExtraLibraries}" Margin="14,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="0,0,0,4">
+                                        <TextBlock Text="{Binding}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
+                                        <Button Grid.Column="1" Content="✕" FontSize="10" Padding="6,2"
+                                                Command="{Binding $parent[UserControl].((vm:LarderViewModel)DataContext).RemoveLibraryCommand}"
+                                                CommandParameter="{Binding}" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Content="{m:Tr larder.addlibrary}" Command="{Binding AddLibraryCommand}" Margin="14,4,14,14" FontSize="11" />
+                        <TextBlock Classes="label" Margin="14,0,14,14" TextWrapping="Wrap" Text="{m:Tr larder.why}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

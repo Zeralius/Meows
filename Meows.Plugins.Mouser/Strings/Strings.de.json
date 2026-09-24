@@ -32,7 +32,7 @@
   "mouser.recycle": "In den Papierkorb",
   "mouser.selected": "{0} ausgewählt",
   "mouser.shadow.gcode": "G-Code ohne Modell daneben",
-  "mouser.shadow.heading": "Allein zurückgelassen",
+  "mouser.shadow.heading": "ALLEIN ZURÜCKGELASSEN",
   "mouser.shadow.hint": "Dateien, die nur neben einer anderen Sinn ergeben. Jede Regel steht für sich; schalte ab, was hier danebenliegt.",
   "mouser.shadow.json": "Download-Notizen (.jpg.json, .info.json) ohne Datei daneben",
   "mouser.shadow.meta": "Unity-.meta-Dateien ohne Asset",
