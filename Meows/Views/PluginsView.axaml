@@ -147,6 +147,13 @@
                                                TextWrapping="Wrap"
                                                IsVisible="{Binding HasHealth}"
                                                Classes.trouble="{Binding HealthIsTrouble}" />
+                                    <!-- What it has cost since Meows started: opening, and background work. -->
+                                    <TextBlock Text="{Binding CostText}"
+                                               Opacity="0.6"
+                                               FontSize="11"
+                                               TextWrapping="Wrap"
+                                               IsVisible="{Binding HasCost}"
+                                               Classes.trouble="{Binding CostIsTrouble}" />
                                     <TextBlock Text="{Binding Error}"
                                                Foreground="{DynamicResource MeowsDangerStrong}"
                                                TextWrapping="Wrap"

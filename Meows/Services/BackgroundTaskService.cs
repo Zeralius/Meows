@@ -278,6 +278,33 @@ public sealed class BackgroundTaskService : IDisposable
 
     public int RunningCount => Running.Count;
 
+    /// <summary>Where each plugin's runs and passes are added up, for the Plugins tab. Optional, so a test can leave it out.</summary>
+    public PluginCosts? Costs { get; set; }
+
+    /// <summary>One run or pass of a plugin's work, timed around its own code.</summary>
+    private async Task Timed(string pluginId, Func<IBackgroundContext, Task> work, BackgroundTaskItem item)
+    {
+        var watch = System.Diagnostics.Stopwatch.StartNew();
+        var failed = false;
+        try
+        {
+            await work(item).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (Exception)
+        {
+            failed = true;
+            throw;
+        }
+        finally
+        {
+            Costs?.Ran(pluginId, watch.Elapsed, failed);
+        }
+    }
+
     internal CancellationToken TokenFor(string pluginId)
     {
         lock (_perPlugin)
@@ -350,7 +377,7 @@ public sealed class BackgroundTaskService : IDisposable
             {
                 if (interval is null)
                 {
-                    await work(item).ConfigureAwait(false);
+                    await Timed(pluginId, work, item).ConfigureAwait(false);
                 }
                 else
                 {
@@ -368,7 +395,7 @@ public sealed class BackgroundTaskService : IDisposable
                         }
 
                         item.PassStarted();
-                        await work(item).ConfigureAwait(false);
+                        await Timed(pluginId, work, item).ConfigureAwait(false);
                         item.PassFinished();
                         WatchesMoved();
 

@@ -72,6 +72,12 @@ it after hours.
 Every plugin starts switched off. Open the **Plugins** tab, turn on the ones you want, and each
 gets its own tab. Turning one off closes its tab again. Nothing runs until you ask for it.
 
+Each switched-on plugin's card also says what it has cost since Meows started: how long its tab
+took to open, the part of startup it is responsible for, marked when that passed half a second;
+and how many background runs it did, how long they took together and the longest of them. Memory
+is not on it on purpose: every plugin shares one process, and a number that cannot be put down to
+one plugin honestly is worse than none.
+
 **Tabs come in groups.** Each group is a coloured chip on the strip with its tabs after it, and
 clicking the chip shuts the group behind it, which is what keeps twenty-odd tabs on one row. The
 groups are the same ones the Plugins tab has always used, the category each plugin declares for
