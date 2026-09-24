@@ -33,6 +33,14 @@ public sealed class WeighInPlugin : IMeowsPlugin
         new("reading", "weighin.records.reading"),
     ];
 
+    /// <summary>
+    /// With no tab open there is no drive selected to tell the story of, so the line is when the
+    /// last reading was, the same one the tab falls back to. The readings are small files; the
+    /// drives themselves are never touched for this.
+    /// </summary>
+    public Glance? GlanceWhileOff(IMeowsDormantHost host) =>
+        new(WeighInViewModel.SummaryOf(Services.Readings.Load(System.IO.Path.Combine(host.DataDirectory, "readings")), host.Text));
+
     public Control CreateView(IMeowsHost host) => new WeighInView
     {
         DataContext = new WeighInViewModel(host),

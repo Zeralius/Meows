@@ -3,6 +3,8 @@
   "contract.newer": "Built for Meows contract {0}, which is newer than this shell's {1}. Update Meows, or rebuild the plugin against {1}.",
   "contract.ui.major": "Built against Avalonia {0}, but this shell hosts {1}. The two share one copy of Avalonia, so the major version has to match or the controls it builds are not controls this can show.",
   "contract.ui.newer": "Built against Avalonia {0}, which is newer than the {1} this shell provides. Update Meows, or rebuild the plugin against Avalonia {1}.",
+  "glance.none": "No plugins are switched on.",
+  "glance.nothing": "nothing recorded yet",
   "group.bot": "Posting bot",
   "group.disk": "Disk and tidying",
   "group.everyday": "Everyday",

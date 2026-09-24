@@ -205,6 +205,19 @@ It lists what the shell can find, flags anything refused on contract grounds or 
 library, and exits non zero if either happened. This is what the release build runs against the
 package it just made.
 
+To see the Home tab without the window:
+
+```bash
+Meows.exe --glance
+Meows.exe --glance --json
+```
+
+Every switched-on plugin's line, in the window's language, a `!` in front of whatever wants
+doing: Collar's dates, Weigh-In's last reading, Trail's PATH when something on it is not doing
+anything, and for the rest the last thing each recorded. `--json` is the same for a status bar,
+a terminal greeting or a scheduled task, with a `trouble` flag at the top and each plugin's id.
+Nothing is switched on or started, and it runs beside a Meows that is already open.
+
 ## Building it yourself
 
 ```bash
@@ -377,13 +390,14 @@ are refused by a 3.x shell and need a rebuild against 1.0.0. **1.1.0**, with Meo
 added the line a plugin can put on its Home card. **1.2.0**, with Meows 4.2.0, added the two
 lists a plugin gives the Rules tab, what it can be asked to do and what it records, and the
 interface its view model does the asking through. **1.3.0**, with Meows 4.3.0, added the server
-a plugin can copy a folder to.
+a plugin can copy a folder to. **1.4.0**, with Meows 4.4.0, added a plugin's Home line with no
+window, for `--glance`.
 
 Meows checks that version when it loads a plugin and refuses anything it cannot honour, with the
 reason on the plugin's card rather than a crash later:
 
-> Built for Meows contract 1.4.0, which is newer than this shell's 1.3.0. Update Meows, or rebuild
-> the plugin against 1.3.0.
+> Built for Meows contract 1.5.0, which is newer than this shell's 1.4.0. Update Meows, or rebuild
+> the plugin against 1.4.0.
 
 A newer contract is refused; an older one is fine, since additions stay backward compatible.
 

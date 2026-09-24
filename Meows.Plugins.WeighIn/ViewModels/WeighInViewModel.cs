@@ -227,16 +227,15 @@ public sealed class WeighInViewModel : ObservableObject, IDisposable, ISearchabl
     public int ReadingsKept => _readings.Count;
 
     /// <summary>The headline: when the last reading was, and how many there are to compare against.</summary>
-    public string SummaryText
+    public string SummaryText => SummaryOf(_readings, _host.Text);
+
+    /// <summary>When the last reading was and how far back they go, from the readings alone, for the tab and for <c>--glance</c>.</summary>
+    public static string SummaryOf(IReadOnlyList<Reading> readings, IMeowsText text)
     {
-        get
-        {
-            var text = _host.Text;
-            if (_readings.Count == 0)
-                return text["weighin.summary.none"];
-            var last = _readings[^1];
-            return text.Format("weighin.summary", last.At.ToString("d MMM HH:mm"), _readings.Count, _readings[0].At.ToString("d MMM"));
-        }
+        if (readings.Count == 0)
+            return text["weighin.summary.none"];
+        var last = readings[^1];
+        return text.Format("weighin.summary", last.At.ToString("d MMM HH:mm"), readings.Count, readings[0].At.ToString("d MMM"));
     }
 
     /// <summary>

@@ -142,7 +142,7 @@ contract version the template was published with. No `ProjectReference`, no Meow
 ```xml
 <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.3.0" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.4.0" ExcludeAssets="runtime" PrivateAssets="all" />
 </ItemGroup>
 ```
 
@@ -233,8 +233,8 @@ The shell checks this for you. At discovery it reads the contract version your a
 compiled against and refuses anything it cannot honour, **before constructing your plugin**, so
 none of your code runs. The reason appears on your plugin's card in place of its toggle:
 
-> Built for Meows contract 1.4.0, which is newer than this shell's 1.3.0. Update Meows, or rebuild
-> the plugin against 1.3.0.
+> Built for Meows contract 1.5.0, which is newer than this shell's 1.4.0. Update Meows, or rebuild
+> the plugin against 1.4.0.
 
 A mismatched **major** is refused either way, since a major bump means members may have been
 removed. A **newer** minor or patch is refused; an older one loads fine, because additive
@@ -522,7 +522,8 @@ with *rebuild against 1.0.0* on its card. The members that came with 1.0.0 are `
 added `IGlanceable`, [a line on the Home tab](#a-line-on-the-home-tab), and nothing else.
 **1.2.0** added `IMeowsPlugin.Actions` and `IMeowsPlugin.Records`, `IActionTarget` and
 `ActionDeclinedException`, for [being asked by a rule](#being-asked-by-a-rule). **1.3.0** added
-[`Reach`](#reach), the server a plugin can copy a folder to.
+[`Reach`](#reach), the server a plugin can copy a folder to. **1.4.0** added
+`IMeowsPlugin.GlanceWhileOff`, [the Home line with no window](#a-line-on-the-home-tab).
 
 ### `DataDirectory`
 
@@ -690,6 +691,26 @@ It is read on the UI thread whenever Home comes to the front or is refreshed, so
 what is in memory, the way `Search` does. Most plugins already have the sentence: it is the
 header line of the tab. A plugin that is off has no view model and no line; that is what the
 shell's own line is for.
+
+`Meows.exe --glance` prints every switched-on plugin's line with no window at all, and
+`--glance --json` does the same for a status bar or a scheduled task. There is no view model to
+ask there either, so since 1.4.0 the plugin class can answer the same question from what it
+keeps:
+
+```csharp
+public Glance? GlanceWhileOff(IMeowsDormantHost host) =>
+    host.LoadSettings<CollarSettings>() is { } settings
+        ? CollarViewModel.GlanceOf(settings.Entries, settings.LeadDays, DateTime.Today, host.Text)
+        : null;
+```
+
+The host is the same dormant one `WhileOff` gets: settings, the journal, the data folder, the
+text. It may be called with no window and off the UI thread, so a file or two, never a walk of a
+drive, never the network. The neat way to keep the two lines the same is the one Collar and
+Weigh-In use: a static method that works the sentence out from the kept data, called by both
+`Glance()` and `GlanceWhileOff`. Null, the default, gets the shell's own line in the output, the
+last thing the plugin recorded; Portion and Purr answer null, because what they would say only
+exists once they have looked.
 
 ### `Watches`
 

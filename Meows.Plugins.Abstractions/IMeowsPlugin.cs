@@ -73,4 +73,15 @@ public interface IMeowsPlugin
     /// is the list with words for people, and it is read while the plugin is off. Since 1.2.0.
     /// </summary>
     IReadOnlyList<RecordedKind> Records => [];
+
+    /// <summary>
+    /// This plugin's line for its Home card with no view to ask: <c>Meows.exe --glance</c>, a
+    /// status bar, a scheduled task wanting to know whether anything needs doing. The same
+    /// sentence <see cref="IGlanceable"/> gives when the tab is open, worked out from what the
+    /// host can read: settings, the journal, a small file in the data folder. It may be asked
+    /// with no window and off the UI thread, so a file or two, never a walk of a drive and never
+    /// the network. Null, the default, leaves the shell's own line: the last thing recorded.
+    /// Since 1.4.0.
+    /// </summary>
+    Glance? GlanceWhileOff(IMeowsDormantHost host) => null;
 }

@@ -346,26 +346,38 @@ public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
     /// <summary>The line under the header: what is late, what is close, and nothing else.</summary>
-    public string Summary
+    public string Summary => SummaryOf(_settings.Entries, LeadDays, DateTime.Today, _host.Text);
+
+    /// <summary>
+    /// The headline from the dates alone, so the tab and <c>--glance</c> say the same thing:
+    /// how many have come round, how many are close, or that all of them are fine.
+    /// </summary>
+    public static string SummaryOf(IReadOnlyList<CollarEntry> entries, int leadDays, DateTime today, IMeowsText text)
     {
-        get
-        {
-            var overdue = Entries.Count(e => e.IsOverdue);
-            var soon = Entries.Count(e => e.IsSoon);
+        var overdue = entries.Count(e => Dates.Of(e, today, leadDays) == Standing.Overdue);
+        var soon = entries.Count(e => Dates.Of(e, today, leadDays) == Standing.Soon);
 
-            if (overdue > 0 && soon > 0)
-                return _host.Text.Format("collar.summary.both", overdue, soon);
-            if (overdue > 0)
-                return _host.Text.Format("collar.summary.overdue", overdue);
-            if (soon > 0)
-                return _host.Text.Format("collar.summary.soon", soon, LeadDays);
+        if (overdue > 0 && soon > 0)
+            return text.Format("collar.summary.both", overdue, soon);
+        if (overdue > 0)
+            return text.Format("collar.summary.overdue", overdue);
+        if (soon > 0)
+            return text.Format("collar.summary.soon", soon, leadDays);
 
-            return Entries.Count == 0 ? "" : _host.Text.Format("collar.summary.clear", Entries.Count);
-        }
+        return entries.Count == 0 ? "" : text.Format("collar.summary.clear", entries.Count);
+    }
+
+    /// <summary>The Home line from the dates alone: red while something is late, nothing when there are no dates.</summary>
+    public static Glance? GlanceOf(IReadOnlyList<CollarEntry> entries, int leadDays, DateTime today, IMeowsText text)
+    {
+        var summary = SummaryOf(entries, leadDays, today, text);
+        return summary.Length == 0
+            ? null
+            : new Glance(summary, entries.Any(e => Dates.Of(e, today, leadDays) == Standing.Overdue));
     }
 
     /// <summary>The same line on the Home tab, red while something is late.</summary>
-    public Glance? Glance() => Summary.Length == 0 ? null : new Glance(Summary, Entries.Any(e => e.IsOverdue));
+    public Glance? Glance() => GlanceOf(_settings.Entries, LeadDays, DateTime.Today, _host.Text);
 
     /// <summary>Adds an entry and selects it, because the next thing wanted is to name it.</summary>
     public void Add(CollarEntry entry)
