@@ -1,0 +1,214 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Screenshot.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Screenshot.Views.ScreenshotView"
+             x:DataType="vm:ScreenshotViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+        <Style Selector="Border.marker">
+            <Setter Property="Width" Value="4" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Summary}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Classes="label" Text="{Binding Status}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <ComboBox ItemsSource="{Binding Groups}"
+                              SelectedIndex="{Binding GroupIndex}"
+                              Width="150"
+                              VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{Binding SortChoices}"
+                              SelectedIndex="{Binding SortIndex}"
+                              Width="130"
+                              VerticalAlignment="Center" />
+                    <Button Content="{m:Tr screenshot.recycle.dups}" Command="{Binding RecycleDuplicatesCommand}" />
+                    <Button Content="{m:Tr screenshot.send}" Command="{Binding SendKeptCommand}" IsVisible="{Binding CanReachScruff}" />
+                    <Button Content="{m:Tr screenshot.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="{DynamicResource MeowsDangerText}"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="*,4,330">
+
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,14,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsEmpty}"
+                           Text="{Binding EmptyText}" />
+
+                <ListBox Name="ShotList"
+                         ItemsSource="{Binding Rows}"
+                         SelectedItem="{Binding Selected}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ShotRowViewModel">
+                            <Grid ColumnDefinitions="4,Auto,*,Auto" ColumnSpacing="10">
+                                <Border Grid.Column="0"
+                                        Classes="marker"
+                                        Background="{DynamicResource MeowsDangerStrong}"
+                                        IsVisible="{Binding IsDuplicate}" />
+
+                                <CheckBox Grid.Column="1"
+                                          IsChecked="{Binding Kept}"
+                                          VerticalAlignment="Center"
+                                          ToolTip.Tip="{m:Tr screenshot.keep}" />
+
+                                <StackPanel Grid.Column="2" Spacing="2">
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Group}" Classes="label" />
+                                        <TextBlock Text="{Binding BurstText}" Classes="label" />
+                                        <TextBlock Text="{Binding SizeText}" Classes="label" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="3"
+                                           Text="{Binding TakenText}"
+                                           FontSize="11"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <Border Grid.Column="2"
+                    Background="{DynamicResource MeowsBase}"
+                    BorderBrush="{DynamicResource MeowsLineSoft}"
+                    BorderThickness="1,0,0,0">
+                <Panel>
+                    <TextBlock Text="{m:Tr screenshot.pickone}"
+                               Classes="label"
+                               Margin="16"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Top"
+                               IsVisible="{Binding !HasSelection}" />
+
+                    <ScrollViewer IsVisible="{Binding HasSelection}">
+                        <StackPanel Margin="16" Spacing="12">
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr screenshot.field.shot}" />
+                                <TextBlock Text="{Binding Selected.Name}"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Selected.Group}" Classes="label" />
+                                <TextBlock Text="{Binding Selected.TakenText}" Classes="label" />
+                                <TextBlock Text="{Binding Selected.SizeText}" Classes="label" />
+                            </StackPanel>
+
+                            <CheckBox Content="{m:Tr screenshot.keep}"
+                                      IsChecked="{Binding Selected.Kept}" />
+
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="{m:Tr screenshot.open}"
+                                        Command="{Binding OpenCommand}"
+                                        FontSize="11" />
+                                <Button Content="{m:Tr screenshot.reveal}"
+                                        Command="{Binding RevealCommand}"
+                                        FontSize="11" />
+                                <Button Content="{m:Tr screenshot.recycle.one}"
+                                        Command="{Binding RecycleOneCommand}"
+                                        Background="{DynamicResource MeowsDanger}"
+                                        BorderBrush="{DynamicResource MeowsDangerLine}"
+                                        FontSize="11" />
+                            </StackPanel>
+
+                            <Border Background="{DynamicResource MeowsLineSoft}" Height="1" Margin="0,4" />
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr screenshot.field.folders}" />
+                                <ListBox ItemsSource="{Binding Folders}"
+                                         SelectedItem="{Binding SelectedFolder}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         MaxHeight="220">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:FolderRowViewModel">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                                <CheckBox Grid.Column="0"
+                                                          IsChecked="{Binding Enabled}"
+                                                          VerticalAlignment="Center" />
+                                                <StackPanel Grid.Column="1" Spacing="0">
+                                                    <TextBlock Text="{Binding Shown}" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Folder.Path}"
+                                                               Classes="label"
+                                                               TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                                <TextBlock Grid.Column="2"
+                                                           Text="?"
+                                                           Classes="label"
+                                                           VerticalAlignment="Center"
+                                                           IsVisible="{Binding IsMissing}"
+                                                           ToolTip.Tip="{m:Tr screenshot.folder.missing}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="{m:Tr screenshot.folder.add}"
+                                            Command="{Binding AddFolderCommand}"
+                                            FontSize="11" />
+                                    <Button Content="{m:Tr screenshot.folder.remove}"
+                                            Command="{Binding RemoveFolderCommand}"
+                                            FontSize="11" />
+                                </StackPanel>
+                            </StackPanel>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </Panel>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

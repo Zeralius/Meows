@@ -38,6 +38,10 @@ to install.
 | **[Carry](Meows.Plugins.Carry/README.md)** | Moves a folder to a drive with room, checks every file, and leaves a junction behind so every path that pointed at it still works |
 | **[Cattery](Meows.Plugins.Cattery/README.md)** | Every git repository under your project folders: its branch, uncommitted work, what is not pushed, and how long since anyone committed, the most neglected first |
 | **[Nest](Meows.Plugins.Nest/README.md)** | Game saves, maps, project files and keys: the few things that cannot be downloaded again, how much there is, and how long since each was copied somewhere else |
+| **[Basket](Meows.Plugins.Basket/README.md)** | Local task board with lists, cards and due dates. No account, no cloud |
+| **[Backlog](Meows.Plugins.Backlog/README.md)** | Which game to play next: backlog, ratings and a picker |
+| **[Screenshot](Meows.Plugins.Screenshot/README.md)** | Sorts game screenshots by game: duplicates out, best-of picks to Scruff |
+| **[Pantry](Meows.Plugins.Pantry/README.md)** | Recipe box with expiry dates and a weekly cooking plan |
 | **[Kibble](Meows.Plugins.Kibble/README.md)** | Sorts a folder of new material into queues, one key press at a time, and can bundle a pick into a comic |
 | **[Perch](Meows.Plugins.Perch/README.md)** | One timeline of what the posting bot will send and when, every group merged, out as far as the queues last |
 | **[Portion](Meows.Plugins.Portion/README.md)** | Finds what the bot will fail on in every queue before it fails at night, and shrinks the pictures that can be shrunk |

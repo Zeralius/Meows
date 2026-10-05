@@ -1,0 +1,243 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Pantry.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Pantry.Views.PantryView"
+             x:DataType="vm:PantryViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+        <Style Selector="Border.marker">
+            <Setter Property="Width" Value="4" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Summary}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Classes="label" Text="{Binding Status}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="{m:Tr pantry.suggest}" Command="{Binding SuggestCommand}" />
+                    <Button Content="{m:Tr pantry.import}" Command="{Binding ImportCommand}" />
+                    <Button Content="{m:Tr pantry.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="{DynamicResource MeowsDangerText}"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="230,4,*,4,350">
+
+            <DockPanel Grid.Column="0">
+                <Grid DockPanel.Dock="Top" Margin="14,14,14,10" ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0"
+                               Classes="section"
+                               Text="{m:Tr pantry.recipes}"
+                               VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                        <Button Content="+"
+                                Command="{Binding AddRecipeCommand}"
+                                FontSize="11"
+                                Padding="8,2" />
+                        <Button Content="−"
+                                Command="{Binding DeleteRecipeCommand}"
+                                FontSize="11"
+                                Padding="8,2" />
+                    </StackPanel>
+                </Grid>
+
+                <ListBox Name="RecipeList"
+                         ItemsSource="{Binding Recipes}"
+                         SelectedItem="{Binding SelectedRecipe}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8,0,8,8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:RecipeRowViewModel">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding Shown}" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Text="{Binding TimeText}" Classes="label" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <DockPanel Grid.Column="2">
+                <Grid DockPanel.Dock="Top" Margin="14,14,14,10" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <TextBlock Grid.Column="0"
+                               Classes="section"
+                               Text="{m:Tr pantry.plan}"
+                               VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                        <Button Content="{m:Tr pantry.cook}"
+                                Command="{Binding CookCommand}"
+                                FontSize="11" />
+                        <Button Content="{m:Tr pantry.clear}"
+                                Command="{Binding ClearDayCommand}"
+                                FontSize="11" />
+                    </StackPanel>
+                </Grid>
+
+                <ListBox Name="PlanList"
+                         ItemsSource="{Binding Plan}"
+                         SelectedItem="{Binding SelectedDay}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8,0,8,8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PlanRowViewModel">
+                            <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="10">
+                                <StackPanel Grid.Column="0" Spacing="0">
+                                    <TextBlock Text="{Binding DateText}" TextWrapping="Wrap" FontSize="11" />
+                                </StackPanel>
+                                <ComboBox Grid.Column="1"
+                                          ItemsSource="{Binding Options}"
+                                          SelectedItem="{Binding PlannedChoice}"
+                                          HorizontalAlignment="Stretch"
+                                          FontSize="11">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:RecipeChoice">
+                                            <TextBlock Text="{Binding Shown}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                                <TextBlock Grid.Column="2"
+                                           Text="•"
+                                           VerticalAlignment="Center"
+                                           IsVisible="{Binding IsToday}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="3" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <Border Grid.Column="4"
+                    Background="{DynamicResource MeowsBase}"
+                    BorderBrush="{DynamicResource MeowsLineSoft}"
+                    BorderThickness="1,0,0,0">
+                <ScrollViewer>
+                    <StackPanel Margin="16" Spacing="12">
+
+                        <StackPanel Spacing="4" IsVisible="{Binding HasRecipe}">
+                            <TextBlock Classes="section" Text="{m:Tr pantry.field.recipe}" />
+                            <TextBox Text="{Binding SelectedRecipe.Title}" PlaceholderText="{m:Tr pantry.field.title.hint}" />
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="8">
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding SelectedRecipe.MinutesText}"
+                                         PlaceholderText="{m:Tr pantry.field.minutes.hint}" />
+                                <TextBox Grid.Column="1"
+                                         Text="{Binding SelectedRecipe.TagsText}"
+                                         PlaceholderText="{m:Tr pantry.field.tags.hint}" />
+                            </Grid>
+                            <TextBox Text="{Binding SelectedRecipe.Body}"
+                                     PlaceholderText="{m:Tr pantry.field.body.hint}"
+                                     AcceptsReturn="True"
+                                     TextWrapping="Wrap"
+                                     MinHeight="120" />
+                        </StackPanel>
+
+                        <TextBlock Text="{m:Tr pantry.pickone}"
+                                   Classes="label"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding !HasRecipe}" />
+
+                        <Border Background="{DynamicResource MeowsLineSoft}" Height="1" Margin="0,4" />
+
+                        <StackPanel Spacing="4">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <TextBlock Classes="section"
+                                           Text="{m:Tr pantry.field.stock}"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="1"
+                                        Content="{m:Tr pantry.useup}"
+                                        Command="{Binding UseUpCommand}"
+                                        FontSize="11" />
+                            </Grid>
+                            <ListBox ItemsSource="{Binding Stock}"
+                                     SelectedItem="{Binding SelectedStock}"
+                                     Background="Transparent"
+                                     BorderThickness="0"
+                                     MaxHeight="220">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:StockRowViewModel">
+                                        <Grid ColumnDefinitions="4,*,Auto" ColumnSpacing="8">
+                                            <Border Grid.Column="0"
+                                                    Classes="marker"
+                                                    Background="{DynamicResource MeowsDangerStrong}"
+                                                    IsVisible="{Binding IsExpired}" />
+                                            <Border Grid.Column="0"
+                                                    Classes="marker"
+                                                    Background="{DynamicResource MeowsWarnLine}"
+                                                    IsVisible="{Binding IsSoon}" />
+                                            <StackPanel Grid.Column="1" Spacing="0">
+                                                <TextBlock Text="{Binding Shown}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding ExpiryText}" Classes="label" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="2"
+                                                       Text="{Binding Note}"
+                                                       Classes="label"
+                                                       VerticalAlignment="Center"
+                                                       IsVisible="{Binding HasNote}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                <TextBox Grid.Column="0"
+                                         Text="{Binding NewStockName}"
+                                         PlaceholderText="{m:Tr pantry.field.stock.hint}" />
+                                <Button Grid.Column="1"
+                                        Content="{m:Tr pantry.stock.add}"
+                                        Command="{Binding AddStockCommand}"
+                                        FontSize="11" />
+                            </Grid>
+                        </StackPanel>
+
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

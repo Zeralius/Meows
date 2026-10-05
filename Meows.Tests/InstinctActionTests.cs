@@ -1,10 +1,14 @@
 using Meows.Plugins.Abstractions;
+using Meows.Plugins.Backlog.ViewModels;
+using Meows.Plugins.Basket.ViewModels;
 using Meows.Plugins.Collar;
 using Meows.Plugins.Collar.ViewModels;
+using Meows.Plugins.Pantry.ViewModels;
 using Meows.Plugins.Portion;
 using Meows.Plugins.Portion.ViewModels;
 using Meows.Plugins.Purrge;
 using Meows.Plugins.Purrge.ViewModels;
+using Meows.Plugins.Screenshot.ViewModels;
 using Meows.Plugins.Scruff;
 using Meows.Plugins.Scruff.ViewModels;
 using Meows.Plugins.WeighIn;
@@ -64,8 +68,8 @@ public sealed class InstinctActionTests : IDisposable
     {
         Type[] performers =
         [
-            typeof(CollarViewModel), typeof(PortionViewModel), typeof(PurrgeViewModel),
-            typeof(WeighInViewModel), typeof(ScruffViewModel),
+            typeof(BacklogViewModel), typeof(BasketViewModel), typeof(CollarViewModel), typeof(PantryViewModel), typeof(PortionViewModel), typeof(PurrgeViewModel),
+            typeof(ScreenshotViewModel), typeof(WeighInViewModel), typeof(ScruffViewModel),
         ];
         var offering = ShippedPlugins.Types
             .Select(t => (IMeowsPlugin)Activator.CreateInstance(t)!)
@@ -74,7 +78,7 @@ public sealed class InstinctActionTests : IDisposable
             .Order()
             .ToList();
 
-        Assert.Equal(["meows.collar", "meows.portion", "meows.purrge", "meows.scruff", "meows.weighin"], offering);
+        Assert.Equal(["meows.backlog", "meows.basket", "meows.collar", "meows.pantry", "meows.portion", "meows.purrge", "meows.screenshot", "meows.scruff", "meows.weighin"], offering);
         Assert.All(performers, t => Assert.True(typeof(IActionTarget).IsAssignableFrom(t), t.Name));
     }
 

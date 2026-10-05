@@ -1,0 +1,204 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Backlog.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Backlog.Views.BacklogView"
+             x:DataType="vm:BacklogViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Summary}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Classes="label" Text="{Binding Status}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <ComboBox ItemsSource="{Binding FilterChoices}"
+                              SelectedIndex="{Binding FilterIndex}"
+                              Width="130"
+                              VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{Binding SortChoices}"
+                              SelectedIndex="{Binding SortIndex}"
+                              Width="150"
+                              VerticalAlignment="Center" />
+                    <Button Content="{m:Tr backlog.pick}" Command="{Binding PickCommand}" />
+                    <Button Content="{m:Tr backlog.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="{DynamicResource MeowsDangerText}"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="*,4,330">
+
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,14,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsEmpty}"
+                           Text="{Binding EmptyText}" />
+
+                <ListBox Name="GameList"
+                         ItemsSource="{Binding Games}"
+                         SelectedItem="{Binding Selected}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GameRowViewModel">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <StackPanel Grid.Column="0" Spacing="2">
+                                    <TextBlock Text="{Binding Shown}" TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding StatusText}" Classes="label" />
+                                        <TextBlock Text="{Binding Stars}" Classes="label" />
+                                        <TextBlock Text="{Binding SizeText}" Classes="label" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding PlayedText}"
+                                           FontSize="11"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           TextWrapping="Wrap"
+                                           MaxWidth="170" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <Border Grid.Column="2"
+                    Background="{DynamicResource MeowsBase}"
+                    BorderBrush="{DynamicResource MeowsLineSoft}"
+                    BorderThickness="1,0,0,0">
+                <Panel>
+                    <TextBlock Text="{m:Tr backlog.pickone}"
+                               Classes="label"
+                               Margin="16"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Top"
+                               IsVisible="{Binding !HasSelection}" />
+
+                    <ScrollViewer IsVisible="{Binding HasSelection}">
+                        <StackPanel Margin="16" Spacing="12">
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr backlog.field.game}" />
+                                <TextBlock Text="{Binding Selected.Shown}"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Selected.PlayedText}" Classes="label" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Selected.SizeText}" Classes="label" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr backlog.field.status}" />
+                                <ComboBox ItemsSource="{Binding Statuses}"
+                                          SelectedItem="{Binding Selected.StatusChoice}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:Choice">
+                                            <TextBlock Text="{Binding Name}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr backlog.field.rating}" />
+                                <ComboBox ItemsSource="{Binding Ratings}"
+                                          SelectedItem="{Binding Selected.RatingChoice}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:Choice">
+                                            <TextBlock Text="{Binding Name}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr backlog.field.note}" />
+                                <TextBox Text="{Binding Selected.Note}"
+                                         AcceptsReturn="True"
+                                         TextWrapping="Wrap"
+                                         MinHeight="70" />
+                            </StackPanel>
+
+                            <Border Background="{DynamicResource MeowsLineSoft}" Height="1" Margin="0,4" />
+
+                            <StackPanel Spacing="8">
+                                <Button Content="{m:Tr backlog.playing}"
+                                        Command="{Binding PlayCommand}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center" />
+                                <Button Content="{m:Tr backlog.finished}"
+                                        Command="{Binding DoneCommand}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center" />
+                                <Button Content="{m:Tr backlog.forget}"
+                                        Command="{Binding ForgetCommand}"
+                                        Background="{DynamicResource MeowsDanger}"
+                                        BorderBrush="{DynamicResource MeowsDangerLine}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr backlog.field.add}" />
+                                <TextBox Text="{Binding NewGameName}"
+                                         PlaceholderText="{m:Tr backlog.field.add.hint}" />
+                                <Button Content="{m:Tr backlog.add}"
+                                        Command="{Binding AddCommand}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center" />
+                            </StackPanel>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </Panel>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>
