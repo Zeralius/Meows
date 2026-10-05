@@ -141,6 +141,88 @@ public sealed class BotWorkspaceTests
         Assert.Equal(2, temp.Workspace.ResolveNextUp(group).Files.Count);
     }
 
+    private static byte[] ComicZip(int pages)
+    {
+        using var stream = new MemoryStream();
+        using (var zip = new System.IO.Compression.ZipArchive(stream, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+            for (var i = 1; i <= pages; i++)
+            {
+                var entry = zip.CreateEntry($"page{i}.jpg");
+                using var writer = new StreamWriter(entry.Open());
+                writer.Write("x");
+            }
+        return stream.ToArray();
+    }
+
+    [Fact]
+    public void A_comic_costs_one_slot_unless_the_group_counts_pages()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        group.FilesPerPost = 1;
+        temp.Queue(group, "comic.zip", new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc), ComicZip(6));
+        temp.Queue(group, "single.png", new DateTime(2021, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+
+        // Oldest first: the comic is first in line either way here, and without the flag
+        // it goes as one file, exactly as before.
+        var next = temp.Workspace.ResolveNextUp(group);
+
+        Assert.Equal("comic.zip", Path.GetFileName(Assert.Single(next.Files)));
+    }
+
+    [Fact]
+    public void A_comic_holds_its_pages_worth_of_slots_when_the_group_counts_pages()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        group.FilesPerPost = 6;
+        group.ComicPagesAsUploads = true;
+        temp.Queue(group, "a.png", new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        temp.Queue(group, "b.png", new DateTime(2021, 1, 1, 0, 0, 0, DateTimeKind.Utc));
+        temp.Queue(group, "comic.zip", new DateTime(2022, 1, 1, 0, 0, 0, DateTimeKind.Utc), ComicZip(6));
+
+        // 1 + 1 + 6 does not fit in 6: the two singles go, the comic waits its turn.
+        var next = temp.Workspace.ResolveNextUp(group);
+
+        Assert.Equal(["a.png", "b.png"], next.Files.Select(Path.GetFileName));
+    }
+
+    [Fact]
+    public void A_comic_over_budget_still_starts_rather_than_wedging_the_queue()
+    {
+        using var temp = new TempWorkspace();
+        var group = temp.AddGroup("G");
+        group.FilesPerPost = 1;
+        group.ComicPagesAsUploads = true;
+        temp.Queue(group, "comic.zip", new DateTime(2020, 1, 1, 0, 0, 0, DateTimeKind.Utc), ComicZip(6));
+
+        var next = temp.Workspace.ResolveNextUp(group);
+
+        Assert.Equal("comic.zip", Path.GetFileName(Assert.Single(next.Files)));
+    }
+
+    [Fact]
+    public void Saving_keeps_the_page_counting_flag()
+    {
+        using var temp = new TempWorkspace();
+        var config = new BotConfig
+        {
+            Groups =
+            [
+                new GroupConfig
+                {
+                    Name = "G", ChatId = "-1", Folder = "groups/g",
+                    Schedule = new ScheduleConfig { IntervalMinutes = 60 },
+                    ComicPagesAsUploads = true,
+                },
+            ],
+        };
+
+        temp.Workspace.SaveConfig(config);
+
+        Assert.True(temp.Workspace.LoadConfig().Groups.Single().ComicPagesAsUploads);
+    }
+
     [Fact]
     public void A_checkout_is_only_valid_with_both_bot_and_config()
     {

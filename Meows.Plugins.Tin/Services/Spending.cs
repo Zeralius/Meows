@@ -71,9 +71,15 @@ public static class Spending
     /// Only whole months count. The first and last months of a folder of exports are nearly always
     /// partial, and a half month read as a whole one drags the answer down.
     /// </summary>
-    public static Rhythm Monthly(IReadOnlyList<Charge> charges, DateTime now, bool incoming)
+    public static Rhythm Monthly(IReadOnlyList<Charge> charges, DateTime now, bool incoming,
+        Func<Charge, string>? accountOf = null)
     {
         var wanted = charges.Where(c => incoming ? c.Amount > 0 : c.Amount < 0).ToList();
+        if (wanted.Count == 0)
+            return new Rhythm(0, 0, 0);
+
+        if (accountOf is not null)
+            wanted = WithoutInternalTransfers(wanted, accountOf);
         if (wanted.Count == 0)
             return new Rhythm(0, 0, 0);
 
@@ -96,7 +102,64 @@ public static class Spending
             .OrderBy(total => total)
             .ToList();
 
-        return new Rhythm(known, leftovers[leftovers.Count / 2], whole.Count);
+        // The lower middle, so two months read as the quieter of the two rather than the louder.
+        // A single large one-off next to an ordinary month must not become the typical month.
+        return new Rhythm(known, leftovers[(leftovers.Count - 1) / 2], whole.Count);
+    }
+
+    /// <summary>
+    /// Money moved between the user's own accounts, set aside before either direction is
+    /// totalled. The same amount leaving one account and arriving in another within a couple
+    /// of days is not spending and not income; counted, it inflates the month coming in and
+    /// going out by the move. Only matched when the two sides sit in different accounts, so a
+    /// folder of one account behaves exactly as before, and only on exact amounts, so a wage
+    /// near a transfer does not get eaten.
+    /// </summary>
+    public static List<Charge> WithoutInternalTransfers(
+        IReadOnlyList<Charge> wanted, Func<Charge, string> accountOf)
+    {
+        const int WindowDays = 2;
+
+        var matched = new bool[wanted.Count];
+
+        foreach (var group in wanted
+                     .Select((c, i) => (Charge: c, Index: i))
+                     .GroupBy(t => Math.Abs(t.Charge.Amount)))
+        {
+            var outs = group.Where(t => t.Charge.Amount < 0).OrderBy(t => t.Charge.Date).ToList();
+            var ins = group.Where(t => t.Charge.Amount > 0).OrderBy(t => t.Charge.Date).ToList();
+            if (outs.Count == 0 || ins.Count == 0)
+                continue;
+
+            foreach (var (outCharge, outIndex) in outs)
+            {
+                if (matched[outIndex])
+                    continue;
+
+                var outAccount = accountOf(outCharge);
+                if (string.IsNullOrEmpty(outAccount) || outAccount == Iban.Unknown)
+                    continue;
+
+                foreach (var (inCharge, inIndex) in ins)
+                {
+                    if (matched[inIndex])
+                        continue;
+
+                    var inAccount = accountOf(inCharge);
+                    if (inAccount == outAccount || string.IsNullOrEmpty(inAccount) || inAccount == Iban.Unknown)
+                        continue;
+
+                    if (Math.Abs((inCharge.Date - outCharge.Date).TotalDays) > WindowDays)
+                        continue;
+
+                    matched[outIndex] = true;
+                    matched[inIndex] = true;
+                    break;
+                }
+            }
+        }
+
+        return wanted.Where((_, i) => !matched[i]).ToList();
     }
 
     /// <summary>

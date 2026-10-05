@@ -29,6 +29,7 @@ public sealed class GroupViewModel : ObservableObject
     private int _filesPerPost;
     private string _postOrder;
     private string _comicOrder;
+    private bool _comicPagesAsUploads;
     private bool _isEnabled;
     private bool _stretchEnabled;
     private double _stretchTargetDays;
@@ -37,6 +38,7 @@ public sealed class GroupViewModel : ObservableObject
     private IReadOnlyList<GroupIssue> _issues = [];
     private int _queueCount;
     private int _archiveCount;
+    private int _uploadSlots;
 
     public GroupViewModel(GroupConfig config, BotWorkspace workspace, Action onDirtyChanged)
     {
@@ -55,6 +57,7 @@ public sealed class GroupViewModel : ObservableObject
         _filesPerPost = config.FilesPerPost ?? 1;
         _postOrder = Normalize(config.PostOrder, PostOrders, "oldest");
         _comicOrder = Normalize(config.ComicOrder, ComicOrders, "name");
+        _comicPagesAsUploads = config.ComicPagesAsUploads == true;
         _isEnabled = config.Enabled ?? true;
         _stretchEnabled = config.Stretch?.TargetDays is > 0;
         _stretchTargetDays = config.Stretch?.TargetDays ?? 7;
@@ -154,6 +157,20 @@ public sealed class GroupViewModel : ObservableObject
     {
         get => _comicOrder;
         set => SetEdited(ref _comicOrder, value);
+    }
+
+    /// <summary>
+    /// Count each page of a comic as its own upload against files_per_post. A 6-page comic
+    /// then holds six slots of queue instead of slipping through as one file.
+    /// </summary>
+    public bool ComicPagesAsUploads
+    {
+        get => _comicPagesAsUploads;
+        set
+        {
+            if (SetEdited(ref _comicPagesAsUploads, value))
+                RefreshCounts();
+        }
     }
 
     /// <summary>Unticking keeps the group in config.json but drops it from the schedule.</summary>
@@ -331,13 +348,13 @@ public sealed class GroupViewModel : ObservableObject
                 return MeowsText.Current["tp.stretch.daily"];
 
             var config = ToConfig();
-            if (QueueRunway.StretchedIntervalMinutes(config, QueueCount) is not { } effective)
+            if (QueueRunway.StretchedIntervalMinutes(config, UploadSlots) is not { } effective)
                 return MeowsText.Current["tp.stretch.off"];
 
             if (effective <= _intervalMinutes)
                 return MeowsText.Current.Format("tp.stretch.resting", _intervalMinutes);
 
-            var reached = QueueRunway.Days(config, QueueCount) ?? 0;
+            var reached = QueueRunway.Days(config, UploadSlots) ?? 0;
             var key = effective >= _stretchCapMinutes
                 ? "tp.stretch.capped"
                 : "tp.stretch.active";
@@ -360,11 +377,24 @@ public sealed class GroupViewModel : ObservableObject
     public void RefreshCounts()
     {
         var config = ToConfig();
-        QueueCount = _workspace.Scan(_workspace.ToSendFolder(config)).Count;
+        var queued = _workspace.Scan(_workspace.ToSendFolder(config));
+        QueueCount = queued.Count;
+        UploadSlots = config.ComicPagesAsUploads == true
+            ? queued.Sum(p => MediaRules.SlotCost(p, config.ComicOrder ?? "name", true))
+            : queued.Count;
         ArchiveCount = _workspace.Scan(_workspace.AlreadySentFolder(config), recursive: true).Count;
         OnPropertyChanged(nameof(IsStarving));
         OnPropertyChanged(nameof(NextPostText));
         OnPropertyChanged(nameof(StretchSummary));
+    }
+
+    /// <summary>
+    /// Uploads left rather than files: with page counting on, a 6-page comic holds six.
+    /// </summary>
+    public int UploadSlots
+    {
+        get => _uploadSlots;
+        private set => SetField(ref _uploadSlots, value);
     }
 
     public GroupConfig ToConfig() => new()
@@ -382,6 +412,8 @@ public sealed class GroupViewModel : ObservableObject
         PostOrder = _postOrder,
         // Leave it out while it matches the default, to keep the file tidy.
         ComicOrder = _comicOrder == "name" && _saved.ComicOrder is null ? null : _comicOrder,
+        // Absent already means one file, one slot.
+        ComicPagesAsUploads = _comicPagesAsUploads ? true : null,
         Stretch = _stretchEnabled
             ? new StretchConfig { TargetDays = _stretchTargetDays, MaxIntervalMinutes = _stretchCapMinutes }
             : null,
@@ -413,6 +445,7 @@ public sealed class GroupViewModel : ObservableObject
         _filesPerPost = config.FilesPerPost ?? 1;
         _postOrder = Normalize(config.PostOrder, PostOrders, "oldest");
         _comicOrder = Normalize(config.ComicOrder, ComicOrders, "name");
+        _comicPagesAsUploads = config.ComicPagesAsUploads == true;
         _isEnabled = config.Enabled ?? true;
         _stretchEnabled = config.Stretch?.TargetDays is > 0;
         _stretchTargetDays = config.Stretch?.TargetDays ?? 7;
@@ -422,7 +455,8 @@ public sealed class GroupViewModel : ObservableObject
                  {
                      nameof(Name), nameof(ChatId), nameof(Folder), nameof(UseInterval),
                      nameof(IntervalMinutes), nameof(Hour), nameof(Minute), nameof(JitterMinutes),
-                     nameof(FilesPerPost), nameof(PostOrder), nameof(ComicOrder),
+                      nameof(FilesPerPost), nameof(PostOrder), nameof(ComicOrder),
+                      nameof(ComicPagesAsUploads),
                      nameof(IsEnabled), nameof(RowOpacity),
                      nameof(StretchEnabled), nameof(StretchTargetDays), nameof(StretchCapMinutes),
                      nameof(StretchSummary),

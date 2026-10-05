@@ -106,7 +106,22 @@
             <!-- Each group and where it runs out -->
             <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
                 <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr perch.groups}" />
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,14,0">
+                        <TextBlock Grid.Column="0" Classes="section" Text="{m:Tr perch.groups}" />
+                        <ComboBox Grid.Column="1"
+                                  ItemsSource="{Binding GroupSorts}"
+                                  SelectedItem="{Binding SelectedGroupSort}"
+                                  FontSize="11"
+                                  MinWidth="130"
+                                  Margin="0,6,0,0"
+                                  VerticalAlignment="Center">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:GroupSortOption">
+                                    <TextBlock Text="{Binding Label.Value}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </Grid>
                     <TextBlock DockPanel.Dock="Bottom"
                                Classes="label"
                                Margin="14,6,14,12"

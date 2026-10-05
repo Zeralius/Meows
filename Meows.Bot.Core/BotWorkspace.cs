@@ -151,19 +151,21 @@ public sealed class BotWorkspace
     public NextUp ResolveNextUp(GroupConfig group)
     {
         var order = (group.PostOrder ?? "oldest").ToLowerInvariant();
-        var count = Math.Max(1, group.FilesPerPost ?? 1);
+        var budget = Math.Max(1, group.FilesPerPost ?? 1);
+        var comicOrder = group.ComicOrder ?? "name";
+        var pagesAsUploads = group.ComicPagesAsUploads == true;
         var queue = Scan(ToSendFolder(group));
 
         if (queue.Count == 0)
         {
             var archive = Scan(AlreadySentFolder(group), recursive: true);
             return archive.Count == 0
-                ? new NextUp(NextUpKind.Nothing, [], count)
-                : new NextUp(NextUpKind.FallbackRandom, [], count);
+                ? new NextUp(NextUpKind.Nothing, [], budget)
+                : new NextUp(NextUpKind.FallbackRandom, [], budget);
         }
 
         if (order == "random")
-            return new NextUp(NextUpKind.RandomAtPostTime, [], count);
+            return new NextUp(NextUpKind.RandomAtPostTime, [], budget);
 
         var byTime = queue
             .Select(p => (Path: p, Time: SafeWriteTime(p)))
@@ -174,7 +176,33 @@ public sealed class BotWorkspace
         if (order == "newest")
             byTime.Reverse();
 
-        return new NextUp(NextUpKind.Known, byTime.Take(count).ToList(), count);
+        if (!pagesAsUploads)
+            return new NextUp(NextUpKind.Known, byTime.Take(budget).ToList(), budget);
+
+        // Same packing as bot.py's get_next_media with comic_pages_as_uploads: queue
+        // order, first in line always starts even over budget.
+        var packed = new List<string>();
+        var used = 0;
+        foreach (var path in byTime)
+        {
+            var cost = MediaRules.SlotCost(path, comicOrder, true);
+            if (used + cost <= budget)
+            {
+                packed.Add(path);
+                used += cost;
+            }
+            else if (packed.Count == 0)
+            {
+                packed.Add(path);
+                break;
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        return new NextUp(NextUpKind.Known, packed, budget);
     }
 
     private static DateTime SafeWriteTime(string path)

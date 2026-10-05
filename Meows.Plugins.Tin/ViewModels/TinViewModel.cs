@@ -861,8 +861,8 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable
         foreach (var slice in Spending.ByPayee(mine))
             Slices.Add(new SliceViewModel(slice, index++, Currency));
 
-        _out = Spending.Monthly(mine, DateTime.Now, incoming: false);
-        _in = Spending.Monthly(mine, DateTime.Now, incoming: true);
+        _out = Spending.Monthly(mine, DateTime.Now, incoming: false, _reading.AccountOf);
+        _in = Spending.Monthly(mine, DateTime.Now, incoming: true, _reading.AccountOf);
 
         OnEverythingChanged();
     }

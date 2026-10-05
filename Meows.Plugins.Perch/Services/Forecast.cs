@@ -89,12 +89,15 @@ public static class Forecast
     private static IEnumerable<Slot> ForGroup(GroupQueue queue, DateTime botStart, DateTime now, DateTime end)
     {
         var group = queue.Group;
-        var perPost = Math.Max(1, group.FilesPerPost ?? 1);
+        var budget = Math.Max(1, group.FilesPerPost ?? 1);
         var jitter = Math.Max(0, group.JitterMinutes ?? DefaultJitterMinutes);
         var random = string.Equals(group.PostOrder, "random", StringComparison.OrdinalIgnoreCase);
+        var pagesAsUploads = group.ComicPagesAsUploads == true;
+        var comicOrder = group.ComicOrder ?? "name";
         var interval = group.Schedule?.IntervalMinutes is { } i && i > 0 ? i : (int?)null;
 
-        var remaining = new Queue<string>(queue.Ordered);
+        var remaining = new Queue<(string Path, int Cost)>(queue.Ordered
+            .Select(p => (p, pagesAsUploads ? MediaRules.SlotCost(p, comicOrder, true) : 1)));
         var at = interval is { } minutes
             ? botStart.AddMinutes(Math.Max(0, group.StartOffsetMinutes ?? 0))
             : FirstDaily(group, botStart);
@@ -113,17 +116,38 @@ public static class Forecast
                 yield break;
             }
 
+            // Same packing as bot.py: budget of upload slots per post, queue order, first
+            // in line always starts even over budget.
             var taken = new List<string>();
-            while (taken.Count < perPost && remaining.Count > 0)
-                taken.Add(remaining.Dequeue());
+            var used = 0;
+            while (remaining.Count > 0)
+            {
+                var peek = remaining.Peek();
+                if (used + peek.Cost <= budget)
+                {
+                    taken.Add(remaining.Dequeue().Path);
+                    used += peek.Cost;
+                }
+                else if (taken.Count == 0)
+                {
+                    taken.Add(remaining.Dequeue().Path);
+                    used += peek.Cost;
+                    break;
+                }
+                else
+                {
+                    break;
+                }
+            }
 
-            var stretched = interval is { } && QueueRunway.IsStretching(group, remaining.Count);
-            var effective = interval is { } ? QueueRunway.StretchedIntervalMinutes(group, remaining.Count) ?? interval : null;
+            var left = remaining.Sum(r => r.Cost);
+            var stretched = interval is { } && QueueRunway.IsStretching(group, left);
+            var effective = interval is { } ? QueueRunway.StretchedIntervalMinutes(group, left) ?? interval : null;
 
             if (visible)
             {
                 yield return new Slot(at, jitter, group, random ? SlotKind.Random : SlotKind.Post,
-                    random ? [] : taken, effective, stretched, remaining.Count);
+                    random ? [] : taken, effective, stretched, left);
             }
 
             at = interval is { } ? at.AddMinutes(effective!.Value) : at.AddDays(1);

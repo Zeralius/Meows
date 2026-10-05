@@ -97,6 +97,26 @@ public static partial class MediaRules
     public static bool IsComic(string path) => KindOf(path) == MediaKind.Comic;
 
     /// <summary>
+    /// Upload slots one queue entry consumes: 1 for a file, the page count for a comic when
+    /// the group counts pages as uploads. Never less than 1 and never throws: an archive
+    /// that cannot be read still holds a post's worth of something.
+    /// </summary>
+    public static int SlotCost(string path, string orderMode = "name", bool pagesAsUploads = false)
+    {
+        if (!pagesAsUploads || !IsComic(path))
+            return 1;
+
+        try
+        {
+            return Math.Max(1, ComicPages(path, orderMode).Count);
+        }
+        catch (Exception)
+        {
+            return 1;
+        }
+    }
+
+    /// <summary>
     /// Whether this file could be a page inside a comic. A media group takes photos and videos
     /// only, so a gif, a pdf or another archive has to be posted on its own.
     /// </summary>

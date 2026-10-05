@@ -45,6 +45,12 @@ public sealed class GroupConfig
 
     public string? ComicOrder { get; set; }
 
+    /// <summary>
+    /// Count each page of a comic as its own upload against files_per_post. Absent or false
+    /// is one file, one slot, which is what the bot has always done.
+    /// </summary>
+    public bool? ComicPagesAsUploads { get; set; }
+
     /// <summary>Absent means the group posts at its configured rate whatever is left.</summary>
     public StretchConfig? Stretch { get; set; }
 
@@ -76,6 +82,7 @@ public sealed class GroupConfig
         FilesPerPost = FilesPerPost,
         PostOrder = PostOrder,
         ComicOrder = ComicOrder,
+        ComicPagesAsUploads = ComicPagesAsUploads,
         Stretch = Stretch is null ? null : new StretchConfig
         {
             TargetDays = Stretch.TargetDays,

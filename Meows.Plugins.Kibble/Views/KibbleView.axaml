@@ -167,6 +167,7 @@
                         <ItemsControl ItemsSource="{Binding Destinations}" Margin="8,0">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:DestinationViewModel">
+                                    <StackPanel Spacing="2" Margin="0,0,0,6">
                                     <Button HorizontalAlignment="Stretch"
                                             HorizontalContentAlignment="Left"
                                             Background="{DynamicResource MeowsCard}"
@@ -174,7 +175,7 @@
                                             BorderThickness="1"
                                             CornerRadius="6"
                                             Padding="10,8"
-                                            Margin="0,0,0,6"
+                                            Margin="0,0,0,0"
                                             Command="{Binding $parent[UserControl].((vm:KibbleViewModel)DataContext).SendToCommand}"
                                             CommandParameter="{Binding}">
                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
@@ -213,9 +214,27 @@
                                                        Classes.low="{Binding IsLow}"
                                                        Classes.dry="{Binding IsDry}"
                                                        FontSize="11"
-                                                       VerticalAlignment="Center" />
+                                                        VerticalAlignment="Center" />
                                         </Grid>
                                     </Button>
+                                        <!-- Bulk: the whole scan, not just the pick, newest or oldest first. -->
+                                        <StackPanel Orientation="Horizontal" Spacing="6" HorizontalAlignment="Right">
+                                            <Button Content="{m:Tr kibble.keepall.newest}"
+                                                    ToolTip.Tip="{m:Tr kibble.keepall.newest.tip}"
+                                                    Classes="held"
+                                                    FontSize="10"
+                                                    Padding="6,1"
+                                                    Command="{Binding $parent[UserControl].((vm:KibbleViewModel)DataContext).KeepNewestCommand}"
+                                                    CommandParameter="{Binding}" />
+                                            <Button Content="{m:Tr kibble.keepall.oldest}"
+                                                    ToolTip.Tip="{m:Tr kibble.keepall.oldest.tip}"
+                                                    Classes="held"
+                                                    FontSize="10"
+                                                    Padding="6,1"
+                                                    Command="{Binding $parent[UserControl].((vm:KibbleViewModel)DataContext).KeepOldestCommand}"
+                                                    CommandParameter="{Binding}" />
+                                        </StackPanel>
+                                    </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
