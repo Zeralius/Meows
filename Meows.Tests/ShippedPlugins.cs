@@ -43,6 +43,9 @@ internal static class ShippedPlugins
         typeof(Plugins.Backlog.BacklogPlugin),
         typeof(Plugins.Screenshot.ScreenshotPlugin),
         typeof(Plugins.Pantry.PantryPlugin),
+        typeof(Plugins.Bookshelf.BookshelfPlugin),
+        typeof(Plugins.Vet.VetPlugin),
+        typeof(Plugins.Naptime.NaptimePlugin),
         // kitten: next plugin goes here
     ];
 }
