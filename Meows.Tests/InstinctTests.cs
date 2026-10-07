@@ -6,7 +6,8 @@ namespace Meows.Tests;
 /// <summary>
 /// The rules, run against a real store with the plugins played by functions: a line lands, the
 /// right rule asks the right plugin, and History gets the account. The guards are the point:
-/// one hop, one at a time per plugin, a runaway paused, a rule whose plugin is gone kept.
+/// guarded chains three deep, one at a time per plugin, a runaway paused, a rule whose plugin
+/// is gone kept.
 /// </summary>
 public sealed class InstinctTests : IDisposable
 {
@@ -115,29 +116,85 @@ public sealed class InstinctTests : IDisposable
     }
 
     [Fact]
-    public async Task What_a_plugin_records_while_doing_what_a_rule_asked_never_starts_another_rule()
+    public async Task A_chain_runs_three_hops_deep_and_then_stops()
     {
+        // Four plugins in a loop, each recording the kind the next rule waits on. The loop
+        // would run all night; three hops are all a chain gets.
+        _plugins =
+        [
+            new("meows.p1", "P1", [new PluginAction("go", "go")], [new RecordedKind("k1", "k1")]),
+            new("meows.p2", "P2", [new PluginAction("go", "go")], [new RecordedKind("k2", "k2")]),
+            new("meows.p3", "P3", [new PluginAction("go", "go")], [new RecordedKind("k3", "k3")]),
+            new("meows.p4", "P4", [new PluginAction("go", "go")], [new RecordedKind("k4", "k4")]),
+        ];
+        InstinctRule Link(string from, string kind, string to) =>
+            new() { Source = from, Kind = kind, Target = to, Action = "go" };
         using var engine = Engine();
-        engine.Add(Rule());
-        engine.Add(Rule(source: Portion, kind: "shrunk", target: Collar, action: "remind"));
+        engine.Add(Link("meows.p1", "k1", "meows.p2"));
+        engine.Add(Link("meows.p2", "k2", "meows.p3"));
+        engine.Add(Link("meows.p3", "k3", "meows.p4"));
+        var loop = Link("meows.p4", "k4", "meows.p1");
+        engine.Add(loop);
 
-        // Portion, asked to check, shrinks something: once straight away and once after work
-        // that hopped to the thread pool, which is where a real plugin's scan finishes.
-        _perform = async (target, request, _) =>
+        _perform = (target, request, _) =>
         {
-            _store.For(target).Record("shrunk", @"E:\queue\big.jpg");
-            await Task.Run(() => _store.For(target).Record("shrunk", @"E:\queue\bigger.jpg"));
-            return "shrank two";
+            _store.For(target).Record($"k{target[^1..]}", "chain");
+            return Task.FromResult("did go");
         };
 
-        _store.For(Birdwatch).Record("saved", @"E:\intake\a.jpg");
+        _store.For("meows.p1").Record("k1", "chain");
         await engine.Idle();
 
-        Assert.Equal([Portion], _asked.Select(a => a.Target));
-        var shrunk = _store.Events(Portion, "shrunk", null, 10);
-        Assert.Equal(2, shrunk.Count);
-        Assert.All(shrunk, e => Assert.True(e.Data.ContainsKey(InstinctScope.DataKey)));
-        Assert.Contains(_log, l => l.Contains("rules do not start rules"));
+        Assert.Equal(["meows.p2", "meows.p3", "meows.p4"], _asked.Select(a => a.Target));
+        Assert.Equal(0, loop.Fired);
+        Assert.Contains(_log, l => l.Contains("three hops") || l.Contains("3 hops"));
+
+        // The history says how deep each firing sat. Nested pumps account inner-first,
+        // so the ids run against firing order; the asking order above is the firing order.
+        var fired = Account().OrderBy(e => e.Id).ToList();
+        Assert.Equal(3, fired.Count);
+        Assert.Contains(fired, e => e.Detail == "When P1 k1, P2: go. did go");
+        Assert.Contains(fired, e => (e.Detail ?? "").Contains("(hop 1 of 3)"));
+        Assert.Contains(fired, e => (e.Detail ?? "").Contains("(hop 2 of 3)"));
+    }
+
+    [Fact]
+    public async Task Trying_it_fires_a_ready_rule_right_now_and_nothing_else()
+    {
+        using var engine = Engine();
+        var rule = Rule(matching: "paws");
+        engine.Add(rule);
+
+        engine.FireNow(rule);
+        await engine.Idle();
+
+        var (target, request) = Assert.Single(_asked);
+        Assert.Equal(Portion, target);
+        Assert.Equal("paws", request.Subject);
+        Assert.Equal("fired", Assert.Single(Account()).Kind);
+
+        engine.SetEnabled(rule, false);
+        engine.FireNow(rule);
+        await engine.Idle();
+        Assert.Single(_asked);
+    }
+
+    [Fact]
+    public void A_row_can_be_tried_while_it_is_ready_and_not_once_it_is_off()
+    {
+        using var engine = Engine();
+        using var tab = new Meows.ViewModels.RulesViewModel(engine, () => _plugins, id => _store.Kinds(id));
+
+        tab.SelectedSource = tab.Sources.Single(s => s.Id == Birdwatch);
+        tab.SelectedKind = tab.Kinds.Single(k => k.Kind == "saved");
+        tab.SelectedTarget = tab.Targets.Single(t => t.Id == Portion);
+        tab.AddCommand.Execute(null);
+
+        var row = Assert.Single(tab.Rows);
+        Assert.True(row.CanTry);
+
+        row.Enabled = false;
+        Assert.False(row.CanTry);
     }
 
     [Fact]
@@ -412,5 +469,260 @@ public sealed class InstinctTests : IDisposable
         Assert.Equal(preferences.Rules[0].Id, back.Id);
         Assert.Equal("paws", back.Matching);
         Assert.False(back.Enabled);
+    }
+
+    private static InstinctRule ClockRule(
+        RuleTrigger trigger = RuleTrigger.Daily,
+        string target = Collar,
+        string action = "remind",
+        string? note = "Water the plants",
+        TimeSpan? at = null,
+        params DayOfWeek[] days) =>
+        new()
+        {
+            Trigger = trigger,
+            Target = target,
+            Action = action,
+            Note = note,
+            At = at ?? new TimeSpan(7, 0, 0),
+            Days = days.ToList(),
+        };
+
+    [Fact]
+    public async Task A_daily_rule_fires_once_per_slot_with_its_note_as_the_subject()
+    {
+        // A Monday morning, looked at twice.
+        var morning = new DateTime(2026, 10, 5, 7, 0, 30);
+        using var engine = Engine(now: () => morning);
+        var rule = ClockRule();
+        engine.Add(rule);
+
+        // Before the slot, the clock says nothing.
+        engine.CheckSchedule(morning.Date.AddHours(6).AddMinutes(59));
+        await engine.Idle();
+        Assert.Empty(_asked);
+
+        engine.CheckSchedule(morning);
+        await engine.Idle();
+
+        var (target, request) = Assert.Single(_asked);
+        Assert.Equal(Collar, target);
+        Assert.Equal("remind", request.Action);
+        Assert.Equal("Water the plants", request.Subject);
+        Assert.Equal(InstinctEngine.ClockId, request.Cause.Plugin);
+        Assert.Equal(InstinctEngine.ClockKind, request.Cause.Kind);
+
+        var line = Assert.Single(Account());
+        Assert.Equal("fired", line.Kind);
+        Assert.Equal("Water the plants", line.Subject);
+        Assert.NotNull(rule.LastScheduled);
+
+        // The same slot looked at again does not fire again.
+        engine.CheckSchedule(morning.AddSeconds(30));
+        await engine.Idle();
+        Assert.Single(_asked);
+
+        // Tomorrow's slot fires again.
+        engine.CheckSchedule(morning.AddDays(1));
+        await engine.Idle();
+        Assert.Equal(2, _asked.Count);
+    }
+
+    [Fact]
+    public async Task A_weekly_rule_fires_only_on_its_days()
+    {
+        // 2026-10-05 is a Monday.
+        var monday = new DateTime(2026, 10, 5, 8, 0, 0);
+        using var engine = Engine(now: () => monday);
+        engine.Add(ClockRule(RuleTrigger.Weekly, days: [DayOfWeek.Monday, DayOfWeek.Friday]));
+
+        engine.CheckSchedule(monday);
+        await engine.Idle();
+        Assert.Single(_asked);
+
+        engine.CheckSchedule(monday.AddDays(1));
+        await engine.Idle();
+        Assert.Single(_asked);
+
+        engine.CheckSchedule(monday.AddDays(4));
+        await engine.Idle();
+        Assert.Equal(2, _asked.Count);
+    }
+
+    [Fact]
+    public async Task Clock_rules_never_match_a_line_no_matter_what_lands()
+    {
+        using var engine = Engine();
+        engine.Add(ClockRule());
+
+        _store.For(Birdwatch).Record("saved", @"E:\intake\a.jpg");
+        _store.For(InstinctEngine.ClockId).Record(InstinctEngine.ClockKind, "tick");
+        await engine.Idle();
+
+        Assert.Empty(_asked);
+    }
+
+    [Fact]
+    public async Task A_clock_rule_switched_off_paused_or_missing_its_target_does_not_fire()
+    {
+        var morning = new DateTime(2026, 10, 5, 9, 0, 0);
+        using var engine = Engine(now: () => morning);
+        var off = ClockRule(note: "off");
+        var paused = ClockRule(note: "paused");
+        paused.PausedReason = "too often";
+        var gone = ClockRule(note: "gone", target: "meows.gone");
+        engine.Add(off);
+        engine.Add(paused);
+        engine.Add(gone);
+        engine.SetEnabled(off, false);
+
+        Assert.Equal(RuleState.Off, engine.StateOf(off, out _));
+        Assert.Equal(RuleState.Paused, engine.StateOf(paused, out _));
+        Assert.Equal(RuleState.TargetMissing, engine.StateOf(gone, out var why));
+        Assert.Contains("meows.gone", why);
+
+        engine.CheckSchedule(morning);
+        await engine.Idle();
+        Assert.Empty(_asked);
+    }
+
+    [Fact]
+    public void A_clock_rule_needs_no_source_and_reads_as_its_appointment()
+    {
+        using var engine = Engine();
+        var daily = ClockRule(note: "x");
+        var weekly = ClockRule(RuleTrigger.Weekly, days: [DayOfWeek.Monday]);
+
+        Assert.Equal(RuleState.Ready, engine.StateOf(daily, out _));
+        Assert.Contains("7:00", engine.Describe(daily));
+        Assert.Contains("Collar", engine.Describe(daily));
+
+        var sentence = engine.Describe(weekly);
+        Assert.Contains("7:00", sentence);
+        Assert.Contains("Monday", sentence);
+    }
+
+    [Fact]
+    public async Task A_clock_that_cannot_be_read_never_fires()
+    {
+        var morning = new DateTime(2026, 10, 5, 9, 0, 0);
+        using var engine = Engine(now: () => morning);
+        engine.Add(ClockRule(at: TimeSpan.FromHours(25)));
+
+        engine.CheckSchedule(morning);
+        await engine.Idle();
+        Assert.Empty(_asked);
+    }
+
+    [Fact]
+    public void Clock_rules_are_kept_with_the_preferences_and_come_back()
+    {
+        var settings = new ShellSettings(Path.Combine(_root, "clock-settings"), previousRoot: Path.Combine(_root, "none"));
+        var preferences = settings.LoadPreferences();
+        preferences.Rules.Add(new InstinctRule
+        {
+            Trigger = RuleTrigger.Weekly,
+            At = new TimeSpan(7, 30, 0),
+            Days = [DayOfWeek.Monday, DayOfWeek.Friday],
+            Note = "Water the plants",
+            Target = Collar,
+            Action = "remind",
+            LastScheduled = new DateTime(2026, 10, 5, 7, 30, 0),
+        });
+        settings.SavePreferences(preferences);
+
+        var back = Assert.Single(settings.LoadPreferences().Rules);
+        Assert.Equal(RuleTrigger.Weekly, back.Trigger);
+        Assert.Equal(new TimeSpan(7, 30, 0), back.At);
+        Assert.Equal([DayOfWeek.Monday, DayOfWeek.Friday], back.Days);
+        Assert.Equal("Water the plants", back.Note);
+        Assert.Equal(new DateTime(2026, 10, 5, 7, 30, 0), back.LastScheduled);
+    }
+
+    [Fact]
+    public void The_rules_tab_makes_a_clock_rule_from_trigger_time_days_and_note()
+    {        using var engine = Engine();
+        using var tab = new Meows.ViewModels.RulesViewModel(engine, () => _plugins, id => _store.Kinds(id));
+
+        tab.SelectedTrigger = tab.Triggers.Single(t => t.Value == RuleTrigger.Weekly);
+        Assert.True(tab.IsWeeklyTrigger);
+        Assert.True(tab.IsClockTrigger);
+        Assert.False(tab.IsEventTrigger);
+        Assert.False(tab.AddCommand.CanExecute(null));
+
+        tab.Days.Single(d => d.Day == DayOfWeek.Monday).IsChecked = true;
+        tab.SelectedTarget = tab.Targets.Single(t => t.Id == Collar);
+        tab.Note = "  Water the plants ";
+        Assert.True(tab.AddCommand.CanExecute(null));
+        tab.AddCommand.Execute(null);
+
+        var rule = Assert.Single(engine.Rules);
+        Assert.Equal(RuleTrigger.Weekly, rule.Trigger);
+        Assert.Equal(new TimeSpan(7, 0, 0), rule.At);
+        Assert.Equal([DayOfWeek.Monday], rule.Days);
+        Assert.Equal("Water the plants", rule.Note);
+        Assert.Equal("", rule.Source);
+        Assert.Equal("", tab.Note);
+
+        // A rescan or a language change reads everything again and keeps what was picked.
+        tab.Refresh();
+        Assert.Equal(RuleTrigger.Weekly, tab.SelectedTrigger?.Value);
+        Assert.Equal([DayOfWeek.Monday], tab.Days.Where(d => d.IsChecked).Select(d => d.Day));
+    }
+
+    [Fact]
+    public async Task A_day_scope_holds_both_kinds_of_rules_to_their_days()
+    {
+        // 2026-10-04 is a Sunday, 2026-10-05 the Monday after.
+        var now = new DateTime(2026, 10, 4, 9, 0, 0);
+        using var engine = Engine(now: () => now);
+        var weekdayEvent = Rule();
+        weekdayEvent.DayScope = RuleDayScope.Weekdays;
+        var weekendClock = ClockRule(note: "weekend", at: new TimeSpan(7, 0, 0));
+        weekendClock.DayScope = RuleDayScope.Weekend;
+        engine.Add(weekdayEvent);
+        engine.Add(weekendClock);
+
+        _store.For(Birdwatch).Record("saved", @"E:\intake\a.jpg");
+        engine.CheckSchedule(now);
+        await engine.Idle();
+
+        // The event landed on a Sunday, the clock's slot is Sunday: one firing, the clock's.
+        var single = Assert.Single(_asked);
+        Assert.Equal("weekend", single.Request.Subject);
+
+        // Monday: the weekday event fires, the weekend clock stays quiet.
+        now = now.AddDays(1).Date.AddHours(8);
+        engine.CheckSchedule(now);
+        _store.For(Birdwatch).Record("saved", @"E:\intake\b.jpg");
+        await engine.Idle();
+
+        Assert.Equal(2, _asked.Count);
+        Assert.Equal(@"E:\intake\b.jpg", _asked[1].Request.Subject);
+    }
+
+    [Fact]
+    public void The_sentence_names_the_scope_and_the_tab_carries_it()
+    {
+        using var engine = Engine();
+        var scoped = Rule();
+        scoped.DayScope = RuleDayScope.Weekdays;
+
+        Assert.Contains("on weekdays", engine.Describe(scoped));
+
+        using var tab = new Meows.ViewModels.RulesViewModel(engine, () => _plugins, id => _store.Kinds(id));
+        Assert.Equal(RuleDayScope.Any, tab.SelectedScope?.Value);
+
+        tab.SelectedSource = tab.Sources.Single(s => s.Id == Birdwatch);
+        tab.SelectedKind = tab.Kinds.Single(k => k.Kind == "saved");
+        tab.SelectedTarget = tab.Targets.Single(t => t.Id == Portion);
+        tab.SelectedScope = tab.Scopes.Single(s => s.Value == RuleDayScope.Weekend);
+        tab.AddCommand.Execute(null);
+
+        var rule = Assert.Single(engine.Rules);
+        Assert.Equal(RuleDayScope.Weekend, rule.DayScope);
+
+        tab.Refresh();
+        Assert.Equal(RuleDayScope.Weekend, tab.SelectedScope?.Value);
     }
 }

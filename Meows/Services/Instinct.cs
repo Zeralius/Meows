@@ -3,24 +3,35 @@ using Meows.Plugins.Abstractions;
 namespace Meows.Services;
 
 /// <summary>
-/// Which rule, if any, the code running right now is doing work for. Set around the call into a
-/// plugin's <see cref="IActionTarget.Perform"/> and carried by the runtime into everything that
-/// call awaits or starts, so the store can mark every line written on a rule's behalf.
+/// Which rule, if any, the code running right now is doing work for, and how deep in a chain
+/// it sits. Set around the call into a plugin's <see cref="IActionTarget.Perform"/> and carried
+/// by the runtime into everything that call awaits or starts, so the store can mark every line
+/// written on a rule's behalf with both.
+///
+/// An event a plugin wrote itself sits at depth zero; each rule that fires on it runs one
+/// deeper, and no rule fires past <see cref="InstinctEngine.MaxDepth"/>.
 /// </summary>
+public sealed record InstinctCause(string Rule, int Depth);
+
 public static class InstinctScope
 {
     /// <summary>The key the store adds to a line's data when a rule caused it.</summary>
     public const string DataKey = "instinct.rule";
 
-    private static readonly AsyncLocal<string?> Current = new();
+    /// <summary>The key the store adds beside it for how deep in a chain the line sits.</summary>
+    public const string DepthKey = "instinct.depth";
 
-    public static string? Rule => Current.Value;
+    private static readonly AsyncLocal<InstinctCause?> Current = new();
 
-    /// <summary>Runs <paramref name="start"/> as the rule, and only its start: what it awaits keeps the mark, the caller does not.</summary>
-    public static T As<T>(string rule, Func<T> start)
+    public static string? Rule => Current.Value?.Rule;
+
+    public static int Depth => Current.Value?.Depth ?? 0;
+
+    /// <summary>Runs <paramref name="start"/> as the rule at the depth, and only its start: what it awaits keeps the mark, the caller does not.</summary>
+    public static T As<T>(string rule, int depth, Func<T> start)
     {
         var previous = Current.Value;
-        Current.Value = rule;
+        Current.Value = new InstinctCause(rule, depth);
         try
         {
             return start();
@@ -30,25 +41,65 @@ public static class InstinctScope
             Current.Value = previous;
         }
     }
+
+    /// <summary>Runs <paramref name="start"/> as the rule, at the top of a chain.</summary>
+    public static T As<T>(string rule, Func<T> start) => As(rule, 0, start);
+}
+
+/// <summary>What starts a rule: another plugin's event, or the clock.</summary>
+public enum RuleTrigger
+{
+    Event,
+    Daily,
+    Weekly,
+}
+
+/// <summary>Which days a rule may fire on: any, weekdays, or the weekend.</summary>
+public enum RuleDayScope
+{
+    Any,
+    Weekdays,
+    Weekend,
 }
 
 /// <summary>
-/// One standing rule: when this plugin records this kind of event, ask that plugin to do this.
-/// Kept in the shell's preferences, by plugin id and action id rather than by anything a
-/// person reads, so a rename or a language change does not break it.
+/// One standing rule: when this plugin records this kind of event, ask that plugin to do this —
+/// or, since Rules 2.0, when the clock says so. Kept in the shell's preferences, by plugin id
+/// and action id rather than by anything a person reads, so a rename or a language change does
+/// not break it. Rules written before the clock say <see cref="RuleTrigger.Event"/>.
 /// </summary>
 public sealed class InstinctRule
 {
     public string Id { get; set; } = Guid.NewGuid().ToString("N")[..10];
 
-    /// <summary>The plugin whose events start it.</summary>
+    public RuleTrigger Trigger { get; set; } = RuleTrigger.Event;
+
+    /// <summary>The plugin whose events start it. Unused by clock rules.</summary>
     public string Source { get; set; } = "";
 
-    /// <summary>The kind of event, exactly as the source records it.</summary>
+    /// <summary>The kind of event, exactly as the source records it. Unused by clock rules.</summary>
     public string Kind { get; set; } = "";
 
-    /// <summary>Only events whose subject or detail contains this, when set. Case does not matter.</summary>
+    /// <summary>Only events whose subject or detail contains this, when set. Case does not matter. Unused by clock rules.</summary>
     public string? Matching { get; set; }
+
+    /// <summary>
+    /// When the clock starts it: the time of day. Unused by event rules.
+    /// </summary>
+    public TimeSpan At { get; set; } = new(7, 0, 0);
+
+    /// <summary>Which days the clock starts it. Unused except by weekly rules.</summary>
+    public List<DayOfWeek> Days { get; set; } = [];
+
+    /// <summary>
+    /// What a clock firing is about, in the person's own words: the subject the target is
+    /// asked about. "Water the plants" becomes the card, the entry, the tick. Unused by event
+    /// rules, which take their subject from the event.
+    /// </summary>
+    public string? Note { get; set; }
+
+    /// <summary>Which days it may fire on. Checked when it would fire, not when the event landed.</summary>
+    public RuleDayScope DayScope { get; set; } = RuleDayScope.Any;
 
     /// <summary>The plugin asked to act.</summary>
     public string Target { get; set; } = "";
@@ -66,6 +117,9 @@ public sealed class InstinctRule
     public string? PausedReason { get; set; }
 
     public DateTime? LastFired { get; set; }
+
+    /// <summary>When the clock last started it. Guards a slot against firing twice.</summary>
+    public DateTime? LastScheduled { get; set; }
 
     /// <summary>The last thing the target said, or why it could not be asked.</summary>
     public string? LastOutcome { get; set; }
@@ -96,15 +150,25 @@ public enum RuleState
 /// matches it asks its target plugin to do its action, and what came back is written to the
 /// history under Instinct's own name, so the first surprising night can be explained.
 ///
-/// Three things keep it from being the thing that surprises: a line written because a rule
-/// asked never starts another rule (one hop); each target does one thing at a time, in the
-/// order asked; and a rule that fires far more often than anyone meant is paused and says so.
-/// A rule whose plugin has gone is never dropped, only shown as not able to run.
+/// Three things keep it from being the thing that surprises: what a rule starts can start
+/// another rule at most <see cref="MaxDepth"/> deep, and then the chain stops; each target
+/// does one thing at a time, in the order asked; and a rule that fires far more often than
+/// anyone meant is paused and says so. A rule whose plugin has gone is never dropped, only
+/// shown as not able to run.
 /// </summary>
 public sealed class InstinctEngine : IDisposable
 {
     /// <summary>The name Instinct writes its lines under in the history.</summary>
     public const string PluginId = "meows.instinct";
+
+    /// <summary>How many rules deep a chain may run past the event that started it.</summary>
+    public const int MaxDepth = 3;
+
+    /// <summary>What a clock firing is recorded as coming from. No plugin writes as the clock.</summary>
+    public const string ClockId = "meows.clock";
+
+    /// <summary>The kind of a clock firing, as the history shows it.</summary>
+    public const string ClockKind = "tick";
 
     /// <summary>More firings than this inside <see cref="RunawayWindow"/> pauses the rule.</summary>
     public const int RunawayLimit = 30;
@@ -128,7 +192,7 @@ public sealed class InstinctEngine : IDisposable
 
     // Per target, what is waiting and whether something is running. One at a time per plugin:
     // five pictures saved in a burst are five checks in a row, not five at once.
-    private readonly Dictionary<string, Queue<(InstinctRule Rule, StoredEvent Cause)>> _waiting = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, Queue<(InstinctRule Rule, StoredEvent Cause, int Depth)>> _waiting = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, int> _busy = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, Queue<DateTime>> _recent = new();
     private int _outstanding;
@@ -221,13 +285,17 @@ public sealed class InstinctEngine : IDisposable
     public RuleState StateOf(InstinctRule rule, out string? why)
     {
         var plugins = _plugins();
-        var source = Find(plugins, rule.Source);
         var target = Find(plugins, rule.Target);
 
-        if (source is null)
+        // Clock rules wait on nothing: the source side is the clock, which is never missing.
+        if (rule.Trigger == RuleTrigger.Event)
         {
-            why = Text.Format("instinct.state.nosource", rule.Source);
-            return RuleState.SourceMissing;
+            var source = Find(plugins, rule.Source);
+            if (source is null)
+            {
+                why = Text.Format("instinct.state.nosource", rule.Source);
+                return RuleState.SourceMissing;
+            }
         }
         if (target is null)
         {
@@ -255,28 +323,60 @@ public sealed class InstinctEngine : IDisposable
     }
 
     /// <summary>
-    /// The rule as a sentence: "When Birdwatch saved a picture, Portion: Check the queues".
-    /// Worked out from what the plugins say now, and from the saved ids when one is gone, so a
-    /// rule pointing at nothing still reads as what it was.
+    /// The rule as a sentence: "When Birdwatch saved a picture, Portion: Check the queues",
+    /// or "Every day at 7:00, Collar: Put it on the list". Worked out from what the plugins
+    /// say now, and from the saved ids when one is gone, so a rule pointing at nothing still
+    /// reads as what it was.
     /// </summary>
     public string Describe(InstinctRule rule)
     {
         var plugins = _plugins();
-        var source = Find(plugins, rule.Source);
         var target = Find(plugins, rule.Target);
 
-        var kind = source?.Records.FirstOrDefault(r => string.Equals(r.Kind, rule.Kind, StringComparison.OrdinalIgnoreCase)) is { } declared
-            ? Text[declared.Label]
-            : Text.Format("instinct.kind.plain", rule.Kind);
         var action = target?.Actions.FirstOrDefault(a => string.Equals(a.Id, rule.Action, StringComparison.OrdinalIgnoreCase)) is { } known
             ? Text[known.Label]
             : rule.Action;
 
+        var when = rule.Trigger == RuleTrigger.Event
+            ? EventWhen(plugins, rule)
+            : ClockWhen(rule);
+        return Text.Format("instinct.sentence", when, target?.Name ?? rule.Target, action);
+    }
+
+    private static string EventWhen(IReadOnlyList<InstinctPlugin> plugins, InstinctRule rule)
+    {
+        var source = Find(plugins, rule.Source);
+        var kind = source?.Records.FirstOrDefault(r => string.Equals(r.Kind, rule.Kind, StringComparison.OrdinalIgnoreCase)) is { } declared
+            ? Text[declared.Label]
+            : Text.Format("instinct.kind.plain", rule.Kind);
+
         var when = Text.Format("instinct.sentence.when", source?.Name ?? rule.Source, kind);
         if (!string.IsNullOrWhiteSpace(rule.Matching))
             when += " " + Text.Format("instinct.sentence.matching", rule.Matching.Trim());
-        return Text.Format("instinct.sentence", when, target?.Name ?? rule.Target, action);
+        return when + DayScopeWords(rule);
     }
+
+    private static string ClockWhen(InstinctRule rule)
+    {
+        var at = $"{rule.At.Hours}:{rule.At.Minutes:D2}";
+        var when = rule.Trigger == RuleTrigger.Weekly
+            ? Text.Format("instinct.when.weekly",
+                string.Join(", ", rule.Days
+                    .Distinct()
+                    .OrderBy(d => ((int)d + 6) % 7)
+                    .Select(d => System.Globalization.CultureInfo.CurrentCulture.DateTimeFormat.GetDayName(d))),
+                at)
+            : Text.Format("instinct.when.daily", at);
+        return when + DayScopeWords(rule);
+    }
+
+    /// <summary>The day scope as words, or nothing when the rule fires any day.</summary>
+    private static string DayScopeWords(InstinctRule rule) => rule.DayScope switch
+    {
+        RuleDayScope.Weekdays => " " + Text["instinct.dayscope.weekdays"],
+        RuleDayScope.Weekend => " " + Text["instinct.dayscope.weekend"],
+        _ => "",
+    };
 
     /// <summary>
     /// A line has landed in the store. Safe from any thread: whether it counts is settled here,
@@ -289,37 +389,131 @@ public sealed class InstinctEngine : IDisposable
         if (string.Equals(stored.Plugin, PluginId, StringComparison.OrdinalIgnoreCase))
             return;
 
-        // One hop. Marked by the store because a rule's action was running when it was written,
-        // or written by a plugin that is in the middle of doing what a rule asked, which covers
-        // work that hopped threads in a way that lost the mark.
-        string? causedBy = stored.Data.TryGetValue(InstinctScope.DataKey, out var marked) ? marked : null;
+        // Guarded chains. Marked by the store because a rule's action was running when the
+        // line was written, or written by a plugin that is in the middle of doing what a rule
+        // asked, which covers work that hopped threads in a way that lost the mark. A line
+        // with no mark is depth zero; a busy plugin's depth cannot be known, so it counts as
+        // the limit, the way one hop used to count everything past the first.
+        int depth;
         List<InstinctRule> matches;
         lock (_gate)
         {
-            if (causedBy is null && _busy.GetValueOrDefault(stored.Plugin) > 0)
-                causedBy = "busy";
+            depth = stored.Data.ContainsKey(InstinctScope.DataKey)
+                ? DepthOf(stored)
+                : _busy.GetValueOrDefault(stored.Plugin) > 0 ? MaxDepth : 0;
             matches = _rules.Where(r => Matches(r, stored)).ToList();
         }
 
         if (matches.Count == 0)
             return;
 
-        if (causedBy is not null)
+        if (depth >= MaxDepth)
         {
-            _log($"Not following '{stored.Kind}' from {stored.Plugin}: a rule asked for it, and rules do not start rules.", LogLevel.Info);
+            _log($"Not following '{stored.Kind}' from {stored.Plugin}: {MaxDepth} hops are all a chain gets.", LogLevel.Info);
             return;
         }
 
         foreach (var rule in matches)
+            ScheduleFire(rule, stored, depth);
+    }
+
+    /// <summary>How deep in a chain the line sits: its mark, or the limit when it cannot be known.</summary>
+    private static int DepthOf(StoredEvent stored)
+    {
+        if (!stored.Data.TryGetValue(InstinctScope.DataKey, out _))
+            return 0;
+        if (stored.Data.TryGetValue(InstinctScope.DepthKey, out var depth) &&
+            int.TryParse(depth, System.Globalization.NumberStyles.Integer, System.Globalization.CultureInfo.InvariantCulture, out var parsed) &&
+            parsed >= 0)
+            return parsed;
+        // Marked before depth was kept: refuse it the way one hop refused everything past the first.
+        return MaxDepth;
+    }
+
+    /// <summary>
+    /// The clock, looked at: every scheduled rule whose slot has come, fired once per slot. The
+    /// shell asks about once a minute; a machine that was off at the time skips that day rather
+    /// than firing late, except when Meows starts later the same morning. Safe from any thread.
+    /// </summary>
+    public void CheckSchedule(DateTime now)
+    {
+        List<(InstinctRule Rule, StoredEvent Cause)> due;
+        lock (_gate)
         {
-            lock (_gate)
-            {
-                _outstanding++;
-                if (_idle.Task.IsCompleted)
-                    _idle = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-            }
-            _post(() => Enqueue(rule, stored));
+            due = _rules
+                .Where(r => r.Enabled && r.PausedReason is null && IsDue(r, now))
+                .Select(r => (Rule: r, Cause: ClockCause(r.Note?.Trim() ?? "", now)))
+                .ToList();
+            foreach (var (rule, _) in due)
+                rule.LastScheduled = now;
         }
+
+        if (due.Count == 0)
+            return;
+
+        // The slots are marked before firing, so a slow target cannot double-fire a minute later.
+        _save();
+        foreach (var (rule, cause) in due)
+            ScheduleFire(rule, cause, 0);
+    }
+
+    /// <summary>Whether the rule's slot has come since it last fired. Event rules have no slot.</summary>
+    private static bool IsDue(InstinctRule rule, DateTime now)
+    {
+        if (rule.Trigger == RuleTrigger.Event)
+            return false;
+        if (!InScope(rule, now))
+            return false;
+        if (rule.Trigger == RuleTrigger.Weekly && !rule.Days.Contains(now.DayOfWeek))
+            return false;
+        // A clock that cannot be read never fires rather than firing oddly.
+        if (rule.At < TimeSpan.Zero || rule.At >= TimeSpan.FromDays(1))
+            return false;
+
+        var slot = now.Date.Add(rule.At);
+        if (now < slot)
+            return false;
+        return rule.LastScheduled is null || rule.LastScheduled < slot;
+    }
+
+    /// <summary>Whether the day is in the rule's scope. Checked when it would fire.</summary>
+    private static bool InScope(InstinctRule rule, DateTime now) => rule.DayScope switch
+    {
+        RuleDayScope.Weekdays => now.DayOfWeek is not DayOfWeek.Saturday and not DayOfWeek.Sunday,
+        RuleDayScope.Weekend => now.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday,
+        _ => true,
+    };
+
+    /// <summary>What a clock firing is asked about: the note, or nothing.</summary>
+    private static StoredEvent ClockCause(string subject, DateTime now) =>
+        new(0, now, ClockId, ClockKind, subject, null,
+            new Dictionary<string, string>());
+
+    private void ScheduleFire(InstinctRule rule, StoredEvent cause, int depth)
+    {
+        lock (_gate)
+        {
+            _outstanding++;
+            if (_idle.Task.IsCompleted)
+                _idle = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        }
+        _post(() => Enqueue(rule, cause, depth));
+    }
+
+    /// <summary>
+    /// Fires a rule by hand, as the Rules tab's "try it": the same path a firing takes,
+    /// including the runaway guard, with the rule's note (or matching word, or nothing) as
+    /// what it is asked about. Nothing is done for a rule that is not ready.
+    /// </summary>
+    public void FireNow(InstinctRule rule)
+    {
+        if (StateOf(rule, out _) != RuleState.Ready)
+            return;
+
+        var subject = rule.Note?.Trim();
+        if (string.IsNullOrEmpty(subject))
+            subject = rule.Trigger == RuleTrigger.Event ? rule.Matching?.Trim() ?? "" : "";
+        ScheduleFire(rule, ClockCause(subject, _now()), 0);
     }
 
     /// <summary>Done when nothing is waiting and nothing is running. For tests, and for a quit that wants to be tidy.</summary>
@@ -329,9 +523,14 @@ public sealed class InstinctEngine : IDisposable
             return _idle.Task;
     }
 
-    private static bool Matches(InstinctRule rule, StoredEvent stored)
+    private bool Matches(InstinctRule rule, StoredEvent stored)
     {
+        // Clock rules never match a line: the clock starts them, nothing else does.
+        if (rule.Trigger != RuleTrigger.Event)
+            return false;
         if (!rule.Enabled || rule.PausedReason is not null)
+            return false;
+        if (!InScope(rule, _now()))
             return false;
         if (!string.Equals(rule.Source, stored.Plugin, StringComparison.OrdinalIgnoreCase))
             return false;
@@ -345,14 +544,14 @@ public sealed class InstinctEngine : IDisposable
         return true;
     }
 
-    private void Enqueue(InstinctRule rule, StoredEvent cause)
+    private void Enqueue(InstinctRule rule, StoredEvent cause, int depth)
     {
         bool start;
         lock (_gate)
         {
             if (!_waiting.TryGetValue(rule.Target, out var queue))
-                _waiting[rule.Target] = queue = new Queue<(InstinctRule, StoredEvent)>();
-            queue.Enqueue((rule, cause));
+                _waiting[rule.Target] = queue = new Queue<(InstinctRule, StoredEvent, int)>();
+            queue.Enqueue((rule, cause, depth));
             start = _busy.GetValueOrDefault(rule.Target) == 0;
             if (start)
                 _busy[rule.Target] = 1;
@@ -367,7 +566,7 @@ public sealed class InstinctEngine : IDisposable
     {
         while (true)
         {
-            (InstinctRule Rule, StoredEvent Cause) next;
+            (InstinctRule Rule, StoredEvent Cause, int Depth) next;
             lock (_gate)
             {
                 if (!_waiting.TryGetValue(target, out var queue) || queue.Count == 0)
@@ -380,7 +579,7 @@ public sealed class InstinctEngine : IDisposable
 
             try
             {
-                await Fire(next.Rule, next.Cause);
+                await Fire(next.Rule, next.Cause, next.Depth);
             }
             catch (Exception ex)
             {
@@ -398,7 +597,7 @@ public sealed class InstinctEngine : IDisposable
         }
     }
 
-    private async Task Fire(InstinctRule rule, StoredEvent cause)
+    private async Task Fire(InstinctRule rule, StoredEvent cause, int depth)
     {
         // Settled when the line arrived, but the person may have switched it off, or it may
         // have been paused by the firings queued ahead of it, since.
@@ -411,7 +610,7 @@ public sealed class InstinctEngine : IDisposable
         if (IsRunaway(rule))
         {
             rule.PausedReason = Text.Format("instinct.paused.runaway", RunawayLimit, (int)RunawayWindow.TotalMinutes);
-            Account(rule, cause, "paused", rule.PausedReason);
+            Account(rule, cause, depth, "paused", rule.PausedReason);
             _log($"Paused the rule '{Describe(rule)}': {rule.PausedReason}", LogLevel.Warning);
             _save();
             Changed?.Invoke();
@@ -426,7 +625,7 @@ public sealed class InstinctEngine : IDisposable
         string outcome;
         try
         {
-            var work = InstinctScope.As(rule.Id, () => _perform(rule.Target, request, patience.Token));
+            var work = InstinctScope.As(rule.Id, depth + 1, () => _perform(rule.Target, request, patience.Token));
             outcome = await work.WaitAsync(patience.Token);
             kind = "fired";
         }
@@ -454,7 +653,7 @@ public sealed class InstinctEngine : IDisposable
         rule.Fired++;
         rule.LastFired = _now();
         rule.LastOutcome = outcome;
-        Account(rule, cause, kind, outcome);
+        Account(rule, cause, depth, kind, outcome);
         _save();
         Changed?.Invoke();
     }
@@ -476,10 +675,12 @@ public sealed class InstinctEngine : IDisposable
         }
     }
 
-    /// <summary>One line in the history: what fired, on what, and what came back.</summary>
-    private void Account(InstinctRule rule, StoredEvent cause, string kind, string outcome)
+    /// <summary>One line in the history: what fired, on what, how deep, and what came back.</summary>
+    private void Account(InstinctRule rule, StoredEvent cause, int depth, string kind, string outcome)
     {
         var detail = Text.Format("instinct.journal", Describe(rule), outcome);
+        if (depth > 0)
+            detail += " " + Text.Format("instinct.hop", depth, MaxDepth);
         _journal.Record(kind, cause.Subject, detail, new Dictionary<string, string>
         {
             ["rule"] = rule.Id,

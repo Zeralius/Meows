@@ -11,6 +11,7 @@ public sealed class PluginEntryViewModel : ObservableObject
     private readonly Action<PluginEntryViewModel, bool> _onActivationChanged;
     private readonly Action<PluginEntryViewModel>? _onUninstall;
     private readonly Action<PluginEntryViewModel>? _onUpdate;
+    private readonly Action<PluginEntryViewModel>? _onShare;
     private bool _isActivated;
     private string? _error;
     private bool _isConfirmingUninstall;
@@ -21,16 +22,19 @@ public sealed class PluginEntryViewModel : ObservableObject
     public PluginEntryViewModel(PluginDescriptor descriptor, Action<PluginEntryViewModel, bool> onActivationChanged,
         Func<string, PluginHealth>? health = null,
         Action<PluginEntryViewModel>? onUninstall = null,
-        Action<PluginEntryViewModel>? onUpdate = null)
+        Action<PluginEntryViewModel>? onUpdate = null,
+        Action<PluginEntryViewModel>? onShare = null)
     {
         Descriptor = descriptor;
         _onActivationChanged = onActivationChanged;
         _health = health;
         _onUninstall = onUninstall;
         _onUpdate = onUpdate;
+        _onShare = onShare;
         OpenHomepageCommand = new RelayCommand(OpenHomepage, () => HasHomepage);
         UninstallCommand = new RelayCommand(Uninstall, () => IsInstalled && _onUninstall is not null);
         UpdateCommand = new RelayCommand(() => _onUpdate?.Invoke(this), () => HasUpdate && _onUpdate is not null);
+        ShareCommand = new RelayCommand(() => _onShare?.Invoke(this), () => _onShare is not null);
     }
 
     // ---- Where it came from -------------------------------------------------------------
@@ -138,6 +142,9 @@ public sealed class PluginEntryViewModel : ObservableObject
     public string UpdateText => _update is { } update ? MeowsText.Current.Format("plugins.update.available", update.Version) : "";
 
     public RelayCommand UpdateCommand { get; }
+
+    /// <summary>Bundle this plugin's settings for someone: what it keeps, as it stands.</summary>
+    public RelayCommand ShareCommand { get; }
 
     /// <summary>
     /// What the plugin last did and what it is watching, from the store and the shell's list of
