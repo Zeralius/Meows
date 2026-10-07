@@ -481,6 +481,12 @@ public sealed class ShellPreferences
     public Dictionary<string, string> LogLevels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
+    /// What reaches Windows as a toast while the window is not in front: "off", "wanted" or
+    /// "everything". See <see cref="ToastModes"/>.
+    /// </summary>
+    public string Toasts { get; set; } = ToastModes.Wanted;
+
+    /// <summary>
     /// How big the tab strip is drawn: "compact", "normal" or "large". Twenty-odd tabs at the
     /// normal size are small to hit, and a strip that wraps anyway has room to be taller.
     /// </summary>

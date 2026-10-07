@@ -342,7 +342,7 @@ public sealed class BucketViewModel(string nameKey, string key, int count, strin
     internal void Reread() => OnEverythingChanged();
 }
 
-public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
 {
     public const string BucketAll = "all";
     public const string BucketUp = "up";
@@ -1133,6 +1133,18 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable
         {
             _host.Log(LogLevel.Warning, $"Could not save Tin settings: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// On the Home card: what quietly went up, since that is the news in a bank statement, and
+    /// otherwise what was read. Not red: a price rise wants a look, not an emergency.
+    /// </summary>
+    public Glance? Glance()
+    {
+        var up = _series.Count(s => s.WentUp);
+        if (up > 0)
+            return new Glance(_host.Text.Format("tin.glance.up", up));
+        return Summary.Length == 0 ? null : new Glance(Summary);
     }
 
     /// <summary>Ctrl+K reaching into the rows on screen: a payee by name. Landing on one selects it.</summary>

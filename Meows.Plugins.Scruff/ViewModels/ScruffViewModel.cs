@@ -55,7 +55,7 @@ public sealed class Choice(string key, string tag)
     public TranslatedString Label { get; } = MeowsText.Entry(key);
 }
 
-public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable
+public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable, IGlanceable
 {
     private static string DefaultOutput() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Scruffed");
@@ -79,6 +79,10 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
     private string _text = "";
     private string _tagsText = "";
     private string? _status;
+
+    /// <summary>How the last post went, kept for the Home card, which outlives the status line.</summary>
+    private string? _lastPost;
+    private int _lastPostFailed;
     private string? _errorMessage;
     private bool _isBusy;
 
@@ -822,6 +826,8 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
             }
 
             Status = _host.Text.Format("scruff.status.posted", posted, handed, failed);
+            _lastPost = Status;
+            _lastPostFailed = failed;
             _host.Notifications.Post(
                 failed > 0 ? NotificationSeverity.Warning : NotificationSeverity.Info,
                 _host.Text["scruff.notify.posted"], Status);
@@ -1121,6 +1127,13 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
     }
 
     private bool _disposed;
+
+    /// <summary>
+    /// On the Home card: how the last post went, red while something did not go, since that is a
+    /// post somebody expects to have been made.
+    /// </summary>
+    public Glance? Glance() =>
+        _lastPost is { } line ? new Glance(line, _lastPostFailed > 0) : null;
 
     /// <summary>
     /// Twice, in practice: the shell disposes the view and then its DataContext, and the view

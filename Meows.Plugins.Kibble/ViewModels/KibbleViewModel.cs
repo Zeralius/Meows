@@ -92,7 +92,7 @@ public sealed record PageOrderOption(PageOrder Value, string Key) : ILabelledOpt
     public override string ToString() => Label.Value;
 }
 
-public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable, IUndoTarget
+public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable, IUndoTarget, IGlanceable
 {
     private const int ThumbnailWidth = 150;
     private const int PreviewWidth = 720;
@@ -929,6 +929,13 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
     public bool Accepts(Handoff handoff) =>
         (handoff.Verb == KibblePlugin.ShowVerb && handoff.Note is { Length: > 0 }) ||
         (handoff.Verb == HandoffVerbs.Folder && handoff.Paths.Count == 1 && Directory.Exists(handoff.Paths[0]));
+
+    /// <summary>
+    /// On the Home card: how the queues stand, red while one has run dry and the bot will post
+    /// nothing for that group until something is sent.
+    /// </summary>
+    public Glance? Glance() =>
+        Destinations.Count == 0 ? null : new Glance(SummaryText, Destinations.Any(d => d.IsDry));
 
     /// <summary>
     /// Ctrl+K reaching into the grid: everything waiting in the folder, not only the tiles built

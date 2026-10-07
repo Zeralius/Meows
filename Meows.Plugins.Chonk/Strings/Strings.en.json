@@ -24,6 +24,8 @@
   "chonk.files.many": "{0} files inside",
   "chonk.files.one": "1 file inside",
   "chonk.folder": "Folder…",
+  "chonk.glance": "{0} holds {1}; {2} is the biggest part at {3}",
+  "chonk.glance.only": "{0} holds {1}",
   "chonk.handoff.kibble": "Sort it with Kibble",
   "chonk.handoff.purrge": "Find duplicates in it (Purrge)",
   "chonk.identifying": "Working out what this is…",

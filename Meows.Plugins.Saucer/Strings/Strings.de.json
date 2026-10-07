@@ -8,6 +8,7 @@
   "saucer.error.open": "Konnte {0} nicht öffnen: {1}",
   "saucer.error.save": "Konnte nicht nach {0} speichern: {1}",
   "saucer.forget": "Verwerfen",
+  "saucer.glance": "{0} aus der Zwischenablage behalten",
   "saucer.image": "Bild",
   "saucer.image.size": "Bild, {0} mal {1}",
   "saucer.intake": "Eingangsordner…",

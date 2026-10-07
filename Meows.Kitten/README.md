@@ -12,7 +12,7 @@ dotnet run --project Meows.Kitten -- Whiskers --plain "Print queue" --icon 🧵 
 `Meows.Plugins.Whiskers/` with the csproj (Debug output into `plugins/`, the string catalogues
 embedded under the name the shell looks for, Avalonia and the contract kept out of the output),
 `WhiskersPlugin.cs`, a view model with the header state, the error strip, the language watch, the
-search hook and the dispose, a view with the header bar and an empty state, `Strings.en.json` and
+search hook, the Home glance and the dispose, a view with the header bar and an empty state, `Strings.en.json` and
 `Strings.de.json`, a README in the shape of the others, and `Meows.Tests/WhiskersTests.cs` with
 two tests that pass on day one.
 

@@ -48,6 +48,7 @@
   "tin.family.parts": "Parts below",
   "tin.files": "EXPORTS READ",
   "tin.folder": "Folder…",
+  "tin.glance.up": "{0} recurring charge(s) quietly went up",
   "tin.hide": "Not a subscription",
   "tin.lapsed": "Was due {0}, never came",
   "tin.name.plain": "Bank statements",

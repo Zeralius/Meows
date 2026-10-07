@@ -16,6 +16,10 @@ smoke-tested with every release. For the shape of a finished plugin, read
 
 Copy an existing plugin's `.csproj`. Three things are load-bearing:
 
+A plugin targets plain `net10.0`. The shell itself has targeted `net10.0-windows10.0.19041.0`
+since 4.2.0, for Windows toasts, and a Windows app loads a plain `net10.0` plugin as it always
+did; nothing about a plugin has to change for it.
+
 ```xml
 <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -344,7 +348,7 @@ dotnet run --project Meows.Kitten -- Whiskers --plain "Print queue" --icon 🧵 
 ```
 
 It writes the project in the house style, view model with the header state, error strip,
-language watch, `ISearchable` hook and dispose, both string catalogues, a README and a test
+language watch, `ISearchable` and `IGlanceable` hooks and dispose, both string catalogues, a README and a test
 file, makes the six edits, then builds the plugin, builds the tests and runs every test that
 knows every plugin, so a template that has drifted from the shell fails in the terminal rather
 than at release time. `--dry-run` says what would happen; `--no-verify` skips the build. See
@@ -625,6 +629,13 @@ It is read on the UI thread whenever Home comes to the front or is refreshed, so
 what is in memory, the way `Search` does. Most plugins already have the sentence: it is the
 header line of the tab. A plugin that is off has no view model and no line; that is what the
 shell's own line is for.
+
+**Every plugin that ships in this repository answers it** (4.2.0), and `GlanceSystemTests` walks
+the shipped list and fails on one that does not, the way the view smoke test fails on a view that
+will not build. What is enforced is the decision, not a line of text: a plugin that has looked
+at nothing yet has no news and answers null, which is right on a fresh start. Kitten writes the
+method into every plugin it makes, answering null, for the author to fill in. A plugin outside
+the repository is under no such rule; the interface stays optional in the contract.
 
 ### `Watches`
 
@@ -1050,7 +1061,8 @@ Private dependencies are fine. Ship them in your folder and the resolver finds t
 - [ ] Strings come from a catalogue, with `WithCulture` and `LogicalName` set on the resource
 - [ ] A `LanguageWatch` is held and disposed, so an open tab follows a language change
 - [ ] No translated text captured into a field at construction
-- [ ] `IGlanceable`, if the tab has a header line worth repeating on Home
+- [ ] `IGlanceable`: required for a plugin that ships here (`GlanceSystemTests`), optional
+      outside; null until there is news, `IsTrouble` only for something that wants doing
 - [ ] `Dispose` can be called twice: the shell disposes the view and then its `DataContext`, and
       most views dispose their `DataContext` themselves
 - [ ] Added to `ViewSmokeTests` in `Meows.Tests`, which builds every plugin's view headless in

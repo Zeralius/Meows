@@ -2,7 +2,14 @@
 
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
-        <TargetFramework>net10.0</TargetFramework>
+        <!-- Windows 10's SDK in the name, for the toasts: they are WinRT, and WinRT is only
+             reachable from a framework that names a Windows version. Meows was already Windows
+             only in every other way (a WinExe, the shell's Recycle Bin, windows-latest in CI);
+             this makes the project file say so. Plugins still build for plain net10.0, and a
+             Windows app loads those as it always did. -->
+        <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
+        <!-- 1809, the first Windows 10 that shows toasts from an unpackaged app. -->
+        <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
@@ -12,7 +19,7 @@
 
         <!-- The app version. Moves independently of the plugin contract version;
              see the versioning section in README.md. -->
-        <Version>4.1.0</Version>
+        <Version>4.2.0</Version>
         <!-- Where the shell looks for its own newer release, the same way it does for a plugin. -->
         <RepositoryUrl>https://github.com/Zeralius/Meows</RepositoryUrl>
         <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
@@ -26,6 +33,14 @@
       <!-- The shared store. The shell carries SQLite once, for every plugin, and plugins reach it
            through the host rather than shipping a second copy. -->
       <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+      <!-- The native SQLite underneath it, lifted past CVE-2025-6965 (GHSA-2m69-gcr7-jv3q).
+           Microsoft.Data.Sqlite 10.0.0 brings SQLitePCLRaw 2.1.11, whose bundled SQLite is older
+           than the 3.50.2 that fixed it. This package is native binaries with no dependencies,
+           so raising it here changes the SQLite that is loaded and nothing about the provider
+           or the API. Stays on the 2.x line the provider expects; 3.x is the provider's own
+           major version and would be a different change. Remove it once Microsoft.Data.Sqlite
+           brings a fixed one itself; SqliteVersionTests says if the pin is ever lost. -->
+      <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.13" />
     </ItemGroup>
 
     <!-- One file per language, merged into the string table at startup. Plugins ship their own

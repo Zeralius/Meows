@@ -57,7 +57,7 @@ public sealed class KindViewModel(DeadKind kind, int count) : ObservableObject
     }
 }
 
-public sealed class MouserViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class MouserViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
 {
     private readonly IMeowsHost _host;
     private MouserSettings _settings;
@@ -421,6 +421,9 @@ public sealed class MouserViewModel : ObservableObject, IDisposable, ISearchable
     /// multi-select and owns its selection, so the view listens and does the selecting.
     /// </summary>
     public event Action<FindingViewModel>? RevealRequested;
+
+    /// <summary>On the Home card: how much dead weight the last sweep found.</summary>
+    public Glance? Glance() => Summary.Length == 0 ? null : new Glance(Summary);
 
     /// <summary>Ctrl+K reaching into the findings on screen, by name or folder.</summary>
     public IReadOnlyList<SearchHit> Search(string query, int limit)

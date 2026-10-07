@@ -122,6 +122,13 @@ The **Settings** tab has two choices, and both take effect as you make them:
   scan you started, carries on while the window is hidden, and the icon shows a dot when there is
   something to read and a ring while something is still working. *Quit* is in the icon's menu. Untick the setting and the close button quits,
   as it did before 2.0.
+- **While the window is hidden**: what reaches Windows as a notification when Meows is in the
+  tray or behind something else. By default, the things that want doing: a date come round, a
+  queue that will fail, a watch that stopped, each once when it appears and again only when its
+  words change, rather than on every pass that checks it. The buttons on it are the buttons in
+  the panel, so *Done* on a Collar date is done without opening anything. *Send a test* asks
+  Windows whether it kept one. Not in a portable copy, since Windows only shows notifications
+  from an app it has been told the name of, and telling it writes to the profile.
 - **Starting up**: whether Meows starts when you log in, and whether it starts in the tray or
   with the window open. It writes one entry to the per-user startup list, which needs no admin
   rights and shows up in the Task Manager's Startup tab like anything else.

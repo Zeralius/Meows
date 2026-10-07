@@ -65,7 +65,7 @@ public sealed class NeglectedViewModel(NeglectedFile file, DateTime now) : Obser
 /// and never touched since. Reading it is free: the walk takes sizes and dates from directory
 /// metadata and opens nothing, so the stamps stay true.
 /// </summary>
-public sealed class CatnipViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget
+public sealed class CatnipViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget, IGlanceable
 {
     private const int ShowAtMost = 500;
 
@@ -493,6 +493,9 @@ public sealed class CatnipViewModel : ObservableObject, IDisposable, ISearchable
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(Headline));
     }
+
+    /// <summary>On the Home card: what has been sitting there unopened, once it has been looked for.</summary>
+    public Glance? Glance() => Headline.Length == 0 ? null : new Glance(Headline);
 
     /// <summary>Ctrl+K: a neglected file by name or folder.</summary>
     public IReadOnlyList<SearchHit> Search(string query, int limit)

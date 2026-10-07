@@ -19,6 +19,114 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>Told after the tab size changes, so the strip redraws at the new one.</summary>
     public Action? TabSizeChanged { get; set; }
 
+    private WindowsToasts? _toasts;
+    private string? _toastTestResult;
+    private RelayCommand? _testToastCommand;
+
+    /// <summary>
+    /// The toasts, handed over once the app has them. Null in a test that builds the window
+    /// without the app around it, in which case the section says toasts are unavailable.
+    /// </summary>
+    public WindowsToasts? Toasts
+    {
+        get => _toasts;
+        set
+        {
+            _toasts = value;
+            RaiseToasts();
+        }
+    }
+
+    public bool IsToastsOff
+    {
+        get => ToastModes.Tidy(_preferences.Toasts) == ToastModes.Off;
+        set { if (value) SetToasts(ToastModes.Off); }
+    }
+
+    public bool IsToastsWanted
+    {
+        get => ToastModes.Tidy(_preferences.Toasts) == ToastModes.Wanted;
+        set { if (value) SetToasts(ToastModes.Wanted); }
+    }
+
+    public bool IsToastsEverything
+    {
+        get => ToastModes.Tidy(_preferences.Toasts) == ToastModes.Everything;
+        set { if (value) SetToasts(ToastModes.Everything); }
+    }
+
+    public void SetToasts(string choice)
+    {
+        choice = ToastModes.Tidy(choice);
+        if (ToastModes.Tidy(_preferences.Toasts) == choice)
+            return;
+        _preferences.Toasts = choice;
+        Save();
+        RaiseToasts();
+    }
+
+    /// <summary>Why toasts are not reaching Windows, when they are not. Empty when all is well.</summary>
+    public string ToastNote
+    {
+        get
+        {
+            if (_toastTestResult is { } result)
+                return result;
+            return (_toasts?.State ?? ToastState.Unavailable) switch
+            {
+                ToastState.Portable => _text["settings.toasts.portable"],
+                ToastState.DisabledByWindows => _text["settings.toasts.disabled"],
+                ToastState.Unavailable => _text["settings.toasts.unavailable"],
+                _ => "",
+            };
+        }
+    }
+
+    public bool HasToastNote => ToastNote.Length > 0;
+
+    public bool CanTestToast => _toasts?.State == ToastState.Ready;
+
+    /// <summary>
+    /// One toast now, past the rule, since the window is in front while this is pressed and the
+    /// rule would rightly say no. Then asks Windows whether it is holding it, which is the only
+    /// answer that says the toast arrived rather than that it was sent.
+    /// </summary>
+    public void TestToast()
+    {
+        if (_toasts is null)
+            return;
+
+        var item = new NotificationItem
+        {
+            Source = "Meows",
+            Severity = NotificationSeverity.Info,
+            Title = _text["settings.toasts.test.title"],
+            Message = _text["settings.toasts.test.message"],
+        };
+        _toasts.Show(item, "Meows");
+
+        var held = _toasts.InActionCentre;
+        _toastTestResult = held > 0
+            ? _text["settings.toasts.test.arrived"]
+            : _text["settings.toasts.test.missing"];
+        _log.Write("settings", $"Test toast sent; Windows holds {held} from Meows.");
+        RaiseToasts();
+        _toastTestResult = null;
+    }
+
+    public RelayCommand TestToastCommand => _testToastCommand ??= new RelayCommand(TestToast, () => CanTestToast);
+
+    private void RaiseToasts()
+    {
+        OnPropertyChanged(nameof(IsToastsOff));
+        OnPropertyChanged(nameof(IsToastsWanted));
+        OnPropertyChanged(nameof(IsToastsEverything));
+        OnPropertyChanged(nameof(ToastNote));
+        OnPropertyChanged(nameof(HasToastNote));
+        OnPropertyChanged(nameof(CanTestToast));
+        _testToastCommand?.RaiseCanExecuteChanged();
+    }
+
     public SettingsViewModel(ShellSettings settings, Translations text, ShellLog log, ShellPreferences preferences)
     {
         _settings = settings;

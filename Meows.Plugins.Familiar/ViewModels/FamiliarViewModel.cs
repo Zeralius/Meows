@@ -216,7 +216,7 @@ public sealed record FrameChoice(string? File, string Label)
 /// framed and cut, and written out the way Foundry or Roll20 wants them. Every change is a
 /// change to a file; the manifest only remembers what a file cannot.
 /// </summary>
-public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget
+public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget, IGlanceable
 {
     /// <summary>The folder under the root that holds the bench. Fixed, so it is the same in every language.</summary>
     public const string BenchFolderName = "Bench";
@@ -1616,6 +1616,17 @@ public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchab
         >= 1024 => $"{bytes / 1024d:0} KB",
         _ => $"{bytes} B",
     };
+
+    /// <summary>On the Home card: what the open kit holds, when one is open and holds anything.</summary>
+    public Glance? Glance()
+    {
+        if (_manifest is not { } kit)
+            return null;
+        var total = kit.Maps.Count + kit.Tokens.Count + kit.Handouts.Count + kit.Notes.Count;
+        return total == 0
+            ? null
+            : new Glance(_host.Text.Format("familiar.status.loaded", kit.Maps.Count, kit.Tokens.Count, kit.Handouts.Count, kit.Notes.Count));
+    }
 
     /// <summary>Ctrl+K reaching into the open kit: a picture by name, or a kit by its folder name.</summary>
     public IReadOnlyList<SearchHit> Search(string query, int limit)

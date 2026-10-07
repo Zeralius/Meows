@@ -182,7 +182,7 @@ public sealed class MediaViewModel : ObservableObject, IDisposable
     public void Dispose() => Thumbnail = null;
 }
 
-public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
 {
     /// <summary>
     /// Shared with Saucer on purpose. Both end their job by dropping a file where Kibble will
@@ -935,6 +935,12 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
             _host.Log(LogLevel.Warning, $"Could not save Birdwatch settings: {ex.Message}");
         }
     }
+
+    /// <summary>
+    /// On the Home card: what the last refresh brought in. Nothing before the first one; a
+    /// stopped refresh is Purr's to say, since it is a watch.
+    /// </summary>
+    public Glance? Glance() => _status is { Length: > 0 } said ? new Glance(said) : null;
 
     /// <summary>Ctrl+K reaching into the pictures loaded: by handle, alt text or the post's words.</summary>
     public IReadOnlyList<SearchHit> Search(string query, int limit)

@@ -80,6 +80,13 @@ public sealed class TrayPresence : IDisposable
         TrayIcon.SetIcons(Application.Current!, [_tray]);
     }
 
+    /// <summary>
+    /// Whether the window is being looked at: shown, not minimised, and the one in front. A
+    /// notification raised then reaches the panel, and a toast on top of it would be twice.
+    /// </summary>
+    public bool IsWindowInFront =>
+        _shown is { IsVisible: true, IsActive: true } window && window.WindowState != WindowState.Minimized;
+
     /// <summary>The window, brought to the front, created on first showing when Meows started in the tray.</summary>
     public void Show()
     {

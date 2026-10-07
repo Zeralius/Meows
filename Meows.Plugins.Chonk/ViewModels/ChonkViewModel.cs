@@ -102,7 +102,7 @@ public sealed class CrumbViewModel(DiskEntry entry, bool isLast) : ObservableObj
     public bool IsLast { get; } = isLast;
 }
 
-public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
 {
     private readonly IMeowsHost _host;
     private ChonkSettings _settings;
@@ -656,6 +656,21 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable
         OnPropertyChanged(nameof(CurrentSizeText));
         OnPropertyChanged(nameof(CurrentPath));
         OnPropertyChanged(nameof(HasResults));
+    }
+
+    /// <summary>
+    /// On the Home card: what was measured and the one part of it that is most of it, which is
+    /// the answer to the question Chonk exists for.
+    /// </summary>
+    public Glance? Glance()
+    {
+        if (Current is not { } measured)
+            return null;
+        var biggest = measured.Children.MaxBy(c => c.Size);
+        return biggest is null
+            ? new Glance(_host.Text.Format("chonk.glance.only", measured.Path, DiskScan.Humanise(measured.Size)))
+            : new Glance(_host.Text.Format("chonk.glance", measured.Path, DiskScan.Humanise(measured.Size),
+                biggest.Name, DiskScan.Humanise(biggest.Size)));
     }
 
     /// <summary>

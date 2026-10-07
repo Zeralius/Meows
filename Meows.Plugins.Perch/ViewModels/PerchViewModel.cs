@@ -173,7 +173,7 @@ public sealed class GroupSummaryViewModel(GroupConfig group, int queued, DateTim
     public bool IsLow { get; } = QueueRunway.Days(group, queued) is { } days && days < QueueRunway.LowDays;
 }
 
-public sealed class PerchViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class PerchViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
 {
     private const int ThumbnailWidth = 56;
     private const int PreviewWidth = 720;
@@ -577,6 +577,13 @@ public sealed class PerchViewModel : ObservableObject, IDisposable, ISearchable
     }
 
     private bool _disposed;
+
+    /// <summary>
+    /// On the Home card: the timeline's own line once it has been read, red while a group runs
+    /// dry inside the view, which is a night the bot posts nothing for it.
+    /// </summary>
+    public Glance? Glance() =>
+        Groups.Count == 0 || IsBusy ? null : new Glance(Status, Groups.Any(g => g.RunsDryInView));
 
     /// <summary>
     /// Twice, in practice: the shell disposes the view and then its DataContext, and the view

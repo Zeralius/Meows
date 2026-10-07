@@ -98,7 +98,7 @@ public sealed class ClipViewModel : ObservableObject, IDisposable
     public void Dispose() => Thumbnail = null;
 }
 
-public sealed class SaucerViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class SaucerViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
 {
     /// <summary>How many clippings to keep. Enough to scroll back through, not enough to hoard.</summary>
     private const int Keep = 40;
@@ -416,6 +416,10 @@ public sealed class SaucerViewModel : ObservableObject, IDisposable, ISearchable
             _host.Log(LogLevel.Warning, $"Could not save Saucer settings: {ex.Message}");
         }
     }
+
+    /// <summary>On the Home card: how much the clipboard has kept, when it has kept anything.</summary>
+    public Glance? Glance() =>
+        Clips.Count == 0 ? null : new Glance(_host.Text.Format("saucer.glance", Clips.Count));
 
     /// <summary>Ctrl+K reaching into the clips: anything copied as text, by what it says.</summary>
     public IReadOnlyList<SearchHit> Search(string query, int limit)

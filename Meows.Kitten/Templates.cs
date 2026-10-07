@@ -88,7 +88,7 @@ public static class Templates
             // Whatever the tab should remember between openings. Plain JSON, camelCase, no schema.
         }
 
-        public sealed class __Name__ViewModel : ObservableObject, IDisposable, ISearchable
+        public sealed class __Name__ViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
         {
             private readonly IMeowsHost _host;
             private __Name__Settings _settings;
@@ -138,6 +138,13 @@ public static class Templates
                 ErrorMessage = null;
                 Status = _host.Text.Format("__key__.status.refreshed", DateTime.Now.ToString("HH:mm"));
             }
+
+            /// <summary>
+            /// The Home card: one sentence, what this tab would say if asked "anything?", or null
+            /// until there is news. From memory, never from the disk. IsTrouble only for something
+            /// that wants doing. Every shipped plugin answers this; GlanceSystemTests says so.
+            /// </summary>
+            public Glance? Glance() => null;
 
             /// <summary>Ctrl+K reaching into this tab. Answer from what is already loaded, never from the disk.</summary>
             public IReadOnlyList<SearchHit> Search(string query, int limit) => [];

@@ -71,6 +71,16 @@ public partial class App : Application
 
             desktop.ShutdownRequested += (_, _) => tray.Dispose();
 
+            // Toasts, for what is raised while the window is not in front. Disposed on the way
+            // out, which takes the toasts back out of the action centre: nothing would answer
+            // their buttons once Meows has gone.
+            var toasts = new WindowsToasts(settings.Root, message => log.Write("toasts", message));
+            var relay = new ToastRelay(notifications, toasts, () => preferences.Toasts,
+                () => tray.IsWindowInFront, tray.Show, message => log.Write("toasts", message));
+            if (viewModel.Settings is { } settingsTab)
+                settingsTab.Toasts = toasts;
+            desktop.ShutdownRequested += (_, _) => relay.Dispose();
+
             // A second Meows started while this one runs: its arguments arrive here, and the
             // window comes up unless that start only wanted the tray.
             Program.Instance?.Listen(args => Avalonia.Threading.Dispatcher.UIThread.Post(() =>

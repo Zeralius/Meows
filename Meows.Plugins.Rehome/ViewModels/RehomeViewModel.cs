@@ -48,7 +48,7 @@ public sealed class StepViewModel(RehomeStep step, Func<string> count) : Observa
 /// before anything else, because the tab it is shown in will not exist next week. Nothing is
 /// ever removed from the source; the wipe is the delete.
 /// </summary>
-public sealed class RehomeViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class RehomeViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
 {
     private readonly IMeowsHost _host;
     private readonly RehomeSettings _settings;
@@ -1159,6 +1159,9 @@ public sealed class RehomeViewModel : ObservableObject, IDisposable, ISearchable
             ErrorMessage = _host.Text.Format("rehome.error.open", path, ex.Message);
         }
     }
+
+    /// <summary>On the Home card: where packing up stands, once the machine has been looked over.</summary>
+    public Glance? Glance() => _allFolders.Count == 0 || _status is not { Length: > 0 } said ? null : new Glance(said);
 
     /// <summary>Ctrl+K: a program by name or publisher, a folder by name or path.</summary>
     public IReadOnlyList<SearchHit> Search(string query, int limit)

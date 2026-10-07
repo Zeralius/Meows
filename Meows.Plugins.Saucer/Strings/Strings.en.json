@@ -8,6 +8,7 @@
   "saucer.error.open": "Could not open {0}: {1}",
   "saucer.error.save": "Could not save into {0}: {1}",
   "saucer.forget": "Forget",
+  "saucer.glance": "{0} kept from the clipboard",
   "saucer.image": "Image",
   "saucer.image.size": "Image, {0} by {1}",
   "saucer.intake": "Intake folder…",

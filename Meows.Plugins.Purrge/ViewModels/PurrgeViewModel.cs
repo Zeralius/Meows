@@ -28,7 +28,7 @@ public sealed class PurrgeSettings
     public bool TrustTimestamps { get; set; }
 }
 
-public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable
+public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable, IGlanceable
 {
     private const int ThumbnailWidth = 96;
     private const int PreviewWidth = 720;
@@ -587,6 +587,12 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
     public bool Accepts(Handoff handoff) =>
         (handoff.Verb == HandoffVerbs.Folder && handoff.Paths.Count == 1 && Directory.Exists(handoff.Paths[0]))
         || (handoff.Verb == HandoffVerbs.Files && handoff.Paths.Count > 0 && handoff.Paths.All(File.Exists));
+
+    /// <summary>
+    /// On the Home card: what the last scan found, when it found anything. "No duplicates" is not
+    /// news, so it says nothing then.
+    /// </summary>
+    public Glance? Glance() => Sets.Count == 0 ? null : new Glance(ResultSummary);
 
     /// <summary>
     /// Ctrl+K reaching into the results: every copy in every set by name or folder, and every

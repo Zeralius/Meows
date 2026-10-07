@@ -74,7 +74,7 @@ public sealed class BucketViewModel(string name, string key, int count, long siz
     }
 }
 
-public sealed class LitterViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class LitterViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
 {
     private readonly IMeowsHost _host;
     private LitterSettings _settings;
@@ -402,6 +402,9 @@ public sealed class LitterViewModel : ObservableObject, IDisposable, ISearchable
     /// multi-select and owns its selection, so the view listens and does the selecting.
     /// </summary>
     public event Action<ItemViewModel>? RevealRequested;
+
+    /// <summary>On the Home card: what is lying in the downloads, once they have been read.</summary>
+    public Glance? Glance() => Summary.Length == 0 ? null : new Glance(Summary);
 
     /// <summary>Ctrl+K reaching into the downloads on screen, by name or kind.</summary>
     public IReadOnlyList<SearchHit> Search(string query, int limit)

@@ -49,7 +49,7 @@ public sealed class SheddableViewModel(Sheddable item) : ObservableObject
     }
 }
 
-public sealed class MoltViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class MoltViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
 {
     private readonly IMeowsHost _host;
     private MoltSettings _settings;
@@ -341,6 +341,9 @@ public sealed class MoltViewModel : ObservableObject, IDisposable, ISearchable
             _host.Log(LogLevel.Warning, $"Could not save Molt settings: {ex.Message}");
         }
     }
+
+    /// <summary>On the Home card: how much could be shed, once it has been measured.</summary>
+    public Glance? Glance() => TotalText.Length == 0 ? null : new Glance(TotalText);
 
     /// <summary>
     /// Ctrl+K reaching into what can be shed, by name or by what it is. Nothing in Molt is

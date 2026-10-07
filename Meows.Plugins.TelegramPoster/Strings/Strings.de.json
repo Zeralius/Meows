@@ -34,6 +34,7 @@
   "tp.error.open": "Konnte {0} nicht öffnen: {1}",
   "tp.error.portion": "Portion hat die Datei nicht genommen.",
   "tp.error.writeconfig": "config.json konnte nicht geschrieben werden: {0}",
+  "tp.glance.running": "Der Posting-Bot läuft auf diesem Rechner.",
   "tp.group.archive": "Archivordner",
   "tp.group.chatid": "Chat-ID",
   "tp.group.comicorder": "Seitenreihenfolge im Comic",

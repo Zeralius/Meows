@@ -9,7 +9,7 @@ using Meows.Bot;
 
 namespace Meows.Plugins.TelegramPoster.ViewModels;
 
-public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISearchable
+public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
 {
     private const int ThumbnailWidth = 150;
     private const int PreviewWidth = 720;
@@ -800,6 +800,12 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISe
         OnPropertyChanged(nameof(NextUpMessage));
         OnPropertyChanged(nameof(HasNextUpMessage));
     }
+
+    /// <summary>
+    /// On the Home card: that the bot is running here, when it is. Not running is the usual state
+    /// on a machine where the bot lives on a server, so it is not news and says nothing.
+    /// </summary>
+    public Glance? Glance() => IsBotRunning ? new Glance(_host.Text["tp.glance.running"]) : null;
 
     /// <summary>
     /// Ctrl+K reaching into the bot: a group by name, and the files in whichever queue is open.
