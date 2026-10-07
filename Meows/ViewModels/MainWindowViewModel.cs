@@ -76,6 +76,8 @@ public sealed class MainWindowViewModel : ObservableObject
         BringBackCommand = new RelayCommand(p => { if (p is TabViewModel tab) _popOuts.BringBack(tab); });
 
         RescanCommand = new RelayCommand(Rescan);
+        SavePersonaCommand = new RelayCommand(SavePersona, () => !string.IsNullOrWhiteSpace(NewPersonaName));
+        DeletePersonaCommand = new RelayCommand(DeletePersona, () => SelectedPersonaName is not null);
         OpenPluginsFolderCommand = new RelayCommand(OpenPluginsFolder, () => _catalog.PluginsDirectories.Count > 0);
         ToggleLogCommand = new RelayCommand(() => IsLogVisible = !IsLogVisible);
         ToggleNotificationsCommand = new RelayCommand(() => IsNotificationsOpen = !IsNotificationsOpen);
@@ -109,7 +111,7 @@ public sealed class MainWindowViewModel : ObservableObject
         PluginNames.Feline = preferences.FelineNames;
         PluginNames.Changed += OnNamesChanged;
 
-        Palette = new CommandPaletteViewModel(PaletteItems, PaletteSearch);
+        Palette = new CommandPaletteViewModel(PaletteItems, PaletteSearch, AddTargets, AddToPlugin);
         OpenPaletteCommand = new RelayCommand(Palette.Open);
         SelectTabCommand = new RelayCommand(tab =>
         {
@@ -136,6 +138,9 @@ public sealed class MainWindowViewModel : ObservableObject
     public CommandPaletteViewModel Palette { get; }
 
     public RelayCommand OpenPaletteCommand { get; }
+
+    /// <summary>What hand-typed words are recorded as coming from. Never stored; only asked with.</summary>
+    private const string QuickAddId = "meows.quickadd";
 
     /// <summary>Clicking a tab on the strip. Its own button rather than a TabControl's selection.</summary>
     public RelayCommand SelectTabCommand { get; }
@@ -218,6 +223,45 @@ public sealed class MainWindowViewModel : ObservableObject
         yield return new PaletteItem("●", text["palette.strip.reset"], "", () => Strip.ResetAll()) { IsCommand = true, CommandOnly = true };
         yield return new PaletteItem("⛭", text["plugins.rescan"], "", Rescan) { IsCommand = true, CommandOnly = true };
         yield return new PaletteItem("⛭", text["plugins.open"], "", OpenPluginsFolder) { IsCommand = true, CommandOnly = true };
+        yield return new PaletteItem("+", text["palette.add"], "", () => Palette.OpenAdd()) { IsCommand = true, CommandOnly = true };
+    }
+
+    /// <summary>
+    /// Ctrl+K then <c>+</c>: adding. Every action any installed plugin offers, with the words to
+    /// find it by; picking one asks what it should take, and Enter hands the words over.
+    /// </summary>
+    private IEnumerable<AddTarget> AddTargets()
+    {
+        var text = MeowsText.Current;
+        foreach (var plugin in InstinctPlugins().Where(p => p.Actions.Count > 0).OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase))
+        {
+            var glyph = Plugins.FirstOrDefault(p => string.Equals(p.Id, plugin.Id, StringComparison.OrdinalIgnoreCase))?.Icon ?? "+";
+            foreach (var action in plugin.Actions)
+                yield return new AddTarget(plugin.Id, plugin.Name, glyph, action.Id,
+                    text[action.Label], action.Description is { } description ? text[description] : null);
+        }
+    }
+
+    /// <summary>What typed words become: the chosen action, asked with the words as its subject.</summary>
+    private async Task AddToPlugin(AddTarget target, string words)
+    {
+        var entry = Plugins.FirstOrDefault(p => string.Equals(p.Id, target.PluginId, StringComparison.OrdinalIgnoreCase));
+        var name = entry?.DisplayName ?? target.PluginName;
+        try
+        {
+            var cause = new StoredEvent(0, DateTime.Now, QuickAddId, "added", words, null, new Dictionary<string, string>());
+            var said = await PerformAction(target.PluginId, new ActionRequest(target.ActionId, cause), CancellationToken.None);
+            _notifications.Post(target.PluginId, NotificationSeverity.Info, name, said,
+                entry is null ? null : new NotificationAction(_text["home.open"], () => OpenPlugin(entry), DismissesAfter: true));
+        }
+        catch (OperationCanceledException)
+        {
+            // Switched off mid-asking, or Meows going. Nothing to say that anyone will read.
+        }
+        catch (Exception ex)
+        {
+            _notifications.Post(target.PluginId, NotificationSeverity.Warning, name, ex.Message, (NotificationAction?)null);
+        }
     }
 
     /// <summary>Ctrl+Shift+K: the palette over only the tab in front.</summary>
@@ -417,6 +461,7 @@ public sealed class MainWindowViewModel : ObservableObject
         _history?.Retranslate();
         _rules?.Refresh();
         _home?.Retranslate();
+        _settingsViewModel?.Retranslate();
         _logTab?.Retranslate();
         foreach (var entry in Plugins)
             entry.Rename();
@@ -550,6 +595,70 @@ public sealed class MainWindowViewModel : ObservableObject
             : PluginInstaller.IsWaiting(directory, report.Name!) ? "plugins.install.pending"
             : "plugins.install.replaced";
         InstallNotice = _text.Format(key, report.Name);
+    }
+
+    /// <summary>
+    /// One plugin's settings bundled for someone: the settings file as it stands, with a
+    /// manifest naming the plugin. Secrets never travel; they are sealed beside the settings.
+    /// </summary>
+    private async Task SharePluginAsync(PluginEntryViewModel entry)
+    {
+        try
+        {
+            var picked = await _picker.Save(new PickOptions
+            {
+                Title = _text["plugins.share.picker"],
+                SuggestedName = $"{entry.Id}.meows-share.zip",
+            });
+            if (string.IsNullOrWhiteSpace(picked))
+                return;
+
+            PluginShare.Export(_settings.Root, entry.Id, entry.DisplayName, AppVersion, picked);
+            InstallNotice = _text.Format("plugins.share.done", entry.DisplayName);
+            _log.Write("plugins", $"Shared '{entry.DisplayName}' to {picked}.");
+        }
+        catch (Exception ex)
+        {
+            InstallNotice = _text.Format("plugins.share.failed", ex.Message);
+            _log.Write("plugins", $"Could not share '{entry.DisplayName}': {ex.Message}", LogLevel.Warning);
+        }
+    }
+
+    /// <summary>
+    /// Shared settings back in: validated, the current file kept aside, and only while the
+    /// plugin is off, so no open tab holds yesterday's words. A plugin that is on is declined
+    /// with the reason rather than left showing stale state.
+    /// </summary>
+    public void InstallShared(string zipPath)
+    {
+        PluginShare.SharedImport report;
+        try
+        {
+            report = PluginShare.Import(_settings.Root, zipPath);
+        }
+        catch (Exception ex)
+        {
+            InstallNotice = _text.Format("plugins.share.failed", ex.Message);
+            _log.Write("plugins", $"Could not take shared settings from {zipPath}: {ex.Message}", LogLevel.Warning);
+            return;
+        }
+
+        var entry = Plugins.FirstOrDefault(p => string.Equals(p.Id, report.PluginId, StringComparison.OrdinalIgnoreCase));
+        if (entry is null || !entry.IsCompatible)
+        {
+            InstallNotice = _text.Format("plugins.share.unknown", report.PluginId);
+            _log.Write("plugins", $"Shared settings for '{report.PluginId}' have no plugin here.", LogLevel.Warning);
+            return;
+        }
+        if (_pluginTabs.ContainsKey(entry.Id))
+        {
+            InstallNotice = _text.Format("plugins.share.switchoff", entry.DisplayName);
+            return;
+        }
+
+        _log.Write("plugins", $"Took shared settings for '{entry.DisplayName}'{(report.BackedUp ? ", current kept aside." : ".")}");
+        Rescan();
+        InstallNotice = _text.Format(report.BackedUp ? "plugins.share.kept" : "plugins.share.done", entry.DisplayName);
     }
 
     /// <summary>
@@ -773,6 +882,33 @@ public sealed class MainWindowViewModel : ObservableObject
         }
     }
 
+    /// <summary>
+    /// The lines for one Home card: up to three from a plugin that says more, else its one
+    /// line, else none. A plugin that throws while asked is logged and left out, the way the
+    /// single line has always been.
+    /// </summary>
+    private IReadOnlyList<Glance>? GlancesAt(PluginEntryViewModel entry)
+    {
+        if (!_pluginTabs.TryGetValue(entry.Id, out var tab))
+            return null;
+        var multi = (tab.Content as Avalonia.Controls.Control)?.DataContext as IMultiGlance
+                    ?? tab.Content as IMultiGlance;
+        if (multi is not null)
+        {
+            try
+            {
+                var lines = multi.Glances();
+                return lines.Count == 0 ? null : lines.Take(3).ToList();
+            }
+            catch (Exception ex)
+            {
+                _log.Write("shell", $"'{entry.DisplayName}' failed to glance: {ex.Message}");
+                return null;
+            }
+        }
+        return GlanceAt(entry) is { } single ? [single] : null;
+    }
+
     public bool IsLogVisible
     {
         get => _isLogVisible;
@@ -909,7 +1045,8 @@ public sealed class MainWindowViewModel : ObservableObject
         // Home first: the window is opened after hours, and the first thing it shows is what
         // happened. Plugins second, so an empty plugins folder is still one click from help.
         _home = new HomeViewModel(Plugins, p => _pluginTabs.ContainsKey(p.Id), GlanceAt, OpenPlugin, _notifications, _background,
-            _store, PluginName, () => _preferences.LastSeen, InvokeNotificationAction);
+            _store, PluginName, () => _preferences.LastSeen, InvokeNotificationAction,
+            GlancesAt, _preferences.HomeOrder, _preferences.HomeHidden, SavePreferences, _picker);
         Tabs.Add(new TabViewModel("shell.tab.home", "🏠", new HomeView { DataContext = _home }));
         _pluginsTab = new TabViewModel("shell.tab.plugins", "⛭", new PluginsView { DataContext = this });
         Tabs.Add(_pluginsTab);
@@ -947,6 +1084,20 @@ public sealed class MainWindowViewModel : ObservableObject
         // Only plugins put there through this tab are asked about, so on most machines this
         // pass says "nothing to check" and touches no network at all.
         _background.ScheduleForShell(_text["plugins.update.task"], TimeSpan.FromHours(24), CheckForUpdates, runImmediately: true);
+
+        // The clock that starts scheduled rules: looked at once a minute, fired once per slot.
+        // Rules only fire while Meows runs; a machine that is off at the time skips that day.
+        if (_instinct is not null)
+        {
+            var clock = _instinct;
+            _background.ScheduleForShell(_text["instinct.task.clock"], TimeSpan.FromMinutes(1),
+                _ =>
+                {
+                    clock.CheckSchedule(DateTime.Now);
+                    return Task.CompletedTask;
+                },
+                runImmediately: true);
+        }
     }
 
     private void Rescan()
@@ -966,7 +1117,7 @@ public sealed class MainWindowViewModel : ObservableObject
             if (descriptor.Plugin is { } plugin)
                 _text.Add(plugin.GetType().Assembly);
 
-            Plugins.Add(new PluginEntryViewModel(descriptor, OnActivationChanged, HealthOf, Uninstall, UpdatePlugin) { CostOf = Costs.For });
+            Plugins.Add(new PluginEntryViewModel(descriptor, OnActivationChanged, HealthOf, Uninstall, UpdatePlugin, entry => _ = SharePluginAsync(entry)) { CostOf = Costs.For });
         }
 
         Regroup();
@@ -979,6 +1130,7 @@ public sealed class MainWindowViewModel : ObservableObject
 
         foreach (var entry in Plugins.Where(p => activated.Contains(p.Id)))
             entry.IsActivated = true;
+        RefreshPersonas();
     }
 
     private void Regroup()
@@ -1037,6 +1189,76 @@ public sealed class MainWindowViewModel : ObservableObject
             Deactivate(entry);
 
         PersistActivations();
+        RefreshPersonas();
+    }
+
+    /// <summary>
+    /// What the window matches right now: the persona whose set, among the plugins installed,
+    /// is exactly what is on, or nothing for a custom mix. Called whenever anything about what
+    /// is on could have changed.
+    /// </summary>
+    private void RefreshPersonas()
+    {
+        PersonaNames.Clear();
+        foreach (var persona in _preferences.Personas)
+            PersonaNames.Add(persona.Name);
+
+        var activated = Plugins.Where(p => p.IsActivated).Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var match = Personas.Match(activated, InstalledPluginIds(), _preferences.Personas);
+        if (!string.Equals(_selectedPersona, match, StringComparison.Ordinal))
+        {
+            _selectedPersona = match;
+            OnPropertyChanged(nameof(SelectedPersonaName));
+        }
+        DeletePersonaCommand.RaiseCanExecuteChanged();
+    }
+
+    private void ApplyPersona(string name)
+    {
+        var persona = _preferences.Personas.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.Ordinal));
+        if (persona is null)
+            return;
+
+        var activated = Plugins.Where(p => p.IsActivated).Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var (turnOn, turnOff) = Personas.Apply(activated, InstalledPluginIds(), persona);
+        foreach (var id in turnOff)
+            if (Plugins.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase)) is { } entry)
+                entry.IsActivated = false;
+        foreach (var id in turnOn)
+            if (Plugins.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase)) is { } entry)
+                entry.IsActivated = true;
+
+        SelectedTab = Tabs[0];
+        RefreshPersonas();
+        _log.Write("shell", $"Persona '{name}': {turnOn.Count} on, {turnOff.Count} off.");
+    }
+
+    /// <summary>Keeps what is on now under the typed name, replacing a persona of the same name.</summary>
+    private void SavePersona()
+    {
+        var name = NewPersonaName.Trim();
+        if (name.Length == 0)
+            return;
+
+        var ids = Plugins.Where(p => p.IsActivated).Select(p => p.Id).ToList();
+        var existing = _preferences.Personas.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+        if (existing is null)
+            _preferences.Personas.Add(new PersonaSetting { Name = name, PluginIds = ids });
+        else
+            existing.PluginIds = ids;
+        NewPersonaName = "";
+        SavePreferences();
+        RefreshPersonas();
+    }
+
+    private void DeletePersona()
+    {
+        if (SelectedPersonaName is not { } name)
+            return;
+
+        _preferences.Personas.RemoveAll(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+        SavePreferences();
+        RefreshPersonas();
     }
 
     private void Activate(PluginEntryViewModel entry, bool bringToFront = true)
@@ -1340,6 +1562,46 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void PersistActivations() =>
         _settings.SaveActivatedPlugins(Plugins.Where(p => p.IsActivated).Select(p => p.Id));
+
+    /// <summary>Every installed plugin that could be switched on, by id.</summary>
+    private IReadOnlyList<string> InstalledPluginIds() =>
+        Plugins.Where(p => p.IsCompatible).Select(p => p.Id).ToList();
+
+    /// <summary>Named sets on the Plugins tab and one pick in the bottom bar. Kept in the preferences.</summary>
+    public ObservableCollection<string> PersonaNames { get; } = [];
+
+    private string? _selectedPersona;
+    private string _newPersonaName = "";
+
+    /// <summary>
+    /// The persona the window matches, or null for a custom mix. Picking one applies it: what
+    /// it names switches on, the rest switches off, and the window lands on Home.
+    /// </summary>
+    public string? SelectedPersonaName
+    {
+        get => _selectedPersona;
+        set
+        {
+            if (!SetField(ref _selectedPersona, value))
+                return;
+            if (value is not null)
+                ApplyPersona(value);
+        }
+    }
+
+    public string NewPersonaName
+    {
+        get => _newPersonaName;
+        set
+        {
+            if (SetField(ref _newPersonaName, value ?? ""))
+                SavePersonaCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public RelayCommand SavePersonaCommand { get; }
+
+    public RelayCommand DeletePersonaCommand { get; }
 
     /// <summary>
     /// The window went away, to the tray or for good: from now is "since you were away". Saved

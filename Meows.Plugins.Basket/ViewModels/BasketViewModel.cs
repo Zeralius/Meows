@@ -205,7 +205,7 @@ public sealed class ListViewModel : ObservableObject
     internal void Reread() => OnEverythingChanged();
 }
 
-public sealed class BasketViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget, IGlanceable, IActionTarget
+public sealed class BasketViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget, IGlanceable, IMultiGlance, IActionTarget
 {
     /// <summary>The condition key. One per plugin scope, so it replaces rather than stacks.</summary>
     private const string DueKey = "due";
@@ -376,6 +376,22 @@ public sealed class BasketViewModel : ObservableObject, IDisposable, ISearchable
 
     /// <summary>The same line on the Home tab, red while something is late.</summary>
     public Glance? Glance() => Board.GlanceOf(_settings.Lists, DateTime.Today, _host.Text);
+
+    /// <summary>The summary plus the most overdue cards, most overdue first. Home shows three at most.</summary>
+    public IReadOnlyList<Glance> Glances()
+    {
+        var lines = new List<Glance>();
+        if (Glance() is { } summary)
+            lines.Add(summary);
+        else
+            return [];
+        lines.AddRange(Board.Overdue(_settings.Lists, DateTime.Today)
+            .Take(2)
+            .Select(c => new Glance(
+                c.Card.Title.Trim().Length > 0 ? c.Card.Title.Trim() : _host.Text["basket.untitled"],
+                IsTrouble: true)));
+        return lines;
+    }
 
     /// <summary>Adds a list and selects it, because the next thing wanted is to name it.</summary>
     public void AddList()

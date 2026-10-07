@@ -48,6 +48,120 @@
                                      Content="{m:Tr settings.theme.dark}"
                                      IsChecked="{Binding IsThemeDark}" />
                     </StackPanel>
+                    <TextBlock Classes="heading" Text="{m:Tr settings.accent}" Margin="0,6,0,0" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.accent.hint}" />
+                    <ComboBox ItemsSource="{Binding Accents}"
+                              SelectedItem="{Binding SelectedAccent}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AccentChoice">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <TextBlock Classes="heading" Text="{m:Tr settings.scheme}" Margin="0,8,0,0" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.scheme.hint}" />
+                    <ComboBox ItemsSource="{Binding Schemes}"
+                              SelectedItem="{Binding SelectedScheme}"
+                              HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AppearanceSchemeChoice">
+                                <TextBlock Text="{Binding Name}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+                    <Border Background="{Binding Preview.Background}"
+                            BorderBrush="{Binding Preview.Border}"
+                            BorderThickness="1"
+                            CornerRadius="6"
+                            Padding="12"
+                            Margin="0,4,0,0">
+                        <StackPanel Spacing="7">
+                            <TextBlock Text="{m:Tr settings.scheme.preview}"
+                                       Foreground="{Binding Preview.Foreground}"
+                                       FontWeight="SemiBold" />
+                            <Border Background="{Binding Preview.Panel}"
+                                    BorderBrush="{Binding Preview.Border}"
+                                    BorderThickness="1"
+                                    Padding="8">
+                                <StackPanel Spacing="6">
+                                    <Border Background="{Binding Preview.Card}"
+                                            BorderBrush="{Binding Preview.Border}"
+                                            BorderThickness="1"
+                                            Padding="8">
+                                        <TextBlock Text="{m:Tr settings.scheme.sample}"
+                                                   Foreground="{Binding Preview.Foreground}" />
+                                    </Border>
+                                    <Border Background="{Binding Preview.Selection}"
+                                            Padding="6">
+                                        <TextBlock Text="{m:Tr settings.scheme.selected}"
+                                                   Foreground="{Binding Preview.SelectionText}" />
+                                    </Border>
+                                </StackPanel>
+                            </Border>
+                            <StackPanel Orientation="Horizontal" Spacing="7">
+                                <Border Background="{Binding Preview.Info}"
+                                        BorderBrush="{Binding Preview.Accent}"
+                                        BorderThickness="1"
+                                        Padding="6">
+                                    <TextBlock Text="{m:Tr settings.scheme.info}"
+                                               Foreground="{Binding Preview.InfoText}" />
+                                </Border>
+                                <Border Background="{Binding Preview.Warning}" Padding="6">
+                                    <TextBlock Text="{m:Tr settings.scheme.warning}"
+                                               Foreground="{Binding Preview.WarningText}" />
+                                </Border>
+                                <Border Background="{Binding Preview.Danger}" Padding="6">
+                                    <TextBlock Text="{m:Tr settings.scheme.danger}"
+                                               Foreground="{Binding Preview.DangerText}" />
+                                </Border>
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Classes="hint"
+                               Foreground="{DynamicResource MeowsWarnText}"
+                               Text="{Binding ContrastNotice}"
+                               IsVisible="{Binding HasContrastNotice}" />
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Content="{m:Tr settings.scheme.customize}"
+                                Command="{Binding CustomizeCommand}"
+                                IsVisible="{Binding !IsCustomScheme}" />
+                        <Button Content="{m:Tr settings.scheme.reset}"
+                                Command="{Binding ResetAppearanceCommand}" />
+                    </StackPanel>
+                    <StackPanel Spacing="8" IsVisible="{Binding IsCustomScheme}">
+                        <TextBlock Classes="hint" Text="{m:Tr settings.scheme.edit.hint}" />
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <RadioButton GroupName="scheme-variant"
+                                         Content="{m:Tr settings.theme.light}"
+                                         IsChecked="{Binding EditLight}" />
+                            <RadioButton GroupName="scheme-variant"
+                                         Content="{m:Tr settings.theme.dark}"
+                                         IsChecked="{Binding EditDark}" />
+                        </StackPanel>
+                        <ItemsControl ItemsSource="{Binding Colours}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:AppearanceColourRow">
+                                    <Grid ColumnDefinitions="135,28,112,*" ColumnSpacing="8" Margin="0,0,0,6">
+                                        <TextBlock Grid.Column="0" Text="{Binding Name}" VerticalAlignment="Center" />
+                                        <Border Grid.Column="1"
+                                                Width="24" Height="24"
+                                                Background="{Binding Swatch}"
+                                                BorderBrush="{DynamicResource MeowsLine}"
+                                                BorderThickness="1" />
+                                        <TextBox Grid.Column="2"
+                                                 Text="{Binding Hex, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                                 VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="3"
+                                                   Text="{Binding ErrorText}"
+                                                   IsVisible="{Binding IsInvalid}"
+                                                   Foreground="{DynamicResource MeowsDangerText}"
+                                                   VerticalAlignment="Center" />
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

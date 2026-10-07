@@ -142,7 +142,7 @@ contract version the template was published with. No `ProjectReference`, no Meow
 ```xml
 <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.5.0" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.6.0" ExcludeAssets="runtime" PrivateAssets="all" />
 </ItemGroup>
 ```
 
@@ -233,8 +233,8 @@ The shell checks this for you. At discovery it reads the contract version your a
 compiled against and refuses anything it cannot honour, **before constructing your plugin**, so
 none of your code runs. The reason appears on your plugin's card in place of its toggle:
 
-> Built for Meows contract 1.6.0, which is newer than this shell's 1.5.0. Update Meows, or rebuild
-> the plugin against 1.5.0.
+> Built for Meows contract 1.7.0, which is newer than this shell's 1.6.0. Update Meows, or rebuild
+> the plugin against 1.6.0.
 
 A mismatched **major** is refused either way, since a major bump means members may have been
 removed. A **newer** minor or patch is refused; an older one loads fine, because additive
@@ -525,7 +525,9 @@ added `IGlanceable`, [a line on the Home tab](#a-line-on-the-home-tab), and noth
 [`Reach`](#reach), the server a plugin can copy a folder to. **1.4.0** added
 `IMeowsPlugin.GlanceWhileOff`, [the Home line with no window](#a-line-on-the-home-tab). **1.5.0**
 added `IMeowsPlugin.Jobs` and `RunJob`, `IMeowsJobHost`, `JobDeclinedException` and
-`IMeowsHost.RunsFromOutside`, for [work without a window](#work-without-a-window).
+`IMeowsHost.RunsFromOutside`, for [work without a window](#work-without-a-window). **1.6.0**
+added `IMultiGlance`, [up to three lines on the Home card](#a-line-on-the-home-tab), and
+nothing else.
 
 ### `DataDirectory`
 
@@ -693,6 +695,22 @@ It is read on the UI thread whenever Home comes to the front or is refreshed, so
 what is in memory, the way `Search` does. Most plugins already have the sentence: it is the
 header line of the tab. A plugin that is off has no view model and no line; that is what the
 shell's own line is for.
+
+Since 1.6.0 a view model can put up to three lines instead of one, by implementing
+`IMultiGlance` beside (or instead of) `IGlanceable`:
+
+```csharp
+public IReadOnlyList<Glance> Glances() => Overdue()
+    .Take(2)
+    .Select(card => new Glance(card.Title, IsTrouble: true))
+    .Prepend(SummaryGlance)
+    .ToList();
+```
+
+The first line plays the Home-line role, exactly as `Glance()` would; the rest are detail the
+card has room for, most overdue first. Home asks `Glances()` first when both are implemented
+and falls back to the single line otherwise; more than three lines are ignored, so there is
+no need to count. Empty means nothing worth any lines right now, the same as null.
 
 `Meows.exe --glance` prints every switched-on plugin's line with no window at all, and
 `--glance --json` does the same for a status bar or a scheduled task. There is no view model to

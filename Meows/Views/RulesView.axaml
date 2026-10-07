@@ -65,6 +65,55 @@
 
                     <WrapPanel Orientation="Horizontal">
                         <TextBlock Classes="word" Text="{m:Tr rules.when}" Margin="0,0,8,6" />
+                        <ComboBox ItemsSource="{Binding Triggers}"
+                                  SelectedItem="{Binding SelectedTrigger}"
+                                  MinWidth="150"
+                                  Margin="0,0,8,6">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:RuleTriggerChoice">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TimePicker SelectedTime="{Binding AtTime}"
+                                    MinuteIncrement="5"
+                                    Margin="0,0,8,6"
+                                    IsVisible="{Binding IsClockTrigger}" />
+                        <TextBox Text="{Binding Note}"
+                                 PlaceholderText="{m:Tr rules.note}"
+                                 Width="200"
+                                 Margin="0,0,8,6"
+                                 IsVisible="{Binding IsClockTrigger}" />
+                        <ComboBox ItemsSource="{Binding Scopes}"
+                                  SelectedItem="{Binding SelectedScope}"
+                                  MinWidth="130"
+                                  Margin="0,0,8,6">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:RuleScopeChoice">
+                                    <TextBlock Text="{Binding Name}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </WrapPanel>
+
+                    <ItemsControl ItemsSource="{Binding Days}"
+                                  IsVisible="{Binding IsWeeklyTrigger}"
+                                  Margin="0,0,0,2">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:RuleDayChoice">
+                                <CheckBox Content="{Binding Name}"
+                                          IsChecked="{Binding IsChecked}"
+                                          Margin="0,0,12,6" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+
+                    <WrapPanel Orientation="Horizontal" IsVisible="{Binding IsEventTrigger}">
                         <ComboBox ItemsSource="{Binding Sources}"
                                   SelectedItem="{Binding SelectedSource}"
                                   PlaceholderText="{m:Tr rules.pick.source}"
@@ -101,7 +150,8 @@
                     <TextBlock Classes="hint"
                                Text="{Binding ActionDescription}"
                                IsVisible="{Binding HasActionDescription}" />
-                    <TextBlock Classes="hint" Text="{m:Tr rules.onehop}" />
+                    <TextBlock Classes="hint" Text="{m:Tr rules.chain}" />
+                    <TextBlock Classes="hint" Text="{m:Tr rules.clockhint}" IsVisible="{Binding IsClockTrigger}" />
                 </StackPanel>
             </Border>
 
@@ -126,6 +176,11 @@
                                     <TextBlock Text="{Binding LastText}" Opacity="0.55" FontSize="11" TextWrapping="Wrap" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
+                                    <Button Classes="small"
+                                            Content="{m:Tr rules.tryit}"
+                                            IsEnabled="{Binding CanTry}"
+                                            Command="{Binding $parent[UserControl].((vm:RulesViewModel)DataContext).TryCommand}"
+                                            CommandParameter="{Binding}" />
                                     <Button Classes="small"
                                             Content="{m:Tr rules.resume}"
                                             IsVisible="{Binding IsPaused}"

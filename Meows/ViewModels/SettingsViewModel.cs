@@ -1,4 +1,6 @@
+using System.Collections.ObjectModel;
 using System.Diagnostics;
+using Avalonia.Media;
 using Meows.Plugins.Abstractions;
 using Meows.Services;
 
@@ -32,9 +34,17 @@ public sealed class SettingsViewModel : ObservableObject
         _preferences = preferences;
 
         OpenSettingsFolderCommand = new RelayCommand(OpenSettingsFolder);
+        CustomizeCommand = new RelayCommand(Customize);
+        ResetAppearanceCommand = new RelayCommand(ResetAppearance);
+        _editDark = _preferences.Theme == Appearance.Dark;
+        UpdateAppearanceEditor();
     }
 
     public RelayCommand OpenSettingsFolderCommand { get; }
+
+    public RelayCommand CustomizeCommand { get; }
+
+    public RelayCommand ResetAppearanceCommand { get; }
 
     /// <summary>
     /// How long history is kept, as radio buttons want it: one bool each, acted on for the
@@ -305,11 +315,192 @@ public sealed class SettingsViewModel : ObservableObject
 
         _preferences.Theme = choice;
         Appearance.Apply(choice);
+        Appearance.ApplyScheme(_preferences);
         Save();
+        UpdateAppearanceEditor();
 
         OnPropertyChanged(nameof(IsThemeSystem));
         OnPropertyChanged(nameof(IsThemeLight));
         OnPropertyChanged(nameof(IsThemeDark));
+    }
+
+    /// <summary>The accents to pick from, default first.</summary>
+    public ObservableCollection<AccentChoice> Accents { get; } =
+    [
+        new(Appearance.DefaultAccent, "settings.accent.default"),
+        new("#0078D4", "settings.accent.blue"),
+        new("#107C10", "settings.accent.green"),
+        new("#CA5010", "settings.accent.amber"),
+        new("#C239B3", "settings.accent.rose"),
+        new("#8764B8", "settings.accent.violet"),
+        new("#038387", "settings.accent.teal"),
+    ];
+
+    /// <summary>
+    /// The same thing as a dropdown row. A ComboBox hands back the object it was given, and
+    /// the object it was given has to be one of the very items in the list or it shows blank.
+    /// </summary>
+    public AccentChoice? SelectedAccent
+    {
+        get => Accents.FirstOrDefault(a => string.Equals(a.Hex, Appearance.NormaliseAccent(_preferences.Accent), StringComparison.OrdinalIgnoreCase));
+        set
+        {
+            if (value is not null)
+                SetAccent(value.Hex);
+        }
+    }
+
+    public void SetAccent(string choice)
+    {
+        choice = Appearance.NormaliseAccent(choice);
+        if (_preferences.Accent == choice)
+            return;
+
+        _preferences.Accent = choice;
+        Appearance.ApplyScheme(_preferences);
+        Save();
+        UpdateAppearanceEditor();
+
+        OnPropertyChanged(nameof(SelectedAccent));
+    }
+
+    public ObservableCollection<AppearanceSchemeChoice> Schemes { get; } =
+        new(Appearance.Schemes.Select(s => new AppearanceSchemeChoice(s.Id, s.Label)));
+
+    public ObservableCollection<AppearanceColourRow> Colours { get; } = [];
+
+    public AppearancePreview Preview { get; } = new();
+
+    public AppearanceSchemeChoice? SelectedScheme
+    {
+        get => Schemes.FirstOrDefault(s => s.Id == Appearance.NormaliseScheme(_preferences.ColourScheme));
+        set
+        {
+            if (value is null || value.Id == Appearance.NormaliseScheme(_preferences.ColourScheme))
+                return;
+            if (value.Id == Appearance.CustomScheme)
+            {
+                Customize();
+                return;
+            }
+            _preferences.ColourScheme = value.Id;
+            _preferences.Accent = Appearance.DefaultAccent;
+            Appearance.ApplyScheme(_preferences);
+            Save();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SelectedAccent));
+            UpdateAppearanceEditor();
+        }
+    }
+
+    public bool IsCustomScheme => Appearance.NormaliseScheme(_preferences.ColourScheme) == Appearance.CustomScheme;
+
+    private bool _editDark;
+
+    public bool EditDark
+    {
+        get => _editDark;
+        set
+        {
+            if (!SetField(ref _editDark, value))
+                return;
+            OnPropertyChanged(nameof(EditLight));
+            UpdateAppearanceEditor();
+        }
+    }
+
+    public bool EditLight
+    {
+        get => !EditDark;
+        set { if (value) EditDark = false; }
+    }
+
+    public string ContrastNotice
+    {
+        get
+        {
+            var low = Appearance.LowContrast(Preview.Colours);
+            return low.Count == 0 ? "" : _text.Format("settings.scheme.contrast", string.Join(", ", low.Select(slot => _text["settings.colour." + slot])));
+        }
+    }
+
+    public bool HasContrastNotice => ContrastNotice.Length > 0;
+
+    private void Customize()
+    {
+        if (!IsCustomScheme)
+        {
+            _preferences.CustomLight = Appearance.Resolve(_preferences, dark: false);
+            _preferences.CustomDark = Appearance.Resolve(_preferences, dark: true);
+        }
+        _preferences.ColourScheme = Appearance.CustomScheme;
+        _preferences.Accent = Appearance.DefaultAccent;
+        Appearance.ApplyScheme(_preferences);
+        Save();
+        OnPropertyChanged(nameof(SelectedScheme));
+        OnPropertyChanged(nameof(SelectedAccent));
+        UpdateAppearanceEditor();
+    }
+
+    private void ResetAppearance()
+    {
+        _preferences.Theme = Appearance.System;
+        _preferences.ColourScheme = Appearance.OriginalScheme;
+        _preferences.Accent = Appearance.DefaultAccent;
+        _preferences.CustomLight = null;
+        _preferences.CustomDark = null;
+        Appearance.Apply(_preferences.Theme);
+        Appearance.ApplyScheme(_preferences);
+        Save();
+        OnPropertyChanged(nameof(IsThemeSystem));
+        OnPropertyChanged(nameof(IsThemeLight));
+        OnPropertyChanged(nameof(IsThemeDark));
+        OnPropertyChanged(nameof(SelectedScheme));
+        OnPropertyChanged(nameof(SelectedAccent));
+        UpdateAppearanceEditor();
+    }
+
+    private void SetCustomColour(string slot, string hex)
+    {
+        if (!IsCustomScheme || !Appearance.TryHex(hex, out var valid))
+            return;
+        if (EditDark)
+            _preferences.CustomDark = Appearance.WithColour(_preferences.CustomDark ?? Appearance.Preset(Appearance.OriginalScheme, true), slot, valid);
+        else
+            _preferences.CustomLight = Appearance.WithColour(_preferences.CustomLight ?? Appearance.Preset(Appearance.OriginalScheme, false), slot, valid);
+        if (slot == "accent")
+        {
+            _preferences.Accent = Appearance.DefaultAccent;
+            OnPropertyChanged(nameof(SelectedAccent));
+        }
+        Appearance.ApplyScheme(_preferences);
+        Save();
+        Preview.Colours = Appearance.Resolve(_preferences, EditDark);
+        OnPropertyChanged(nameof(ContrastNotice));
+        OnPropertyChanged(nameof(HasContrastNotice));
+    }
+
+    private void UpdateAppearanceEditor()
+    {
+        Preview.Colours = Appearance.Resolve(_preferences, EditDark);
+        Colours.Clear();
+        if (IsCustomScheme)
+            foreach (var slot in Appearance.ColourSlots)
+                Colours.Add(new AppearanceColourRow(slot, Appearance.Colour(Preview.Colours, slot), SetCustomColour));
+        OnPropertyChanged(nameof(IsCustomScheme));
+        OnPropertyChanged(nameof(ContrastNotice));
+        OnPropertyChanged(nameof(HasContrastNotice));
+    }
+
+    public void Retranslate()
+    {
+        foreach (var scheme in Schemes)
+            scheme.Reread();
+        foreach (var accent in Accents)
+            accent.Reread();
+        foreach (var colour in Colours)
+            colour.Reread();
+        OnPropertyChanged(nameof(ContrastNotice));
     }
 
     public void SetTabSize(string choice)
@@ -397,4 +588,103 @@ public sealed class SettingsViewModel : ObservableObject
             _log.Write("shell", $"Could not open {_settings.Root}: {ex.Message}");
         }
     }
+}
+
+/// <summary>One accent in the dropdown, named by the language the window is in.</summary>
+public sealed class AccentChoice(string hex, string key) : ObservableObject
+{
+    public string Hex { get; } = hex;
+
+    public string Name => MeowsText.Current[key];
+
+    internal void Reread() => OnPropertyChanged(nameof(Name));
+}
+
+public sealed class AppearanceSchemeChoice(string id, string key) : ObservableObject
+{
+    public string Id { get; } = id;
+
+    public string Name => MeowsText.Current[key];
+
+    internal void Reread() => OnPropertyChanged(nameof(Name));
+}
+
+public sealed class AppearanceColourRow : ObservableObject
+{
+    private readonly Action<string, string> _changed;
+    private string _hex;
+    private string _lastValid;
+
+    public AppearanceColourRow(string slot, string hex, Action<string, string> changed)
+    {
+        Slot = slot;
+        _hex = hex;
+        _lastValid = hex;
+        _changed = changed;
+    }
+
+    public string Slot { get; }
+
+    public string Name => MeowsText.Current["settings.colour." + Slot];
+
+    public string Hex
+    {
+        get => _hex;
+        set
+        {
+            if (!SetField(ref _hex, value ?? ""))
+                return;
+            if (Appearance.TryHex(_hex, out var valid))
+            {
+                _lastValid = valid;
+                _changed(Slot, valid);
+                OnPropertyChanged(nameof(Swatch));
+            }
+            OnPropertyChanged(nameof(IsInvalid));
+        }
+    }
+
+    public bool IsInvalid => !Appearance.TryHex(_hex, out _);
+
+    public string ErrorText => MeowsText.Current["settings.scheme.invalid"];
+
+    public IBrush Swatch => new SolidColorBrush(Color.Parse(_lastValid));
+
+    internal void Reread()
+    {
+        OnPropertyChanged(nameof(Name));
+        OnPropertyChanged(nameof(ErrorText));
+    }
+}
+
+public sealed class AppearancePreview : ObservableObject
+{
+    private SchemeColours _colours = Appearance.Preset(Appearance.OriginalScheme, false);
+
+    public SchemeColours Colours
+    {
+        get => _colours;
+        set
+        {
+            _colours = value;
+            OnEverythingChanged();
+        }
+    }
+
+    private static IBrush Brush(string hex) => new SolidColorBrush(Color.Parse(hex));
+
+    public IBrush Background => Brush(Colours.Background);
+    public IBrush Panel => Brush(Colours.Panel);
+    public IBrush Card => Brush(Colours.Card);
+    public IBrush Foreground => Brush(Colours.Foreground);
+    public IBrush Border => Brush(Colours.Border);
+    public IBrush Selection => Brush(Colours.Selection);
+    public IBrush SelectionText => Brush(Colours.SelectionText);
+    public IBrush Accent => Brush(Colours.Accent);
+    public IBrush Info => Brush(Colours.Info);
+    public IBrush InfoText => Brush(Colours.InfoText);
+    public IBrush Warning => Brush(Colours.Warning);
+    public IBrush WarningText => Brush(Colours.WarningText);
+    public IBrush Danger => Brush(Colours.Danger);
+    public IBrush DangerText => Brush(Colours.DangerText);
 }

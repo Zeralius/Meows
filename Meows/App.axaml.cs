@@ -35,6 +35,7 @@ public partial class App : Application
             // to be there before anything asks for one.
             var preferences = settings.LoadPreferences();
             RequestedThemeVariant = Appearance.VariantFor(preferences.Theme);
+            Appearance.ApplyScheme(preferences);
 
             var text = new Translations(message => log.Write("strings", message));
             text.Add(typeof(App).Assembly);

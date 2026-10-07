@@ -118,13 +118,15 @@ public sealed class MeowsStore
 
     public void Record(string plugin, string kind, string subject, string? detail, IReadOnlyDictionary<string, string>? data)
     {
-        // A line written while a rule's action is running says which rule, so the rule engine
-        // can refuse to be started by it. That is the whole of "one hop": the mark is put on
-        // here, where every line passes, rather than trusted to each plugin to add.
+        // A line written while a rule's action is running says which rule and how deep in a
+        // chain, so the rule engine can refuse it past the limit. That is the whole of the
+        // depth guard: the mark is put on here, where every line passes, rather than trusted
+        // to each plugin to add.
         if (InstinctScope.Rule is { } rule)
         {
             var marked = data is null ? new Dictionary<string, string>() : new Dictionary<string, string>(data);
             marked[InstinctScope.DataKey] = rule;
+            marked[InstinctScope.DepthKey] = InstinctScope.Depth.ToString(System.Globalization.CultureInfo.InvariantCulture);
             data = marked;
         }
 
