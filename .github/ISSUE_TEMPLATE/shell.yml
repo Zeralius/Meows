@@ -1,0 +1,51 @@
+name: Shell change
+description: Rules, Home, palette, contract, settings — anything that is Meows itself
+title: "[shell] "
+labels: ["shell"]
+body:
+  - type: textarea
+    id: area
+    attributes:
+      label: Area
+      description: Which part of the shell (Rules tab, Home, palette, contract, settings, …)?
+    validations:
+      required: true
+  - type: textarea
+    id: current
+    attributes:
+      label: Current behavior
+      description: What happens today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposed
+    attributes:
+      label: Proposed behavior
+      description: What should happen instead, and why it earns a shell change rather than a plugin.
+    validations:
+      required: true
+  - type: dropdown
+    id: contract
+    attributes:
+      label: Contract impact
+      options:
+        - None, additive only
+        - Breaking, with migration described below
+    validations:
+      required: true
+  - type: textarea
+    id: migration
+    attributes:
+      label: Migration
+      description: Only for breaking changes: what old files, settings, or plugins need, and what happens to them.
+  - type: textarea
+    id: done
+    attributes:
+      label: Done means
+      description: The merge gate. Edit if the issue needs more, never less.
+      value: |
+        - [ ] New tests, green alongside the suite (`dotnet test Meows.Tests/...`)
+        - [ ] Views hold together in both themes and both languages
+        - [ ] en + de strings, sorted catalogues, matching placeholders
+        - [ ] Preferences round-trip covered; old files still load
+        - [ ] Docs updated (README.md, PLUGIN-GUIDE.md if the contract moved)

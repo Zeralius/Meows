@@ -1,0 +1,46 @@
+name: Plugin (new or tweak)
+description: A new Meows plugin, or a change to one that ships
+title: "[plugin] "
+labels: ["plugin"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: Who hurts, how often? One or two sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: does
+    attributes:
+      label: What it does
+      description: What the tab reads, shows, and changes — in that order.
+    validations:
+      required: true
+  - type: textarea
+    id: refuses
+    attributes:
+      label: What it refuses to do
+      description: The line it will not cross. Keeps the scope cat-sized.
+  - type: checkboxes
+    id: fit
+    attributes:
+      label: Meows fit
+      description: Tick what applies. Unticked boxes are either out of scope or to be discussed.
+      options:
+        - label: Local-first, no account, no cloud
+        - label: Writes History lines in its own words
+        - label: Offers a Rules action and/or records kinds
+        - label: Has a watch, schedule, or --do job where one makes sense
+        - label: Ctrl+K reachable (on and, if data is kept, off)
+  - type: textarea
+    id: done
+    attributes:
+      label: Done means
+      description: The merge gate. Edit if the issue needs more, never less.
+      value: |
+        - [ ] House structure (view model, view, en+de catalogues, README)
+        - [ ] New tests, green alongside the suite (`dotnet test Meows.Tests/...`)
+        - [ ] View holds together in both themes and both languages
+        - [ ] Root README table row, version bumped per the versioning rule
+        - [ ] No contract break (or stated explicitly, with migration)
