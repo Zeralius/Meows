@@ -167,10 +167,19 @@ public sealed class VetTests : IDisposable
             Thread.Sleep(50);
         Assert.True(model.HasBackup);
         Assert.Single(host.Conditions);
+        Assert.Contains("backup 9 days old", model.Summary);
 
         File.SetLastWriteTimeUtc(file, DateTime.UtcNow);
         model.CheckupCommand.Execute(null);
-        Assert.Empty(host.Conditions);
+        Assert.DoesNotContain("backup", model.Summary);
+
+        // The checkup reads the real drives and reboot key too, so a machine with a full drive
+        // keeps the condition up for that. Only a machine with nothing else to say clears it.
+        var rest = Checkup.Judge(Checkup.Run(null, DateTime.UtcNow), backupSet: false, Checkup.DefaultWarnDays, TestStrings.Load());
+        if (rest.IsTrouble)
+            Assert.Single(host.Conditions);
+        else
+            Assert.Empty(host.Conditions);
         Assert.Contains(host.Store.Events, e => e.Kind == "checked");
     }
 
