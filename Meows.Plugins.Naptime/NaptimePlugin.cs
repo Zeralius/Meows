@@ -21,6 +21,8 @@ public sealed class NaptimePlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public PluginTopics Topics => PluginTopics.Everyday;
+
     /// <summary>A handoff Naptime sends itself: show this habit. The note carries the habit's id.</summary>
     public const string ShowVerb = "naptime.show";
 

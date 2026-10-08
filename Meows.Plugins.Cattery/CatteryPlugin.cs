@@ -21,6 +21,8 @@ public sealed class CatteryPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public PluginTopics Topics => PluginTopics.Developer;
+
     public IReadOnlyList<PluginJob> Jobs =>
     [
         new("read", "cattery.job.read", "cattery.job.read.hint"),

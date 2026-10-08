@@ -19,6 +19,8 @@ public sealed class LitterPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Files;
+
     public Control CreateView(IMeowsHost host) => new LitterView
     {
         DataContext = new LitterViewModel(host),

@@ -32,6 +32,9 @@ public sealed record PluginDescriptor
     /// <summary>What the plugin called its group, or null if it did not say.</summary>
     public string? Category { get; private init; }
 
+    /// <summary>What the plugin said it is about, for the filter. None for an incompatible one, which shows under All.</summary>
+    public PluginTopics Topics { get; private init; }
+
     /// <summary>Why we would not load it, phrased for whoever is reading the card.</summary>
     public string? IncompatibleReason { get; private init; }
 
@@ -54,6 +57,7 @@ public sealed record PluginDescriptor
             Description = plugin.Description,
             Icon = plugin.Icon ?? "●",
             Category = Tidy(plugin.Category),
+            Topics = plugin.Topics,
             Provenance = provenance ?? PluginProvenance.None,
         };
 

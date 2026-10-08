@@ -19,6 +19,8 @@ public sealed class KibblePlugin : IMeowsPlugin
 
     public string Category => "group.bot";
 
+    public PluginTopics Topics => PluginTopics.Social;
+
     /// <summary>A handoff Kibble sends itself: show this waiting file. The note carries the path.</summary>
     public const string ShowVerb = "kibble.show";
 

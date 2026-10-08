@@ -20,6 +20,8 @@ public sealed class CatnipPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Files;
+
     public IReadOnlyList<RecordedKind> Records =>
     [
         new("scan", "catnip.records.scan"),

@@ -19,6 +19,8 @@ public sealed class MouserPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Files;
+
     public Control CreateView(IMeowsHost host) => new MouserView
     {
         DataContext = new MouserViewModel(host),

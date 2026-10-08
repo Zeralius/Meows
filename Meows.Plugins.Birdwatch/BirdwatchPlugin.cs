@@ -19,6 +19,8 @@ public sealed class BirdwatchPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public PluginTopics Topics => PluginTopics.Social;
+
     public IReadOnlyList<RecordedKind> Records =>
     [
         new("saved", "birdwatch.records.saved"),

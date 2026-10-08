@@ -20,6 +20,8 @@ public sealed class CarryPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Files;
+
     public IReadOnlyList<RecordedKind> Records =>
     [
         new("carried", "carry.records.carried"),

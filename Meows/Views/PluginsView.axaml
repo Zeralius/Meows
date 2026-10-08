@@ -29,7 +29,219 @@
             <Setter Property="Padding" Value="8,3" />
             <Setter Property="MinHeight" Value="0" />
         </Style>
+        <!-- A filter chip: a pill that stays lit while it is the one picked. -->
+        <Style Selector="ToggleButton.chip">
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Padding" Value="12,4" />
+            <Setter Property="MinHeight" Value="0" />
+            <Setter Property="CornerRadius" Value="14" />
+            <Setter Property="Margin" Value="0,0,6,6" />
+        </Style>
     </UserControl.Styles>
+
+    <UserControl.Resources>
+
+        <!-- One card per row: everything the plugin can say about itself. As before 5.1.0. -->
+        <DataTemplate x:Key="ListCard" x:DataType="vm:PluginEntryViewModel">
+            <Border Background="{DynamicResource MeowsCard}"
+                    BorderBrush="{DynamicResource MeowsLine}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="16,13"
+                    Margin="0,0,0,10">
+                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                    <TextBlock Grid.Column="0"
+                               Text="{Binding Icon}"
+                               FontFamily="Segoe UI Emoji"
+                               FontSize="22"
+                               VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Spacing="3">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="15" />
+                            <TextBlock Text="{Binding OtherName}"
+                                       Opacity="0.4"
+                                       FontSize="12"
+                                       VerticalAlignment="Bottom"
+                                       Margin="0,0,0,2"
+                                       IsVisible="{Binding HasOtherName}" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding Description}" Opacity="0.6" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Origin}" Opacity="0.35" FontSize="11" />
+                        <!-- Who made it and when it arrived, from the DLL and the installer's note. -->
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <TextBlock Text="{Binding ProvenanceText}"
+                                       Opacity="0.35"
+                                       FontSize="11"
+                                       IsVisible="{Binding HasProvenance}" />
+                            <Button Classes="link"
+                                    Content="{Binding HomepageText}"
+                                    Command="{Binding OpenHomepageCommand}"
+                                    IsVisible="{Binding HasHomepage}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasUpdate}">
+                            <TextBlock Text="{Binding UpdateText}"
+                                       Foreground="{DynamicResource MeowsGoodText}"
+                                       FontSize="11"
+                                       VerticalAlignment="Center" />
+                            <Button Classes="small" Content="{m:Tr plugins.update}" Command="{Binding UpdateCommand}" />
+                        </StackPanel>
+                        <!-- What it last did and what it is watching, where the switch is. -->
+                        <TextBlock Text="{Binding HealthText}"
+                                   Opacity="0.6"
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding HasHealth}"
+                                   Classes.trouble="{Binding HealthIsTrouble}" />
+                        <!-- What it has cost since Meows started: opening, and background work. -->
+                        <TextBlock Text="{Binding CostText}"
+                                   Opacity="0.6"
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding HasCost}"
+                                   Classes.trouble="{Binding CostIsTrouble}" />
+                        <TextBlock Text="{Binding Error}"
+                                   Foreground="{DynamicResource MeowsDangerStrong}"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding HasError}" />
+                        <TextBlock Text="{Binding IncompatibleReason}"
+                                   Foreground="{DynamicResource MeowsWarnText}"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding IsIncompatible}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center">
+                        <ToggleSwitch IsChecked="{Binding IsActivated}"
+                                      IsEnabled="{Binding IsCompatible}"
+                                      OnContent="{m:Tr plugins.active}"
+                                      OffContent="{m:Tr plugins.inactive}"
+                                      IsVisible="{Binding IsCompatible}" />
+                        <Border Background="{DynamicResource MeowsWarn}"
+                                BorderBrush="{DynamicResource MeowsWarnLine}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="8,3"
+                                IsVisible="{Binding IsIncompatible}">
+                            <TextBlock Text="{m:Tr plugins.incompatible}" Foreground="{DynamicResource MeowsWarnText}" FontSize="11" />
+                        </Border>
+                        <Button Classes="small"
+                                HorizontalAlignment="Right"
+                                Content="{Binding UninstallText}"
+                                Command="{Binding UninstallCommand}"
+                                IsVisible="{Binding IsInstalled}" />
+                        <Button Classes="small"
+                                HorizontalAlignment="Right"
+                                Content="{m:Tr plugins.share}"
+                                Command="{Binding ShareCommand}" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <!--
+            A tile: what it is and whether it is on, at a glance. What does not fit a tile (where
+            it was loaded from, who made it, what it has cost) is the list's; anything that wants
+            doing (an error, an update, a health line in red) is on both.
+        -->
+        <DataTemplate x:Key="GridCard" x:DataType="vm:PluginEntryViewModel">
+            <Border Background="{DynamicResource MeowsCard}"
+                    BorderBrush="{DynamicResource MeowsLine}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="14,12"
+                    Margin="0,0,10,10"
+                    MinHeight="150">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Margin="0,0,0,6">
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding Icon}"
+                                   FontFamily="Segoe UI Emoji"
+                                   FontSize="22"
+                                   VerticalAlignment="Center" />
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding DisplayName}"
+                                       FontWeight="SemiBold"
+                                       FontSize="14"
+                                       TextTrimming="CharacterEllipsis" />
+                            <TextBlock Text="{Binding OtherName}"
+                                       Opacity="0.4"
+                                       FontSize="11"
+                                       TextTrimming="CharacterEllipsis"
+                                       IsVisible="{Binding HasOtherName}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="2"
+                                      IsChecked="{Binding IsActivated}"
+                                      IsEnabled="{Binding IsCompatible}"
+                                      IsVisible="{Binding IsCompatible}"
+                                      OnContent=""
+                                      OffContent=""
+                                      MinWidth="0"
+                                      VerticalAlignment="Center"
+                                      ToolTip.Tip="{m:Tr plugins.active}" />
+                        <Border Grid.Column="2"
+                                Background="{DynamicResource MeowsWarn}"
+                                BorderBrush="{DynamicResource MeowsWarnLine}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="6,2"
+                                VerticalAlignment="Center"
+                                IsVisible="{Binding IsIncompatible}">
+                            <TextBlock Text="{m:Tr plugins.incompatible}" Foreground="{DynamicResource MeowsWarnText}" FontSize="11" />
+                        </Border>
+                    </Grid>
+
+                    <StackPanel DockPanel.Dock="Bottom"
+                                Orientation="Horizontal"
+                                Spacing="6"
+                                HorizontalAlignment="Right"
+                                Margin="0,8,0,0">
+                        <Button Classes="small"
+                                Content="{Binding UninstallText}"
+                                Command="{Binding UninstallCommand}"
+                                IsVisible="{Binding IsInstalled}" />
+                        <Button Classes="small"
+                                Content="{m:Tr plugins.share}"
+                                Command="{Binding ShareCommand}" />
+                    </StackPanel>
+
+                    <StackPanel Spacing="4">
+                        <TextBlock Text="{Binding Description}"
+                                   Opacity="0.6"
+                                   FontSize="12"
+                                   TextWrapping="Wrap"
+                                   MaxLines="4"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{Binding Description}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasUpdate}">
+                            <TextBlock Text="{Binding UpdateText}"
+                                       Foreground="{DynamicResource MeowsGoodText}"
+                                       FontSize="11"
+                                       VerticalAlignment="Center"
+                                       TextTrimming="CharacterEllipsis" />
+                            <Button Classes="small" Content="{m:Tr plugins.update}" Command="{Binding UpdateCommand}" />
+                        </StackPanel>
+                        <TextBlock Text="{Binding HealthText}"
+                                   Opacity="0.6"
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   MaxLines="2"
+                                   TextTrimming="CharacterEllipsis"
+                                   IsVisible="{Binding HasHealth}"
+                                   Classes.trouble="{Binding HealthIsTrouble}" />
+                        <TextBlock Text="{Binding Error}"
+                                   Foreground="{DynamicResource MeowsDangerStrong}"
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding HasError}" />
+                        <TextBlock Text="{Binding IncompatibleReason}"
+                                   Foreground="{DynamicResource MeowsWarnText}"
+                                   FontSize="11"
+                                   TextWrapping="Wrap"
+                                   IsVisible="{Binding IsIncompatible}" />
+                    </StackPanel>
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+
+    </UserControl.Resources>
 
     <DockPanel Margin="20">
 
@@ -102,6 +314,39 @@
             </StackPanel>
         </StackPanel>
 
+        <!-- What the cards are about, and how they are laid out. -->
+        <Grid DockPanel.Dock="Top"
+              ColumnDefinitions="*,Auto"
+              ColumnSpacing="16"
+              Margin="0,0,0,10"
+              IsVisible="{Binding HasPlugins}">
+            <ItemsControl Grid.Column="0" ItemsSource="{Binding PluginFilters}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <WrapPanel />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:PluginFilterViewModel">
+                        <ToggleButton Classes="chip"
+                                      Content="{Binding Text}"
+                                      IsChecked="{Binding IsSelected}" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+            <StackPanel Grid.Column="1"
+                        Orientation="Horizontal"
+                        Spacing="12"
+                        VerticalAlignment="Top">
+                <RadioButton GroupName="pluginsLayout"
+                             Content="{m:Tr plugins.layout.grid}"
+                             IsChecked="{Binding IsPluginsGrid}" />
+                <RadioButton GroupName="pluginsLayout"
+                             Content="{m:Tr plugins.layout.list}"
+                             IsChecked="{Binding IsPluginsList}" />
+            </StackPanel>
+        </Grid>
+
         <ScrollViewer>
             <ItemsControl ItemsSource="{Binding PluginGroups}">
                 <ItemsControl.ItemTemplate>
@@ -119,103 +364,19 @@
                                            VerticalAlignment="Center" />
                             </StackPanel>
 
-                            <ItemsControl ItemsSource="{Binding Entries}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:PluginEntryViewModel">
-                        <Border Background="{DynamicResource MeowsCard}"
-                                BorderBrush="{DynamicResource MeowsLine}"
-                                BorderThickness="1"
-                                CornerRadius="8"
-                                Padding="16,13"
-                                Margin="0,0,0,10">
-                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
-                                <TextBlock Grid.Column="0"
-                                           Text="{Binding Icon}"
-                                           FontFamily="Segoe UI Emoji"
-                                           FontSize="22"
-                                           VerticalAlignment="Center" />
-                                <StackPanel Grid.Column="1" Spacing="3">
-                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="15" />
-                                        <TextBlock Text="{Binding OtherName}"
-                                                   Opacity="0.4"
-                                                   FontSize="12"
-                                                   VerticalAlignment="Bottom"
-                                                   Margin="0,0,0,2"
-                                                   IsVisible="{Binding HasOtherName}" />
-                                    </StackPanel>
-                                    <TextBlock Text="{Binding Description}" Opacity="0.6" TextWrapping="Wrap" />
-                                    <TextBlock Text="{Binding Origin}" Opacity="0.35" FontSize="11" />
-                                    <!-- Who made it and when it arrived, from the DLL and the installer's note. -->
-                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                        <TextBlock Text="{Binding ProvenanceText}"
-                                                   Opacity="0.35"
-                                                   FontSize="11"
-                                                   IsVisible="{Binding HasProvenance}" />
-                                        <Button Classes="link"
-                                                Content="{Binding HomepageText}"
-                                                Command="{Binding OpenHomepageCommand}"
-                                                IsVisible="{Binding HasHomepage}" />
-                                    </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasUpdate}">
-                                        <TextBlock Text="{Binding UpdateText}"
-                                                   Foreground="{DynamicResource MeowsGoodText}"
-                                                   FontSize="11"
-                                                   VerticalAlignment="Center" />
-                                        <Button Classes="small" Content="{m:Tr plugins.update}" Command="{Binding UpdateCommand}" />
-                                    </StackPanel>
-                                    <!-- What it last did and what it is watching, where the switch is. -->
-                                    <TextBlock Text="{Binding HealthText}"
-                                               Opacity="0.6"
-                                               FontSize="11"
-                                               TextWrapping="Wrap"
-                                               IsVisible="{Binding HasHealth}"
-                                               Classes.trouble="{Binding HealthIsTrouble}" />
-                                    <!-- What it has cost since Meows started: opening, and background work. -->
-                                    <TextBlock Text="{Binding CostText}"
-                                               Opacity="0.6"
-                                               FontSize="11"
-                                               TextWrapping="Wrap"
-                                               IsVisible="{Binding HasCost}"
-                                               Classes.trouble="{Binding CostIsTrouble}" />
-                                    <TextBlock Text="{Binding Error}"
-                                               Foreground="{DynamicResource MeowsDangerStrong}"
-                                               TextWrapping="Wrap"
-                                               IsVisible="{Binding HasError}" />
-                                    <TextBlock Text="{Binding IncompatibleReason}"
-                                               Foreground="{DynamicResource MeowsWarnText}"
-                                               TextWrapping="Wrap"
-                                               IsVisible="{Binding IsIncompatible}" />
-                                </StackPanel>
-                                <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center">
-                                    <ToggleSwitch IsChecked="{Binding IsActivated}"
-                                                  IsEnabled="{Binding IsCompatible}"
-                                                  OnContent="{m:Tr plugins.active}"
-                                                  OffContent="{m:Tr plugins.inactive}"
-                                                  IsVisible="{Binding IsCompatible}" />
-                                    <Border Background="{DynamicResource MeowsWarn}"
-                                            BorderBrush="{DynamicResource MeowsWarnLine}"
-                                            BorderThickness="1"
-                                            CornerRadius="4"
-                                            Padding="8,3"
-                                            IsVisible="{Binding IsIncompatible}">
-                                        <TextBlock Text="{m:Tr plugins.incompatible}" Foreground="{DynamicResource MeowsWarnText}" FontSize="11" />
-                                    </Border>
-                                    <Button Classes="small"
-                                            HorizontalAlignment="Right"
-                                            Content="{Binding UninstallText}"
-                                            Command="{Binding UninstallCommand}"
-                                            IsVisible="{Binding IsInstalled}" />
-                                    <Button Classes="small"
-                                            HorizontalAlignment="Right"
-                                            Content="{m:Tr plugins.share}"
-                                            Command="{Binding ShareCommand}" />
-                                </StackPanel>
-                            </Grid>
-                        </Border>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
+                            <ItemsControl ItemsSource="{Binding Entries}"
+                                          ItemTemplate="{StaticResource GridCard}"
+                                          IsVisible="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).IsPluginsGrid}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <WrapPanel ItemWidth="290" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
                             </ItemsControl>
+
+                            <ItemsControl ItemsSource="{Binding Entries}"
+                                          ItemTemplate="{StaticResource ListCard}"
+                                          IsVisible="{Binding $parent[UserControl].((vm:MainWindowViewModel)DataContext).IsPluginsList}" />
 
                         </StackPanel>
                     </DataTemplate>

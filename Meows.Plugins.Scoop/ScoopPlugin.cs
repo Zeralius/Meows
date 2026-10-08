@@ -20,6 +20,8 @@ public sealed class ScoopPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Files;
+
     public IReadOnlyList<RecordedKind> Records =>
     [
         new("restored", "scoop.records.restored"),

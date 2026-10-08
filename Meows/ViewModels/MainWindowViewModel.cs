@@ -1133,11 +1133,59 @@ public sealed class MainWindowViewModel : ObservableObject
         RefreshPersonas();
     }
 
+    /// <summary>
+    /// The chips first, from everything installed, then the headings and cards from what the
+    /// picked chip lets through. A kept filter whose topic nobody has any more falls back to All
+    /// rather than showing an empty tab with no chip lit.
+    /// </summary>
     private void Regroup()
     {
+        var chips = PluginFilter.Chips(Plugins.Select(p => p.Descriptor.Topics).ToList());
+        var selected = PluginFilter.Parse(_preferences.PluginsTopic);
+        if (selected is { } kept && chips.All(c => c.Topic != kept))
+            selected = null;
+
+        PluginFilters.Clear();
+        foreach (var (topic, count) in chips)
+            PluginFilters.Add(new PluginFilterViewModel(topic, count, topic == selected, PickTopic));
+
         PluginGroups.Clear();
-        foreach (var group in PluginGroupViewModel.Arrange(Plugins))
+        foreach (var group in PluginGroupViewModel.Arrange(Plugins.Where(p => PluginFilter.Shows(p.Descriptor.Topics, selected))))
             PluginGroups.Add(group);
+    }
+
+    private void PickTopic(PluginTopics? topic)
+    {
+        _preferences.PluginsTopic = topic?.ToString();
+        SavePreferences();
+        Regroup();
+    }
+
+    /// <summary>All, then one chip per topic something installed is about, with how many.</summary>
+    public ObservableCollection<PluginFilterViewModel> PluginFilters { get; } = new();
+
+    /// <summary>Cards in a grid, the default since 5.1.0.</summary>
+    public bool IsPluginsGrid
+    {
+        get => !_preferences.PluginsAsList;
+        set { if (value) SetPluginsAsList(false); }
+    }
+
+    /// <summary>One card per row, with where it came from and who made it, as before 5.1.0.</summary>
+    public bool IsPluginsList
+    {
+        get => _preferences.PluginsAsList;
+        set { if (value) SetPluginsAsList(true); }
+    }
+
+    private void SetPluginsAsList(bool asList)
+    {
+        if (_preferences.PluginsAsList == asList)
+            return;
+        _preferences.PluginsAsList = asList;
+        SavePreferences();
+        OnPropertyChanged(nameof(IsPluginsGrid));
+        OnPropertyChanged(nameof(IsPluginsList));
     }
 
     /// <summary>

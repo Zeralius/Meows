@@ -25,6 +25,13 @@ public sealed class MyPluginPlugin : IMeowsPlugin
     /// </summary>
     public string? Category => "PLUGIN-CATEGORY";
 
+    /// <summary>
+    /// What it is about, for the filter on the Plugins tab: Files, Gaming, Tabletop, Everyday,
+    /// Social, Developer or Meows, combined with | when it is about more than one. None shows it
+    /// under All only.
+    /// </summary>
+    public PluginTopics Topics => PluginTopics.None;
+
     public Control CreateView(IMeowsHost host) => new MyPluginView
     {
         DataContext = new MyPluginViewModel(host),

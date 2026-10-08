@@ -19,6 +19,8 @@ public sealed class TinPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public PluginTopics Topics => PluginTopics.Everyday;
+
     public Control CreateView(IMeowsHost host) => new TinView
     {
         DataContext = new TinViewModel(host),

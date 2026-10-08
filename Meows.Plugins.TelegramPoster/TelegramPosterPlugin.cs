@@ -17,6 +17,8 @@ public sealed class TelegramPosterPlugin : IMeowsPlugin
 
     public string Category => "group.bot";
 
+    public PluginTopics Topics => PluginTopics.Social;
+
     public IReadOnlyList<RecordedKind> Records =>
     [
         new("held", "tp.records.held"),

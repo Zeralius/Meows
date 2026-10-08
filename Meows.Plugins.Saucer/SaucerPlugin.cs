@@ -19,6 +19,8 @@ public sealed class SaucerPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public PluginTopics Topics => PluginTopics.Social;
+
     public IReadOnlyList<RecordedKind> Records =>
     [
         new("saved", "saucer.records.saved"),

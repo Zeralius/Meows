@@ -21,6 +21,8 @@ public sealed class BacklogPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Gaming;
+
     /// <summary>A handoff Backlog sends itself: show this game. The note carries the entry's id.</summary>
     public const string ShowVerb = "backlog.show";
 

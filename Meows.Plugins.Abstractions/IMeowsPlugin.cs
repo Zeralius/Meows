@@ -44,6 +44,13 @@ public interface IMeowsPlugin
     string? Category => null;
 
     /// <summary>
+    /// What the plugin is about, for the filter on the Plugins tab: one or more of a fixed list,
+    /// combined with <c>|</c>. <see cref="PluginTopics.None"/>, the default, shows it under All
+    /// only. Read while the plugin is off, so answer with a constant. Since 1.7.0.
+    /// </summary>
+    PluginTopics Topics => PluginTopics.None;
+
+    /// <summary>
     /// Called once per activation. The control, and its DataContext, get disposed on
     /// deactivation if they implement IDisposable.
     /// </summary>

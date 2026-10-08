@@ -21,6 +21,8 @@ public sealed class VetPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Files | PluginTopics.Everyday;
+
     /// <summary>The job that runs the checkup with no window.</summary>
     public const string CheckJob = "check";
 

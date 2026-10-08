@@ -20,6 +20,8 @@ public sealed class FamiliarPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public PluginTopics Topics => PluginTopics.Tabletop;
+
     /// <summary>A handoff Familiar sends itself: open this kit. The note carries the kit's folder.</summary>
     public const string KitVerb = "familiar.kit";
 

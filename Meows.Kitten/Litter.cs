@@ -85,6 +85,12 @@ public sealed class Litter(Repo repo, Options options)
         .Replace("__Id__", options.Id)
         .Replace("__Icon__", options.Icon)
         .Replace("__Category__", options.Category)
+        .Replace("__Topic__", options.Category switch
+        {
+            "group.disk" => "Files",
+            "group.bot" => "Social",
+            _ => "Everyday",
+        })
         .Replace("__Plain__", options.Plain)
         .Replace("__Description__", options.Description);
 

@@ -87,6 +87,9 @@ back from what the plugins already recorded, so it is exactly as true as the his
 
 Every plugin starts switched off. Open the **Plugins** tab, turn on the ones you want, and each
 gets its own tab. Turning one off closes its tab again. Nothing runs until you ask for it.
+The chips above the cards filter them by what they are about (drives & files, gaming, tabletop,
+everyday life, posting & social, developer, Meows itself), and the cards come as a grid or as a
+list with more on each, whichever you pick; both are remembered.
 
 Each switched-on plugin's card also says what it has cost since Meows started: how long its tab
 took to open, the part of startup it is responsible for, marked when that passed half a second;
@@ -449,13 +452,14 @@ interface its view model does the asking through. **1.3.0**, with Meows 4.3.0, a
 a plugin can copy a folder to. **1.4.0**, with Meows 4.4.0, added a plugin's Home line with no
 window, for `--glance`. **1.5.0**, with Meows 4.17.0, added the jobs a plugin can do with no
 window, for `--do`. **1.6.0**, with Meows 5.0.0, added the extra lines a plugin can put on
-its Home card.
+its Home card. **1.7.0**, with Meows 5.1.0, added the topics a plugin is filed under for the
+filter on the Plugins tab.
 
 Meows checks that version when it loads a plugin and refuses anything it cannot honour, with the
 reason on the plugin's card rather than a crash later:
 
-> Built for Meows contract 1.7.0, which is newer than this shell's 1.6.0. Update Meows, or rebuild
-> the plugin against 1.6.0.
+> Built for Meows contract 1.8.0, which is newer than this shell's 1.7.0. Update Meows, or rebuild
+> the plugin against 1.7.0.
 
 A newer contract is refused; an older one is fine, since additions stay backward compatible.
 

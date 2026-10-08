@@ -19,6 +19,7 @@ public sealed class MyPlugin : IMeowsPlugin
     public string Description => "One sentence, shown on the Plugins tab.";
     public string? Icon => "🎲";
     public string? Category => "group.everyday";  // optional heading on the Plugins tab
+    public PluginTopics Topics => PluginTopics.Everyday;  // optional filter on the Plugins tab, since 1.7.0
 
     public Control CreateView(IMeowsHost host) =>
         new MyView { DataContext = new MyViewModel(host) };

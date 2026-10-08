@@ -21,6 +21,8 @@ public sealed class BookshelfPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public PluginTopics Topics => PluginTopics.Everyday;
+
     /// <summary>A handoff Bookshelf sends itself: show this book. The note carries the book's path.</summary>
     public const string ShowVerb = "bookshelf.show";
 

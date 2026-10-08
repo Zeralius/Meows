@@ -1,7 +1,7 @@
 namespace Meows.Kitten;
 
 /// <summary>
-/// The files, with __Name__, __key__, __Id__, __Icon__, __Category__, __Plain__ and
+/// The files, with __Name__, __key__, __Id__, __Icon__, __Category__, __Topic__, __Plain__ and
 /// __Description__ filled in. Kept as the plugins are actually written today: the header bar,
 /// the error strip, the empty state, the language watch, the search hook, the dispose. When the
 /// house style moves, this moves with it, and the build Kitten runs afterwards is what notices
@@ -69,6 +69,10 @@ public static class Templates
             public string Icon => "__Icon__";
 
             public string Category => "__Category__";
+
+            // What it is about, for the filter on the Plugins tab. Kitten guessed from the
+            // heading; add more with | (Files | Gaming) when it is about more than one thing.
+            public PluginTopics Topics => PluginTopics.__Topic__;
 
             public Control CreateView(IMeowsHost host) => new __Name__View
             {

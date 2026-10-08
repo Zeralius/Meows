@@ -20,6 +20,8 @@ public sealed class LarderPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Gaming;
+
     public Control CreateView(IMeowsHost host) => new LarderView
     {
         DataContext = new LarderViewModel(host),

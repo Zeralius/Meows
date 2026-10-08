@@ -19,6 +19,8 @@ public sealed class PerchPlugin : IMeowsPlugin
 
     public string Category => "group.bot";
 
+    public PluginTopics Topics => PluginTopics.Social;
+
     public Control CreateView(IMeowsHost host) => new PerchView
     {
         DataContext = new PerchViewModel(host),

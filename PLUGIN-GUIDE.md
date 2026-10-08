@@ -142,7 +142,7 @@ contract version the template was published with. No `ProjectReference`, no Meow
 ```xml
 <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.6.0" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.7.0" ExcludeAssets="runtime" PrivateAssets="all" />
 </ItemGroup>
 ```
 
@@ -233,8 +233,8 @@ The shell checks this for you. At discovery it reads the contract version your a
 compiled against and refuses anything it cannot honour, **before constructing your plugin**, so
 none of your code runs. The reason appears on your plugin's card in place of its toggle:
 
-> Built for Meows contract 1.7.0, which is newer than this shell's 1.6.0. Update Meows, or rebuild
-> the plugin against 1.6.0.
+> Built for Meows contract 1.8.0, which is newer than this shell's 1.7.0. Update Meows, or rebuild
+> the plugin against 1.7.0.
 
 A mismatched **major** is refused either way, since a major bump means members may have been
 removed. A **newer** minor or patch is refused; an older one loads fine, because additive
@@ -361,6 +361,7 @@ public sealed class MyPlugin : IMeowsPlugin
     public string Description => "One sentence, shown on the Plugins tab.";
     public string? Icon => "🎲";            // shown on the tab header
     public string? Category => "Everyday";  // heading on the Plugins tab, optional
+    public PluginTopics Topics => PluginTopics.Everyday;  // filter on the Plugins tab, optional
 
     public Control CreateView(IMeowsHost host) =>
         new MyView { DataContext = new MyViewModel(host) };
@@ -379,6 +380,14 @@ stays the identity underneath, in the log and as the source of notifications and
 the plugin simply appears under **Everything else**. The shell does not interpret the text and
 holds no list of valid groups: two plugins share a heading when they spell it the same way,
 ignoring case. Pick an existing one to join it, or invent your own.
+
+`Topics` is the other way of finding a plugin on that tab: the filter chips above the cards.
+Unlike `Category` it is a fixed list the shell knows and translates, `Files`, `Gaming`,
+`Tabletop`, `Everyday`, `Social`, `Developer` and `Meows`, and it is flags, so a plugin about two
+things says both: Nest is `PluginTopics.Files | PluginTopics.Gaming`. A chip only appears when
+something installed names its topic. The default, `None`, shows the plugin under **All** only,
+which is where a plugin built before contract 1.7.0 ends up. Answer with a constant; it is read
+while the plugin is off.
 
 `CreateView` runs once per activation. If it throws, the shell catches it, marks the plugin
 *Failed* on its card, and logs the exception; a broken plugin cannot take the window down.
@@ -527,7 +536,8 @@ added `IGlanceable`, [a line on the Home tab](#a-line-on-the-home-tab), and noth
 added `IMeowsPlugin.Jobs` and `RunJob`, `IMeowsJobHost`, `JobDeclinedException` and
 `IMeowsHost.RunsFromOutside`, for [work without a window](#work-without-a-window). **1.6.0**
 added `IMultiGlance`, [up to three lines on the Home card](#a-line-on-the-home-tab), and
-nothing else.
+nothing else. **1.7.0** added `IMeowsPlugin.Topics` and the `PluginTopics` flags, for the
+[filter on the Plugins tab](#3-the-entry-point), and nothing else.
 
 ### `DataDirectory`
 

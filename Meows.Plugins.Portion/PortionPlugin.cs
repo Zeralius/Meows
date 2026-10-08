@@ -19,6 +19,8 @@ public sealed class PortionPlugin : IMeowsPlugin
 
     public string Category => "group.bot";
 
+    public PluginTopics Topics => PluginTopics.Social;
+
     /// <summary>A rule's "weigh the queues now".</summary>
     public const string CheckAction = "check";
 

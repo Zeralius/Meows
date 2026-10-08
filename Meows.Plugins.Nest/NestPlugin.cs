@@ -22,6 +22,8 @@ public sealed class NestPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Files | PluginTopics.Gaming;
+
     public IReadOnlyList<PluginJob> Jobs =>
     [
         new("copy", "nest.job.copy", "nest.job.copy.hint"),

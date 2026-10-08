@@ -19,6 +19,8 @@ public sealed class MoltPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Files;
+
     public Control CreateView(IMeowsHost host) => new MoltView
     {
         DataContext = new MoltViewModel(host),

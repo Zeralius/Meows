@@ -21,6 +21,8 @@ public sealed class PantryPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public PluginTopics Topics => PluginTopics.Everyday;
+
     /// <summary>A handoff Pantry sends itself: show this recipe. The note carries the recipe's id.</summary>
     public const string ShowVerb = "pantry.show";
 

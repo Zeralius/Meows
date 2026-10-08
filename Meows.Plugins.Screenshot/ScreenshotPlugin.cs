@@ -22,6 +22,8 @@ public sealed class ScreenshotPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Gaming | PluginTopics.Social;
+
     /// <summary>A handoff Screenshot sends itself: show this shot. The note carries the shot's path.</summary>
     public const string ShowVerb = "screenshot.show";
 

@@ -19,6 +19,8 @@ public sealed class CollarPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public PluginTopics Topics => PluginTopics.Everyday;
+
     /// <summary>A handoff Collar sends itself: show this entry. The note carries the entry's id.</summary>
     public const string ShowVerb = "collar.show";
 

@@ -19,6 +19,8 @@ public sealed class ChonkPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Files;
+
     public IReadOnlyList<RecordedKind> Records =>
     [
         new("extracted", "chonk.records.extracted"),

@@ -19,6 +19,8 @@ public sealed class ScruffPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public PluginTopics Topics => PluginTopics.Social;
+
     /// <summary>A rule's "take the metadata out of it, where it is".</summary>
     public const string CleanAction = "clean";
 

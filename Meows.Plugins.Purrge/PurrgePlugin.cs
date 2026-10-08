@@ -19,6 +19,8 @@ public sealed class PurrgePlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Files;
+
     /// <summary>A rule's "look for duplicates in its folder".</summary>
     public const string ScanAction = "scan";
 

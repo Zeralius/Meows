@@ -21,6 +21,8 @@ public sealed class BasketPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public PluginTopics Topics => PluginTopics.Everyday;
+
     /// <summary>A handoff Basket sends itself: show this card. The note carries the card's id.</summary>
     public const string ShowVerb = "basket.show";
 

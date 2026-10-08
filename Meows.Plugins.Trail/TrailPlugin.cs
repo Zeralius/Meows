@@ -20,6 +20,8 @@ public sealed class TrailPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public PluginTopics Topics => PluginTopics.Developer;
+
     public IReadOnlyList<RecordedKind> Records =>
     [
         new("tidied", "trail.records.tidied"),

@@ -20,6 +20,8 @@ public sealed class WeighInPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public PluginTopics Topics => PluginTopics.Files;
+
     /// <summary>A rule's "take a reading now".</summary>
     public const string MeasureAction = "measure";
 

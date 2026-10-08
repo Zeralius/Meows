@@ -20,6 +20,8 @@ public sealed class PurrPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public PluginTopics Topics => PluginTopics.Meows;
+
     public Control CreateView(IMeowsHost host) => new PurrView
     {
         DataContext = new PurrViewModel(host),

@@ -511,6 +511,15 @@ public sealed class ShellPreferences
     /// </summary>
     public string TabSize { get; set; } = TabSizes.Normal;
 
+    /// <summary>The Plugins tab as one card per row, as before 5.1.0, rather than the grid.</summary>
+    public bool PluginsAsList { get; set; }
+
+    /// <summary>
+    /// The filter last picked on the Plugins tab, by its <see cref="Meows.Plugins.Abstractions.PluginTopics"/> name, or null
+    /// for All. A name that is no longer a topic reads as All.
+    /// </summary>
+    public string? PluginsTopic { get; set; }
+
     /// <summary>
     /// The groups on the tab strip, in the order they are shown. Only groups somebody has
     /// touched are in here: the rest are worked out from what each plugin says its category is,
