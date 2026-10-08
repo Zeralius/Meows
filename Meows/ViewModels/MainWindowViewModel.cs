@@ -78,6 +78,7 @@ public sealed class MainWindowViewModel : ObservableObject
         RescanCommand = new RelayCommand(Rescan);
         SavePersonaCommand = new RelayCommand(SavePersona, () => !string.IsNullOrWhiteSpace(NewPersonaName));
         DeletePersonaCommand = new RelayCommand(DeletePersona, () => SelectedPersonaName is not null);
+        AddReadyMadePersonasCommand = new RelayCommand(AddReadyMadePersonas, ReadyMadePersonasMissing);
         OpenPluginsFolderCommand = new RelayCommand(OpenPluginsFolder, () => _catalog.PluginsDirectories.Count > 0);
         ToggleLogCommand = new RelayCommand(() => IsLogVisible = !IsLogVisible);
         ToggleNotificationsCommand = new RelayCommand(() => IsNotificationsOpen = !IsNotificationsOpen);
@@ -1039,6 +1040,11 @@ public sealed class MainWindowViewModel : ObservableObject
 
     public void Initialize()
     {
+        // The ready-made personas, once: a fresh start and an upgrade both find them in the list,
+        // and one deleted afterwards stays deleted.
+        if (!_preferences.ReadyMadePersonasAdded)
+            AddReadyMadePersonas();
+
         // The strip watches the tabs, so it exists before any of them are added.
         Strip = new TabStripViewModel(Tabs, _preferences, CategoryOf, SavePreferences);
 
@@ -1259,6 +1265,7 @@ public sealed class MainWindowViewModel : ObservableObject
             OnPropertyChanged(nameof(SelectedPersonaName));
         }
         DeletePersonaCommand.RaiseCanExecuteChanged();
+        AddReadyMadePersonasCommand.RaiseCanExecuteChanged();
     }
 
     private void ApplyPersona(string name)
@@ -1308,6 +1315,24 @@ public sealed class MainWindowViewModel : ObservableObject
         SavePreferences();
         RefreshPersonas();
     }
+
+    /// <summary>
+    /// The ready-made personas that are missing, added back; one there by that name is left as it
+    /// is. Also what the first start of 5.2.0 does once, by itself.
+    /// </summary>
+    private void AddReadyMadePersonas()
+    {
+        var added = Personas.AddReadyMade(_preferences.Personas, key => MeowsText.Current[key]);
+        _preferences.ReadyMadePersonasAdded = true;
+        SavePreferences();
+        RefreshPersonas();
+        if (added > 0)
+            _log.Write("shell", $"Added {added} ready-made persona(s).");
+    }
+
+    private bool ReadyMadePersonasMissing() =>
+        Personas.ReadyMade.Any(r => !_preferences.Personas.Any(p =>
+            string.Equals(p.Name, MeowsText.Current[r.NameKey], StringComparison.OrdinalIgnoreCase)));
 
     private void Activate(PluginEntryViewModel entry, bool bringToFront = true)
     {
@@ -1650,6 +1675,9 @@ public sealed class MainWindowViewModel : ObservableObject
     public RelayCommand SavePersonaCommand { get; }
 
     public RelayCommand DeletePersonaCommand { get; }
+
+    /// <summary>The ready-made personas that are not there, added back.</summary>
+    public RelayCommand AddReadyMadePersonasCommand { get; }
 
     /// <summary>
     /// The window went away, to the tray or for good: from now is "since you were away". Saved

@@ -139,7 +139,9 @@ someone else built, as a zip, or drop the zip on the tab; its card then says who
 offers **Uninstall**, and once a day Meows looks at the plugin's repository for a newer release
 and offers that on the card too. **Open plugins folder** takes you to where they are read from.
 **Personas** name the plugins that are on now — Work, Table, a quiet weekend — and switch the
-whole set with one pick, on that tab or in the bottom bar. A card's **Share…** bundles what
+whole set with one pick, on that tab or in the bottom bar. Five come ready-made, Gamer, Game
+master, Household, Creator and Developer, and are yours to change or delete like any other;
+**Add ready-made** brings back the ones that are missing. A card's **Share…** bundles what
 that plugin keeps into one file for someone; **Install shared…** (or a dropped
 `.meows-share.zip`) puts such a file where the plugin reads it, keeping what was there
 aside, and only while the plugin is switched off.

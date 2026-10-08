@@ -311,6 +311,10 @@
                 <Button Classes="small"
                         Content="{m:Tr plugins.persona.delete}"
                         Command="{Binding DeletePersonaCommand}" />
+                <Button Classes="small"
+                        Content="{m:Tr plugins.persona.readymade}"
+                        Command="{Binding AddReadyMadePersonasCommand}"
+                        ToolTip.Tip="{m:Tr plugins.persona.readymade.tip}" />
             </StackPanel>
         </StackPanel>
 

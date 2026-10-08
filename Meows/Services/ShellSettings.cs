@@ -565,6 +565,12 @@ public sealed class ShellPreferences
     /// </summary>
     public List<PersonaSetting> Personas { get; set; } = [];
 
+    /// <summary>
+    /// Whether the ready-made personas have been offered. Once, on the first start of 5.2.0 or
+    /// later, so one deleted stays deleted; the Plugins tab can add the missing ones back.
+    /// </summary>
+    public bool ReadyMadePersonasAdded { get; set; }
+
     /// <summary>The server plugins can copy to, from the Settings tab. Its key is in the secrets, not here.</summary>
     public ReachSettings Reach { get; set; } = new();
 }
