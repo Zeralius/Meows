@@ -1655,15 +1655,17 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         {
             var config = _workspace.LoadConfig();
             var index = 1;
-            foreach (var group in config.Groups)
-                Destinations.Add(new DestinationViewModel(group, _workspace, index++));
+            var built = config.Groups.Select(group => new DestinationViewModel(group, _workspace, index++)).ToList();
 
-            // Driest first, so the group that needs feeding is the one under your thumb.
-            var ordered = Destinations.OrderBy(d => d.Days ?? double.MaxValue).ToList();
-            Destinations.Clear();
+            // Driest first, so the group that needs feeding is the one under your thumb. Each one
+            // read its queue folder when it was made; renumbered rather than made again, which
+            // read every queue a second time.
             var position = 1;
-            foreach (var d in ordered)
-                Destinations.Add(new DestinationViewModel(d.Group, _workspace, position++));
+            foreach (var d in built.OrderBy(d => d.Days ?? double.MaxValue))
+            {
+                d.Renumber(position++);
+                Destinations.Add(d);
+            }
 
             _host.Log($"Loaded {Destinations.Count} destination(s) from {_workspace.ConfigPath}");
             NotifyIfStarving();

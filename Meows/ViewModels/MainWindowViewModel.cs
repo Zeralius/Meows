@@ -1238,13 +1238,23 @@ public sealed class MainWindowViewModel : ObservableObject
     private void OnActivationChanged(PluginEntryViewModel entry, bool activated)
     {
         if (activated)
-            Activate(entry);
+            Activate(entry, bringToFront: !_applyingPersona);
         else
             Deactivate(entry);
 
+        // A persona switches a handful at once and does these once at the end.
+        if (_applyingPersona)
+            return;
         PersistActivations();
         RefreshPersonas();
     }
+
+    /// <summary>
+    /// Set while a persona is switching plugins on and off. Each of them then only opens or
+    /// closes; the tab coming to the front, the activation file written, Home rebuilt and the
+    /// persona lists rebuilt happen once when the persona is done rather than once per plugin.
+    /// </summary>
+    private bool _applyingPersona;
 
     /// <summary>
     /// What the window matches right now: the persona whose set, among the plugins installed,
@@ -1274,18 +1284,29 @@ public sealed class MainWindowViewModel : ObservableObject
         if (persona is null)
             return;
 
+        var switching = System.Diagnostics.Stopwatch.StartNew();
         var activated = Plugins.Where(p => p.IsActivated).Select(p => p.Id).ToHashSet(StringComparer.OrdinalIgnoreCase);
         var (turnOn, turnOff) = Personas.Apply(activated, InstalledPluginIds(), persona);
-        foreach (var id in turnOff)
-            if (Plugins.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase)) is { } entry)
-                entry.IsActivated = false;
-        foreach (var id in turnOn)
-            if (Plugins.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase)) is { } entry)
-                entry.IsActivated = true;
+        _applyingPersona = true;
+        try
+        {
+            foreach (var id in turnOff)
+                if (Plugins.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase)) is { } entry)
+                    entry.IsActivated = false;
+            foreach (var id in turnOn)
+                if (Plugins.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase)) is { } entry)
+                    entry.IsActivated = true;
+        }
+        finally
+        {
+            _applyingPersona = false;
+        }
 
+        PersistActivations();
         SelectedTab = Tabs[0];
+        _home?.Refresh();
         RefreshPersonas();
-        _log.Write("shell", $"Persona '{name}': {turnOn.Count} on, {turnOff.Count} off.");
+        _log.Write("shell", $"Persona '{name}': {turnOn.Count} on, {turnOff.Count} off, in {switching.ElapsedMilliseconds} ms.");
     }
 
     /// <summary>Keeps what is on now under the typed name, replacing a persona of the same name.</summary>
@@ -1365,8 +1386,9 @@ public sealed class MainWindowViewModel : ObservableObject
             if (_popOutsRestored && _popOuts.RememberedOut.Contains(entry.Id))
                 _popOuts.PopOut(tab);
             entry.Error = null;
-            _log.Write("shell", $"Activated '{entry.DisplayName}'.");
-            _home?.Refresh();
+            _log.Write("shell", $"Activated '{entry.DisplayName}' in {opening.ElapsedMilliseconds} ms.");
+            if (!_applyingPersona)
+                _home?.Refresh();
         }
         catch (Exception ex)
         {
@@ -1608,6 +1630,8 @@ public sealed class MainWindowViewModel : ObservableObject
 
     private void Deactivate(PluginEntryViewModel entry)
     {
+        var closing = System.Diagnostics.Stopwatch.StartNew();
+
         // Order matters. Stop its work and take down its notifications before the view goes,
         // or a cancelled task can post into a shell that has forgotten the plugin.
         _background.CancelAllFor(entry.Id);
@@ -1629,8 +1653,9 @@ public sealed class MainWindowViewModel : ObservableObject
             disposableContext.Dispose();
 
         SelectedTab ??= Tabs.FirstOrDefault();
-        _log.Write("shell", $"Deactivated '{entry.DisplayName}'.");
-        _home?.Refresh();
+        _log.Write("shell", $"Deactivated '{entry.DisplayName}' in {closing.ElapsedMilliseconds} ms.");
+        if (!_applyingPersona)
+            _home?.Refresh();
     }
 
     private void PersistActivations() =>

@@ -398,18 +398,42 @@ public sealed class ScreenshotViewModel : ObservableObject, IDisposable, ISearch
     /// <summary>Folders found, merged in, and read. The first thing a fresh tab does is look around.</summary>
     public void Discover()
     {
-        IReadOnlyList<string> libraries;
-        try
-        {
-            libraries = _steamLibraries();
-        }
-        catch (Exception)
-        {
-            libraries = [];
-        }
+        if (IsScanning)
+            return;
+        ErrorMessage = null;
+        IsScanning = true;
+        Status = _host.Text["screenshot.status.reading"];
 
-        var added = Shots.MergeFolders(_settings.Folders,
-            Shots.FindSources(_profileRoot, _appDataRoot, libraries));
+        // The looking is off the UI thread: it reads every Steam library's manifests, hundreds
+        // of small files on what may be a hard drive that has spun down, and on a cold disk that
+        // was most of a minute with the window standing still.
+        var profileRoot = _profileRoot;
+        var appDataRoot = _appDataRoot;
+        var steamLibraries = _steamLibraries;
+        _scan = _host.Background.Run(_host.Text["screenshot.task"], async context =>
+        {
+            var found = await Task.Run(() =>
+            {
+                IReadOnlyList<string> libraries;
+                try
+                {
+                    libraries = steamLibraries();
+                }
+                catch (Exception)
+                {
+                    libraries = [];
+                }
+                return Shots.FindSources(profileRoot, appDataRoot, libraries);
+            }, context.Token);
+            await Dispatcher.UIThread.InvokeAsync(() => Found(found));
+        });
+    }
+
+    /// <summary>What a look around found, merged into the folders and read. Separate so a test can hand it folders directly.</summary>
+    public void Found(IReadOnlyList<(string Folder, string Label)> found)
+    {
+        IsScanning = false;
+        var added = Shots.MergeFolders(_settings.Folders, found);
         Save();
         RebuildFolders();
         if (added > 0)

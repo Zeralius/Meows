@@ -24,7 +24,18 @@ public sealed class DestinationViewModel : ObservableObject
     public GroupConfig Group { get; }
 
     /// <summary>Position in the list, so 1 to 9 can be typed instead of clicked.</summary>
-    public int Index { get; }
+    public int Index { get; private set; }
+
+    /// <summary>A new place in the list after sorting, without reading the queue again.</summary>
+    internal void Renumber(int index)
+    {
+        if (Index == index)
+            return;
+        Index = index;
+        OnPropertyChanged(nameof(Index));
+        OnPropertyChanged(nameof(ShortcutText));
+        OnPropertyChanged(nameof(HasShortcut));
+    }
 
     public string Name => string.IsNullOrWhiteSpace(Group.Name)
         ? MeowsText.Current["kibble.unnamed"]

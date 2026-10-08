@@ -227,8 +227,33 @@ public sealed class ScreenshotTests : IDisposable
     private static void Png(string path, byte fill, int size = 100) =>
         File.WriteAllBytes(path, Enumerable.Repeat(fill, size).ToArray());
 
-    private ScreenshotViewModel Model(FakeHost host, string profile) =>
-        new(host, profile, Path.Combine(_root, "appdata"), () => []);
+    /// <summary>
+    /// A fresh tab hands its look around to the background, which the fake host never runs; done
+    /// here with the same search, landing the way it lands in the app.
+    /// </summary>
+    private ScreenshotViewModel Model(FakeHost host, string profile)
+    {
+        var appData = Path.Combine(_root, "appdata");
+        var model = new ScreenshotViewModel(host, profile, appData, () => []);
+        if (model.Folders.Count == 0)
+            model.Found(Shots.FindSources(profile, appData, []));
+        return model;
+    }
+
+    /// <summary>The look around reads every Steam library; on a cold disk that took most of a minute with the window still.</summary>
+    [Fact]
+    public void First_open_looks_around_in_the_background_not_in_the_constructor()
+    {
+        Profile("Videos", "Captures");
+        var host = new FakeHost(Path.Combine(_root, "host-cold"));
+
+        using var model = new ScreenshotViewModel(host, Path.Combine(_root, "profile"), Path.Combine(_root, "appdata"),
+            () => throw new InvalidOperationException("Steam asked on the UI thread"));
+
+        Assert.Empty(model.Folders);
+        Assert.Contains(host.Work.Requested, t => t.Length > 0);
+        Assert.False(model.HasError);
+    }
 
     [Fact]
     public void First_open_finds_the_usual_folders_and_says_so()
