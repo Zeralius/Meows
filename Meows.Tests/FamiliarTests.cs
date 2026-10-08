@@ -41,7 +41,7 @@ public sealed class FamiliarTests : IDisposable
 
         // The bench is always first; the new kit sits after it and is opened.
         Assert.True(model.Kits[0].IsBench);
-        var kit = Assert.Single(model.Kits.Where(k => !k.IsBench));
+        var kit = Assert.Single(model.Kits, k => !k.IsBench);
         Assert.Equal("Cellar of Woe", kit.Name);
         Assert.Same(kit, model.SelectedKit);
         foreach (var sub in new[] { "maps", "tokens", "handouts", "notes" })

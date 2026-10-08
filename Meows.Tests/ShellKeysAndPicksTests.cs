@@ -108,7 +108,7 @@ public sealed class ShellKeysAndPicksTests
     }
 
     [Fact]
-    public void The_second_start_reaches_the_first_with_its_arguments()
+    public async Task The_second_start_reaches_the_first_with_its_arguments()
     {
         using var first = SingleInstance.TryClaim();
         if (first is null)
@@ -121,7 +121,6 @@ public sealed class ShellKeysAndPicksTests
         first.Listen(args => heard.TrySetResult(args));
 
         Assert.True(SingleInstance.Signal(["--open", "meows.collar"]));
-        Assert.True(heard.Task.Wait(TimeSpan.FromSeconds(5)));
-        Assert.Equal(["--open", "meows.collar"], heard.Task.Result);
+        Assert.Equal(["--open", "meows.collar"], await heard.Task.WaitAsync(TimeSpan.FromSeconds(5)));
     }
 }

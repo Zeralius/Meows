@@ -78,7 +78,7 @@
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr familiar.kits}" />
                     <StackPanel DockPanel.Dock="Bottom" Margin="10,6,10,12" Spacing="6">
-                        <TextBox Text="{Binding NewKitName}" Watermark="{m:Tr familiar.new.placeholder}" FontSize="11" />
+                        <TextBox Text="{Binding NewKitName}" PlaceholderText="{m:Tr familiar.new.placeholder}" FontSize="11" />
                         <Button Content="{m:Tr familiar.new}" Command="{Binding NewKitCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                         <TextBlock Classes="label" TextWrapping="Wrap" Text="{Binding Root}" />
                     </StackPanel>
@@ -113,7 +113,7 @@
                     <DockPanel Grid.Column="0">
                         <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr familiar.notes}" Margin="6,8,6,4" />
                         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" ColumnSpacing="6" Margin="6,0,6,6">
-                            <TextBox Grid.Column="0" Text="{Binding NewNoteName}" Watermark="{m:Tr familiar.notes.new.placeholder}" FontSize="11" />
+                            <TextBox Grid.Column="0" Text="{Binding NewNoteName}" PlaceholderText="{m:Tr familiar.notes.new.placeholder}" FontSize="11" />
                             <Button Grid.Column="1" Content="{m:Tr familiar.notes.new}" Command="{Binding NewNoteCommand}" FontSize="11" />
                         </Grid>
                         <ListBox DockPanel.Dock="Top" ItemsSource="{Binding Notes}" SelectedItem="{Binding SelectedNote}" Background="Transparent" BorderThickness="0" MaxHeight="120" Margin="0,0,0,6">
@@ -159,7 +159,7 @@
                                 <TextBlock Classes="label" Text="{m:Tr familiar.encounter.map}" />
                                 <ComboBox ItemsSource="{Binding Maps}" SelectedItem="{Binding Map}" FontSize="11" HorizontalAlignment="Stretch" />
                                 <TextBlock Classes="label" Text="{m:Tr familiar.encounter.roster}" />
-                                <TextBox Text="{Binding Roster}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="70" FontSize="12" VerticalContentAlignment="Top" Watermark="{m:Tr familiar.encounter.roster.placeholder}" />
+                                <TextBox Text="{Binding Roster}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="70" FontSize="12" VerticalContentAlignment="Top" PlaceholderText="{m:Tr familiar.encounter.roster.placeholder}" />
                                 <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr familiar.encounter.roster.hint}" />
                                 <TextBlock Classes="label" Text="{m:Tr familiar.encounter.notes}" />
                                 <TextBox Text="{Binding Notes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="90" FontSize="12" VerticalContentAlignment="Top" />

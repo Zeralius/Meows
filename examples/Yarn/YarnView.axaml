@@ -18,7 +18,7 @@
             <TextBlock Text="{m:Tr yarn.title}" FontSize="20" FontWeight="SemiBold" />
             <TextBlock Text="{m:Tr yarn.blurb}" Opacity="0.7" TextWrapping="Wrap" />
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBox Text="{Binding Draft}" Watermark="{m:Tr yarn.draft}" Width="260" />
+                <TextBox Text="{Binding Draft}" PlaceholderText="{m:Tr yarn.draft}" Width="260" />
                 <Button Content="{m:Tr yarn.keep}" Command="{Binding KeepCommand}" IsDefault="True" />
             </StackPanel>
             <TextBlock Text="{Binding CountText}" Opacity="0.5" FontSize="12" />

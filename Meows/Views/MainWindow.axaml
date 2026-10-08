@@ -445,7 +445,7 @@
                                             <MenuItem StaysOpenOnClick="True">
                                                 <MenuItem.Header>
                                                     <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <TextBox Text="{Binding Menu.NewGroupName}" Width="160" Watermark="{m:Tr strip.tab.newgroup.name}" />
+                                                        <TextBox Text="{Binding Menu.NewGroupName}" Width="160" PlaceholderText="{m:Tr strip.tab.newgroup.name}" />
                                                         <Button Content="{m:Tr strip.tab.newgroup.go}" Command="{Binding Menu.NewGroupCommand}" />
                                                     </StackPanel>
                                                 </MenuItem.Header>
@@ -508,7 +508,7 @@
                 <TextBox Name="PaletteBox"
                          DockPanel.Dock="Top"
                          Text="{Binding Palette.Query}"
-                         Watermark="{Binding Palette.Hint}"
+                         PlaceholderText="{Binding Palette.Hint}"
                          FontSize="15"
                          Margin="0,0,0,8" />
                 <TextBlock DockPanel.Dock="Top"

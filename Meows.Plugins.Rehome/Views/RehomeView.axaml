@@ -64,7 +64,7 @@
                     <TextBlock Classes="label" Text="{Binding Status}" TextWrapping="Wrap" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
-                    <TextBox Text="{Binding Filter}" Watermark="{m:Tr rehome.filter}" Width="260" FontSize="12" VerticalAlignment="Center" />
+                    <TextBox Text="{Binding Filter}" PlaceholderText="{m:Tr rehome.filter}" Width="260" FontSize="12" VerticalAlignment="Center" />
                     <Button Content="{m:Tr rehome.filter.clear}" Command="{Binding ClearFilterCommand}" IsVisible="{Binding HasFilter}" Classes="small" VerticalAlignment="Center" />
                     <Button Content="{m:Tr rehome.scan}" Command="{Binding ScanCommand}" IsVisible="{Binding !IsBusy}" />
                     <Button Content="{m:Tr rehome.stop}" Command="{Binding CancelCommand}" IsVisible="{Binding IsBusy}" />

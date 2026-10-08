@@ -47,9 +47,9 @@ public sealed class GroupColourChoice(string colour, Action<string> pick)
     public string Colour { get; } = colour;
 
     /// <summary>The colour's own name on the menu, which is the only place it is ever read.</summary>
-    public string Name => MeowsText.Current["strip.colour." + colour];
+    public string Name => MeowsText.Current["strip.colour." + Colour];
 
-    public IBrush Paint => GroupPaint.For(colour);
+    public IBrush Paint => GroupPaint.For(Colour);
 
     public RelayCommand PickCommand { get; } = new(() => pick(colour));
 }

@@ -58,7 +58,7 @@
             <StackPanel Spacing="8">
                 <StackPanel Orientation="Horizontal" Spacing="8">
                     <TextBlock Text="{m:Tr trail.which}" VerticalAlignment="Center" />
-                    <TextBox Text="{Binding Command}" Watermark="dotnet" Width="200" />
+                    <TextBox Text="{Binding Command}" PlaceholderText="dotnet" Width="200" />
                     <Button Content="{m:Tr trail.which.go}" Command="{Binding ResolveCommand}" IsDefault="True" />
                 </StackPanel>
                 <TextBlock Classes="mono"

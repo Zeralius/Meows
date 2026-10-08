@@ -58,7 +58,7 @@ public static class Shadow
         var names = new HashSet<string>(fileNames, StringComparer.OrdinalIgnoreCase);
         var stems = fileNames
             .GroupBy(n => Path.GetFileNameWithoutExtension(n), StringComparer.OrdinalIgnoreCase)
-            .ToDictionary(g => g.Key, g => g.Select(Path.GetExtension).ToList(), StringComparer.OrdinalIgnoreCase);
+            .ToDictionary(g => g.Key, g => g.Select(n => Path.GetExtension(n)).ToList(), StringComparer.OrdinalIgnoreCase);
         var videos = fileNames.Where(n => Videos.Contains(Path.GetExtension(n))).ToList();
 
         foreach (var name in fileNames)

@@ -481,7 +481,7 @@
                     <StackPanel Margin="14,12" Spacing="6">
                         <TextBlock Classes="section" Margin="0" Text="{m:Tr purrge.groom.rule}" />
                         <TextBlock Classes="label" Text="{m:Tr purrge.groom.filter}" />
-                        <TextBox Text="{Binding Groom.Filter}" Watermark="*.jpg; *.png" />
+                        <TextBox Text="{Binding Groom.Filter}" PlaceholderText="*.jpg; *.png" />
                         <CheckBox Content="{m:Tr purrge.groom.dropcounter}" IsChecked="{Binding Groom.DropCopyCounter}" />
                         <TextBlock Classes="label" Text="{m:Tr purrge.groom.find}" />
                         <TextBox Text="{Binding Groom.Find}" />
