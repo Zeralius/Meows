@@ -457,6 +457,13 @@ public sealed class ShellPreferences
     /// <summary>One-off notifications as Windows notifications while the window is not in front.</summary>
     public bool SayOutside { get; set; } = true;
 
+    /// <summary>
+    /// With <see cref="SayOutside"/> on: only what wants doing, which is every condition and the
+    /// events that are a warning or worse, rather than every finished job too. Off by default,
+    /// which is how it was before there was a choice.
+    /// </summary>
+    public bool SayOutsideOnlyTrouble { get; set; }
+
     /// <summary>A notification once a week counting what the week's history holds.</summary>
     public bool WeeklyRecap { get; set; } = true;
 

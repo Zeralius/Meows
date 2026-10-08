@@ -52,7 +52,7 @@ public sealed class StripDragTests : IDisposable
         var background = new BackgroundTaskService(notifications, log);
         var store = new MeowsStore(_root, _ => { });
         var updater = new PluginUpdates("0.0.0-test", new HttpClient(new NoInternet()));
-        var model = new MainWindowViewModel(new PluginCatalog(log), settings, log, notifications, background, text,
+        var model = new MainWindowViewModel(new PluginCatalog(log, []), settings, log, notifications, background, text,
             settings.LoadPreferences(), store, updater);
         model.Initialize();
         return model;

@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Security;
 using System.Text;
+using Meows.Plugins.Abstractions;
 
 namespace Meows.Services;
 
@@ -26,18 +27,21 @@ public enum ToastSurface
 public static class ToastRule
 {
     /// <summary>
-    /// An event always. A condition when it is new or its words change, not on every pass that
-    /// re-sets it: Collar looks at its dates daily and sets the same "2 are due" each time, which
-    /// is one toast, and a second only when it becomes "3 are due". A drive filling all week
-    /// says so once.
+    /// An event always, or only a warning or worse when <paramref name="onlyTrouble"/>: an Info
+    /// event is usually "finished", and finished is not worth leaving your work for. A condition
+    /// when it is new or its words change, not on every pass that re-sets it: Collar looks at its
+    /// dates daily and sets the same "2 are due" each time, which is one toast, and a second only
+    /// when it becomes "3 are due". A drive filling all week says so once. A condition is
+    /// something that wants doing whatever its severity, so <paramref name="onlyTrouble"/> keeps it.
     /// </summary>
     /// <param name="replaced">The condition this one took the place of under the same key, or null.</param>
-    public static bool ShouldSay(NotificationItem item, NotificationItem? replaced) =>
-        !item.IsCondition
-        || replaced is null
-        || replaced.Title != item.Title
-        || replaced.Message != item.Message
-        || replaced.Severity != item.Severity;
+    public static bool ShouldSay(NotificationItem item, NotificationItem? replaced, bool onlyTrouble = false) =>
+        item.IsCondition
+            ? replaced is null
+              || replaced.Title != item.Title
+              || replaced.Message != item.Message
+              || replaced.Severity != item.Severity
+            : !onlyTrouble || item.Severity >= NotificationSeverity.Warning;
 }
 
 /// <summary>

@@ -52,9 +52,25 @@ public sealed class ToastRuleTests
     }
 
     [Fact]
-    public void An_event_is_always_said()
+    public void An_event_is_said_unless_only_trouble_is_wanted_and_it_is_only_news()
     {
-        var item = new NotificationItem { Source = "meows.chonk", Title = "Measured", Severity = NotificationSeverity.Info };
-        Assert.True(ToastRule.ShouldSay(item, null));
+        var finished = new NotificationItem { Source = "meows.chonk", Title = "Measured", Severity = NotificationSeverity.Info };
+        var failed = new NotificationItem { Source = "meows.chonk", Title = "Could not read D:", Severity = NotificationSeverity.Warning };
+
+        Assert.True(ToastRule.ShouldSay(finished, null));
+        Assert.True(ToastRule.ShouldSay(failed, null));
+
+        Assert.False(ToastRule.ShouldSay(finished, null, onlyTrouble: true));
+        Assert.True(ToastRule.ShouldSay(failed, null, onlyTrouble: true));
+    }
+
+    [Fact]
+    public void A_condition_wants_doing_whatever_its_severity()
+    {
+        var due = new NotificationItem
+        {
+            Source = "meows.collar", Title = "2 are due", Severity = NotificationSeverity.Info, ConditionKey = "due",
+        };
+        Assert.True(ToastRule.ShouldSay(due, null, onlyTrouble: true));
     }
 }

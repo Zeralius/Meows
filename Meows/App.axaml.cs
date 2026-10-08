@@ -84,7 +84,7 @@ public partial class App : Application
 
             void SayOutside(NotificationItem item, NotificationItem? replaced)
             {
-                if (!preferences.SayOutside || tray.IsWindowActive || !ToastRule.ShouldSay(item, replaced))
+                if (!preferences.SayOutside || tray.IsWindowActive || !ToastRule.ShouldSay(item, replaced, preferences.SayOutsideOnlyTrouble))
                     return;
                 var pressable = item.Actions
                     .Select(action => (action.Label, buttons.Remember(() =>

@@ -138,10 +138,18 @@ public sealed class VetTests : IDisposable
 
     private FakeHost Host(string name) => new(Path.Combine(_root, "host-" + name));
 
+    /// <summary>
+    /// One roomy drive and no reboot waiting, whatever this PC is like: a nearly full drive here
+    /// would otherwise keep the health condition up through every test that expects it gone.
+    /// </summary>
+    private static readonly MachineReadings Healthy = new(
+        () => [new DriveRow { Name = "C:\\", TotalBytes = 500L << 30, FreeBytes = 250L << 30 }],
+        () => false);
+
     [Fact]
     public void Opens_with_a_checkup_and_something_to_say()
     {
-        using var model = new VetViewModel(Host("open"));
+        using var model = new VetViewModel(Host("open"), Healthy);
 
         Assert.False(string.IsNullOrWhiteSpace(model.Status));
         Assert.False(model.HasError);
@@ -158,7 +166,7 @@ public sealed class VetTests : IDisposable
         File.WriteAllText(file, "x");
         File.SetLastWriteTimeUtc(file, DateTime.UtcNow.AddDays(-9).Date);
 
-        using var model = new VetViewModel(host);
+        using var model = new VetViewModel(host, Healthy);
         host.Picks.Answers.Enqueue(backup);
         model.SetBackupCommand.Execute(null);
 
@@ -172,21 +180,32 @@ public sealed class VetTests : IDisposable
         File.SetLastWriteTimeUtc(file, DateTime.UtcNow);
         model.CheckupCommand.Execute(null);
         Assert.DoesNotContain("backup", model.Summary);
-
-        // The checkup reads the real drives and reboot key too, so a machine with a full drive
-        // keeps the condition up for that. Only a machine with nothing else to say clears it.
-        var rest = Checkup.Judge(Checkup.Run(null, DateTime.UtcNow), backupSet: false, Checkup.DefaultWarnDays, TestStrings.Load());
-        if (rest.IsTrouble)
-            Assert.Single(host.Conditions);
-        else
-            Assert.Empty(host.Conditions);
+        Assert.Empty(host.Conditions);
         Assert.Contains(host.Store.Events, e => e.Kind == "checked");
+    }
+
+    [Fact]
+    public void A_full_drive_raises_the_condition_and_room_made_takes_it_down()
+    {
+        var free = 2L << 30;
+        var machine = new MachineReadings(
+            () => [new DriveRow { Name = "S:\\", TotalBytes = 500L << 30, FreeBytes = free }],
+            () => false);
+        var host = Host("full");
+
+        using var model = new VetViewModel(host, machine);
+        Assert.Single(host.Conditions);
+        Assert.Contains("S:\\", model.Summary);
+
+        free = 250L << 30;
+        model.CheckupCommand.Execute(null);
+        Assert.Empty(host.Conditions);
     }
 
     [Fact]
     public void Warn_days_fall_back_to_a_week_when_not_a_number()
     {
-        using var model = new VetViewModel(Host("warn"));
+        using var model = new VetViewModel(Host("warn"), Healthy);
 
         model.WarnDaysText = "nonsense";
 
@@ -200,7 +219,7 @@ public sealed class VetTests : IDisposable
         var target = Path.Combine(_root, "vet.zip");
         host.Picks.Answers.Enqueue(target);
 
-        using var model = new VetViewModel(host);
+        using var model = new VetViewModel(host, Healthy);
         model.ExportCommand.Execute(null);
 
         var deadline = DateTime.UtcNow.AddSeconds(5);
@@ -215,7 +234,7 @@ public sealed class VetTests : IDisposable
     [Fact]
     public void Search_reaches_into_the_drives_without_throwing()
     {
-        using var model = new VetViewModel(Host("search"));
+        using var model = new VetViewModel(Host("search"), Healthy);
 
         var hits = model.Search("zzz-no-such-drive", 5);
 
@@ -234,13 +253,13 @@ public sealed class VetTests : IDisposable
     public void Glance_while_off_says_what_the_tab_would_say()
     {
         var inner = Host("glance-off");
-        using (var model = new VetViewModel(inner))
+        using (var model = new VetViewModel(inner, Healthy))
         {
         }
 
         var glance = new VetPlugin().GlanceWhileOff(new Dormant(inner, "meows.vet"));
 
-        using var open = new VetViewModel(inner);
+        using var open = new VetViewModel(inner, Healthy);
         Assert.Equal(open.Glance(), glance);
     }
 
@@ -248,7 +267,7 @@ public sealed class VetTests : IDisposable
     public async Task The_check_job_runs_and_reports()
     {
         var inner = Host("job");
-        using (var model = new VetViewModel(inner))
+        using (var model = new VetViewModel(inner, Healthy))
         {
         }
 

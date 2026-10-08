@@ -229,6 +229,14 @@
                               IsChecked="{Binding SayOutside}"
                               Margin="0,4,0,0" />
                     <TextBlock Classes="hint" Text="{Binding OutsideHow}" />
+                    <StackPanel Spacing="4" Margin="24,0,0,0" IsEnabled="{Binding SayOutside}">
+                        <RadioButton GroupName="outside"
+                                     Content="{m:Tr settings.outside.everything}"
+                                     IsChecked="{Binding IsOutsideEverything}" />
+                        <RadioButton GroupName="outside"
+                                     Content="{m:Tr settings.outside.trouble}"
+                                     IsChecked="{Binding IsOutsideOnlyTrouble}" />
+                    </StackPanel>
                 </StackPanel>
             </Border>
 

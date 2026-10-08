@@ -40,6 +40,15 @@ public sealed record Verdict(bool IsTrouble, IReadOnlyList<string> Parts);
 /// the newest file in the backup folder is. Reading only, always; the only thing Vet writes is
 /// the diagnostic zip it is asked for.
 /// </summary>
+/// <summary>
+/// Where a checkup reads the machine: the drives and the reboot key. The real one in the app; a
+/// test hands in drives of its own, so what it asserts does not depend on how full this PC is.
+/// </summary>
+public sealed record MachineReadings(Func<List<DriveRow>> Drives, Func<bool?> RebootNeeded)
+{
+    public static MachineReadings Real { get; } = new(Checkup.Drives, Checkup.RebootNeeded);
+}
+
 public static class Checkup
 {
     /// <summary>A backup older than this many days counts as stale.</summary>
@@ -145,15 +154,18 @@ public static class Checkup
         return Math.Max(0, days);
     }
 
-    public static CheckupSummary Run(string? backupFolder, DateTime nowUtc)
+    public static CheckupSummary Run(string? backupFolder, DateTime nowUtc) =>
+        Run(backupFolder, nowUtc, Drives(), RebootNeeded());
+
+    /// <summary>One checkup from drives and a reboot answer already read, so nothing is read twice.</summary>
+    public static CheckupSummary Run(string? backupFolder, DateTime nowUtc, List<DriveRow> drives, bool? rebootNeeded)
     {
-        var drives = Drives();
         return new CheckupSummary
         {
             AtUtc = nowUtc,
             Drives = drives.Count,
             LowDrives = drives.Where(d => d.IsLow).Select(d => d.Name).ToList(),
-            RebootNeeded = RebootNeeded(),
+            RebootNeeded = rebootNeeded,
             BackupDays = BackupDays(backupFolder, nowUtc),
             BackupStale = false,
         };

@@ -156,6 +156,10 @@ The **Settings** tab has two choices, and both take effect as you make them:
   scan you started, carries on while the window is hidden, and the icon shows a dot when there is
   something to read and a ring while something is still working. *Quit* is in the icon's menu. Untick the setting and the close button quits,
   as it did before 2.0.
+- **Say it outside the window**: while the window is not in front, notifications also reach
+  Windows, buttons and all. Either everything, finished jobs included, or only what wants doing:
+  dates come round, warnings and errors. Something that stays true all week, like a drive filling,
+  says so once and again only when its words change.
 - **Server**: the machine the bot and Foundry run on, for the plugins that can put something
   there. A folder, meaning a share, a mapped drive or anything Windows can already open, or SFTP
   with an SSH key, kept sealed to your Windows account rather than pointed at. For SFTP, **Test**

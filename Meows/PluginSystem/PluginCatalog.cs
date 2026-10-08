@@ -8,8 +8,20 @@ namespace Meows.Plugins;
 public sealed class PluginCatalog
 {
     private readonly ShellLog _log;
+    private readonly IReadOnlyList<string>? _directories;
 
     public PluginCatalog(ShellLog log) => _log = log;
+
+    /// <summary>
+    /// Looks only where it is told, never at MEOWS_PLUGINS_DIR or above the exe. For tests: a
+    /// development checkout keeps its built plugins in plugins/, which the walk up from bin
+    /// finds, so a shell under test would otherwise see whatever this machine last built.
+    /// </summary>
+    public PluginCatalog(ShellLog log, IReadOnlyList<string> directories)
+    {
+        _log = log;
+        _directories = directories;
+    }
 
     public IReadOnlyList<string> PluginsDirectories { get; private set; } = [];
 
@@ -102,7 +114,7 @@ public sealed class PluginCatalog
 
     public IReadOnlyList<PluginDescriptor> Discover()
     {
-        PluginsDirectories = ResolvePluginsDirectories();
+        PluginsDirectories = _directories ?? ResolvePluginsDirectories();
         if (PluginsDirectories.Count == 0)
         {
             _log.Write("plugins", "No plugins directory found. Set MEOWS_PLUGINS_DIR to point at one.");

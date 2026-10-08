@@ -55,9 +55,12 @@ public sealed class VetViewModel : ObservableObject, IDisposable, ISearchable, I
     private string? _status;
     private string? _errorMessage;
 
-    public VetViewModel(IMeowsHost host)
+    private readonly MachineReadings _machine;
+
+    public VetViewModel(IMeowsHost host, MachineReadings? machine = null)
     {
         _host = host;
+        _machine = machine ?? MachineReadings.Real;
         _settings = host.LoadSettings<VetSettings>() ?? new VetSettings();
 
         CheckupCommand = new RelayCommand(CheckupNow);
@@ -170,11 +173,11 @@ public sealed class VetViewModel : ObservableObject, IDisposable, ISearchable, I
     {
         ErrorMessage = null;
 
-        _drives = Checkup.Drives();
-        _reboot = Checkup.RebootNeeded();
+        _drives = _machine.Drives();
+        _reboot = _machine.RebootNeeded();
         _backupDays = Checkup.BackupDays(_settings.BackupFolder, DateTime.UtcNow);
 
-        var summary = Checkup.Run(_settings.BackupFolder, DateTime.UtcNow);
+        var summary = Checkup.Run(_settings.BackupFolder, DateTime.UtcNow, _drives, _reboot);
         summary.BackupStale = HasBackup && _backupDays is { } days && days > _settings.WarnDays;
         _settings.LastCheckup = summary;
         Save();

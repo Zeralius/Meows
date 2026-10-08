@@ -129,6 +129,30 @@ public sealed class SettingsViewModel : ObservableObject
         }
     }
 
+    /// <summary>Every notification outside the window, finished jobs included. The default.</summary>
+    public bool IsOutsideEverything
+    {
+        get => !_preferences.SayOutsideOnlyTrouble;
+        set { if (value) SetOutsideOnlyTrouble(false); }
+    }
+
+    /// <summary>Only what wants doing outside the window: conditions, warnings and errors.</summary>
+    public bool IsOutsideOnlyTrouble
+    {
+        get => _preferences.SayOutsideOnlyTrouble;
+        set { if (value) SetOutsideOnlyTrouble(true); }
+    }
+
+    private void SetOutsideOnlyTrouble(bool onlyTrouble)
+    {
+        if (_preferences.SayOutsideOnlyTrouble == onlyTrouble)
+            return;
+        _preferences.SayOutsideOnlyTrouble = onlyTrouble;
+        _settings.SavePreferences(_preferences);
+        OnPropertyChanged(nameof(IsOutsideEverything));
+        OnPropertyChanged(nameof(IsOutsideOnlyTrouble));
+    }
+
     /// <summary>The week counted from the history, as one notification a week.</summary>
     public bool WeeklyRecap
     {

@@ -55,7 +55,7 @@ public sealed class ShellViewSmokeTests : IDisposable
         var background = new BackgroundTaskService(notifications, log);
         var store = new MeowsStore(_root, _ => { });
         var updater = new PluginUpdates("0.0.0-test", new HttpClient(new NoInternet()));
-        var model = new MainWindowViewModel(new PluginCatalog(log), settings, log, notifications, background, text,
+        var model = new MainWindowViewModel(new PluginCatalog(log, []), settings, log, notifications, background, text,
             settings.LoadPreferences(), store, updater);
         model.Initialize();
         return (model, settings);
@@ -160,11 +160,9 @@ public sealed class ShellViewSmokeTests : IDisposable
         var previousSink = Logger.Sink;
         Logger.Sink = complaints;
 
-        // Ids no plugin has: a dev checkout keeps its built plugins in plugins/, which the
-        // catalogue finds by walking up from bin, so a real id would be installed there.
         var (model, settings) = Build(p => p.Rules.Add(new InstinctRule
         {
-            Source = "meows.test.gone", Kind = "saved", Target = "meows.test.away", Action = "check", Matching = "paws",
+            Source = "meows.birdwatch", Kind = "saved", Target = "meows.portion", Action = "check", Matching = "paws",
         }));
         Window? window = null;
         try
@@ -176,8 +174,8 @@ public sealed class ShellViewSmokeTests : IDisposable
             Settle();
 
             var rows = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text).ToList();
-            Assert.Contains(rows, t => t is not null && t.Contains("meows.test.gone") && t.Contains("paws"));
-            Assert.Contains(rows, t => t is not null && t.StartsWith("Waiting for meows.test.gone"));
+            Assert.Contains(rows, t => t is not null && t.Contains("meows.birdwatch") && t.Contains("paws"));
+            Assert.Contains(rows, t => t is not null && t.StartsWith("Waiting for meows.birdwatch"));
         }
         finally
         {
