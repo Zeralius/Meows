@@ -203,6 +203,50 @@ public sealed class VetTests : IDisposable
     }
 
     [Fact]
+    public void A_nearly_full_drive_draws_a_nearly_full_bar_and_says_so_under_it()
+    {
+        var machine = new MachineReadings(
+            () => [new DriveRow { Name = "S:\\", TotalBytes = 1000L << 30, FreeBytes = 20L << 30 }],
+            () => false);
+        var host = Host("bars");
+
+        using var model = new VetViewModel(host, machine);
+        var row = Assert.Single(model.Drives);
+
+        // Used, as Explorer draws it, by default.
+        Assert.True(model.IsBarUsed);
+        Assert.Equal(0.98, row.BarValue, 2);
+        Assert.Equal("98 % full", row.PercentText);
+        Assert.Equal("20 GB free of 1000 GB · almost full", row.RoomText);
+
+        // The room left, when picked; remembered for the next opening.
+        model.IsBarFree = true;
+        row = Assert.Single(model.Drives);
+        Assert.Equal(0.02, row.BarValue, 2);
+        Assert.Equal("2 % free", row.PercentText);
+
+        using var again = new VetViewModel(host, machine);
+        Assert.True(again.IsBarFree);
+    }
+
+    [Fact]
+    public void A_drive_with_room_says_only_how_much()
+    {
+        using var model = new VetViewModel(Host("roomy"), Healthy);
+        Assert.Equal("250 GB free of 500 GB", Assert.Single(model.Drives).RoomText);
+    }
+
+    [Theory]
+    [InlineData(512L, "512 B")]
+    [InlineData(20L << 30, "20 GB")]
+    [InlineData(1L << 40, "1 TB")]
+    [InlineData((1L << 40) + (1L << 39), "1.5 TB")]
+    public void Sizes_read_in_the_largest_unit_that_fits(long bytes, string expected)
+    {
+        Assert.Equal(expected, Checkup.Humanise(bytes));
+    }
+
+    [Fact]
     public void Warn_days_fall_back_to_a_week_when_not_a_number()
     {
         using var model = new VetViewModel(Host("warn"), Healthy);

@@ -179,6 +179,7 @@ public sealed class AccountSortingTests : IDisposable
 
         // A second opening reads the settings file rather than the object that wrote it.
         using var again = new TinViewModel(host);
+        again.Refresh();
 
         Assert.Equal("Mama", again.AccountName);
         Assert.Equal("Mama", again.Accounts.Single(a => a.Key == Hers).Name);

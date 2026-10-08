@@ -582,6 +582,29 @@ public sealed class TinAdviceTests : IDisposable
         return model;
     }
 
+    /// <summary>
+    /// Opening the tab, which a persona does for several plugins at once, hands the read to the
+    /// background rather than standing the window still while the statements are parsed.
+    /// </summary>
+    [Fact]
+    public void Opening_with_a_folder_reads_in_the_background_not_in_the_constructor()
+    {
+        File.WriteAllText(Path.Combine(_folder, "giro.csv"),
+            "Buchungstag;Beguenstigter;Betrag" + Environment.NewLine + "01.08.2026;FITNESS NORD;-29,90" + Environment.NewLine);
+        var host = new FakeHost(Path.Combine(_root, "data"));
+        host.SaveSettings(new TinSettings { Folder = _folder });
+
+        using var model = new TinViewModel(host);
+
+        Assert.Contains("Tin reading the statements", host.Work.Requested);
+        Assert.Empty(model.Sources);
+        Assert.Equal("Reading the statements…", model.Status);
+
+        // The same read in place, as a test or a deliberate change does it.
+        model.Refresh();
+        Assert.Single(model.Sources);
+    }
+
     [Fact]
     public void A_folder_of_pdfs_says_what_to_ask_the_bank_for()
     {

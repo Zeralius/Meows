@@ -81,8 +81,10 @@
   "tin.status.hidden": "{0} weggelegt",
   "tin.status.nofiles": "Keine CSV-Dateien in dem Ordner.",
   "tin.status.read": "{0} wiederkehrend",
+  "tin.status.reading": "Lese die Kontoauszüge…",
   "tin.status.restored": "{0} ist wieder in der Liste",
   "tin.status.start": "Noch nichts eingelesen.",
   "tin.summary": "{0} Dateien, {1} Buchungen, {2} doppelte Zeilen übersprungen",
+  "tin.task": "Tin liest die Kontoauszüge",
   "tin.total": "{0} im Monat, {1} im Jahr"
 }

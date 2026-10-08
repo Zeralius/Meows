@@ -22,6 +22,14 @@
         <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
         </Style>
+        <!-- A low drive: the bar, its percentage and its sentence in red, not only the stripe. -->
+        <Style Selector="ProgressBar.low">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsDangerStrong}" />
+        </Style>
+        <Style Selector="TextBlock.low">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsDangerText}" />
+            <Setter Property="Opacity" Value="1" />
+        </Style>
         <Style Selector="Border.marker">
             <Setter Property="Width" Value="4" />
             <Setter Property="CornerRadius" Value="2" />
@@ -63,7 +71,24 @@
             <StackPanel Margin="16" Spacing="16" MaxWidth="700" HorizontalAlignment="Left">
 
                 <StackPanel Spacing="4">
-                    <TextBlock Classes="section" Text="{m:Tr vet.drives}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                        <TextBlock Grid.Column="0"
+                                   Classes="section"
+                                   Text="{m:Tr vet.drives}"
+                                   VerticalAlignment="Center" />
+                        <!-- Which part the bar is: the used part like Explorer, or the room left. -->
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10">
+                            <TextBlock Classes="label" Text="{m:Tr vet.bar}" VerticalAlignment="Center" />
+                            <RadioButton GroupName="vetBar"
+                                         Content="{m:Tr vet.bar.used}"
+                                         IsChecked="{Binding IsBarUsed}"
+                                         FontSize="11" />
+                            <RadioButton GroupName="vetBar"
+                                         Content="{m:Tr vet.bar.free}"
+                                         IsChecked="{Binding IsBarFree}"
+                                         FontSize="11" />
+                        </StackPanel>
+                    </Grid>
                     <TextBlock Classes="label"
                                Text="{m:Tr vet.empty}"
                                TextWrapping="Wrap"
@@ -75,8 +100,9 @@
                              BorderThickness="0">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:DriveViewModel">
-                                <Grid ColumnDefinitions="4,Auto,*,Auto" ColumnSpacing="10">
+                                <Grid ColumnDefinitions="4,Auto,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="10">
                                     <Border Grid.Column="0"
+                                            Grid.RowSpan="2"
                                             Classes="marker"
                                             Background="{DynamicResource MeowsDangerStrong}"
                                             IsVisible="{Binding IsLow}" />
@@ -86,15 +112,27 @@
                                                FontSize="20"
                                                VerticalAlignment="Center" />
                                     <ProgressBar Grid.Column="2"
+                                                 Classes.low="{Binding IsLow}"
                                                  Minimum="0"
                                                  Maximum="1"
-                                                 Value="{Binding FreeFraction}"
+                                                 Value="{Binding BarValue}"
                                                  VerticalAlignment="Center"
-                                                 MinHeight="10" />
+                                                 MinHeight="14" />
                                     <TextBlock Grid.Column="3"
-                                               Text="{Binding RoomText}"
-                                               FontSize="11"
+                                               Classes.low="{Binding IsLow}"
+                                               Text="{Binding PercentText}"
+                                               FontWeight="SemiBold"
+                                               MinWidth="70"
+                                               TextAlignment="Right"
                                                VerticalAlignment="Center" />
+                                    <TextBlock Grid.Row="1"
+                                               Grid.Column="2"
+                                               Grid.ColumnSpan="2"
+                                               Classes.low="{Binding IsLow}"
+                                               Text="{Binding RoomText}"
+                                               FontSize="12"
+                                               Opacity="0.7"
+                                               Margin="0,3,0,0" />
                                 </Grid>
                             </DataTemplate>
                         </ListBox.ItemTemplate>

@@ -12,26 +12,45 @@ public sealed class VetSettings
     public int WarnDays { get; set; } = Checkup.DefaultWarnDays;
 
     public CheckupSummary? LastCheckup { get; set; }
+
+    /// <summary>The drive bars drawn as the room left rather than the part used, as before 5.3.0.</summary>
+    public bool BarsShowFree { get; set; }
 }
 
-public sealed class DriveViewModel : ObservableObject
+/// <summary>
+/// One drive as a row: a bar, a percentage beside it and a sentence under it. The bar is the
+/// used part by default, the way Explorer draws it, so a drive that is nearly full looks nearly
+/// full; <paramref name="showFree"/> draws the room left instead. Either way it is red when the
+/// drive is low, and the sentence says so in words.
+/// </summary>
+public sealed class DriveViewModel(DriveRow drive, bool showFree, IMeowsText text) : ObservableObject
 {
-    public DriveViewModel(DriveRow drive)
-    {
-        Drive = drive;
-    }
-
-    public DriveRow Drive { get; }
+    public DriveRow Drive { get; } = drive;
 
     public string Name => Drive.Name;
 
     public bool IsLow => Drive.IsLow;
 
-    public string RoomText => Checkup.Humanise(Drive.FreeBytes) + " / " + Checkup.Humanise(Drive.TotalBytes);
-
     public double FreeFraction => Drive.TotalBytes <= 0
         ? 0
         : Math.Clamp((double)Drive.FreeBytes / Drive.TotalBytes, 0, 1);
+
+    /// <summary>What the bar is filled to: the used part, or the free part when that was picked.</summary>
+    public double BarValue => showFree ? FreeFraction : 1 - FreeFraction;
+
+    /// <summary>Beside the bar, the same measure the bar draws: "93 % full" or "7 % free".</summary>
+    public string PercentText => text.Format(showFree ? "vet.drive.percent.free" : "vet.drive.percent.used",
+        Math.Round(BarValue * 100));
+
+    /// <summary>Under the bar, in words, whichever way the bar is drawn.</summary>
+    public string RoomText
+    {
+        get
+        {
+            var room = text.Format("vet.drive.room", Checkup.Humanise(Drive.FreeBytes), Checkup.Humanise(Drive.TotalBytes));
+            return IsLow ? room + " · " + text["vet.drive.low"] : room;
+        }
+    }
 }
 
 /// <summary>
@@ -182,11 +201,7 @@ public sealed class VetViewModel : ObservableObject, IDisposable, ISearchable, I
         _settings.LastCheckup = summary;
         Save();
 
-        var keep = Selected?.Name;
-        Drives.Clear();
-        foreach (var drive in _drives)
-            Drives.Add(new DriveViewModel(drive));
-        Selected = Drives.FirstOrDefault(d => d.Name == keep);
+        ShowDrives();
 
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(Summary));
@@ -317,8 +332,44 @@ public sealed class VetViewModel : ObservableObject, IDisposable, ISearchable, I
         }
     }
 
+    /// <summary>The rows from the last reading, drawn the way the bars are set to be. Reads nothing.</summary>
+    private void ShowDrives()
+    {
+        var keep = Selected?.Name;
+        Drives.Clear();
+        foreach (var drive in _drives)
+            Drives.Add(new DriveViewModel(drive, _settings.BarsShowFree, _host.Text));
+        Selected = Drives.FirstOrDefault(d => d.Name == keep);
+    }
+
+    /// <summary>The bars as the part used, the way Explorer draws them. The default.</summary>
+    public bool IsBarUsed
+    {
+        get => !_settings.BarsShowFree;
+        set { if (value) SetBarsShowFree(false); }
+    }
+
+    /// <summary>The bars as the room left.</summary>
+    public bool IsBarFree
+    {
+        get => _settings.BarsShowFree;
+        set { if (value) SetBarsShowFree(true); }
+    }
+
+    private void SetBarsShowFree(bool showFree)
+    {
+        if (_settings.BarsShowFree == showFree)
+            return;
+        _settings.BarsShowFree = showFree;
+        Save();
+        ShowDrives();
+        OnPropertyChanged(nameof(IsBarUsed));
+        OnPropertyChanged(nameof(IsBarFree));
+    }
+
     private void Retranslate()
     {
+        ShowDrives();
         OnEverythingChanged();
         OnPropertyChanged(nameof(Summary));
         OnPropertyChanged(nameof(BackupText));

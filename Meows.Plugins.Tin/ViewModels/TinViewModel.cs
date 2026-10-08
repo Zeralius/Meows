@@ -3,6 +3,7 @@ using System.Globalization;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
+using Avalonia.Threading;
 using Meows.Plugins.Abstractions;
 using Meows.Plugins.Tin.Services;
 
@@ -350,6 +351,8 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable, I
     public const string BucketHidden = "hidden";
 
     private readonly IMeowsHost _host;
+    private volatile bool _readingNow;
+    private volatile bool _disposed;
     private readonly TinSettings _settings;
     private readonly LanguageWatch _language;
 
@@ -368,7 +371,7 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable, I
         _settings = host.LoadSettings<TinSettings>() ?? new TinSettings();
         _account = _settings.Account;
 
-        RefreshCommand = new RelayCommand(Refresh);
+        RefreshCommand = new RelayCommand(RefreshInBackground);
         FilterCommand = new RelayCommand(p => ApplyFilter((p as BucketViewModel)?.Key));
         AccountCommand = new RelayCommand(p => ShowAccount((p as AccountViewModel)?.Key ?? ""));
         OpenFolderCommand = new RelayCommand(() => Open(Folder), () => Directory.Exists(Folder));
@@ -377,7 +380,7 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable, I
         ClearSourceCommand = new RelayCommand(() => SelectedSource = null, () => SelectedSource is not null);
         ChartCommand = new RelayCommand(() => ShowChart = !ShowChart);
 
-        Refresh();
+        RefreshInBackground();
 
         _language = new LanguageWatch(Retranslate);
     }
@@ -807,12 +810,62 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable, I
             return;
         }
 
-        var saved = _settings.Columns.ToDictionary(
-            pair => pair.Key,
-            pair => new ColumnMap(pair.Value.Date, pair.Value.Name, pair.Value.Amount, pair.Value.Reference),
-            StringComparer.Ordinal);
+        Show(Statement.Read(Folder, SavedColumns(), _settings.FileAccounts));
+    }
 
-        _reading = Statement.Read(Folder, saved, _settings.FileAccounts);
+    /// <summary>
+    /// The same read, off the UI thread: opening the tab, switching a persona that turns Tin on,
+    /// or pressing Refresh. A folder of statements and PDFs takes seconds to read, and every one
+    /// of them used to be a second the whole window stood still. A deliberate change (a folder
+    /// picked, a file told which account it is) still reads in place, so what it changed is on
+    /// screen the moment it returns.
+    /// </summary>
+    private void RefreshInBackground()
+    {
+        if (!HasFolder || !Directory.Exists(Folder))
+        {
+            Refresh();
+            return;
+        }
+        if (_readingNow)
+            return;
+
+        ErrorMessage = null;
+        _readingNow = true;
+        Status = _host.Text["tin.status.reading"];
+
+        // Copies, so the read does not race an edit made on the tab while it runs.
+        var folder = Folder;
+        var saved = SavedColumns();
+        var accounts = new Dictionary<string, string>(_settings.FileAccounts, StringComparer.Ordinal);
+
+        _host.Background.Run(_host.Text["tin.task"], async context =>
+        {
+            try
+            {
+                var reading = await Task.Run(() => Statement.Read(folder, saved, accounts), context.Token);
+                await Dispatcher.UIThread.InvokeAsync(() =>
+                {
+                    if (!_disposed)
+                        Show(reading);
+                });
+            }
+            finally
+            {
+                _readingNow = false;
+            }
+        });
+    }
+
+    private Dictionary<string, ColumnMap> SavedColumns() => _settings.Columns.ToDictionary(
+        pair => pair.Key,
+        pair => new ColumnMap(pair.Value.Date, pair.Value.Name, pair.Value.Amount, pair.Value.Reference),
+        StringComparer.Ordinal);
+
+    /// <summary>What a read found, put on screen. On the UI thread.</summary>
+    private void Show(Reading reading)
+    {
+        _reading = reading;
 
         // An account that has gone away, because its files were moved out of the folder, should
         // not leave the tab showing an empty list and no way back.
@@ -1167,7 +1220,11 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable, I
         return hits;
     }
 
-    public void Dispose() => _language.Dispose();
+    public void Dispose()
+    {
+        _disposed = true;
+        _language.Dispose();
+    }
 
     // ---- picking, through the host's dialogs rather than a TopLevel of our own ----
 

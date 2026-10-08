@@ -81,8 +81,10 @@
   "tin.status.hidden": "{0} put away",
   "tin.status.nofiles": "No CSV files in that folder.",
   "tin.status.read": "{0} recurring",
+  "tin.status.reading": "Reading the statements…",
   "tin.status.restored": "{0} back in the list",
   "tin.status.start": "Nothing read yet.",
   "tin.summary": "{0} files, {1} charges, {2} duplicate rows skipped",
+  "tin.task": "Tin reading the statements",
   "tin.total": "{0} a month, {1} a year"
 }
