@@ -21,6 +21,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Every tag, so the NuGet step can read the contract version the previous release had.
+          fetch-depth: 0
 
       - uses: actions/setup-dotnet@v5
         with:
@@ -205,6 +208,21 @@ jobs:
 
           if ($packages.Count -eq 0) { throw "Nothing to push: artifacts/nuget has no .nupkg" }
 
+          # The contract version the release before this one shipped. NuGet's index lags a fresh
+          # push by a long while (5.2.0 went out a few minutes after 5.1.0 pushed 1.7.0, did not
+          # find 1.7.0 in the index, pushed it again and got 409), so "not in the index" alone
+          # does not mean "not published". A version the previous release already had was that
+          # release's to push.
+          $previousContract = $null
+          $previous = git describe --tags --abbrev=0 --match 'v*' HEAD~1 2>$null
+          if ($LASTEXITCODE -eq 0 -and $previous) {
+            $csproj = git show "${previous}:Meows.Plugins.Abstractions/Meows.Plugins.Abstractions.csproj" 2>$null
+            if ($LASTEXITCODE -eq 0 -and (($csproj -join "`n") -match '<ContractVersion>([^<]+)</ContractVersion>')) {
+              $previousContract = $Matches[1]
+            }
+          }
+          "previous release: $previous, contract $previousContract"
+
           foreach ($package in $packages) {
             # The id and version out of the file name. Ours have no digit-only segment in the
             # id, so the first thing that looks like a version starts the version.
@@ -228,6 +246,11 @@ jobs:
 
             if ($already) {
               "$id $version is already on NuGet, leaving it alone"
+              continue
+            }
+
+            if ($version -eq $previousContract) {
+              "$id $version came with $previous and is not in NuGet's index yet; that release pushed it, leaving it alone"
               continue
             }
 
