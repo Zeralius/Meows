@@ -255,8 +255,11 @@ public sealed class BookshelfTests : IDisposable
         Assert.Equal(staging, model.StagingText);
 
         model.StageUnfinishedCommand.Execute(null);
+        // The copy lands before the journal line is written, so wait for both: a slow runner
+        // otherwise sees the file and asks for the line in between.
         deadline = DateTime.UtcNow.AddSeconds(5);
-        while (!File.Exists(Path.Combine(staging, "Author - Reading.epub")) && DateTime.UtcNow < deadline)
+        while ((!File.Exists(Path.Combine(staging, "Author - Reading.epub")) || !host.Store.Events.Any(e => e.Kind == "sent"))
+               && DateTime.UtcNow < deadline)
             Thread.Sleep(50);
 
         Assert.True(File.Exists(Path.Combine(staging, "Author - Reading.epub")));

@@ -43,9 +43,9 @@ internal static class TestStrings
     {
         MeowsText.Use(Load());
 
-        // English words want English numbers and dates beside them. CI's Linux runner gets the
-        // invariant culture, a German Windows gets "1,5 GB" and "23 Sept."; pin the one CI sees so
-        // the suite reads the same on every machine.
+        // English words want English numbers and dates beside them. CI's runner is an English
+        // Windows, a German one gets "1,5 GB" and "23 Sept."; pin the invariant culture so the
+        // suite reads the same on every machine.
         CultureInfo.DefaultThreadCurrentCulture = CultureInfo.InvariantCulture;
         CultureInfo.DefaultThreadCurrentUICulture = CultureInfo.InvariantCulture;
         CultureInfo.CurrentCulture = CultureInfo.InvariantCulture;
