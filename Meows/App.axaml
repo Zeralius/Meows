@@ -16,6 +16,12 @@
 
     <Application.Styles>
         <FluentTheme />
+        <Style Selector="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsForeground}" />
+        </Style>
+        <Style Selector="ListBoxItem:selected TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsSelectionText}" />
+        </Style>
     </Application.Styles>
 
 </Application>

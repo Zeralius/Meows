@@ -1,0 +1,327 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Basket.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Basket.Views.BasketView"
+             x:DataType="vm:BasketViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+        <Style Selector="Border.marker">
+            <Setter Property="Width" Value="4" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Summary}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Classes="label" Text="{Binding Status}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <Button Content="{m:Tr basket.add.list}" Command="{Binding AddListCommand}" />
+                    <Button Content="{m:Tr basket.add.card}" Command="{Binding AddCardCommand}" />
+                    <Button Content="{m:Tr basket.export}" Command="{Binding ExportCommand}" />
+                    <Button Content="{m:Tr basket.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="{DynamicResource MeowsDangerText}"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="230,4,*,4,350">
+
+            <DockPanel Grid.Column="0">
+                <Grid DockPanel.Dock="Top" Margin="14,14,14,10" ColumnDefinitions="*,Auto">
+                    <TextBlock Grid.Column="0"
+                               Classes="section"
+                               Text="{m:Tr basket.lists}"
+                               VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                        <Button Content="+"
+                                Command="{Binding AddListCommand}"
+                                FontSize="11"
+                                Padding="8,2" />
+                        <Button Content="−"
+                                Command="{Binding DeleteListCommand}"
+                                FontSize="11"
+                                Padding="8,2" />
+                    </StackPanel>
+                </Grid>
+
+                <ListBox Name="ListList"
+                         ItemsSource="{Binding Lists}"
+                         SelectedItem="{Binding SelectedList}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8,0,8,8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ListViewModel">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding Shown}"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="1"
+                                           Text="{Binding Count}"
+                                           Classes="label"
+                                           VerticalAlignment="Center" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <DockPanel Grid.Column="2">
+                <Grid DockPanel.Dock="Top" Margin="14,14,14,10" ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                    <TextBlock Grid.Column="0"
+                               Classes="section"
+                               Text="{m:Tr basket.cards}"
+                               VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
+                        <Button Content="{m:Tr basket.move.left}"
+                                Command="{Binding MoveLeftCommand}"
+                                FontSize="11" />
+                        <Button Content="{m:Tr basket.move.right}"
+                                Command="{Binding MoveRightCommand}"
+                                FontSize="11" />
+                        <Button Content="{m:Tr basket.done}"
+                                Command="{Binding FinishCommand}"
+                                FontSize="11" />
+                        <Button Content="{m:Tr basket.delete.card}"
+                                Command="{Binding DeleteCardCommand}"
+                                Background="{DynamicResource MeowsDanger}"
+                                BorderBrush="{DynamicResource MeowsDangerLine}"
+                                FontSize="11" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,0,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding !HasCards}"
+                           Text="{m:Tr basket.empty}" />
+
+                <ListBox Name="CardList"
+                         ItemsSource="{Binding SelectedList.Cards}"
+                         SelectedItem="{Binding SelectedCard}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8,0,8,8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:CardViewModel">
+                            <Grid ColumnDefinitions="4,Auto,*,Auto" ColumnSpacing="10">
+                                <Border Grid.Column="0"
+                                        Classes="marker"
+                                        Background="{DynamicResource MeowsDangerStrong}"
+                                        IsVisible="{Binding IsOverdue}" />
+                                <Border Grid.Column="0"
+                                        Classes="marker"
+                                        Background="{DynamicResource MeowsWarnLine}"
+                                        IsVisible="{Binding IsDueToday}" />
+
+                                <CheckBox Grid.Column="1"
+                                          IsChecked="{Binding Done}"
+                                          VerticalAlignment="Center" />
+
+                                <StackPanel Grid.Column="2" Spacing="2">
+                                    <TextBlock Text="{Binding Shown}" TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="🔗"
+                                                   Classes="label"
+                                                   IsVisible="{Binding HasLink}" />
+                                        <TextBlock Text="{Binding CheckSummary}"
+                                                   Classes="label"
+                                                   IsVisible="{Binding HasChecks}" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <TextBlock Grid.Column="3"
+                                           Text="{Binding DueText}"
+                                           FontSize="11"
+                                           VerticalAlignment="Center"
+                                           HorizontalAlignment="Right"
+                                           TextWrapping="Wrap"
+                                           MaxWidth="170" />
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="3" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <Border Grid.Column="4"
+                    Background="{DynamicResource MeowsBase}"
+                    BorderBrush="{DynamicResource MeowsLineSoft}"
+                    BorderThickness="1,0,0,0">
+                <Panel>
+                    <TextBlock Text="{m:Tr basket.pickone}"
+                               Classes="label"
+                               Margin="16"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Top"
+                               IsVisible="{Binding !HasCard}" />
+
+                    <ScrollViewer IsVisible="{Binding HasCard}">
+                        <StackPanel Margin="16" Spacing="12">
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr basket.field.title}" />
+                                <TextBox Text="{Binding SelectedCard.Title}" PlaceholderText="{m:Tr basket.field.title.hint}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr basket.field.move}" />
+                                <ComboBox ItemsSource="{Binding Lists}"
+                                          SelectedItem="{Binding SelectedMoveTarget}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ListViewModel">
+                                            <TextBlock Text="{Binding Shown}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr basket.field.due}" />
+                                <DatePicker SelectedDate="{Binding SelectedCard.DueOn}" HorizontalAlignment="Stretch" />
+                                <TextBlock Text="{Binding SelectedCard.DueText}" Classes="label" TextWrapping="Wrap" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="{m:Tr basket.today}"
+                                            Command="{Binding SetTodayCommand}"
+                                            FontSize="11" />
+                                    <Button Content="{m:Tr basket.clear}"
+                                            Command="{Binding ClearDueCommand}"
+                                            FontSize="11" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr basket.field.link}" />
+                                <TextBlock Text="{Binding SelectedCard.LinkName}"
+                                           TextTrimming="CharacterEllipsis"
+                                           IsVisible="{Binding SelectedCard.HasLink}" />
+                                <TextBlock Text="{m:Tr basket.nolink}"
+                                           Classes="label"
+                                           TextWrapping="Wrap"
+                                           IsVisible="{Binding !SelectedCard.HasLink}" />
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="{m:Tr basket.attach}"
+                                            Command="{Binding AttachCommand}"
+                                            FontSize="11" />
+                                    <Button Content="{m:Tr basket.open}"
+                                            Command="{Binding OpenLinkCommand}"
+                                            FontSize="11" />
+                                    <Button Content="{m:Tr basket.unlink}"
+                                            Command="{Binding UnlinkCommand}"
+                                            FontSize="11" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr basket.field.notes}" />
+                                <TextBox Text="{Binding SelectedCard.Notes}"
+                                         PlaceholderText="{m:Tr basket.field.notes.hint}"
+                                         AcceptsReturn="True"
+                                         TextWrapping="Wrap"
+                                         MinHeight="70" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr basket.field.checklist}" />
+                                <ListBox ItemsSource="{Binding SelectedCard.Checks}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         MaxHeight="220">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:CheckItemViewModel">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                                <CheckBox Grid.Column="0"
+                                                          IsChecked="{Binding Done}"
+                                                          VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Title}"
+                                                           TextWrapping="Wrap"
+                                                           VerticalAlignment="Center" />
+                                                <Button Grid.Column="2"
+                                                        Content="✕"
+                                                        Command="{Binding RemoveCommand}"
+                                                        FontSize="11"
+                                                        Padding="8,2" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                    <TextBox Grid.Column="0"
+                                             Text="{Binding NewCheckTitle}"
+                                             PlaceholderText="{m:Tr basket.field.newcheck.hint}" />
+                                    <Button Grid.Column="1"
+                                            Content="{m:Tr basket.add.check}"
+                                            Command="{Binding AddCheckCommand}"
+                                            FontSize="11" />
+                                </Grid>
+                            </StackPanel>
+
+                            <Border Background="{DynamicResource MeowsLineSoft}" Height="1" Margin="0,4" />
+
+                            <StackPanel Spacing="8">
+                                <Button Content="{m:Tr basket.done}"
+                                        Command="{Binding FinishCommand}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center" />
+                                <Button Content="{m:Tr basket.delete.card}"
+                                        Command="{Binding DeleteCardCommand}"
+                                        Background="{DynamicResource MeowsDanger}"
+                                        BorderBrush="{DynamicResource MeowsDangerLine}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center" />
+                            </StackPanel>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </Panel>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

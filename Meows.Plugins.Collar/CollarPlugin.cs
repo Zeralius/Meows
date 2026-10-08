@@ -22,6 +22,24 @@ public sealed class CollarPlugin : IMeowsPlugin
     /// <summary>A handoff Collar sends itself: show this entry. The note carries the entry's id.</summary>
     public const string ShowVerb = "collar.show";
 
+    /// <summary>A rule's "put it on the list", for today.</summary>
+    public const string RemindToday = "remind";
+
+    /// <summary>The same, a week out: for things that want looking at, not today.</summary>
+    public const string RemindWeek = "remind-week";
+
+    public IReadOnlyList<PluginAction> Actions =>
+    [
+        new(RemindToday, "collar.action.today", "collar.action.today.hint"),
+        new(RemindWeek, "collar.action.week", "collar.action.week.hint"),
+    ];
+
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("handled", "collar.records.handled"),
+        new("snoozed", "collar.records.snoozed"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new CollarView
     {
         DataContext = new CollarViewModel(host),
@@ -37,6 +55,12 @@ public sealed class CollarPlugin : IMeowsPlugin
         var settings = host.LoadSettings<CollarSettings>();
         return settings is null || settings.Entries.Count == 0 ? null : new SleepingCollar(host, settings.Entries);
     }
+
+    /// <summary>The dates are in the settings file, so the Home line needs nothing else.</summary>
+    public Glance? GlanceWhileOff(IMeowsDormantHost host) =>
+        host.LoadSettings<CollarSettings>() is { } settings
+            ? CollarViewModel.GlanceOf(settings.Entries, settings.LeadDays, DateTime.Today, host.Text)
+            : null;
 
     private sealed class SleepingCollar(IMeowsDormantHost host, IReadOnlyList<Services.CollarEntry> entries) : ISearchable
     {

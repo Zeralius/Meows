@@ -16,8 +16,24 @@ public sealed record Glance(string Text, bool IsTrouble = false);
 /// Read on the UI thread whenever Home is shown or refreshed, so answer from what is already
 /// in memory and never from the disk or the network. Null means nothing worth a line right
 /// now, and the card falls back to the shell's own words. Since 1.1.0.
-/// </summary>
+ /// </summary>
 public interface IGlanceable
 {
     Glance? Glance();
+}
+
+/// <summary>
+/// Implemented by a plugin's view model to put up to three lines of its own on the Home tab,
+/// where <see cref="IGlanceable"/> puts one. The first line plays the Home-line role, exactly
+/// as <see cref="IGlanceable.Glance"/> would; the rest are detail the card has room for, most
+/// overdue first. Home asks this first when a view model implements both, and falls back to
+/// the single line otherwise.
+///
+/// Read on the UI thread whenever Home is shown or refreshed, so answer from what is already
+/// in memory and never from the disk or the network. Empty means nothing worth any lines
+/// right now, and the card falls back to the shell's own words. Since 1.6.0.
+/// </summary>
+public interface IMultiGlance
+{
+    IReadOnlyList<Glance> Glances();
 }

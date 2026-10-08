@@ -181,5 +181,8 @@
   "rehome.task.back": "Rehome: holt zurück",
   "rehome.task.pack": "Rehome: packt",
   "rehome.task.scan": "Rehome: scannt",
-  "rehome.title": "Rehome"
+  "rehome.title": "Rehome",
+  "rehome.records.to-get": "die Liste zum Wiederholen geschrieben hat",
+  "rehome.records.packed": "den Rechner eingepackt hat",
+  "rehome.records.restored": "den Rechner wieder eingeräumt hat"
 }

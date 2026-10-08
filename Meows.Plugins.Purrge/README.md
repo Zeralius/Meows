@@ -111,6 +111,65 @@ The moment it fixed what it found it would be a backup tool with all of a backup
 modes, and the honest scope that makes it worth having would be gone. The two buttons under the
 preview open Explorer on the source and on the copy; fix things with the tool that made the copy.
 
+## Look-alikes: the same picture, saved differently
+
+Exact duplicates are identical bytes. Most duplication in a collection of downloaded pictures is
+not: the same image saved twice at different sizes, re-encoded by a site, watermarked, converted
+from PNG to JPEG. **Look-alikes** is a third mode for those. Every picture under the folder is
+decoded small, once, and given a perceptual hash, and pictures within the chosen closeness of
+each other form a group. Hashing, like everything else here, puts the access time back.
+
+It is kept apart from the other two on purpose. An exact match is a fact; a look-alike is an
+opinion, and two pages of one comic can look as close as two copies of one page. So:
+
+- **The results are never mixed.** Byte-for-byte copies are left to Duplicates, and a group here
+  never holds two identical files.
+- **Closeness defaults to boring.** *Very close*, four bits in sixty-four, with *nearly identical*
+  and *close* either side of it.
+- **Groups do not chain.** Each group forms around one picture and holds what is close to that
+  picture, so A like B and B like C does not make A like C.
+- **Every file carries its own size and pixels**, since near copies differ by definition. The one
+  suggested to keep has the most pixels, then the most bytes. **Keep this one instead** lets the
+  better copy win.
+- **Nothing is binned without looking.** There is no keep-one-bin-the-rest. A picture goes to
+  the Recycle Bin one at a time, and only once it and the one being kept are both on screen at
+  full size, side by side.
+
+### Videos too
+
+Ticking **Videos too** asks the same question of videos: the same clip re-encoded, resized, or
+remuxed into another container. It needs ffmpeg installed (on PATH, or where winget or a plain
+`C:\ffmpeg` put it); without it videos are left out and the status line says so, rather than
+anything being guessed from file names. Each video gives five frames, at 10, 30, 50, 70 and 90 per
+cent of its length, each hashed the way pictures are, and two videos are alike when their lengths
+agree to within a second or two per cent and their frames are, on average, as close as the
+strictness allows. A clip cut from a longer video never matches it, because the lengths disagree
+first. Groups are all pictures or all videos, never both; the copy with the most pixels is
+suggested as the keeper, and the side-by-side panel shows each video's middle frame, so nothing is
+binned without both on screen. Frames are decoded two videos at a time, and access times are put
+back as for pictures.
+
+## Rename: tidy the names
+
+The duplicates show how they got there: a browser's `(1)`, a `- Copy`, a transposed digit, a
+hash-named re-save. **Rename** works on the files directly in the folder picked in the tree, in
+this order: only the files matching the filter, the `(1)` and `- Copy` taken off, find and
+replace (plain, or a regular expression), the case changed, and then the new name put together
+from a template where `{name}` is what the steps left, `{n}` a number counted in name order and
+`{date}` the day the file last changed. The extension is never touched; a name that lies about
+its kind is Portion's to fix.
+
+Every file is in the preview with its name now and after, before anything moves. A new name that
+another file already has, two files heading for the same name, a name Windows would refuse, or a
+regular expression that does not parse is marked on its row and sorted to the top, and **nothing
+moves while any row clashes**. A file that is itself being renamed is no obstacle, so names can
+swap or a sequence can shift: every file first steps aside under a temporary name and then takes
+its new one. Dates stay as they were.
+
+The last run is kept, across a restart too, and *Put the old names back* undoes it as far as the
+files let it: a file that has gone, or whose old name something else now has, keeps its new one
+and is named in the result. Each run and each undo is a *renamed* line in the history.
+
 ## Not in this version
 
 **Hardlinks and junctions.** Several paths can point at one file. Deleting one is harmless
@@ -118,6 +177,13 @@ because the data survives through the others, but it frees nothing, so those set
 
 **Perceptual matching.** Only exact content matches are found today. A re-encode, a resize or a
 re-save at different quality is a different file and will not be grouped.
+
+## When a rule asks
+
+On the Rules tab Purrge offers **Look for duplicates in its folder**: the folder the other
+plugin's event was about, or the folder of the file it was about, walked the way the Scan button
+walks it, with the summary as the answer. A scan already running is left to finish. Each copy
+Purrge sends to the Recycle Bin is an event a rule can wait for.
 
 ## Settings
 

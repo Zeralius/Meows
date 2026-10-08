@@ -14,8 +14,10 @@ public partial class PluginsView : UserControl
     {
         InitializeComponent();
         this.FindControl<Button>("InstallButton")!.Click += OnInstall;
+        this.FindControl<Button>("SharedButton")!.Click += OnInstallShared;
 
         // The zip can be dropped on the tab as well as picked; it is the same install.
+        // A shared-settings zip ends in .meows-share.zip and goes to the plugin that kept it.
         DragDrop.SetAllowDrop(this, true);
         AddHandler(DragDrop.DragOverEvent, OnDragOver);
         AddHandler(DragDrop.DropEvent, OnDrop);
@@ -38,7 +40,12 @@ public partial class PluginsView : UserControl
         {
             if (item is IStorageFile file && file.TryGetLocalPath() is { } path &&
                 path.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
-                model.InstallPlugin(path);
+            {
+                if (path.EndsWith(".meows-share.zip", StringComparison.OrdinalIgnoreCase))
+                    model.InstallShared(path);
+                else
+                    model.InstallPlugin(path);
+            }
         }
 
         e.Handled = true;
@@ -58,5 +65,21 @@ public partial class PluginsView : UserControl
 
         if (files.FirstOrDefault()?.TryGetLocalPath() is { } path)
             model.InstallPlugin(path);
+    }
+
+    private async void OnInstallShared(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainWindowViewModel model || TopLevel.GetTopLevel(this)?.StorageProvider is not { } storage)
+            return;
+
+        var files = await storage.OpenFilePickerAsync(new FilePickerOpenOptions
+        {
+            Title = MeowsText.Current["plugins.shared.install"],
+            AllowMultiple = false,
+            FileTypeFilter = [new FilePickerFileType(MeowsText.Current["plugins.shared.picker"]) { Patterns = ["*.meows-share.zip"] }],
+        });
+
+        if (files.FirstOrDefault()?.TryGetLocalPath() is { } path)
+            model.InstallShared(path);
     }
 }

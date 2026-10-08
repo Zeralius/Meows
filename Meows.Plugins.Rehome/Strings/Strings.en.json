@@ -181,5 +181,8 @@
   "rehome.task.back": "Rehome: bringing back",
   "rehome.task.pack": "Rehome: packing",
   "rehome.task.scan": "Rehome: scanning",
-  "rehome.title": "Rehome"
+  "rehome.title": "Rehome",
+  "rehome.records.to-get": "wrote the list of what to get back",
+  "rehome.records.packed": "packed the machine up",
+  "rehome.records.restored": "put the machine back"
 }

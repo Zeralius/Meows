@@ -20,6 +20,12 @@ public sealed class ScoopPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("restored", "scoop.records.restored"),
+        new("emptied", "scoop.records.emptied"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new ScoopView
     {
         DataContext = new ScoopViewModel(host),

@@ -1,4 +1,7 @@
 {
+  "bot.rename.clash": "{0} gibt es schon, also wurde nichts umbenannt.",
+  "bot.rename.honest": "Der Name passt schon zu dem, was die Datei ist.",
+  "bot.rename.notpostable": "Die Datei ist eigentlich {0}, und das postet der Bot unter keinem Namen. Stattdessen zurückhalten.",
   "bot.runway.days": "noch {0} Tage",
   "bot.runway.dry": "leer",
   "bot.runway.hours": "noch {0} Stunden",

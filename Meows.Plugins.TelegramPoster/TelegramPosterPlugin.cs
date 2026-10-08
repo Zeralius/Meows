@@ -17,6 +17,11 @@ public sealed class TelegramPosterPlugin : IMeowsPlugin
 
     public string Category => "group.bot";
 
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("held", "tp.records.held"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new TelegramPosterView
     {
         DataContext = new TelegramPosterViewModel(host),

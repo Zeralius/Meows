@@ -182,6 +182,9 @@ public sealed class FakeHost : IMeowsHost
     /// <summary>The same thing, typed, so a test can read what was asked for.</summary>
     public FakeBackgroundWork Work => (FakeBackgroundWork)Background;
 
+    /// <summary>The server, when a test gives it one. Nothing by default, as a shell with none set answers.</summary>
+    public IMeowsReach Reach { get; set; } = NoReach.Instance;
+
     public void Log(string message) => Lines.Add(message);
 
     public T? LoadSettings<T>() where T : class =>

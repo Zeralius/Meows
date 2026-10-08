@@ -272,9 +272,17 @@ public sealed class TargetViewModel : ObservableObject
 
         IsOverLimit = composed.Limit > 0 && composed.Length > composed.Limit;
         CanGo = composed.CanGo;
-        ProblemsText = string.Join("\n", composed.Problems.Select(p => text.Format(p.Key, p.Values)));
-        NotesText = string.Join("\n", composed.Notes.Select(p => text.Format(p.Key, p.Values)));
+        ProblemLines = composed.Problems.Select(p => text.Format(p.Key, p.Values)).ToList();
+        NoteLines = composed.Notes.Concat(Lick.Notes(Target, draft, images)).Select(p => text.Format(p.Key, p.Values)).Distinct().ToList();
+        ProblemsText = string.Join("\n", ProblemLines);
+        NotesText = string.Join("\n", NoteLines);
     }
+
+    /// <summary>What would stop this place taking the post, a line each.</summary>
+    public IReadOnlyList<string> ProblemLines { get; private set; } = [];
+
+    /// <summary>What would go, but not as meant, a line each.</summary>
+    public IReadOnlyList<string> NoteLines { get; private set; } = [];
 
     /// <summary>Everything worked out in code reads differently now.</summary>
     public void Reread() => OnEverythingChanged();

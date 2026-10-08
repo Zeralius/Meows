@@ -34,6 +34,17 @@ to install.
 | **[Rehome](Meows.Plugins.Rehome/README.md)** | Packs the machine up before a clean Windows install: what is installed and how to get it back, what the wipe takes and where to keep it, and the way back afterwards |
 | **[Scoop](Meows.Plugins.Scoop/README.md)** | Every drive's Recycle Bin in one list: what is in it, how big, how old, put back one at a time or emptied per drive |
 | **[Trail](Meows.Plugins.Trail/README.md)** | PATH read and explained: entries pointing nowhere, the same tool on there twice, and which one actually wins |
+| **[Larder](Meows.Plugins.Larder/README.md)** | Every installed Steam game with its size, when it was last played and which library it is in, the never-touched largest first |
+| **[Carry](Meows.Plugins.Carry/README.md)** | Moves a folder to a drive with room, checks every file, and leaves a junction behind so every path that pointed at it still works |
+| **[Cattery](Meows.Plugins.Cattery/README.md)** | Every git repository under your project folders: its branch, uncommitted work, what is not pushed, and how long since anyone committed, the most neglected first |
+| **[Nest](Meows.Plugins.Nest/README.md)** | Game saves, maps, project files and keys: the few things that cannot be downloaded again, how much there is, and how long since each was copied somewhere else |
+| **[Basket](Meows.Plugins.Basket/README.md)** | Local task board with lists, cards and due dates. No account, no cloud |
+| **[Backlog](Meows.Plugins.Backlog/README.md)** | Which game to play next: backlog, ratings and a picker |
+| **[Screenshot](Meows.Plugins.Screenshot/README.md)** | Sorts game screenshots by game: duplicates out, best-of picks to Scruff |
+| **[Pantry](Meows.Plugins.Pantry/README.md)** | Recipe box with expiry dates and a weekly cooking plan |
+| **[Bookshelf](Meows.Plugins.Bookshelf/README.md)** | Ebook library: dedupe by content, unfinished first, staging for the ereader |
+| **[Vet](Meows.Plugins.Vet/README.md)** | Family PC health: disk room, reboot needed, backup age, diagnostic zip |
+| **[Naptime](Meows.Plugins.Naptime/README.md)** | Habit tracker: daily ticks, weekly targets, streaks with one miss forgiven |
 | **[Kibble](Meows.Plugins.Kibble/README.md)** | Sorts a folder of new material into queues, one key press at a time, and can bundle a pick into a comic |
 | **[Perch](Meows.Plugins.Perch/README.md)** | One timeline of what the posting bot will send and when, every group merged, out as far as the queues last |
 | **[Portion](Meows.Plugins.Portion/README.md)** | Finds what the bot will fail on in every queue before it fails at night, and shrinks the pictures that can be shrunk |
@@ -58,15 +69,30 @@ makes your unzip tool copy it to a temporary folder on its own, and some of the 
 files they need. Meows will start, but those plugins refuse to open and say so on their card.
 
 The window opens on **Home**: what happened while it was away. The notifications that are up,
-with their buttons; what is running and how many schedules are watching; each switched-on
-plugin's card with its tab a click away; and what the plugins did since the window was last
-hidden. A plugin that has one sentence to say puts it on its card, "1 have passed, 2 more
-coming up", "2 would fail to post", red when it wants doing; under it is what the plugin last
-did and whether its watches are running. Meows lives in the tray, so this is the page for opening
-it after hours.
+with their buttons; what the rules did overnight; what is running and how many schedules are
+watching; each switched-on plugin's card with its tab a click away; and what the plugins did
+since the window was last hidden. A plugin that has one sentence to say puts it on its card,
+"1 have passed, 2 more coming up", "2 would fail to post", red when it wants doing — some
+put up to three lines, most overdue first; under it is what the plugin last
+did and whether its watches are running. Cards move up and down, hide away behind a heading
+of their own, and come back in the remembered order; hiding is not switching off. Meows lives in the tray, so this is the page for opening
+it after hours. **Week page…** writes the week onto one markdown page — what is up now, the
+week's count, and what happened since the window was last hidden — and opens it.
+
+**This week**, on Home, counts the last seven days of the history: how many things were done, what
+went to the Recycle Bin, what Carry moved to another drive, how much rules set off, and the five
+things done most, in each plugin's own words. Once a week the same comes as one notification,
+unless the Settings tab turns it off; the first week only starts the clock. Every number is read
+back from what the plugins already recorded, so it is exactly as true as the history.
 
 Every plugin starts switched off. Open the **Plugins** tab, turn on the ones you want, and each
 gets its own tab. Turning one off closes its tab again. Nothing runs until you ask for it.
+
+Each switched-on plugin's card also says what it has cost since Meows started: how long its tab
+took to open, the part of startup it is responsible for, marked when that passed half a second;
+and how many background runs it did, how long they took together and the longest of them. Memory
+is not on it on purpose: every plugin shares one process, and a number that cannot be put down to
+one plugin honestly is worse than none.
 
 **Tabs come in groups.** Each group is a coloured chip on the strip with its tabs after it, and
 clicking the chip shuts the group behind it, which is what keeps twenty-odd tabs on one row. The
@@ -97,7 +123,9 @@ plugin is showing, a line from the history. Ctrl+Shift+K is the same box over on
 front. Ctrl+1 to Ctrl+9 pick a tab in the order they are shown, counting only the tabs that can
 be seen, so a shut group does not make the numbers skip. In the palette, `>` lists the
 things to do rather than the places to go: pop a tab out or bring it back, the theme, the
-language, the names, rescan the plugins folder.
+language, the names, rescan the plugins folder. `+` adds instead of going: pick what takes
+it — Collar's list, Basket's board, a habit's tick — type the words, and Enter hands them
+over. What came back arrives as one notification, with the tab a click away.
 
 Starting `Meows.exe` while one is already running does not start a second: the one that is
 running shows its window and the second start ends.
@@ -107,6 +135,11 @@ built around the posting bot are together. **Install plugin…** on that tab tak
 someone else built, as a zip, or drop the zip on the tab; its card then says who made it and
 offers **Uninstall**, and once a day Meows looks at the plugin's repository for a newer release
 and offers that on the card too. **Open plugins folder** takes you to where they are read from.
+**Personas** name the plugins that are on now — Work, Table, a quiet weekend — and switch the
+whole set with one pick, on that tab or in the bottom bar. A card's **Share…** bundles what
+that plugin keeps into one file for someone; **Install shared…** (or a dropped
+`.meows-share.zip`) puts such a file where the plugin reads it, keeping what was there
+aside, and only while the plugin is switched off.
 
 The **Settings** tab has two choices, and both take effect as you make them:
 
@@ -114,6 +147,7 @@ The **Settings** tab has two choices, and both take effect as you make them:
   drawn; larger ones are easier to hit and take another row when the strip wraps.
 - **Theme**: light, dark, or follow the system. Following the system means Meows changes with
   Windows, including when Windows switches itself at sunset.
+- **Accent**: one colour for the controls that use one, in both themes, or the default.
 - **Language**: English, German, or follow the system. It applies to the shell and to every plugin
   that ships the language. Anything a plugin has not translated stays in English rather than
   disappearing.
@@ -122,13 +156,13 @@ The **Settings** tab has two choices, and both take effect as you make them:
   scan you started, carries on while the window is hidden, and the icon shows a dot when there is
   something to read and a ring while something is still working. *Quit* is in the icon's menu. Untick the setting and the close button quits,
   as it did before 2.0.
-- **While the window is hidden**: what reaches Windows as a notification when Meows is in the
-  tray or behind something else. By default, the things that want doing: a date come round, a
-  queue that will fail, a watch that stopped, each once when it appears and again only when its
-  words change, rather than on every pass that checks it. The buttons on it are the buttons in
-  the panel, so *Done* on a Collar date is done without opening anything. *Send a test* asks
-  Windows whether it kept one. Not in a portable copy, since Windows only shows notifications
-  from an app it has been told the name of, and telling it writes to the profile.
+- **Server**: the machine the bot and Foundry run on, for the plugins that can put something
+  there. A folder, meaning a share, a mapped drive or anything Windows can already open, or SFTP
+  with an SSH key, kept sealed to your Windows account rather than pointed at. For SFTP, **Test**
+  shows the key the server answers with; compare it with the server and press **Trust**, and
+  from then on a server answering with any other key is refused. Nothing is copied until a
+  plugin asks. Familiar is the first to ask: a Foundry export goes to the server too, straight
+  into the meows-kit module's kits folder.
 - **Starting up**: whether Meows starts when you log in, and whether it starts in the tray or
   with the window open. It writes one entry to the per-user startup list, which needs no admin
   rights and shows up in the Task Manager's Startup tab like anything else.
@@ -152,6 +186,33 @@ every plugin or only the one being shown, which asks first and says how many lin
 by default, or a year, six months, three months or a month, applied when Meows starts and once a
 day while it runs; Purr lists that pass under Meows. Neither forgetting ever touches the facts a
 plugin keeps or the hashes anything has seen.
+
+The **Rules** tab joins the plugins up: *when* one plugin records something, *then* ask another
+to act. When Birdwatch saves a picture, check Portion's queues; when Kibble queues a file, have
+Scruff take the metadata out of it where it now sits; when Purrge sends a copy to the bin, put
+it on Collar's list for a week from now. A rule is one sentence of dropdowns, with an optional
+word the event has to mention, and runs whether or not the window is open: a plugin a rule asks
+is switched on if it is off, and its tab is not brought to the front. Every firing is a line in
+the History tab under *Instinct*, saying what fired, what was asked and what came back, so the
+first surprising night can be read rather than guessed at.
+
+Three things keep it from being the surprise. **Up to three hops**: whatever a plugin does
+because a rule asked can start another rule, at most three deep, and then the chain stops,
+with each hop named in the History line. **One at a time**: five pictures
+saved in a burst are five checks in a row, not five at once. **A rule that runs away is paused**:
+more than thirty firings in ten minutes stops it with the reason on its row and a *Resume*
+button. A rule whose plugin has been uninstalled is never dropped; its row says what is missing,
+and it runs again the day the plugin is back.
+
+What can be asked for so far: Collar puts it on the list, for today or a week out; Portion checks
+the queues; Purrge looks for duplicates in the folder; Scruff cleans the picture in place, the
+original to the Recycle Bin and the clean copy keeping its date so a queue keeps its order; and
+Weigh-In takes a reading. Anything any plugin records can start a rule, and every plugin that
+writes to the history says in words what it records, so a rule can wait for something that has
+not happened yet. A rule can also start from the clock instead of an event: every day or on
+chosen weekdays at a set time, with an optional note that becomes what the target is asked
+about ("Water the plants" becomes the card). Clock rules fire while Meows runs; a machine
+that is off at the time skips that day.
 
 Every card on the **Plugins** tab carries a line of health: the last thing that plugin recorded
 and how long ago, and how many of its watches are running, a stopped one in red.
@@ -181,6 +242,33 @@ Meows.exe --list-plugins
 It lists what the shell can find, flags anything refused on contract grounds or missing a private
 library, and exits non zero if either happened. This is what the release build runs against the
 package it just made.
+
+To see the Home tab without the window:
+
+```bash
+Meows.exe --glance
+Meows.exe --glance --json
+```
+
+Every switched-on plugin's line, in the window's language, a `!` in front of whatever wants
+doing: Collar's dates, Weigh-In's last reading, Trail's PATH when something on it is not doing
+anything, and for the rest the last thing each recorded. `--json` is the same for a status bar,
+a terminal greeting or a scheduled task, with a `trouble` flag at the top and each plugin's id.
+Nothing is switched on or started, and it runs beside a Meows that is already open.
+
+To have a plugin do its work with no window, from Task Scheduler:
+
+```bash
+Meows.exe --do
+Meows.exe --do weighin.measure
+```
+
+With nothing after it, `--do` lists the jobs there are: `weighin.measure` takes Weigh-In's
+reading, `nest.copy` copies what cannot be downloaded again, `cattery.read` asks git about every
+repository. With a name it runs that one and prints what it did. The exit code is 0 done, 1 failed,
+2 no such job, 3 the plugin is switched off. While Windows runs Weigh-In's reading, the tab's own
+schedule stands down so the reading happens once, and anything worth knowing comes up as a
+Windows notification.
 
 ## Building it yourself
 
@@ -351,13 +439,19 @@ contract itself does: **major** if a member is removed or changed, **minor** if 
 **patch** for documentation. It reached **1.0.0** with Meows 3.0.0, which is the point from
 which a plugin built against any 1.x loads on any later 1.x shell; plugins built against 0.x
 are refused by a 3.x shell and need a rebuild against 1.0.0. **1.1.0**, with Meows 3.1.0,
-added the line a plugin can put on its Home card.
+added the line a plugin can put on its Home card. **1.2.0**, with Meows 4.2.0, added the two
+lists a plugin gives the Rules tab, what it can be asked to do and what it records, and the
+interface its view model does the asking through. **1.3.0**, with Meows 4.3.0, added the server
+a plugin can copy a folder to. **1.4.0**, with Meows 4.4.0, added a plugin's Home line with no
+window, for `--glance`. **1.5.0**, with Meows 4.17.0, added the jobs a plugin can do with no
+window, for `--do`. **1.6.0**, with Meows 5.0.0, added the extra lines a plugin can put on
+its Home card.
 
 Meows checks that version when it loads a plugin and refuses anything it cannot honour, with the
 reason on the plugin's card rather than a crash later:
 
-> Built for Meows contract 1.2.0, which is newer than this shell's 1.1.0. Update Meows, or rebuild
-> the plugin against 1.1.0.
+> Built for Meows contract 1.7.0, which is newer than this shell's 1.6.0. Update Meows, or rebuild
+> the plugin against 1.6.0.
 
 A newer contract is refused; an older one is fine, since additions stay backward compatible.
 

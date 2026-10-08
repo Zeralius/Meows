@@ -98,10 +98,21 @@
             <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
                 <DockPanel>
                     <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr mouser.showonly}" />
+                    <StackPanel DockPanel.Dock="Bottom" Margin="8,4,8,12" Spacing="2">
+                        <TextBlock Classes="section" Margin="0,6,0,2" Text="{m:Tr mouser.shadow.heading}" />
+                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr mouser.shadow.hint}" Margin="0,0,0,4" />
+                        <ItemsControl ItemsSource="{Binding ShadowRules}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ShadowRuleViewModel">
+                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsOn}" FontSize="11" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
                     <Button DockPanel.Dock="Bottom"
                             Content="{m:Tr mouser.showall}"
                             Command="{Binding ClearFilterCommand}"
-                            Margin="8,6,8,12"
+                            Margin="8,6,8,0"
                             FontSize="11"
                             HorizontalAlignment="Stretch"
                             HorizontalContentAlignment="Center" />

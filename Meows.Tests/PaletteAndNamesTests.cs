@@ -63,6 +63,82 @@ public class PaletteTests
         Assert.Equal(["history"], ran);
         Assert.False(palette.IsOpen);
     }
+
+    [Fact]
+    public void Plus_is_adding_and_the_mark_comes_off()
+    {
+        Assert.True(CommandPaletteViewModel.IsAddQuery("+milk", out var rest));
+        Assert.Equal("milk", rest);
+        Assert.True(CommandPaletteViewModel.IsAddQuery("  + collar ", out rest));
+        Assert.Equal("collar", rest);
+        Assert.False(CommandPaletteViewModel.IsAddQuery("a+b", out _));
+        Assert.False(CommandPaletteViewModel.IsAddQuery(">commands", out _));
+    }
+
+    [Fact]
+    public void Adding_picks_what_takes_it_then_hands_over_the_words()
+    {
+        var done = new List<(string Plugin, string Action, string Text)>();
+        var targets = new[]
+        {
+            new AddTarget("meows.collar", "Collar", "🏷", "remind", "Put it on the list for today", null),
+            new AddTarget("meows.basket", "Basket", "🧺", "add", "Add a card to the board", null),
+        };
+        var palette = new CommandPaletteViewModel(() => [], _ => [],
+            () => targets,
+            (target, text) =>
+            {
+                done.Add((target.PluginId, target.ActionId, text));
+                return Task.CompletedTask;
+            });
+
+        // "+" lists what takes things; words narrow it to the plugin named.
+        palette.OpenAdd();
+        Assert.Equal("+", palette.Query);
+        Assert.Equal(2, palette.Items.Count);
+
+        palette.Query = "+collar";
+        var pick = Assert.Single(palette.Items);
+        Assert.Contains("Collar", pick.Title);
+
+        // Picking asks what it should take instead of running anything yet.
+        palette.RunSelected();
+        Assert.True(palette.IsOpen);
+        Assert.True(palette.IsAdding);
+        Assert.Equal("", palette.Query);
+        Assert.Empty(done);
+
+        // Words become the one thing Enter does; empty words do nothing.
+        palette.RunSelected();
+        Assert.Empty(done);
+
+        palette.Query = "milk";
+        var add = Assert.Single(palette.Items);
+        Assert.Contains("milk", add.Title);
+        Assert.Contains("Collar", add.Title);
+        palette.RunSelected();
+
+        Assert.Equal([("meows.collar", "remind", "milk")], done);
+        Assert.False(palette.IsOpen);
+        Assert.False(palette.IsAdding);
+    }
+
+    [Fact]
+    public void Closing_leaves_adding_behind()
+    {
+        var palette = new CommandPaletteViewModel(() => [], _ => [],
+            () => [new AddTarget("meows.collar", "Collar", "🏷", "remind", "Put it on the list", null)],
+            (_, _) => Task.CompletedTask);
+
+        palette.OpenAdd();
+        palette.RunSelected();
+        Assert.True(palette.IsAdding);
+
+        palette.IsOpen = false;
+        palette.Open();
+        Assert.False(palette.IsAdding);
+        Assert.Equal("", palette.Query);
+    }
 }
 
 /// <summary>Feline or plain, and the identity underneath.</summary>

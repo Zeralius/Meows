@@ -69,6 +69,20 @@ public interface IMeowsHost
     /// showing answers. Since 1.0.0.
     /// </summary>
     IMeowsPicker Pick => NoPicker.Instance;
+
+    /// <summary>
+    /// The server set on the Settings tab, to copy a folder to. The default reaches nothing,
+    /// which is also what a shell answers when nobody has set one. Since 1.3.0.
+    /// </summary>
+    IMeowsReach Reach => NoReach.Instance;
+
+    /// <summary>
+    /// Whether Windows has been running this plugin's job through <c>Meows.exe --do</c> lately,
+    /// within the last eight days. A plugin whose job <see cref="PluginJob.StandsInForSchedule"/>
+    /// asks this before its own scheduled pass and stands down when it is true, so the work
+    /// happens once. False, the default, from a shell that has never run it. Since 1.5.0.
+    /// </summary>
+    bool RunsFromOutside(string jobId) => false;
 }
 
 /// <summary>What a shell built against an older contract answers. Nothing is kept.</summary>

@@ -149,6 +149,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         _sourceFolder = _settings.LastSourceFolder ?? "";
 
         SendToCommand = new RelayCommand(SendTo, CanSend);
+        KeepNewestCommand = new RelayCommand(p => KeepAll(p as DestinationViewModel, newestFirst: true), CanKeepAll);
+        KeepOldestCommand = new RelayCommand(p => KeepAll(p as DestinationViewModel, newestFirst: false), CanKeepAll);
         LoadMoreCommand = new RelayCommand(LoadMore, () => HasMore);
         ChooseComicCommand = new RelayCommand(() => BundleMode = BundleMode.AsComic);
         ChooseFilesCommand = new RelayCommand(() => BundleMode = BundleMode.AsFiles);
@@ -278,6 +280,12 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
     public ObservableCollection<IncomingFileViewModel> Incoming { get; } = new();
 
     public RelayCommand SendToCommand { get; }
+
+    /// <summary>Queues the whole folder, newest first, into the group it names.</summary>
+    public RelayCommand KeepNewestCommand { get; }
+
+    /// <summary>Queues the whole folder, oldest first, into the group it names.</summary>
+    public RelayCommand KeepOldestCommand { get; }
 
     public RelayCommand SkipCommand { get; }
 
@@ -1226,8 +1234,9 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         }
         else
         {
-            StatusMessage = _host.Text.Format("kibble.status.sent", destination.Name, destination.RunwayText);
-            _host.Log($"Queued {Path.GetFileName(result.Destination!)} into {destination.Name}");
+            StatusMessage = _host.Text.Format("kibble.status.sent", destination.Name, destination.RunwayText)
+                            + (result.Detail is { } renamed ? " " + renamed : "");
+            _host.Log($"Queued {Path.GetFileName(result.Destination!)} into {destination.Name}{(result.Detail is null ? "" : $" ({result.Detail})")}");
         }
         RaiseGridState();
     }
@@ -1319,6 +1328,87 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         _host.Log($"Queued {sent.Count} file(s) into {destination.Name}" +
                   (refused.Count > 0 ? $", {refused.Count} refused" : ""));
         RaiseGridState();
+    }
+
+    /// <summary>
+    /// Queues the whole folder into a group, newest or oldest first. Unlike <see cref="SendTo"/>
+    /// this covers everything the scan found rather than just the selection, and it does not
+    /// follow the grid sort: the direction is the point of the button.
+    /// </summary>
+    private void KeepAll(DestinationViewModel? destination, bool newestFirst)
+    {
+        if (_workspace is null || destination is null || _pending.Count == 0)
+            return;
+
+        var ordered = (newestFirst
+                ? _pending.OrderByDescending(f => f.Modified)
+                : _pending.OrderBy(f => f.Modified))
+            .ToList();
+        var results = Intake.SendMany(
+            ordered.Select(f => f.Path).ToList(), _workspace, destination.Group, Stamp, Duplicates);
+
+        var sentPaths = new List<string>();
+        var refused = new List<string>();
+
+        for (var i = 0; i < ordered.Count; i++)
+        {
+            if (results[i].Moved)
+                sentPaths.Add(ordered[i].Path);
+            else
+                refused.Add(_host.Text.Format("kibble.refused.line", ordered[i].Name, results[i].Detail));
+        }
+
+        if (sentPaths.Count == 0)
+        {
+            BlockedReason = string.Join("\n", refused);
+            _host.Log(LogLevel.Warning, $"Nothing kept for {destination.Name}: {refused.Count} refused");
+            return;
+        }
+
+        var batch = Guid.NewGuid().ToString("N");
+        Remember(results.Where(r => r.Moved), destination.Name);
+        foreach (var moved in results.Where(r => r.Moved))
+            Journal(moved, destination.Name, batch);
+
+        TakePaths(sentPaths);
+
+        SetSelection([]);
+        Selected = Incoming.FirstOrDefault();
+
+        destination.Refresh();
+        BlockedReason = refused.Count > 0 ? string.Join("\n", refused) : null;
+        StatusMessage = refused.Count == 0
+            ? _host.Text.Format("kibble.status.sentfiles", sentPaths.Count, destination.Name, destination.RunwayText)
+            : _host.Text.Format("kibble.status.sentsome", sentPaths.Count, destination.Name, refused.Count);
+        _host.Log($"Queued {sentPaths.Count} file(s) into {destination.Name}" +
+                  (refused.Count > 0 ? $", {refused.Count} refused" : ""));
+        RaiseGridState();
+    }
+
+    private bool CanKeepAll(object? parameter) =>
+        _workspace is not null && _pending.Count > 0 && parameter is DestinationViewModel;
+
+    /// <summary>
+    /// Removes sent paths wherever they are tracked. Take covers the tiles on screen, but a
+    /// lazy window means most of a KeepAll batch never had a tile: those have to leave
+    /// <see cref="_pending"/> directly or they would come back on the next scroll.
+    /// </summary>
+    private void TakePaths(IReadOnlyList<string> paths)
+    {
+        var gone = paths.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        _pending.RemoveAll(f => gone.Contains(f.Path));
+
+        var tiles = Incoming.Where(t => gone.Contains(t.Path)).ToList();
+        foreach (var tile in tiles)
+        {
+            Incoming.Remove(tile);
+            tile.Dispose();
+        }
+
+        _selection.RemoveAll(t => gone.Contains(t.Path));
+
+        _loadedTarget = ClampTarget(Incoming.Count);
+        TopUp();
     }
 
     /// <summary>
@@ -1769,6 +1859,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         OnPropertyChanged(nameof(RemainingText));
         OnPropertyChanged(nameof(IsEmpty));
         OnPropertyChanged(nameof(SummaryText));
+        KeepNewestCommand.RaiseCanExecuteChanged();
+        KeepOldestCommand.RaiseCanExecuteChanged();
         RaiseWindowState();
     }
 
@@ -1777,6 +1869,8 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
         OnPropertyChanged(nameof(HasWorkspace));
         OnPropertyChanged(nameof(BotRootText));
         OnPropertyChanged(nameof(SummaryText));
+        KeepNewestCommand.RaiseCanExecuteChanged();
+        KeepOldestCommand.RaiseCanExecuteChanged();
     }
 
     private void SaveSettings()

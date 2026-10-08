@@ -45,6 +45,10 @@ public sealed class MastodonTarget : IApiTarget
 
     public string Name => "Mastodon";
 
+    public bool CarriesAltText => true;
+
+    public TagSpelling Spelling => TagSpelling.Hashtags;
+
     public MediaLimits Limits { get; } = new(4, 16_000_000, 4096, [ImageFormat.Jpeg, ImageFormat.Png, ImageFormat.WebP, ImageFormat.Gif]);
 
     public bool PostsItself => true;

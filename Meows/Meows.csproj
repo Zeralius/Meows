@@ -2,14 +2,7 @@
 
     <PropertyGroup>
         <OutputType>WinExe</OutputType>
-        <!-- Windows 10's SDK in the name, for the toasts: they are WinRT, and WinRT is only
-             reachable from a framework that names a Windows version. Meows was already Windows
-             only in every other way (a WinExe, the shell's Recycle Bin, windows-latest in CI);
-             this makes the project file say so. Plugins still build for plain net10.0, and a
-             Windows app loads those as it always did. -->
-        <TargetFramework>net10.0-windows10.0.19041.0</TargetFramework>
-        <!-- 1809, the first Windows 10 that shows toasts from an unpackaged app. -->
-        <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+        <TargetFramework>net10.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
@@ -19,7 +12,7 @@
 
         <!-- The app version. Moves independently of the plugin contract version;
              see the versioning section in README.md. -->
-        <Version>4.2.0</Version>
+        <Version>5.0.0</Version>
         <!-- Where the shell looks for its own newer release, the same way it does for a plugin. -->
         <RepositoryUrl>https://github.com/Zeralius/Meows</RepositoryUrl>
         <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
@@ -41,6 +34,9 @@
            major version and would be a different change. Remove it once Microsoft.Data.Sqlite
            brings a fixed one itself; SqliteVersionTests says if the pin is ever lost. -->
       <PackageReference Include="SQLitePCLRaw.lib.e_sqlite3" Version="2.1.13" />
+      <!-- Reach over SFTP. The shell owns the connection so a plugin only ever names a place on
+           the server; a share or a mapped drive needs nothing but the file system. -->
+      <PackageReference Include="SSH.NET" Version="2026.0.0" />
     </ItemGroup>
 
     <!-- One file per language, merged into the string table at startup. Plugins ship their own

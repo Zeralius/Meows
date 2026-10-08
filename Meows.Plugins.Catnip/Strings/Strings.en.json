@@ -33,6 +33,8 @@
   "catnip.progress": "Walking {0}",
   "catnip.purrge": "Ask Purrge for other copies",
   "catnip.purrge.hint": "Purrge walks the drives these sit on, opening only files of exactly their sizes, and the answer lands on the status line.",
+  "catnip.records.recycled": "sent something to the Recycle Bin",
+  "catnip.records.scan": "finished a scan",
   "catnip.recycle": "Recycle Bin",
   "catnip.reply": "{0} never opened",
   "catnip.reveal": "Show in Explorer",

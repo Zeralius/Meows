@@ -364,9 +364,12 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISe
             if (pages == 0)
                 return _host.Text["tp.detail.nopages"];
             var batches = (pages + MediaRules.MediaGroupLimit - 1) / MediaRules.MediaGroupLimit;
-            return batches == 1
+            var text = batches == 1
                 ? _host.Text.Format("tp.detail.pages.one", pages)
                 : _host.Text.Format("tp.detail.pages.many", pages, batches);
+            if (SelectedGroup?.ComicPagesAsUploads == true)
+                text += " · " + _host.Text.Format("tp.detail.slots", pages);
+            return text;
         }
     }
 

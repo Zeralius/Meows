@@ -55,7 +55,10 @@ public sealed class Choice(string key, string tag)
     public TranslatedString Label { get; } = MeowsText.Entry(key);
 }
 
-public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable, IGlanceable
+/// <summary>One line in the strip above Post: which places, what about them, and whether it would stop them.</summary>
+public sealed record BeforePostingLine(string Places, string Text, bool IsProblem);
+
+public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable, IActionTarget, IGlanceable
 {
     private static string DefaultOutput() => Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.MyPictures), "Scruffed");
@@ -574,6 +577,7 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
         foreach (var target in Targets)
             target.Recompose(draft, images, _host.Text);
         PostCommand.RaiseCanExecuteChanged();
+        RebuildBeforePosting();
     }
 
     private void OnTargetsChanged()
@@ -581,6 +585,37 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
         _settings.EnabledTargets = Targets.Where(t => t.IsEnabled).Select(t => t.Id).ToList();
         Save();
         PostCommand.RaiseCanExecuteChanged();
+        RebuildBeforePosting();
+    }
+
+    /// <summary>
+    /// The strip above Post: every switched-on place's problems and notes in one list, one line
+    /// per thing to say, with the places it applies to in front, so the same missing alt text on
+    /// three places is one line and not three. Post stays as it was: most of these are notes, and
+    /// the ones that are not are refused by their place at posting anyway.
+    /// </summary>
+    public ObservableCollection<BeforePostingLine> BeforePosting { get; } = [];
+
+    /// <summary>Somewhere is switched on and nothing about the post is worth a word.</summary>
+    public bool IsAllClear => Targets.Any(t => t.IsEnabled) && BeforePosting.Count == 0;
+
+    public bool HasBeforePosting => BeforePosting.Count > 0;
+
+    private void RebuildBeforePosting()
+    {
+        BeforePosting.Clear();
+        var on = Targets.Where(t => t.IsEnabled).ToList();
+        var lines = on.SelectMany(t => t.ProblemLines.Select(l => (t.Name, Line: l, Problem: true)))
+            .Concat(on.SelectMany(t => t.NoteLines.Select(l => (t.Name, Line: l, Problem: false))));
+
+        foreach (var group in lines.GroupBy(l => (l.Line, l.Problem)).OrderByDescending(g => g.Key.Problem))
+        {
+            var places = string.Join(", ", group.Select(g => g.Name).Distinct());
+            BeforePosting.Add(new BeforePostingLine(places, group.Key.Line, group.Key.Problem));
+        }
+
+        OnPropertyChanged(nameof(IsAllClear));
+        OnPropertyChanged(nameof(HasBeforePosting));
     }
 
     // ---- Cleaning ------------------------------------------------------------------------------
@@ -679,6 +714,70 @@ public sealed class ScruffViewModel : ObservableObject, IDisposable, IHandoffTar
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>
+    /// A rule's "clean it": the one file the event was about, cleaned where it lies, whatever is
+    /// in the tab's own pile. Only when there is something to take out; a picture that carries
+    /// nothing is left exactly as it was, down to its date.
+    /// </summary>
+    public async Task<string> Perform(ActionRequest request, CancellationToken token)
+    {
+        if (request.Action != ScruffPlugin.CleanAction)
+            throw new ActionDeclinedException(_host.Text.Format("scruff.action.unknown", request.Action));
+
+        var path = request.Path;
+        if (!File.Exists(path))
+            throw new ActionDeclinedException(_host.Text.Format("scruff.action.gone", path));
+
+        var name = Path.GetFileName(path);
+        var text = _host.Text;
+        return await Task.Run(() =>
+        {
+            var clean = Preparer.Clean(File.ReadAllBytes(path));
+            if (clean.Format == ImageFormat.Unknown)
+                throw new ActionDeclinedException(text.Format("scruff.error.notapicture", name));
+            if (!clean.Original.CarriesAnything && !clean.Turned)
+                return text.Format("scruff.action.nothing", name);
+
+            token.ThrowIfCancellationRequested();
+            var final = ReplaceInPlace(path, clean);
+            _host.Log($"Scruff cleaned {path} for a rule{(final == path ? "" : $", now {Path.GetFileName(final)}")}.");
+            return final == path
+                ? text.Format("scruff.action.cleaned", name)
+                : text.Format("scruff.action.renamed", name, Path.GetFileName(final));
+        }, token);
+    }
+
+    /// <summary>
+    /// A cleaned picture over its original: written beside it first, the original to the Recycle
+    /// Bin, then into its place under the name its format calls for. The original's modified
+    /// time is put back on it, because the bot orders a queue by that time and a file cleaned in
+    /// a queue must not jump to the front of it. Throws with the reason when the original would
+    /// not go to the bin, having taken the new copy away again.
+    /// </summary>
+    public static string ReplaceInPlace(string path, Prepared clean)
+    {
+        var folder = Path.GetDirectoryName(path) ?? "";
+        var name = Path.GetFileName(path);
+        var wanted = string.Equals(Path.GetExtension(name), clean.Extension, StringComparison.OrdinalIgnoreCase)
+            ? name
+            : Path.GetFileNameWithoutExtension(name) + clean.Extension;
+        var final = Path.Combine(folder, wanted);
+        var temp = Path.Combine(folder, "." + wanted + ".scruff");
+        var written = File.GetLastWriteTimeUtc(path);
+
+        File.WriteAllBytes(temp, clean.Bytes);
+        var outcome = RecycleBin.Send([path]);
+        if (outcome.Failed > 0)
+        {
+            File.Delete(temp);
+            throw new IOException($"{name}: {outcome.FailureReason}");
+        }
+
+        File.Move(temp, final, overwrite: true);
+        File.SetLastWriteTimeUtc(final, written);
+        return final;
     }
 
     private static string Unique(string path)

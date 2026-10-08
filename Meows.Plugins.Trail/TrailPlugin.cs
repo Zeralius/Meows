@@ -20,6 +20,31 @@ public sealed class TrailPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("tidied", "trail.records.tidied"),
+        new("restored", "trail.records.restored"),
+    ];
+
+    /// <summary>
+    /// PATH is two registry values and an environment variable, cheap enough to read with no tab
+    /// open. Like the tab, it only speaks when something on the list is not doing anything.
+    /// </summary>
+    public Glance? GlanceWhileOff(IMeowsDormantHost host)
+    {
+        IReadOnlyList<Services.PathEntry> entries;
+        try
+        {
+            entries = Services.PathRead.All();
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+        var trouble = entries.Count(e => e.IsTrouble);
+        return trouble == 0 ? null : new Glance(host.Text.Format("trail.summary", entries.Count, trouble));
+    }
+
     public Control CreateView(IMeowsHost host) => new TrailView
     {
         DataContext = new TrailViewModel(host),

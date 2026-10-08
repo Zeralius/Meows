@@ -33,6 +33,8 @@
   "catnip.progress": "Gehe {0} durch",
   "catnip.purrge": "Purrge nach weiteren Kopien fragen",
   "catnip.purrge.hint": "Purrge geht die Platten durch, auf denen diese liegen, öffnet nur Dateien genau ihrer Größe, und die Antwort landet in der Statuszeile.",
+  "catnip.records.recycled": "etwas in den Papierkorb gelegt hat",
+  "catnip.records.scan": "eine Suche beendet hat",
   "catnip.recycle": "Papierkorb",
   "catnip.reply": "{0} nie geöffnet",
   "catnip.reveal": "Im Explorer zeigen",

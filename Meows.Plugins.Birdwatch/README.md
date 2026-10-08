@@ -161,6 +161,12 @@ fighting login walls and rate limits that change without notice, so the feature 
 repeatedly and always at the worst moment. A plugin that says X is unsupported is better than one
 that supports it on Tuesdays.
 
+## Rules
+
+Every picture Birdwatch saves is a line in the history, *saved*, with the saved file as its
+subject, so a rule on the Rules tab can act on it: check Portion's queues, have Collar put it on
+the list, have Scruff clean it.
+
 ## Settings
 
 `%APPDATA%\Meows\plugins\meows.birdwatch\settings.json` holds the watched handles, the intake

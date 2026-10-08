@@ -32,12 +32,6 @@ public sealed class NotificationItem
 
     public DateTime Raised { get; } = DateTime.Now;
 
-    /// <summary>
-    /// Which one this is, for anything outside the list that has to find it again: a toast's
-    /// button, pressed after the list has moved on, says which item it belongs to by this.
-    /// </summary>
-    public string Id { get; } = Guid.NewGuid().ToString("N");
-
     public bool IsCondition => ConditionKey is not null;
 
     /// <summary>Conditions are not user-dismissable. Only the plugin knows if it still applies.</summary>
@@ -79,26 +73,19 @@ public sealed class NotificationCenter
 
     public event Action? Changed;
 
+    /// <summary>A one-off event, as it arrives: what the shell turns into a Windows notification when the window is not in front.</summary>
+    public event Action<NotificationItem>? Posted;
+
+    /// <summary>
+    /// A condition, as it is set, with the one it took the place of under the same key, or null
+    /// when it is new. A condition re-set with the same words on every pass is not news, and only
+    /// whoever listens can tell that from the two of them.
+    /// </summary>
+    public event Action<NotificationItem, NotificationItem?>? ConditionSet;
+
     public int Count => Items.Count;
 
     public bool HasAny => Items.Count > 0;
-
-    /// <summary>
-    /// One arrived. <c>Replaced</c> is the condition it took the place of under the same key, or
-    /// null for an event or a condition that is new. A condition re-set with the same words on
-    /// every pass is not news, and only whoever listens can tell that from the two of them.
-    /// </summary>
-    public event Action<NotificationItem, NotificationItem?>? Arrived;
-
-    /// <summary>One went: dismissed, cleared by its plugin, trimmed, or its plugin switched off.</summary>
-    public event Action<NotificationItem>? Removed;
-
-    /// <summary>The item with this id, if it is still in the list.</summary>
-    public NotificationItem? Find(string id) => Items.FirstOrDefault(i => i.Id == id);
-
-    /// <summary>The condition standing under this key now, if there is one.</summary>
-    public NotificationItem? Condition(string source, string key) =>
-        Items.FirstOrDefault(i => i.Source == source && i.ConditionKey == key);
 
     public NotificationSeverity? Worst => Items.Count == 0
         ? null
@@ -128,11 +115,10 @@ public sealed class NotificationCenter
             {
                 var oldest = Items.Last(i => !i.IsCondition);
                 Items.Remove(oldest);
-                Removed?.Invoke(oldest);
             }
 
-            Arrived?.Invoke(item, null);
             Changed?.Invoke();
+            Posted?.Invoke(item);
         });
     }
 
@@ -145,12 +131,9 @@ public sealed class NotificationCenter
     {
         OnUiThread(() =>
         {
-            // Taken out quietly rather than through RemoveCondition: this is a replacement, and
-            // reporting it as a removal followed by an arrival would make every re-set look new.
-            var replaced = Condition(source, key);
+            var replaced = Items.FirstOrDefault(i => i.Source == source && i.ConditionKey == key);
             if (replaced is not null)
                 Items.Remove(replaced);
-
             var item = new NotificationItem
             {
                 Source = source,
@@ -161,9 +144,8 @@ public sealed class NotificationCenter
                 ConditionKey = key,
             };
             Items.Insert(0, item);
-
-            Arrived?.Invoke(item, replaced);
             Changed?.Invoke();
+            ConditionSet?.Invoke(item, replaced);
         });
     }
 
@@ -177,20 +159,15 @@ public sealed class NotificationCenter
     public void Dismiss(NotificationItem item) =>
         OnUiThread(() =>
         {
-            if (!item.CanDismiss || !Items.Remove(item))
-                return;
-            Removed?.Invoke(item);
-            Changed?.Invoke();
+            if (item.CanDismiss && Items.Remove(item))
+                Changed?.Invoke();
         });
 
     public void DismissAllEvents() =>
         OnUiThread(() =>
         {
             foreach (var item in Items.Where(i => i.CanDismiss).ToList())
-            {
                 Items.Remove(item);
-                Removed?.Invoke(item);
-            }
             Changed?.Invoke();
         });
 
@@ -199,20 +176,14 @@ public sealed class NotificationCenter
         OnUiThread(() =>
         {
             foreach (var item in Items.Where(i => i.Source == source).ToList())
-            {
                 Items.Remove(item);
-                Removed?.Invoke(item);
-            }
             Changed?.Invoke();
         });
 
     private bool RemoveCondition(string source, string key)
     {
-        var existing = Condition(source, key);
-        if (existing is null || !Items.Remove(existing))
-            return false;
-        Removed?.Invoke(existing);
-        return true;
+        var existing = Items.FirstOrDefault(i => i.Source == source && i.ConditionKey == key);
+        return existing is not null && Items.Remove(existing);
     }
 
     private static void OnUiThread(Action action)

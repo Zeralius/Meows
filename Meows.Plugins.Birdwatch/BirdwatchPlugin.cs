@@ -19,6 +19,11 @@ public sealed class BirdwatchPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("saved", "birdwatch.records.saved"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new BirdwatchView
     {
         DataContext = new BirdwatchViewModel(host),

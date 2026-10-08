@@ -20,6 +20,13 @@ public sealed class RehomePlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("to-get", "rehome.records.to-get"),
+        new("packed", "rehome.records.packed"),
+        new("restored", "rehome.records.restored"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new RehomeView
     {
         DataContext = new RehomeViewModel(host),

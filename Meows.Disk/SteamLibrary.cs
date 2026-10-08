@@ -15,6 +15,25 @@ public sealed record SteamGame(string Name, long SizeOnDisk, DateTime? LastPlaye
 }
 
 /// <summary>
+/// One installed game as its manifest describes it, with the library it sits in. Steam writes 0
+/// for LastPlayed when a game was never launched and leaves the key out for some; the first is
+/// never played and the second is unknown, and the two are never folded together.
+/// </summary>
+public sealed record SteamInstall(
+    string AppId,
+    string Name,
+    long SizeOnDisk,
+    DateTime? LastPlayed,
+    DateTime? LastUpdated,
+    string Library,
+    string InstallFolder)
+{
+    public bool NeverPlayed => LastPlayed == DateTime.UnixEpoch;
+
+    public bool PlayedUnknown => LastPlayed is null;
+}
+
+/// <summary>
 /// Reads Steam's own records instead of guessing from the filesystem. Every installed game has an
 /// appmanifest holding its real name, size and last played time, which is better than anything we
 /// could infer. No API and no network needed: they are plain text files already on disk.
@@ -120,6 +139,57 @@ public static class SteamLibrary
             }
         }
         return null;
+    }
+
+    /// <summary>
+    /// Every game installed in one library, from its appmanifest files alone: no network, no
+    /// login, and nothing walked but the one folder of manifests. A library on a drive that is not
+    /// there today gives an empty list rather than an error.
+    /// </summary>
+    public static IReadOnlyList<SteamInstall> InstalledIn(string library)
+    {
+        var games = new List<SteamInstall>();
+        var steamapps = Path.Combine(library, "steamapps");
+        IEnumerable<string> manifests;
+        try
+        {
+            manifests = Directory.EnumerateFiles(steamapps, "appmanifest_*.acf").ToList();
+        }
+        catch (Exception)
+        {
+            return games;
+        }
+
+        foreach (var manifest in manifests)
+        {
+            try
+            {
+                var text = File.ReadAllText(manifest);
+                var appId = Value(text, "appid");
+                if (appId.Length == 0)
+                    appId = Path.GetFileNameWithoutExtension(manifest)["appmanifest_".Length..];
+                var installdir = Value(text, "installdir");
+                var name = Value(text, "name");
+                // Without an install folder there is no game here, whatever the file is called.
+                if (installdir.Length == 0)
+                    continue;
+                var updated = Number(text, "LastUpdated");
+                games.Add(new SteamInstall(
+                    appId,
+                    name.Length > 0 ? name : installdir,
+                    Number(text, "SizeOnDisk") ?? 0,
+                    Played(text),
+                    updated is > 0 ? DateTime.UnixEpoch.AddSeconds(updated.Value) : null,
+                    library,
+                    Path.Combine(steamapps, "common", installdir)));
+            }
+            catch (Exception)
+            {
+                // One unreadable manifest costs its own game and nothing else.
+            }
+        }
+
+        return games;
     }
 
     /// <summary>Where the Steam client is, from the registry, or the default when the registry does not say.</summary>

@@ -63,12 +63,15 @@ public static class FolderWalk
     /// <summary>
     /// Whether the folder can be read at all. Not the same question as whether it is empty, and
     /// a scanner that confuses the two will offer to delete something it never looked inside.
+    /// Both listings are probed: a folder whose file list throws (locked installer payload,
+    /// elevated dir read as non-admin) must read as unreadable, never as empty.
     /// </summary>
     public static bool CanRead(DirectoryInfo directory)
     {
         try
         {
             directory.GetDirectories();
+            directory.GetFiles();
             return true;
         }
         catch (Exception)

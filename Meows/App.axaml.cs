@@ -35,6 +35,7 @@ public partial class App : Application
             // to be there before anything asks for one.
             var preferences = settings.LoadPreferences();
             RequestedThemeVariant = Appearance.VariantFor(preferences.Theme);
+            Appearance.ApplyScheme(preferences);
 
             var text = new Translations(message => log.Write("strings", message));
             text.Add(typeof(App).Assembly);
@@ -71,15 +72,53 @@ public partial class App : Application
 
             desktop.ShutdownRequested += (_, _) => tray.Dispose();
 
-            // Toasts, for what is raised while the window is not in front. Disposed on the way
-            // out, which takes the toasts back out of the action centre: nothing would answer
-            // their buttons once Meows has gone.
-            var toasts = new WindowsToasts(settings.Root, message => log.Write("toasts", message));
-            var relay = new ToastRelay(notifications, toasts, () => preferences.Toasts,
-                () => tray.IsWindowInFront, tray.Show, message => log.Write("toasts", message));
-            if (viewModel.Settings is { } settingsTab)
-                settingsTab.Toasts = toasts;
-            desktop.ShutdownRequested += (_, _) => relay.Dispose();
+            // Saying it outside the window: an event becomes a Windows notification while the
+            // window is not in front, and so does a condition when it is new or its words change.
+            // A state true all week says so once rather than every pass (ToastRule). The surface
+            // is decided once, here.
+            var surface = Toasts.Prepare(ShellSettings.IsPortable, message => log.Write("toast", message));
+            log.Write("toast", $"Saying it outside the window as: {surface}");
+            var buttons = new ToastButtons();
+            notifications.Posted += item => SayOutside(item, null);
+            notifications.ConditionSet += SayOutside;
+
+            void SayOutside(NotificationItem item, NotificationItem? replaced)
+            {
+                if (!preferences.SayOutside || tray.IsWindowActive || !ToastRule.ShouldSay(item, replaced))
+                    return;
+                var pressable = item.Actions
+                    .Select(action => (action.Label, buttons.Remember(() =>
+                    {
+                        action.Invoke();
+                        if (action.DismissesAfter)
+                            notifications.Dismiss(item);
+                    })))
+                    .ToList();
+                Toasts.Show($"{item.SourceName} · {item.Title}", item.Message,
+                    item.Severity >= Meows.Plugins.Abstractions.NotificationSeverity.Warning,
+                    message => log.Write("toast", message), pressable);
+            }
+
+            // The weekly recap: checked hourly, posted once a week from the week's history. The
+            // first week only starts the clock, since a recap of the week before is a recap of nothing.
+            if (preferences.LastRecapUtc is null)
+            {
+                preferences.LastRecapUtc = DateTime.UtcNow;
+                settings.SavePreferences(preferences);
+            }
+            background.ScheduleForShell(text["recap.task"], TimeSpan.FromHours(1), _ =>
+            {
+                var now = DateTime.UtcNow;
+                if (preferences.WeeklyRecap && WeeklyRecap.IsDue(preferences.LastRecapUtc, now))
+                {
+                    var recap = WeeklyRecap.Of(store.Between(now - WeeklyRecap.Week, now), now - WeeklyRecap.Week, now);
+                    preferences.LastRecapUtc = now;
+                    settings.SavePreferences(preferences);
+                    notifications.Post("Meows", Meows.Plugins.Abstractions.NotificationSeverity.Info,
+                        text["recap.title"], WeeklyRecap.Summary(recap, text), []);
+                }
+                return Task.CompletedTask;
+            }, runImmediately: true);
 
             // A second Meows started while this one runs: its arguments arrive here, and the
             // window comes up unless that start only wanted the tray.
@@ -87,6 +126,9 @@ public partial class App : Application
             {
                 log.Write("shell", "Another start asked for the running Meows" +
                     (args.Length == 0 ? "." : ": " + string.Join(' ', args)));
+                // A toast's button: pressed here, without bringing the window up for it.
+                if (args.Count(buttons.Press) > 0)
+                    return;
                 if (!args.Contains(StartWithWindows.TrayArgument, StringComparer.OrdinalIgnoreCase))
                     tray.Show();
             }));

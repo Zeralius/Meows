@@ -1,0 +1,235 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Bookshelf.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Bookshelf.Views.BookshelfView"
+             x:DataType="vm:BookshelfViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.label">
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="TextBlock.section">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Opacity" Value="0.5" />
+            <Setter Property="FontSize" Value="11" />
+        </Style>
+        <Style Selector="ListBoxItem">
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="CornerRadius" Value="5" />
+        </Style>
+        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+        </Style>
+        <Style Selector="Border.marker">
+            <Setter Property="Width" Value="4" />
+            <Setter Property="CornerRadius" Value="2" />
+            <Setter Property="VerticalAlignment" Value="Stretch" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Summary}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                    <TextBlock Classes="label" Text="{Binding Status}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <ComboBox ItemsSource="{Binding FilterChoices}"
+                              SelectedIndex="{Binding FilterIndex}"
+                              Width="130"
+                              VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{Binding SortChoices}"
+                              SelectedIndex="{Binding SortIndex}"
+                              Width="150"
+                              VerticalAlignment="Center" />
+                    <Button Content="{m:Tr bookshelf.stage}" Command="{Binding StageUnfinishedCommand}" />
+                    <Button Content="{m:Tr bookshelf.refresh}" Command="{Binding RefreshCommand}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="{DynamicResource MeowsDangerText}"
+                       TextWrapping="Wrap" />
+        </Border>
+
+        <Grid ColumnDefinitions="*,4,330">
+
+            <DockPanel Grid.Column="0">
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,14,14,10"
+                           Opacity="0.45"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsEmpty}"
+                           Text="{Binding EmptyText}" />
+
+                <ListBox Name="BookList"
+                         ItemsSource="{Binding Rows}"
+                         SelectedItem="{Binding Selected}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:BookRowViewModel">
+                            <Grid ColumnDefinitions="4,*,Auto" ColumnSpacing="10">
+                                <Border Grid.Column="0"
+                                        Classes="marker"
+                                        Background="{DynamicResource MeowsDangerStrong}"
+                                        IsVisible="{Binding IsDuplicate}" />
+
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Text="{Binding Shown}" TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Text="{Binding Author}"
+                                                   Classes="label"
+                                                   IsVisible="{Binding HasAuthor}" />
+                                        <TextBlock Text="{Binding StatusText}" Classes="label" />
+                                        <TextBlock Text="{Binding Format}" Classes="label" />
+                                    </StackPanel>
+                                </StackPanel>
+
+                                <StackPanel Grid.Column="2" Spacing="2" HorizontalAlignment="Right">
+                                    <TextBlock Text="{Binding OpenedText}"
+                                               FontSize="11"
+                                               HorizontalAlignment="Right" />
+                                    <TextBlock Text="{Binding SizeText}"
+                                               Classes="label"
+                                               HorizontalAlignment="Right" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <Border Grid.Column="2"
+                    Background="{DynamicResource MeowsBase}"
+                    BorderBrush="{DynamicResource MeowsLineSoft}"
+                    BorderThickness="1,0,0,0">
+                <Panel>
+                    <TextBlock Text="{m:Tr bookshelf.pickone}"
+                               Classes="label"
+                               Margin="16"
+                               TextWrapping="Wrap"
+                               VerticalAlignment="Top"
+                               IsVisible="{Binding !HasSelection}" />
+
+                    <ScrollViewer IsVisible="{Binding HasSelection}">
+                        <StackPanel Margin="16" Spacing="12">
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr bookshelf.field.book}" />
+                                <TextBlock Text="{Binding Selected.Shown}"
+                                           FontWeight="SemiBold"
+                                           TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Selected.Author}"
+                                           Classes="label"
+                                           IsVisible="{Binding Selected.HasAuthor}" />
+                                <TextBlock Text="{Binding Selected.OpenedText}" Classes="label" TextWrapping="Wrap" />
+                                <TextBlock Text="{Binding Selected.SizeText}" Classes="label" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr bookshelf.field.status}" />
+                                <ComboBox ItemsSource="{Binding Statuses}"
+                                          SelectedItem="{Binding Selected.StatusChoice}"
+                                          HorizontalAlignment="Stretch">
+                                    <ComboBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:Choice">
+                                            <TextBlock Text="{Binding Name}" />
+                                        </DataTemplate>
+                                    </ComboBox.ItemTemplate>
+                                </ComboBox>
+                            </StackPanel>
+
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Content="{m:Tr bookshelf.open}"
+                                        Command="{Binding OpenCommand}"
+                                        FontSize="11" />
+                                <Button Content="{m:Tr bookshelf.reveal}"
+                                        Command="{Binding RevealCommand}"
+                                        FontSize="11" />
+                                <Button Content="{m:Tr bookshelf.recycle.one}"
+                                        Command="{Binding RecycleOneCommand}"
+                                        Background="{DynamicResource MeowsDanger}"
+                                        BorderBrush="{DynamicResource MeowsDangerLine}"
+                                        FontSize="11" />
+                            </StackPanel>
+
+                            <Border Background="{DynamicResource MeowsLineSoft}" Height="1" Margin="0,4" />
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr bookshelf.field.staging}" />
+                                <TextBlock Text="{Binding StagingText}"
+                                           Classes="label"
+                                           TextTrimming="CharacterEllipsis" />
+                                <Button Content="{m:Tr bookshelf.staging.set}"
+                                        Command="{Binding SetStagingCommand}"
+                                        FontSize="11"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Center" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="section" Text="{m:Tr bookshelf.field.folders}" />
+                                <ListBox ItemsSource="{Binding Folders}"
+                                         SelectedItem="{Binding SelectedFolder}"
+                                         Background="Transparent"
+                                         BorderThickness="0"
+                                         MaxHeight="180">
+                                    <ListBox.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:FolderRowViewModel">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                                <CheckBox Grid.Column="0"
+                                                          IsChecked="{Binding Enabled}"
+                                                          VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Shown}"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="2"
+                                                           Text="?"
+                                                           Classes="label"
+                                                           VerticalAlignment="Center"
+                                                           IsVisible="{Binding IsMissing}"
+                                                           ToolTip.Tip="{m:Tr bookshelf.folder.missing}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListBox.ItemTemplate>
+                                </ListBox>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Content="{m:Tr bookshelf.folder.add}"
+                                            Command="{Binding AddFolderCommand}"
+                                            FontSize="11" />
+                                    <Button Content="{m:Tr bookshelf.folder.remove}"
+                                            Command="{Binding RemoveFolderCommand}"
+                                            FontSize="11" />
+                                </StackPanel>
+                            </StackPanel>
+
+                        </StackPanel>
+                    </ScrollViewer>
+                </Panel>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

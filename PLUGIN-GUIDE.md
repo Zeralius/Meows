@@ -16,10 +16,6 @@ smoke-tested with every release. For the shape of a finished plugin, read
 
 Copy an existing plugin's `.csproj`. Three things are load-bearing:
 
-A plugin targets plain `net10.0`. The shell itself has targeted `net10.0-windows10.0.19041.0`
-since 4.2.0, for Windows toasts, and a Windows app loads a plain `net10.0` plugin as it always
-did; nothing about a plugin has to change for it.
-
 ```xml
 <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
@@ -146,7 +142,7 @@ contract version the template was published with. No `ProjectReference`, no Meow
 ```xml
 <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.1.0" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.6.0" ExcludeAssets="runtime" PrivateAssets="all" />
 </ItemGroup>
 ```
 
@@ -237,8 +233,8 @@ The shell checks this for you. At discovery it reads the contract version your a
 compiled against and refuses anything it cannot honour, **before constructing your plugin**, so
 none of your code runs. The reason appears on your plugin's card in place of its toggle:
 
-> Built for Meows contract 1.2.0, which is newer than this shell's 1.1.0. Update Meows, or rebuild
-> the plugin against 1.1.0.
+> Built for Meows contract 1.7.0, which is newer than this shell's 1.6.0. Update Meows, or rebuild
+> the plugin against 1.6.0.
 
 A mismatched **major** is refused either way, since a major bump means members may have been
 removed. A **newer** minor or patch is refused; an older one loads fine, because additive
@@ -424,6 +420,67 @@ with the files waiting in its last folder, one listing when first asked, and Fam
 one-shots by name; a plugin whose data only exists once it is on, Tin's accounts or Birdwatch's
 posts, answers nothing and is left out, which is the honest default.
 
+### Being asked by a rule
+
+The shell's **Rules** tab joins plugins up: *when* one records an event, *then* ask another to
+do something. Since 1.2.0 a plugin takes part through two lists on the plugin class and one
+interface on its view model. Both lists are read while the plugin is off, so they are fixed
+lists, never read from settings or the disk.
+
+```csharp
+public IReadOnlyList<PluginAction> Actions =>
+[
+    new("check", "myplugin.action.check", "myplugin.action.check.hint"),
+];
+
+public IReadOnlyList<RecordedKind> Records =>
+[
+    new("found", "myplugin.records.found"),    // the kind you pass to Store.Record
+];
+```
+
+`Actions` is what a rule can ask for: a stable id, which is what rules are saved by, and a label
+and an optional sentence, both keys from your catalogue. `Records` names the kinds of event you
+already write to the store, with a past-tense phrase that follows your plugin's name on the
+Rules tab, "Birdwatch *saved a picture*", so a rule can wait for one before it has ever happened.
+A kind you record but do not list can still start a rule once it is in the history; it is shown
+by its bare word. Both default to empty, and a plugin with no actions is simply not on the
+"then" side.
+
+The asking goes to the view model:
+
+```csharp
+public sealed class MyViewModel : ObservableObject, IActionTarget
+{
+    public async Task<string> Perform(ActionRequest request, CancellationToken token)
+    {
+        if (request.Action != "check")
+            throw new ActionDeclinedException($"My plugin does not know how to {request.Action}.");
+        if (!File.Exists(request.Path))
+            throw new ActionDeclinedException($"{request.Path} is not there any more.");
+
+        var found = await CheckAsync(request.Path, token);
+        return $"{found} things found";              // the line History shows
+    }
+}
+```
+
+The shell switches the plugin on if it is off, without bringing its tab to the front, and calls
+`Perform` on the UI thread. Do the work the way the tab would, through background work if it
+is long, and return one sentence saying how it went. `request.Cause` is the whole event that set
+the rule off; `request.Path` is where the thing is now, which is the cause's subject unless the
+recording plugin moved it and wrote the new place as `destination` in its data, as Kibble does.
+Throw `ActionDeclinedException` for "not this time", the file has gone or the tab is busy, and
+anything else for a real failure; History tells the two apart. The token is cancelled when
+Meows quits, when your plugin is switched off, and when an action has run for an hour.
+
+Whatever you record while performing is marked as the rule's doing and never starts another
+rule. That is the one-hop rule, and it is kept by the shell, not by you: the store marks every
+line written from inside `Perform`, including from work it awaited on another thread, and
+treats any line from a plugin that is busy with a rule the same way. Collar, Portion, Purrge,
+Scruff and Weigh-In are the worked examples; Collar's is the smallest, and Weigh-In's shows
+several rules asking at once sharing one pass.
+
 ---
 
 ## 4. `IMeowsHost`
@@ -447,6 +504,7 @@ public interface IMeowsHost
     IMeowsStore Store { get; }          // 0.5.0
     IMeowsWatches Watches { get; }      // 0.7.0
     IMeowsPicker Pick { get; }          // 1.0.0
+    IMeowsReach Reach { get; }          // 1.3.0
 }
 ```
 
@@ -462,6 +520,14 @@ older minor. A plugin built against 0.x is refused by a 1.x shell, before any of
 with *rebuild against 1.0.0* on its card. The members that came with 1.0.0 are `Pick` below and
 `IMeowsPlugin.WhileOff` in [section 3](#3-the-entry-point); nothing was taken away. **1.1.0**
 added `IGlanceable`, [a line on the Home tab](#a-line-on-the-home-tab), and nothing else.
+**1.2.0** added `IMeowsPlugin.Actions` and `IMeowsPlugin.Records`, `IActionTarget` and
+`ActionDeclinedException`, for [being asked by a rule](#being-asked-by-a-rule). **1.3.0** added
+[`Reach`](#reach), the server a plugin can copy a folder to. **1.4.0** added
+`IMeowsPlugin.GlanceWhileOff`, [the Home line with no window](#a-line-on-the-home-tab). **1.5.0**
+added `IMeowsPlugin.Jobs` and `RunJob`, `IMeowsJobHost`, `JobDeclinedException` and
+`IMeowsHost.RunsFromOutside`, for [work without a window](#work-without-a-window). **1.6.0**
+added `IMultiGlance`, [up to three lines on the Home card](#a-line-on-the-home-tab), and
+nothing else.
 
 ### `DataDirectory`
 
@@ -630,12 +696,83 @@ what is in memory, the way `Search` does. Most plugins already have the sentence
 header line of the tab. A plugin that is off has no view model and no line; that is what the
 shell's own line is for.
 
-**Every plugin that ships in this repository answers it** (4.2.0), and `GlanceSystemTests` walks
+**Every plugin that ships in this repository answers it** (5.0.0), and `GlanceSystemTests` walks
 the shipped list and fails on one that does not, the way the view smoke test fails on a view that
 will not build. What is enforced is the decision, not a line of text: a plugin that has looked
 at nothing yet has no news and answers null, which is right on a fresh start. Kitten writes the
 method into every plugin it makes, answering null, for the author to fill in. A plugin outside
 the repository is under no such rule; the interface stays optional in the contract.
+
+Since 1.6.0 a view model can put up to three lines instead of one, by implementing
+`IMultiGlance` beside (or instead of) `IGlanceable`:
+
+```csharp
+public IReadOnlyList<Glance> Glances() => Overdue()
+    .Take(2)
+    .Select(card => new Glance(card.Title, IsTrouble: true))
+    .Prepend(SummaryGlance)
+    .ToList();
+```
+
+The first line plays the Home-line role, exactly as `Glance()` would; the rest are detail the
+card has room for, most overdue first. Home asks `Glances()` first when both are implemented
+and falls back to the single line otherwise; more than three lines are ignored, so there is
+no need to count. Empty means nothing worth any lines right now, the same as null.
+
+`Meows.exe --glance` prints every switched-on plugin's line with no window at all, and
+`--glance --json` does the same for a status bar or a scheduled task. There is no view model to
+ask there either, so since 1.4.0 the plugin class can answer the same question from what it
+keeps:
+
+```csharp
+public Glance? GlanceWhileOff(IMeowsDormantHost host) =>
+    host.LoadSettings<CollarSettings>() is { } settings
+        ? CollarViewModel.GlanceOf(settings.Entries, settings.LeadDays, DateTime.Today, host.Text)
+        : null;
+```
+
+The host is the same dormant one `WhileOff` gets: settings, the journal, the data folder, the
+text. It may be called with no window and off the UI thread, so a file or two, never a walk of a
+drive, never the network. The neat way to keep the two lines the same is the one Collar and
+Weigh-In use: a static method that works the sentence out from the kept data, called by both
+`Glance()` and `GlanceWhileOff`. Null, the default, gets the shell's own line in the output, the
+last thing the plugin recorded; Portion and Purr answer null, because what they would say only
+exists once they have looked.
+
+### Work without a window
+
+Since 1.5.0 a plugin can declare work it does with no view: `Meows.exe --do weighin.measure`, one
+line in Task Scheduler, so the nightly pass happens whether or not anyone opened Meows. Windows
+owns the trigger and Meows owns the work; nothing runs as a service or with nobody logged in.
+
+```csharp
+public IReadOnlyList<PluginJob> Jobs =>
+[
+    new("measure", "weighin.job.measure", "weighin.job.measure.hint") { StandsInForSchedule = true },
+];
+
+public async Task<string> RunJob(string jobId, IMeowsJobHost host, CancellationToken token)
+{
+    var settings = host.LoadSettings<WeighInSettings>() ?? new();
+    var reading = await Task.Run(() => Readings.Take(/* ... */), token);
+    // save it, journal it through host.Store, host.Notify if something wants doing
+    return host.Text.Format("weighin.status.read", reading.Drives.Count, reading.At.ToString("HH:mm"));
+}
+```
+
+The job runs in a process of its own, with no window and no UI thread, beside a Meows that may be
+open; it touches nothing a view model owns. The host is the dormant one plus `SaveSettings`,
+`Log`, `Report` for progress in the terminal, and `Notify` for something worth saying with no
+window to say it in. The sentence returned is printed and is the task's result. Throw
+`JobDeclinedException` for a job that should not run as asked, "no copy folder is set"; anything
+else thrown is a failure. The exit codes are 0 done, 1 failed or declined, 2 no such job, 3 the
+plugin is switched off, since off means off whoever asks. `--do` with nothing after it lists the
+jobs there are.
+
+**A job and a schedule are the same work with two owners.** A job that also runs on the plugin's
+own schedule says `StandsInForSchedule`, and the plugin asks `host.RunsFromOutside(jobId)` before
+its own pass and stands down when Windows has run the job in the last eight days. Weigh-In does
+exactly that. Keep the work in a static method both call, as Weigh-In, Nest and Cattery do.
 
 ### `Watches`
 
@@ -674,6 +811,39 @@ code-behinds opens a dialog any more; `ChonkViewModel.PickFolderCommand` is the 
 tests, `FakeHost.Picks` answers each dialog with the next scripted path, so the whole flow runs
 without a window. Reaching for `TopLevel.GetTopLevel(this)?.StorageProvider` in code-behind
 still works, if a plugin would rather.
+
+### `Reach`
+
+The server set on the Settings tab, the machine the bot and Foundry run on, reached either as a
+folder (a share, a mapped drive) or over SFTP with a key the shell keeps sealed. A plugin never
+learns which: it names a place under the server's root and hands over a folder.
+
+```csharp
+if (!_host.Reach.IsSet)
+    return;   // keep the button off, and say where to set a server
+
+_host.Background.Run("Putting the kit on the server", async context =>
+{
+    var progress = new Progress<ReachProgress>(p => context.ReportProgress((double)p.Done / p.Total));
+    var result = await _host.Reach.CopyFolder(kitFolder, "Data/modules/meows-kit/kits/tavern", progress, context.Token);
+    if (!result.Ok)
+        _host.Notifications.Post(NotificationSeverity.Warning, "Did not reach the server", result.Error ?? "");
+});
+```
+
+The remote path is relative with forward slashes; anything rooted or climbing out with `..` is
+refused. Subfolders come along, missing folders are made, a file already there under the same
+name is replaced and anything else there is left alone. Each file is written under a temporary
+name and moved into place once its size checks out, so a copy cut off halfway never leaves half
+a file under the real name. The server's own troubles, unplugged, refused, full, come back in the
+result rather than as an exception; only cancelling throws. `Where` names the server for a
+person, and is what to show beside the button.
+
+For SFTP the shell will not connect until a person has tested the server on the Settings tab,
+compared the key it answered with, and pressed Trust; a server that later answers with another
+key is refused with both keys in the error. None of that reaches a plugin, and the key itself
+never leaves the shell. Familiar is the worked example: `SendToServer` in `FamiliarViewModel`.
+The default, and a shell with nothing set, reaches nothing and says so.
 
 ### `Explorer`
 
@@ -835,6 +1005,14 @@ pasted into a bug report.
 
 Use these when the user needs to know something. The point is that the shell owns one surface,
 so a problem raised by a tab in the background is still seen.
+
+Since Meows 4.17.0 a one-off event posted while the window is not in front also becomes a Windows
+notification, buttons and all, unless the Settings tab turns that off. Since 5.0.0 a condition
+does too, when it is new or its title, message or severity changes, but not when it is re-set
+with the same words: a state true all week says so once rather than every pass, so set the same
+condition as often as you like. A portable Meows, which writes
+nothing into the Start menu, uses a tray balloon without buttons instead. Nothing changes for a
+plugin: post as before.
 
 ```csharp
 public interface IMeowsNotifications

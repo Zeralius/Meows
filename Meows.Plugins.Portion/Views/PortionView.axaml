@@ -185,6 +185,12 @@
                                     Command="{Binding ShrinkSelectedCommand}"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center" />
+                            <Button Content="{m:Tr portion.rename}"
+                                    Command="{Binding RenameCommand}"
+                                    IsVisible="{Binding Selected.CanRename}"
+                                    ToolTip.Tip="{Binding Selected.HonestName}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
                             <Button Content="{m:Tr portion.hold}"
                                     Command="{Binding HoldCommand}"
                                     IsVisible="{Binding Selected.WillFail}"

@@ -35,6 +35,7 @@ public static class ArchiveInspector
         }
 
         evidence.Add(Contents(summary));
+        evidence.AddRange(Wound(path, summary));
 
         if (sibling is not null)
         {
@@ -88,6 +89,41 @@ public static class ArchiveInspector
 
     private static string Cost(TwinReport twin) =>
         Say("disk.twin.cost", FolderSize.Humanise(twin.ArchiveSize), FolderSize.Humanise(twin.MatchedBytes));
+
+    /// <summary>
+    /// Twine's two questions, answered from the same table of contents: is there an archive in
+    /// this archive, and is there only one file. Said, never acted on. A single page in a .cbz is
+    /// often a comic of one page on purpose, so that one is said more softly.
+    /// </summary>
+    public static IEnumerable<string> Wound(string path, ArchiveSummary summary)
+    {
+        if (summary.OnlyEntry is { } only)
+        {
+            var name = Path.GetFileName(only.Replace('/', Path.DirectorySeparatorChar));
+            if (Archives.IsArchive(only))
+                yield return Say("disk.twine.only.archive", name, FolderSize.Humanise(summary.UnpackedSize));
+            else if (IsComic(path))
+                yield return Say("disk.twine.only.page", name);
+            else
+                yield return Say("disk.twine.only", name);
+            yield break;
+        }
+
+        switch (summary.Nested.Count)
+        {
+            case 0:
+                break;
+            case 1:
+                yield return Say("disk.twine.nested.one", Path.GetFileName(summary.Nested[0].Name.Replace('/', Path.DirectorySeparatorChar)), FolderSize.Humanise(summary.NestedBytes));
+                break;
+            default:
+                yield return Say("disk.twine.nested", summary.Nested.Count, FolderSize.Humanise(summary.NestedBytes));
+                break;
+        }
+    }
+
+    private static bool IsComic(string path) =>
+        Path.GetExtension(path) is { } ext && (ext.Equals(".cbz", StringComparison.OrdinalIgnoreCase) || ext.Equals(".cbr", StringComparison.OrdinalIgnoreCase));
 
     private static string Contents(ArchiveSummary summary) => summary.TopKind is "" or "(none)"
         ? Say("disk.archive.contents.noextension", summary.EntryCount, FolderSize.Humanise(summary.UnpackedSize))

@@ -207,7 +207,7 @@ public sealed class EntryViewModel : ObservableObject
     internal void Reread() => OnEverythingChanged();
 }
 
-public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget, IGlanceable
+public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable, IHandoffTarget, IGlanceable, IActionTarget
 {
     /// <summary>The condition key. One per plugin scope, so it replaces rather than stacks.</summary>
     private const string DueKey = "due";
@@ -346,26 +346,38 @@ public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable
     public bool HasError => !string.IsNullOrEmpty(ErrorMessage);
 
     /// <summary>The line under the header: what is late, what is close, and nothing else.</summary>
-    public string Summary
+    public string Summary => SummaryOf(_settings.Entries, LeadDays, DateTime.Today, _host.Text);
+
+    /// <summary>
+    /// The headline from the dates alone, so the tab and <c>--glance</c> say the same thing:
+    /// how many have come round, how many are close, or that all of them are fine.
+    /// </summary>
+    public static string SummaryOf(IReadOnlyList<CollarEntry> entries, int leadDays, DateTime today, IMeowsText text)
     {
-        get
-        {
-            var overdue = Entries.Count(e => e.IsOverdue);
-            var soon = Entries.Count(e => e.IsSoon);
+        var overdue = entries.Count(e => Dates.Of(e, today, leadDays) == Standing.Overdue);
+        var soon = entries.Count(e => Dates.Of(e, today, leadDays) == Standing.Soon);
 
-            if (overdue > 0 && soon > 0)
-                return _host.Text.Format("collar.summary.both", overdue, soon);
-            if (overdue > 0)
-                return _host.Text.Format("collar.summary.overdue", overdue);
-            if (soon > 0)
-                return _host.Text.Format("collar.summary.soon", soon, LeadDays);
+        if (overdue > 0 && soon > 0)
+            return text.Format("collar.summary.both", overdue, soon);
+        if (overdue > 0)
+            return text.Format("collar.summary.overdue", overdue);
+        if (soon > 0)
+            return text.Format("collar.summary.soon", soon, leadDays);
 
-            return Entries.Count == 0 ? "" : _host.Text.Format("collar.summary.clear", Entries.Count);
-        }
+        return entries.Count == 0 ? "" : text.Format("collar.summary.clear", entries.Count);
+    }
+
+    /// <summary>The Home line from the dates alone: red while something is late, nothing when there are no dates.</summary>
+    public static Glance? GlanceOf(IReadOnlyList<CollarEntry> entries, int leadDays, DateTime today, IMeowsText text)
+    {
+        var summary = SummaryOf(entries, leadDays, today, text);
+        return summary.Length == 0
+            ? null
+            : new Glance(summary, entries.Any(e => Dates.Of(e, today, leadDays) == Standing.Overdue));
     }
 
     /// <summary>The same line on the Home tab, red while something is late.</summary>
-    public Glance? Glance() => Summary.Length == 0 ? null : new Glance(Summary, Entries.Any(e => e.IsOverdue));
+    public Glance? Glance() => GlanceOf(_settings.Entries, LeadDays, DateTime.Today, _host.Text);
 
     /// <summary>Adds an entry and selects it, because the next thing wanted is to name it.</summary>
     public void Add(CollarEntry entry)
@@ -425,6 +437,49 @@ public sealed class CollarViewModel : ObservableObject, IDisposable, ISearchable
         handoff.Answer(added == 0
             ? _host.Text["collar.reply.attached"]
             : _host.Text.Format("collar.reply.added", added));
+    }
+
+    /// <summary>
+    /// A rule's "put it on the list": a one-off entry named after what the rule was about, due
+    /// today or in a week, with the file attached when there is one and the other plugin's words
+    /// as the note. Nothing is selected, since nobody is necessarily looking. The same thing
+    /// asked twice for the same day is one entry, not two.
+    /// </summary>
+    public Task<string> Perform(ActionRequest request, CancellationToken token)
+    {
+        var days = request.Action switch
+        {
+            CollarPlugin.RemindToday => 0,
+            CollarPlugin.RemindWeek => 7,
+            _ => throw new ActionDeclinedException(_host.Text.Format("collar.action.unknown", request.Action)),
+        };
+
+        var path = request.Path;
+        var isFile = System.IO.File.Exists(path);
+        var title = isFile ? System.IO.Path.GetFileName(path) : request.Subject.Trim();
+        if (title.Length == 0)
+            title = _host.Text["collar.untitled"];
+        var due = DateTime.Today.AddDays(days);
+        var shown = due.ToString("d", Culture);
+
+        if (_settings.Entries.Any(e => !e.Done && e.Due.Date == due && string.Equals(e.Title, title, StringComparison.CurrentCultureIgnoreCase)))
+            return Task.FromResult(_host.Text.Format("collar.action.already", title, shown));
+
+        _settings.Entries.Add(new CollarEntry
+        {
+            Title = title,
+            Kind = Kind.Other,
+            Due = due,
+            Note = request.Cause.Detail ?? "",
+            File = isFile ? path : null,
+        });
+        Save();
+
+        var keep = Selected?.Id;
+        Rebuild();
+        Selected = keep is null ? null : Entries.FirstOrDefault(e => e.Id == keep);
+
+        return Task.FromResult(_host.Text.Format("collar.action.added", title, shown));
     }
 
     /// <summary>Dealt with: a repeat moves to its next date, a one-off is finished.</summary>

@@ -16,12 +16,27 @@ public sealed class PerchSettings
     public DateTime? BotStartedAt { get; set; }
 
     public int HorizonHours { get; set; } = 48;
+
+    /// <summary>
+    /// How the left column is ordered: config file order, longest queue first or last,
+    /// or by name. Queued counts change every refresh, so the choice is a setting, not a
+    /// one-off click.
+    /// </summary>
+    public string GroupSort { get; set; } = "config";
 }
 
 /// <summary>One choice in a dropdown, named by the language the window is in.</summary>
 public sealed class HorizonOption(int hours, string key)
 {
     public int Hours { get; } = hours;
+
+    public TranslatedString Label { get; } = MeowsText.Entry(key);
+}
+
+/// <summary>One group-sort choice in the dropdown above the left column.</summary>
+public sealed class GroupSortOption(string value, string key)
+{
+    public string Value { get; } = value;
 
     public TranslatedString Label { get; } = MeowsText.Entry(key);
 }
@@ -285,6 +300,62 @@ public sealed class PerchViewModel : ObservableObject, IDisposable, ISearchable,
         }
     }
 
+    public IReadOnlyList<GroupSortOption> GroupSorts { get; } =
+    [
+        new("config", "perch.sort.config"),
+        new("queueDesc", "perch.sort.queuedesc"),
+        new("queueAsc", "perch.sort.queueasc"),
+        new("nameAsc", "perch.sort.nameasc"),
+        new("nameDesc", "perch.sort.namedesc"),
+    ];
+
+    /// <summary>
+    /// The left column order. Reorders what is already there rather than rereading the bot:
+    /// the queues have not changed, only how they are looked at.
+    /// </summary>
+    public GroupSortOption SelectedGroupSort
+    {
+        get => GroupSorts.FirstOrDefault(o => o.Value == _settings.GroupSort) ?? GroupSorts[0];
+        set
+        {
+            if (value is null || _settings.GroupSort == value.Value)
+                return;
+            _settings.GroupSort = value.Value;
+            Save();
+            OnPropertyChanged();
+            ApplyGroupSort();
+        }
+    }
+
+    /// <summary>Orders group summaries the way the dropdown asks, longest queue included.</summary>
+    public static List<GroupSummaryViewModel> OrderedSummaries(
+        IEnumerable<GroupSummaryViewModel> summaries, string sort) => sort switch
+    {
+        "queueDesc" => summaries
+            .OrderByDescending(g => g.Queued)
+            .ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList(),
+        "queueAsc" => summaries
+            .OrderBy(g => g.Queued)
+            .ThenBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList(),
+        "nameAsc" => summaries
+            .OrderBy(g => g.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList(),
+        "nameDesc" => summaries
+            .OrderByDescending(g => g.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList(),
+        _ => summaries.ToList(),
+    };
+
+    private void ApplyGroupSort()
+    {
+        var ordered = OrderedSummaries(Groups, _settings.GroupSort);
+        Groups.Clear();
+        foreach (var summary in ordered)
+            Groups.Add(summary);
+    }
+
     public SlotViewModel? Selected
     {
         get => _selected;
@@ -404,12 +475,19 @@ public sealed class PerchViewModel : ObservableObject, IDisposable, ISearchable,
 
                 var slots = Forecast.Build(queues, start, now, horizon);
 
-                var summaries = queues.Select(q => new GroupSummaryViewModel(
-                    q.Group,
-                    q.Ordered.Count,
-                    slots.FirstOrDefault(s => s.Group == q.Group && s.Kind is SlotKind.RunsDry or SlotKind.Nothing)?.At,
-                    q.Group.Schedule?.IntervalMinutes is { } i && i > 0 && QueueRunway.IsStretching(q.Group, q.Ordered.Count)))
-                    .ToList();
+                // Uploads left, not files: a 6-page comic counting as uploads holds six
+                // slots of queue, so the runway and the dry point read it that way too.
+                var summaries = queues.Select(q =>
+                {
+                    var uploads = q.Group.ComicPagesAsUploads == true
+                        ? q.Ordered.Sum(p => MediaRules.SlotCost(p, q.Group.ComicOrder ?? "name", true))
+                        : q.Ordered.Count;
+                    return new GroupSummaryViewModel(
+                        q.Group,
+                        uploads,
+                        slots.FirstOrDefault(s => s.Group == q.Group && s.Kind is SlotKind.RunsDry or SlotKind.Nothing)?.At,
+                        q.Group.Schedule?.IntervalMinutes is { } i && i > 0 && QueueRunway.IsStretching(q.Group, uploads));
+                }).ToList();
 
                 return (slots, summaries);
             }, token);
@@ -417,7 +495,7 @@ public sealed class PerchViewModel : ObservableObject, IDisposable, ISearchable,
             Clear();
             foreach (var slot in slots)
                 _all.Add(new SlotViewModel(slot));
-            foreach (var summary in summaries)
+            foreach (var summary in OrderedSummaries(summaries, _settings.GroupSort))
                 Groups.Add(summary);
 
             RebuildDays();

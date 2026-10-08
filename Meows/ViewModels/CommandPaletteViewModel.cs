@@ -27,6 +27,12 @@ public sealed class PaletteItem(string glyph, string title, string subtitle, Act
 }
 
 /// <summary>
+/// One place something typed can go: a plugin's action, with the words to find it by. Picking
+/// one does not run anything yet; it asks what the action should take.
+/// </summary>
+public sealed record AddTarget(string PluginId, string PluginName, string Glyph, string ActionId, string Label, string? Hint);
+
+/// <summary>
 /// The command palette: Ctrl+K, type, Enter.
 ///
 /// Everything the window can do from one box, which is quicker than the tabs once there are
@@ -38,16 +44,25 @@ public sealed class CommandPaletteViewModel : ObservableObject
 {
     private readonly Func<IEnumerable<PaletteItem>> _fixed;
     private readonly Func<string, IEnumerable<PaletteItem>> _searched;
+    private readonly Func<IEnumerable<AddTarget>> _addTargets;
+    private readonly Func<AddTarget, string, Task> _add;
     private bool _isOpen;
     private string _query = "";
     private PaletteItem? _selected;
     private string? _scopeKey;
     private string _scopeName = "";
+    private AddTarget? _addTarget;
 
-    public CommandPaletteViewModel(Func<IEnumerable<PaletteItem>> fixedItems, Func<string, IEnumerable<PaletteItem>> searchedItems)
+    public CommandPaletteViewModel(
+        Func<IEnumerable<PaletteItem>> fixedItems,
+        Func<string, IEnumerable<PaletteItem>> searchedItems,
+        Func<IEnumerable<AddTarget>>? addTargets = null,
+        Func<AddTarget, string, Task>? add = null)
     {
         _fixed = fixedItems;
         _searched = searchedItems;
+        _addTargets = addTargets ?? (() => []);
+        _add = add ?? ((_, _) => Task.CompletedTask);
         RunCommand = new RelayCommand(RunSelected);
         CloseCommand = new RelayCommand(() => IsOpen = false);
     }
@@ -69,6 +84,10 @@ public sealed class CommandPaletteViewModel : ObservableObject
             {
                 Query = "";
                 Rebuild();
+            }
+            else
+            {
+                _addTarget = null;
             }
         }
     }
@@ -99,18 +118,28 @@ public sealed class CommandPaletteViewModel : ObservableObject
 
     public bool IsScoped => _scopeKey is not null;
 
-    /// <summary>What the box says before anything is typed: the usual hint, or the tab being searched.</summary>
-    public string Hint => _scopeKey is null
-        ? MeowsText.Current["palette.hint"]
-        : MeowsText.Current.Format("palette.hint.scoped", _scopeName);
+    /// <summary>What the box says before anything is typed: the usual hint, the tab being searched, or what adding takes.</summary>
+    public string Hint => _addTarget is { } add
+        ? MeowsText.Current.Format("palette.add.hint", add.PluginName, add.Label)
+        : _scopeKey is null
+            ? MeowsText.Current["palette.hint"]
+            : MeowsText.Current.Format("palette.hint.scoped", _scopeName);
 
     public void Open()
     {
         _scopeKey = null;
         _scopeName = "";
+        _addTarget = null;
         OnPropertyChanged(nameof(Hint));
         OnPropertyChanged(nameof(IsScoped));
         IsOpen = true;
+    }
+
+    /// <summary>Ctrl+K then <c>+</c>: adding, starting at picking what takes it.</summary>
+    public void OpenAdd()
+    {
+        Open();
+        Query = "+";
     }
 
     public void OpenScoped(string tabKey, string tabName)
@@ -145,6 +174,22 @@ public sealed class CommandPaletteViewModel : ObservableObject
         rest = trimmed;
         return false;
     }
+
+    /// <summary>Whether a query is adding something, and the words after the mark.</summary>
+    public static bool IsAddQuery(string query, out string rest)
+    {
+        var trimmed = query.TrimStart();
+        if (trimmed.StartsWith('+'))
+        {
+            rest = trimmed[1..].Trim();
+            return true;
+        }
+        rest = trimmed;
+        return false;
+    }
+
+    /// <summary>Whether the box is asking what an action should take, rather than listing.</summary>
+    public bool IsAdding => _addTarget is not null;
 
     public void MoveSelection(int delta)
     {
@@ -189,15 +234,37 @@ public sealed class CommandPaletteViewModel : ObservableObject
         var query = _query.Trim();
         List<PaletteItem> all;
 
-        if (_scopeKey is not null)
+        if (_addTarget is { } adding)
+        {
+            // Asking what an action should take: the one thing Enter does, or nothing on empty.
+            all = query.Length == 0
+                ? []
+                : [new PaletteItem(adding.Glyph,
+                    MeowsText.Current.Format("palette.add.do", query, adding.PluginName),
+                    adding.Hint ?? "",
+                    () =>
+                    {
+                        var target = adding;
+                        var text = query;
+                        _ = _add(target, text);
+                    })];
+        }
+        else if (_scopeKey is not null)
         {
             // One tab: nothing fixed, only what that tab answers, from two letters on.
             all = query.Length >= 2 ? _searched(query).ToList() : [];
         }
-        else if (IsCommandQuery(query, out var rest))
+        else if (IsAddQuery(query, out var rest))
+        {
+            all = _addTargets()
+                .Select(t => new PaletteItem(t.Glyph, $"{t.PluginName}: {t.Label}", t.Hint ?? "", () => EnterAddTarget(t)))
+                .ToList();
+            query = rest;
+        }
+        else if (IsCommandQuery(query, out var commandRest))
         {
             all = _fixed().Where(i => i.IsCommand).ToList();
-            query = rest;
+            query = commandRest;
         }
         else
         {
@@ -212,5 +279,16 @@ public sealed class CommandPaletteViewModel : ObservableObject
 
         Selected = Items.FirstOrDefault();
         OnPropertyChanged(nameof(IsEmpty));
+    }
+
+    /// <summary>An add target picked: the box now asks what it should take.</summary>
+    private void EnterAddTarget(AddTarget target)
+    {
+        _addTarget = target;
+        OnPropertyChanged(nameof(Hint));
+        OnPropertyChanged(nameof(IsAdding));
+        Query = "";
+        // RunSelected closes the box before running the item; adding stays open for the words.
+        IsOpen = true;
     }
 }

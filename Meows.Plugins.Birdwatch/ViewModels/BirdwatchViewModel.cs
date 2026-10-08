@@ -869,6 +869,8 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
                     media.IsSaved = true;
                     Status = _host.Text.Format("birdwatch.status.saved", Path.GetFileName(result.Path!));
                     _host.Log($"Birdwatch saved {result.Path}");
+                    _host.Store.Record("saved", result.Path!, _host.Text.Format("birdwatch.journal.saved", media.AuthorHandle),
+                        new Dictionary<string, string> { ["post"] = media.Post.Id });
                     if (result.Hash is not null)
                         _host.Store.MarkSeen(result.Hash, $"@{media.AuthorHandle} {media.Post.Id}");
                     break;

@@ -82,6 +82,28 @@ target in a form this reads and 73 do not, mostly Start Menu entries pointing in
 namespace rather than at a file. Nothing is said about those 73. Of the 229, six came back broken,
 and all six were confirmed gone by hand.
 
+## Left on their own
+
+Some files only make sense beside another one. Everything else Mouser reports is judged on its
+own; one of these is only an orphan relative to its folder, so each is held up against the files
+next to it, by a rule that is named and switched on or off in the left column:
+
+- **Subtitles with no video.** `movie.srt`, `movie.en.srt` and `movie.en.forced.srt` belong to
+  `movie.mkv`. A folder with a single video owns whatever subtitles are in it, whatever they are
+  called, and a `Subs` folder belongs to the film one level up.
+- **Photo sidecars with no photo.** `photo.xmp` or `photo.cr2.xmp` beside `photo.cr2`, and
+  `IMG_0001.AAE` beside `IMG_0001.HEIC`.
+- **Download notes with nothing beside them.** Takeout's `photo.jpg.json` wants `photo.jpg`, and
+  yt-dlp's `clip.info.json` wants a `clip` that is not json. Any other json is somebody's data and
+  is left alone.
+- **Unity .meta files with no asset**, only inside a project's `Assets` or `Packages`, where
+  Unity writes one per asset and one per folder. Elsewhere `.meta` means something else.
+- **G-code with no model beside it.** Off unless switched on, because a print file is often kept
+  on purpose after the model has gone.
+
+Each finding says the name it was expecting. Switching a rule looks at the folder again, and the
+choice is remembered.
+
 ## What it will not touch
 
 - The folder you pointed it at, however empty it is

@@ -36,6 +36,10 @@
         <Style Selector="TextBlock.delta.shrank">
             <Setter Property="Foreground" Value="{DynamicResource MeowsGoodText}" />
         </Style>
+        <Style Selector="TextBlock.over">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsDangerText}" />
+            <Setter Property="Opacity" Value="1" />
+        </Style>
     </UserControl.Styles>
 
     <DockPanel>
@@ -147,7 +151,31 @@
                             <TextBlock Text="{Binding SelectedGrowth.Path}" Classes="label" TextWrapping="Wrap" />
                             <Button Content="{m:Tr weighin.chonk}" Command="{Binding MeasureInChonkCommand}" IsVisible="{Binding CanReachChonk}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,6,0,0" />
                             <Button Content="{m:Tr weighin.explore}" Command="{Binding ExploreCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <Button Content="{m:Tr weighin.budget.set}" Command="{Binding BudgetSelectedCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                         </StackPanel>
+
+                        <!-- Budgets: a line per folder, set by hand, checked at every reading. -->
+                        <TextBlock Text="{m:Tr weighin.budgets}" FontWeight="SemiBold" FontSize="13" Margin="0,14,0,0" />
+                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr weighin.budgets.hint}" />
+                        <ItemsControl ItemsSource="{Binding BudgetRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:BudgetRowViewModel">
+                                    <StackPanel Spacing="3" Margin="0,4,0,4">
+                                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                            <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding Path}" />
+                                            <NumericUpDown Grid.Column="1" Value="{Binding Gigabytes}" Minimum="0.1" Maximum="100000" Increment="1" FormatString="0.#" FontSize="11" Width="96"
+                                                           ToolTip.Tip="{m:Tr weighin.budget.gb}" />
+                                            <Button Grid.Column="2" Content="✕" FontSize="11" Padding="6,2"
+                                                    Command="{Binding $parent[UserControl].((vm:WeighInViewModel)DataContext).RemoveBudgetCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{m:Tr weighin.budget.remove}" />
+                                        </Grid>
+                                        <TextBlock Classes="label" Classes.over="{Binding IsOver}" Text="{Binding StandingText}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Content="{m:Tr weighin.budget.add}" Command="{Binding AddBudgetCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
 
                         <TextBlock Text="{m:Tr weighin.dials}" FontWeight="SemiBold" FontSize="13" Margin="0,14,0,0" />
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">

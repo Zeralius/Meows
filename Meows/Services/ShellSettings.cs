@@ -433,6 +433,15 @@ public sealed class ShellPreferences
     /// <summary>"system", "light" or "dark".</summary>
     public string Theme { get; set; } = "system";
 
+    /// <summary>One of the accents <see cref="Appearance.Accents"/> names, or "default".</summary>
+    public string Accent { get; set; } = Appearance.DefaultAccent;
+
+    public string ColourScheme { get; set; } = Appearance.OriginalScheme;
+
+    public SchemeColours? CustomLight { get; set; }
+
+    public SchemeColours? CustomDark { get; set; }
+
     /// <summary>"system", or a two letter language code the shell ships.</summary>
     public string Language { get; set; } = "system";
 
@@ -444,6 +453,15 @@ public sealed class ShellPreferences
 
     /// <summary>When Windows starts Meows at login, start in the tray rather than with the window open.</summary>
     public bool StartInTray { get; set; }
+
+    /// <summary>One-off notifications as Windows notifications while the window is not in front.</summary>
+    public bool SayOutside { get; set; } = true;
+
+    /// <summary>A notification once a week counting what the week's history holds.</summary>
+    public bool WeeklyRecap { get; set; } = true;
+
+    /// <summary>When that notification last went out; null until the first week has passed.</summary>
+    public DateTime? LastRecapUtc { get; set; }
 
     /// <summary>Purrge and Chonk, or Duplicates and Disk usage. On, because it is the app's character.</summary>
     public bool FelineNames { get; set; } = true;
@@ -481,12 +499,6 @@ public sealed class ShellPreferences
     public Dictionary<string, string> LogLevels { get; set; } = new(StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// What reaches Windows as a toast while the window is not in front: "off", "wanted" or
-    /// "everything". See <see cref="ToastModes"/>.
-    /// </summary>
-    public string Toasts { get; set; } = ToastModes.Wanted;
-
-    /// <summary>
     /// How big the tab strip is drawn: "compact", "normal" or "large". Twenty-odd tabs at the
     /// normal size are small to hit, and a strip that wraps anyway has room to be taller.
     /// </summary>
@@ -510,6 +522,35 @@ public sealed class ShellPreferences
     /// keeps the order it was switched on in, at the end.
     /// </summary>
     public List<string> TabOrder { get; set; } = [];
+
+    /// <summary>
+    /// The order of the cards on the Home tab, by plugin id. Anything not in here keeps the
+    /// order the plugins come in, at the end: only cards somebody has moved are written down.
+    /// </summary>
+    public List<string> HomeOrder { get; set; } = [];
+
+    /// <summary>
+    /// Cards hidden on the Home tab, by plugin id. Hidden is not off: the tab keeps working,
+    /// it just stops taking up room on the morning page.
+    /// </summary>
+    public List<string> HomeHidden { get; set; } = [];
+
+    /// <summary>
+    /// The standing rules on the Rules tab: when one plugin records something, ask another to
+    /// act. A rule whose plugin has been uninstalled stays in here and is shown as unable to
+    /// run, so putting the plugin back brings the rule back with it.
+    /// </summary>
+    public List<InstinctRule> Rules { get; set; } = [];
+
+    /// <summary>
+    /// Named sets of switched-on plugins: "Work", "Table", quiet weekends. Applying one
+    /// switches on what it names and off what it does not. A name gone missing is ignored
+    /// rather than uninstalled, so a persona survives a plugin moving out.
+    /// </summary>
+    public List<PersonaSetting> Personas { get; set; } = [];
+
+    /// <summary>The server plugins can copy to, from the Settings tab. Its key is in the secrets, not here.</summary>
+    public ReachSettings Reach { get; set; } = new();
 }
 
 /// <summary>One group on the tab strip, as it is remembered.</summary>

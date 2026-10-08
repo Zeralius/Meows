@@ -11,6 +11,7 @@ public sealed class PluginEntryViewModel : ObservableObject
     private readonly Action<PluginEntryViewModel, bool> _onActivationChanged;
     private readonly Action<PluginEntryViewModel>? _onUninstall;
     private readonly Action<PluginEntryViewModel>? _onUpdate;
+    private readonly Action<PluginEntryViewModel>? _onShare;
     private bool _isActivated;
     private string? _error;
     private bool _isConfirmingUninstall;
@@ -21,16 +22,19 @@ public sealed class PluginEntryViewModel : ObservableObject
     public PluginEntryViewModel(PluginDescriptor descriptor, Action<PluginEntryViewModel, bool> onActivationChanged,
         Func<string, PluginHealth>? health = null,
         Action<PluginEntryViewModel>? onUninstall = null,
-        Action<PluginEntryViewModel>? onUpdate = null)
+        Action<PluginEntryViewModel>? onUpdate = null,
+        Action<PluginEntryViewModel>? onShare = null)
     {
         Descriptor = descriptor;
         _onActivationChanged = onActivationChanged;
         _health = health;
         _onUninstall = onUninstall;
         _onUpdate = onUpdate;
+        _onShare = onShare;
         OpenHomepageCommand = new RelayCommand(OpenHomepage, () => HasHomepage);
         UninstallCommand = new RelayCommand(Uninstall, () => IsInstalled && _onUninstall is not null);
         UpdateCommand = new RelayCommand(() => _onUpdate?.Invoke(this), () => HasUpdate && _onUpdate is not null);
+        ShareCommand = new RelayCommand(() => _onShare?.Invoke(this), () => _onShare is not null);
     }
 
     // ---- Where it came from -------------------------------------------------------------
@@ -139,6 +143,9 @@ public sealed class PluginEntryViewModel : ObservableObject
 
     public RelayCommand UpdateCommand { get; }
 
+    /// <summary>Bundle this plugin's settings for someone: what it keeps, as it stands.</summary>
+    public RelayCommand ShareCommand { get; }
+
     /// <summary>
     /// What the plugin last did and what it is watching, from the store and the shell's list of
     /// schedules, so "is Birdwatch actually doing anything" is answered where its switch is.
@@ -151,8 +158,29 @@ public sealed class PluginEntryViewModel : ObservableObject
 
     public bool HealthIsTrouble => Health.StoppedWatches > 0;
 
+    /// <summary>How the card finds out what this plugin has cost since Meows started. Null on a card nothing measures.</summary>
+    public Func<string, PluginCost>? CostOf { get; init; }
+
+    public PluginCost Cost => CostOf?.Invoke(Id) ?? PluginCost.Nothing;
+
+    /// <summary>"opened in 120 ms · 14 runs, 3 min busy": what it has cost, where its switch is.</summary>
+    public string CostText => PluginCosts.Describe(Cost, MeowsText.Current);
+
+    public bool HasCost => CostText.Length > 0;
+
+    public bool CostIsTrouble => Cost.SlowToOpen;
+
+    public void RefreshCost()
+    {
+        OnPropertyChanged(nameof(Cost));
+        OnPropertyChanged(nameof(CostText));
+        OnPropertyChanged(nameof(HasCost));
+        OnPropertyChanged(nameof(CostIsTrouble));
+    }
+
     public void RefreshHealth()
     {
+        RefreshCost();
         OnPropertyChanged(nameof(Health));
         OnPropertyChanged(nameof(HealthText));
         OnPropertyChanged(nameof(HasHealth));

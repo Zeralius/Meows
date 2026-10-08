@@ -19,6 +19,11 @@ public sealed class SaucerPlugin : IMeowsPlugin
 
     public string Category => "group.everyday";
 
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("saved", "saucer.records.saved"),
+    ];
+
     public Control CreateView(IMeowsHost host) => new SaucerView
     {
         DataContext = new SaucerViewModel(host),

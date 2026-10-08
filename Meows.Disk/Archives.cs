@@ -4,11 +4,22 @@ using System.Security.Cryptography;
 namespace Meows.Disk;
 
 /// <summary>What an archive holds, from its table of contents and nothing more.</summary>
+/// <param name="Nested">The entries that are archives themselves, which is how a download of a download ends up inside one file.</param>
+/// <param name="OnlyEntry">The one file's path inside, when there is exactly one; the archive may be nothing but a wrapper round it.</param>
 public sealed record ArchiveSummary(int EntryCount, long UnpackedSize, string TopKind, int TopCount)
 {
+    public IReadOnlyList<NestedArchive> Nested { get; init; } = [];
+
+    public string? OnlyEntry { get; init; }
+
+    public long NestedBytes => Nested.Sum(n => n.Size);
+
     /// <summary>The kind most of the entries are, as a share of all of them.</summary>
     public int TopShare => EntryCount == 0 ? 0 : TopCount * 100 / EntryCount;
 }
+
+/// <summary>An archive found inside another one, by its path inside and its unpacked size.</summary>
+public sealed record NestedArchive(string Name, long Size);
 
 public enum TwinVerdict
 {
@@ -137,17 +148,26 @@ public static class Archives
             var kinds = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
             var count = 0;
             var unpacked = 0L;
+            var nested = new List<NestedArchive>();
+            string? only = null;
 
             foreach (var entry in FileEntries(zip))
             {
                 count++;
                 unpacked += entry.Length;
+                only = count == 1 ? entry.FullName : null;
+                if (IsArchive(entry.Name))
+                    nested.Add(new NestedArchive(entry.FullName, entry.Length));
                 var kind = Path.GetExtension(entry.Name) is { Length: > 0 } ext ? ext : "(none)";
                 kinds[kind] = kinds.GetValueOrDefault(kind) + 1;
             }
 
             var top = kinds.OrderByDescending(k => k.Value).FirstOrDefault();
-            return new ArchiveSummary(count, unpacked, top.Key ?? "", top.Value);
+            return new ArchiveSummary(count, unpacked, top.Key ?? "", top.Value)
+            {
+                Nested = nested.OrderByDescending(n => n.Size).ToList(),
+                OnlyEntry = only,
+            };
         }
         catch (Exception)
         {

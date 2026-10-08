@@ -58,4 +58,46 @@ public interface IMeowsPlugin
     /// <see cref="IMeowsDormantHost"/>. Since 1.0.0.
     /// </summary>
     ISearchable? WhileOff(IMeowsDormantHost host) => null;
+
+    /// <summary>
+    /// What a rule can ask this plugin to do, performed by the view model through
+    /// <see cref="IActionTarget"/>. Read while the plugin is off, so answer with a fixed list,
+    /// never from settings or the disk. Empty, the default, keeps the plugin out of the "then"
+    /// half of a rule. Since 1.2.0.
+    /// </summary>
+    IReadOnlyList<PluginAction> Actions => [];
+
+    /// <summary>
+    /// The kinds of event this plugin records, so a rule can wait for one before it has ever
+    /// happened. A kind not listed here can still start a rule once it is in the history; this
+    /// is the list with words for people, and it is read while the plugin is off. Since 1.2.0.
+    /// </summary>
+    IReadOnlyList<RecordedKind> Records => [];
+
+    /// <summary>
+    /// This plugin's line for its Home card with no view to ask: <c>Meows.exe --glance</c>, a
+    /// status bar, a scheduled task wanting to know whether anything needs doing. The same
+    /// sentence <see cref="IGlanceable"/> gives when the tab is open, worked out from what the
+    /// host can read: settings, the journal, a small file in the data folder. It may be asked
+    /// with no window and off the UI thread, so a file or two, never a walk of a drive and never
+    /// the network. Null, the default, leaves the shell's own line: the last thing recorded.
+    /// Since 1.4.0.
+    /// </summary>
+    Glance? GlanceWhileOff(IMeowsDormantHost host) => null;
+
+    /// <summary>
+    /// What this plugin can do with no window, for <c>Meows.exe --do</c>. Read while the plugin
+    /// is off, so answer with a fixed list. Empty, the default, keeps the plugin off the command
+    /// line. Since 1.5.0.
+    /// </summary>
+    IReadOnlyList<PluginJob> Jobs => [];
+
+    /// <summary>
+    /// Does one of <see cref="Jobs"/>, in a process of its own with no window, and says in a
+    /// sentence what it did; the sentence is printed and becomes the task's result. Throw
+    /// <see cref="JobDeclinedException"/> for a job that should not run as asked; anything else
+    /// thrown is a failure. Only asked of a plugin that is switched on. Since 1.5.0.
+    /// </summary>
+    Task<string> RunJob(string jobId, IMeowsJobHost host, CancellationToken token) =>
+        throw new JobDeclinedException($"No job called '{jobId}'.");
 }

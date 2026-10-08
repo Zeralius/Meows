@@ -36,5 +36,7 @@
   "trail.tidy.nobackup": "Nothing was changed, because the old value could not be written down first: {0}",
   "trail.tidy.failed": "PATH was not changed: {0}",
   "trail.journal.tidied": "{0} entries taken off PATH",
-  "trail.journal.restored": "the previous PATH put back"
+  "trail.journal.restored": "the previous PATH put back",
+  "trail.records.tidied": "tidied PATH",
+  "trail.records.restored": "put PATH back"
 }

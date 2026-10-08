@@ -63,6 +63,13 @@ Thirty by default.
 Reminding too early is the failure mode nobody talks about. Something six months out is not news,
 and a plugin that cries every launch stops being read.
 
+## When a rule asks
+
+On the Rules tab Collar offers **Put it on the list for today** and **Put it on the list for a
+week from now**. Either makes a one-off entry named after the file or thing the other plugin's
+event was about, with the file attached when there is one and that plugin's words as the note,
+and leaves whatever is selected alone. The same thing asked for the same day twice is one entry.
+
 ## What it does not do
 
 - **It does not sync anywhere.** The list is a few lines in Meows' own settings under

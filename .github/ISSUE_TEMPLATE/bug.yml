@@ -1,0 +1,27 @@
+name: Bug
+description: Something wrong, not a new feature
+title: "[bug] "
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened vs what should happen
+      description: One paragraph each, if you can.
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: How to make it happen
+      description: Steps, files, settings — what it takes to see it here too.
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: From the window corner, or --glance.
+  - type: textarea
+    id: log
+    attributes:
+      label: Log excerpt
+      description: From %APPDATA%\Meows\meows.log. Stack trace if there is one; trim the noise around it.
+      render: text

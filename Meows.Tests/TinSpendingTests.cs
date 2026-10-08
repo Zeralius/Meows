@@ -173,4 +173,44 @@ public class SpendingTests
 
         Assert.False(Spending.Monthly(charges, Now, incoming: false).IsUseful);
     }
+
+    [Fact]
+    public void Two_months_read_as_the_quieter_one_rather_than_the_louder()
+    {
+        // An ordinary month beside a month with a large one-off. The upper middle would make
+        // the one-off the typical month and inflate every month after it.
+        var charges = new List<Charge>
+        {
+            Out("NETTO MARKEN-DISCOUNT", "2026-06-07", 60m),
+            Out("GARAGE REPAIRS", "2026-06-09", 3000m),
+            Out("NETTO MARKEN-DISCOUNT", "2026-07-07", 60m),
+            Out("SHOP", "2026-05-20", 10m),
+            Out("SHOP", "2026-08-14", 10m),
+        };
+
+        var month = Spending.Monthly(charges, Now, incoming: false);
+
+        Assert.Equal(60m, month.Typical);
+    }
+
+    [Fact]
+    public void Money_moved_between_own_accounts_is_neither_spending_nor_income()
+    {
+        // A monthly move to savings: out of giro, into Tagesgeld two days later. Counted, it
+        // inflates the month going out and the month coming in by the move.
+        var giro = new Charge(new DateTime(2026, 6, 5), "UEBERTRAG TAGESGELD", -500m, "giro.csv");
+        var spare = new Charge(new DateTime(2026, 6, 7), "UEBERTRAG GIRO", 500m, "tagesgeld.csv");
+        var wage = new Charge(new DateTime(2026, 6, 28), "ARBEITGEBER GEHALT", 2400m, "giro.csv");
+        var anchor1 = new Charge(new DateTime(2026, 5, 20), "SHOP", -10m, "giro.csv");
+        var anchor2 = new Charge(new DateTime(2026, 8, 14), "SHOP", -10m, "giro.csv");
+        var charges = new List<Charge> { giro, spare, wage, anchor1, anchor2 };
+
+        string AccountOf(Charge c) => c.Source == "giro.csv" ? "DE111" : "DE222";
+
+        var outMonth = Spending.Monthly(charges, Now, incoming: false, AccountOf);
+        var inMonth = Spending.Monthly(charges, Now, incoming: true, AccountOf);
+
+        Assert.Equal(0m, outMonth.Typical);
+        Assert.Equal(0m, inMonth.Typical);
+    }
 }

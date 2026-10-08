@@ -20,6 +20,13 @@ public sealed class FamiliarSettings
 
     /// <summary>Longest side after Fit. 4096 is what a browser handles without complaint.</summary>
     public int FitMaxSide { get; set; } = 4096;
+
+    /// <summary>
+    /// Where a Foundry kit goes on the server, under the folder set on the Settings tab: the
+    /// meows-kit module's kits folder when that folder is Foundry's user data. Only used once a
+    /// server is set.
+    /// </summary>
+    public string ServerKits { get; set; } = FamiliarViewModel.DefaultServerKits;
 }
 
 /// <summary>A one-shot folder in the left column.</summary>
@@ -416,6 +423,33 @@ public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchab
     public string Root => _settings.Root!;
 
     public string ExportRoot => _settings.ExportRoot ?? Path.Combine(Root, "Exports");
+
+    public const string DefaultServerKits = "Data/modules/meows-kit/kits";
+
+    /// <summary>A server is set on the Settings tab, so a Foundry export goes there as well.</summary>
+    public bool CanReachServer => _host.Reach.IsSet;
+
+    /// <summary>The line under the Foundry button: where on the server a kit lands, or how to make it land there.</summary>
+    public string ServerText => CanReachServer
+        ? _host.Text.Format("familiar.server.where", _host.Reach.Where ?? "", ServerKits)
+        : _host.Text["familiar.server.none"];
+
+    public string ServerKits
+    {
+        get => _settings.ServerKits;
+        set
+        {
+            var trimmed = (value ?? "").Trim().Trim('/');
+            if (trimmed.Length == 0)
+                trimmed = DefaultServerKits;
+            if (_settings.ServerKits == trimmed)
+                return;
+            _settings.ServerKits = trimmed;
+            SaveSettings();
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(ServerText));
+        }
+    }
 
     public int Roll20MaxMegabytes
     {
@@ -1531,6 +1565,11 @@ public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchab
             _host.Store.Record(foundry ? "exported-foundry" : "exported-roll20", report.Folder, Status);
             _host.Notifications.Post(NotificationSeverity.Info, _host.Text["familiar.notify.exported"], Status,
                 new NotificationAction(_host.Text["familiar.notify.open"], () => Open(report.Folder), DismissesAfter: true));
+
+            // The one manual step left was getting the folder to the server. With a server set,
+            // Meows takes it there itself and the module's import is one click.
+            if (foundry && _host.Reach.IsSet)
+                SendToServer(report.Folder);
         }
         catch (Exception ex)
         {
@@ -1540,6 +1579,45 @@ public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchab
         {
             IsBusy = false;
         }
+    }
+
+    /// <summary>
+    /// The exported kit to the server, as background work with the file count on the Tasks
+    /// panel, under the kits folder and named as it is here. The local export stays whatever
+    /// happens, so a server that is down costs a retry, not the export.
+    /// </summary>
+    public IBackgroundTask SendToServer(string folder)
+    {
+        var name = Path.GetFileName(folder.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
+        var remote = ServerKits.TrimEnd('/') + "/" + name;
+        return _host.Background.Run(_host.Text.Format("familiar.task.server", name), async context =>
+        {
+            var progress = new Progress<ReachProgress>(p =>
+            {
+                context.Report(p.File);
+                context.ReportProgress(p.Total == 0 ? null : (double)p.Done / p.Total);
+            });
+            var result = await _host.Reach.CopyFolder(folder, remote, progress, context.Token);
+
+            await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (result.Ok)
+                {
+                    Status = _host.Text.Format("familiar.status.server", name, result.Where);
+                    _host.Store.Record("sent", folder, Status, new Dictionary<string, string>
+                    {
+                        [ActionRequest.DestinationKey] = result.Where,
+                    });
+                    _host.Notifications.Post(NotificationSeverity.Info, _host.Text["familiar.notify.server"], Status);
+                }
+                else
+                {
+                    ErrorMessage = _host.Text.Format("familiar.error.server", name, result.Error ?? "");
+                    _host.Notifications.Post(NotificationSeverity.Warning, _host.Text["familiar.notify.server.failed"], ErrorMessage,
+                        new NotificationAction(_host.Text["familiar.server.retry"], () => SendToServer(folder), DismissesAfter: true));
+                }
+            });
+        });
     }
 
     // ---- plumbing ----

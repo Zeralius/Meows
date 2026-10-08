@@ -101,8 +101,15 @@ at the top-left, ready to be dragged where they go. Five maps in the kit, five s
 folder, in order.
 
 There is no way to write into a running Foundry from outside, and writing its database while it
-runs corrupts the world, which is why the module exists. Getting the folder to the server is the
-one manual step until *Reach past this one machine* in IDEAS.md lands.
+runs corrupts the world, which is why the module exists.
+
+**Getting the folder to the server is Meows' job once a server is set on the Settings tab.** A
+Foundry export then goes there too, as background work with a file count on the Tasks panel,
+into `Data/modules/meows-kit/kits/<kit>` under the server's folder, which is the module's kits
+folder when that folder is Foundry's user data; the path is editable under the Foundry button
+for a server laid out differently. The local export stays either way, so a server that is down
+costs a *Try again* on the notification rather than the export. Without a server set, the folder
+is uploaded through Foundry's file picker as before.
 
 ## Where it goes: Roll20
 

@@ -13,9 +13,18 @@ public sealed record DriveReading(string Root, long Total, long Free, IReadOnlyL
     public long Used => Total - Free;
 }
 
-/// <summary>Every drive, once, on a date. One file per reading under the plugin's data folder.</summary>
-public sealed record Reading(DateTime At, IReadOnlyList<DriveReading> Drives)
+/// <summary>
+/// Every drive, once, on a date. One file per reading under the plugin's data folder.
+/// <paramref name="Budgeted"/> is the folders somebody set a budget on, at whatever depth they
+/// sit, kept apart from the drive's folders so they do not turn up twice in what grew. Null in a
+/// reading taken before budgets existed.
+/// </summary>
+public sealed record Reading(DateTime At, IReadOnlyList<DriveReading> Drives, IReadOnlyList<FolderReading>? Budgeted = null)
 {
+    /// <summary>A budgeted folder's size in this reading, or null when it was not measured.</summary>
+    public long? SizeOf(string path) =>
+        Budgeted?.FirstOrDefault(f => Budgets.Same(f.Path, path))?.Size;
+
     public DriveReading? Drive(string root) =>
         Drives.FirstOrDefault(d => string.Equals(d.Root, root, StringComparison.OrdinalIgnoreCase));
 }
@@ -47,9 +56,10 @@ public static class Readings
 
     /// <summary>Takes a reading of the drives given, walking each and keeping folders to the depth.</summary>
     public static Reading Take(IReadOnlyList<string> roots, int depth, bool skipSystemFolders,
-        Action<string>? report, CancellationToken token)
+        Action<string>? report, CancellationToken token, IReadOnlyCollection<string>? budgeted = null)
     {
         var drives = new List<DriveReading>();
+        var kept = new List<FolderReading>();
         foreach (var root in roots)
         {
             token.ThrowIfCancellationRequested();
@@ -76,6 +86,8 @@ public static class Readings
                     ListFilesFrom = long.MaxValue,
                 }, null, token);
                 Flatten(tree, 0, depth, folders);
+                if (budgeted is { Count: > 0 })
+                    Keep(tree, budgeted, kept);
             }
             catch (OperationCanceledException)
             {
@@ -89,7 +101,23 @@ public static class Readings
             drives.Add(new DriveReading(root, total, free, folders));
         }
 
-        return new Reading(DateTime.Now, drives);
+        return new Reading(DateTime.Now, drives, budgeted is null ? null : kept);
+    }
+
+    /// <summary>
+    /// The budgeted folders under this tree, at whatever depth: the walk already sized every
+    /// folder, so keeping a few more numbers costs nothing. Only the branches that lead to one of
+    /// them are followed.
+    /// </summary>
+    private static void Keep(DiskEntry entry, IReadOnlyCollection<string> wanted, List<FolderReading> into)
+    {
+        if (wanted.Any(w => Budgets.Same(w, entry.Path)))
+            into.Add(new FolderReading(entry.Path, entry.Size));
+        foreach (var child in entry.Children.Where(c => c.IsFolder))
+        {
+            if (wanted.Any(w => Budgets.Same(w, child.Path) || Budgets.IsUnder(w, child.Path)))
+                Keep(child, wanted, into);
+        }
     }
 
     private static void Flatten(DiskEntry entry, int level, int depth, List<FolderReading> into)

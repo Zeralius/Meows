@@ -1,472 +1,447 @@
-using System.Security.Cryptography;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
-using System.Xml.Linq;
-using Microsoft.Win32;
-using Meows.Plugins.Abstractions;
-using Windows.Data.Xml.Dom;
-using Windows.UI.Notifications;
 
 namespace Meows.Services;
 
-/// <summary>What reaches Windows while the window is not in front.</summary>
-public static class ToastModes
+/// <summary>How Meows says something outside its window on this machine, decided once at startup.</summary>
+public enum ToastSurface
 {
-    /// <summary>Nothing. The panel and the tray's dot, as before.</summary>
-    public const string Off = "off";
+    /// <summary>A Windows notification, with buttons, in the Action Center afterwards.</summary>
+    Toast,
 
-    /// <summary>
-    /// The default: a condition when it appears or its words change, and an event that is a
-    /// warning or an error. Collar's date that has come round is a condition at the Info level,
-    /// so this is about kind rather than severity: an Info event is usually "finished", and
-    /// finished is not worth leaving your work for.
-    /// </summary>
-    public const string Wanted = "wanted";
+    /// <summary>A tray balloon, which Windows 10 and 11 show as a notification without buttons.</summary>
+    Balloon,
 
-    /// <summary>Every event too, the finished ones included.</summary>
-    public const string Everything = "everything";
-
-    public static readonly string[] All = [Off, Wanted, Everything];
-
-    public static string Tidy(string? mode) =>
-        All.Contains(mode?.Trim().ToLowerInvariant()) ? mode!.Trim().ToLowerInvariant() : Wanted;
+    /// <summary>Not Windows, or nothing worked: said in the window only.</summary>
+    None,
 }
 
 /// <summary>
-/// Which notifications are worth a toast. Separate from Windows so it can be tested without
-/// one, because this is the part that decides whether Meows is useful from the tray or merely
-/// noisy, and the difference is one line.
+/// Which notifications are worth saying outside the window. Separate from Windows so it can be
+/// tested without one, because this is the part that decides whether Meows is useful from the
+/// tray or merely noisy.
 /// </summary>
 public static class ToastRule
 {
+    /// <summary>
+    /// An event always. A condition when it is new or its words change, not on every pass that
+    /// re-sets it: Collar looks at its dates daily and sets the same "2 are due" each time, which
+    /// is one toast, and a second only when it becomes "3 are due". A drive filling all week
+    /// says so once.
+    /// </summary>
     /// <param name="replaced">The condition this one took the place of under the same key, or null.</param>
-    /// <param name="windowInFront">Whether the window is visible and active: the panel is then being looked at.</param>
-    public static bool ShouldToast(NotificationItem item, NotificationItem? replaced, string mode, bool windowInFront)
-    {
-        mode = ToastModes.Tidy(mode);
-        if (mode == ToastModes.Off || windowInFront)
-            return false;
-
-        if (item.IsCondition)
-        {
-            // A condition re-set with the same words on every pass is not news. Collar looks at
-            // its dates daily and sets the same "2 are due" each time; that is one toast, and a
-            // second one only when it becomes "3 are due".
-            return replaced is null
-                   || replaced.Title != item.Title
-                   || replaced.Message != item.Message
-                   || replaced.Severity != item.Severity;
-        }
-
-        return mode == ToastModes.Everything || item.Severity >= NotificationSeverity.Warning;
-    }
-}
-
-/// <summary>What a pressed toast was pointing at: a condition by its key, or an event by its id.</summary>
-/// <param name="Button">Which of the notification's buttons, or -1 for the toast itself.</param>
-public sealed record ToastTarget(string? Source, string? ConditionKey, string? EventId, int Button)
-{
-    public bool IsCondition => ConditionKey is not null;
-
-    public bool IsBody => Button < 0;
+    public static bool ShouldSay(NotificationItem item, NotificationItem? replaced) =>
+        !item.IsCondition
+        || replaced is null
+        || replaced.Title != item.Title
+        || replaced.Message != item.Message
+        || replaced.Severity != item.Severity;
 }
 
 /// <summary>
-/// The toast itself, as XML, and the arguments its buttons carry back.
+/// Saying it outside the window. A real toast needs an AppUserModelID and a Start menu shortcut
+/// carrying it; an installed Meows writes both into the user's own Start menu and registry, and a
+/// portable folder on a stick writes neither and uses a tray balloon instead. Which one is decided
+/// once at startup and said on the Settings tab, never failed quietly.
 ///
-/// A condition's toast is named for the condition rather than for the item, because the item
-/// is replaced every time the plugin re-sets it: a button on yesterday's "2 are due" has to
-/// reach today's, not a notification that no longer exists.
+/// A toast's buttons open <c>meows:act/&lt;id&gt;</c>, which starts Meows with that argument; the
+/// running Meows hears it through the single-instance pipe and presses the button it stands for.
 /// </summary>
-public static class ToastContent
+public static class Toasts
 {
-    /// <summary>Windows shows five buttons at most and the notification centre allows more.</summary>
-    public const int MaxButtons = 5;
+    public const string AppId = "Meows.Desktop";
+    public const string Scheme = "meows";
+    public const string ActPrefix = "meows:act/";
 
-    public const string Group = "meows";
+    public static ToastSurface Surface { get; private set; } = ToastSurface.None;
 
-    /// <summary>
-    /// The name Windows files the toast under, which is also how it is taken back down. Short and
-    /// stable: a condition keeps its tag across every re-set, an event has its own.
-    /// </summary>
-    public static string Tag(NotificationItem item) =>
-        item.IsCondition ? "c-" + Hash(item.Source + "\n" + item.ConditionKey) : "e-" + item.Id;
-
-    private static string Hash(string text) =>
-        Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(text)))[..24].ToLowerInvariant();
-
-    public static string Arguments(NotificationItem item, int button) =>
-        item.IsCondition
-            ? $"c|{Uri.EscapeDataString(item.Source)}|{Uri.EscapeDataString(item.ConditionKey!)}|{button}"
-            : $"e|{item.Id}|{button}";
-
-    /// <summary>Null for anything that is not one of ours, which is then treated as a plain open.</summary>
-    public static ToastTarget? Parse(string? arguments)
-    {
-        if (string.IsNullOrEmpty(arguments))
-            return null;
-
-        var parts = arguments.Split('|');
-        try
-        {
-            return parts switch
-            {
-                ["c", var source, var key, var button] when int.TryParse(button, out var b) =>
-                    new ToastTarget(Uri.UnescapeDataString(source), Uri.UnescapeDataString(key), null, b),
-                ["e", var id, var button] when int.TryParse(button, out var b) =>
-                    new ToastTarget(null, null, id, b),
-                _ => null,
-            };
-        }
-        catch (UriFormatException)
-        {
-            return null;
-        }
-    }
+    /// <summary>Balloons still showing in this process, so a --do run can wait for them before it exits.</summary>
+    private static readonly List<Task> Pending = [];
 
     /// <summary>
-    /// The toast's XML. Built as a document rather than glued together as a string, so a title
-    /// holding an ampersand or a quote is text rather than a toast Windows silently refuses.
+    /// Works out the surface, writing the shortcut and the protocol for an installed Meows. Safe
+    /// to call more than once; the answer is the same.
     /// </summary>
-    public static string Xml(NotificationItem item, string sourceName)
+    public static ToastSurface Prepare(bool portable, Action<string> log)
     {
-        var binding = new XElement("binding", new XAttribute("template", "ToastGeneric"),
-            new XElement("text", item.Title));
-        if (item.HasMessage)
-            binding.Add(new XElement("text", item.Message));
-        binding.Add(new XElement("text", new XAttribute("placement", "attribution"), sourceName));
-
-        var toast = new XElement("toast",
-            new XAttribute("launch", Arguments(item, -1)),
-            new XElement("visual", binding));
-
-        // A warning stays up until it is dealt with rather than sliding away after a few seconds.
-        if (item.Severity >= NotificationSeverity.Warning)
-            toast.Add(new XAttribute("scenario", "reminder"));
-
-        var buttons = item.Actions.Take(MaxButtons).Select((action, i) =>
-            new XElement("action",
-                new XAttribute("content", action.Label),
-                new XAttribute("arguments", Arguments(item, i)),
-                new XAttribute("activationType", "foreground"))).ToList();
-
-        // A reminder with no buttons cannot be dismissed on some builds of Windows, so it is
-        // only a reminder when it has something to press.
-        if (buttons.Count == 0)
-            toast.Attribute("scenario")?.Remove();
-        else
-            toast.Add(new XElement("actions", buttons));
-
-        return toast.ToString(SaveOptions.DisableFormatting);
-    }
-}
-
-/// <summary>Why toasts are or are not reaching Windows, for the Settings tab to say.</summary>
-public enum ToastState
-{
-    Ready,
-    Off,
-    Portable,
-    DisabledByWindows,
-    Unavailable,
-}
-
-/// <summary>
-/// Windows toasts, straight against WinRT.
-///
-/// No toolkit. The usual one brings System.Drawing.Common 4.7.0, which has a critical advisory,
-/// and what it adds beyond this is a COM server registered against the exe's path so that a
-/// toast can relaunch Meows after it has quit. Meows lives in the tray: while it runs, a toast's
-/// own Activated event arrives in-process, which covers what the buttons are for. The price is
-/// that a toast clicked after Meows has quit does nothing, so quitting takes Meows' toasts out of
-/// the action centre rather than leaving buttons behind that would press nothing.
-///
-/// Registered with one key under HKCU, which names the app and its icon. Not in a portable copy,
-/// which promises to write nothing to the profile.
-/// </summary>
-public sealed class WindowsToasts
-{
-    public const string AppId = "Zeralius.Meows";
-
-    private readonly string _dataFolder;
-    private readonly Action<string> _log;
-
-    /// <summary>
-    /// The toasts on screen or in the action centre, by tag. Held because the Activated event is
-    /// on the object: let it be collected and the buttons stop answering.
-    /// </summary>
-    private readonly Dictionary<string, ToastNotification> _live = new(StringComparer.Ordinal);
-
-    private bool _registered;
-    private bool _saidWhy;
-
-    /// <summary>ERROR_NOT_FOUND as an HRESULT, which is what Setting throws for an unpackaged app.</summary>
-    private const int ElementNotFound = unchecked((int)0x80070490);
-
-    /// <summary>
-    /// Said once, with the reason. "Unavailable" on the Settings tab and nothing in the log would
-    /// leave nobody able to tell a missing registration from a Windows that cannot do it.
-    /// </summary>
-    private void SayWhy(Exception ex)
-    {
-        if (_saidWhy)
-            return;
-        _log($"Toasts are unavailable: {ex.GetType().Name} 0x{ex.HResult:X8}: {ex.Message}");
-        _saidWhy = true;
-    }
-
-    public WindowsToasts(string dataFolder, Action<string> log)
-    {
-        _dataFolder = dataFolder;
-        _log = log;
-    }
-
-    /// <summary>Raised on a thread of Windows' choosing when a toast or one of its buttons is pressed.</summary>
-    public event Action<ToastTarget?>? Pressed;
-
-    public ToastState State
-    {
-        get
-        {
-            if (ShellSettings.IsPortable)
-                return ToastState.Portable;
-            if (!OperatingSystem.IsWindowsVersionAtLeast(10, 0, 17763))
-                return ToastState.Unavailable;
-            try
-            {
-                Register();
-            }
-            catch (Exception ex)
-            {
-                SayWhy(ex);
-                return ToastState.Unavailable;
-            }
-
-            try
-            {
-                return ToastNotificationManager.CreateToastNotifier(AppId).Setting == NotificationSetting.Enabled
-                    ? ToastState.Ready
-                    : ToastState.DisabledByWindows;
-            }
-            catch (System.Runtime.InteropServices.COMException ex) when (ex.HResult == ElementNotFound)
-            {
-                // Windows cannot say whether toasts are on for an app with no Start menu
-                // shortcut, and throws rather than answering, but it shows them regardless: asked
-                // on this machine, Setting threw this and a toast shown straight after was held in
-                // the action centre. So this is "unknown and working", not "unavailable". Only an
-                // answer of disabled is taken as disabled.
-                return ToastState.Ready;
-            }
-            catch (Exception ex)
-            {
-                SayWhy(ex);
-                return ToastState.Unavailable;
-            }
-        }
-    }
-
-    /// <summary>
-    /// Says who the toasts are from. Windows shows toasts from an unpackaged app only when it can
-    /// name the app, and this key is what it names it from. Written once per run, so a moved
-    /// folder is followed on the next start.
-    /// </summary>
-    private void Register()
-    {
-        if (_registered || !OperatingSystem.IsWindows())
-            return;
-
-        var icon = Path.Combine(_dataFolder, "toast.png");
-        if (!File.Exists(icon))
-        {
-            try
-            {
-                using var source = Avalonia.Platform.AssetLoader.Open(new Uri("avares://Meows/Assets/tray.png"));
-                using var target = File.Create(icon);
-                source.CopyTo(target);
-            }
-            catch (Exception ex)
-            {
-                _log($"Could not write the toast icon: {ex.Message}");
-            }
-        }
-
-        using var key = Registry.CurrentUser.CreateSubKey(@"Software\Classes\AppUserModelId\" + AppId);
-        key.SetValue("DisplayName", "Meows");
-        if (File.Exists(icon))
-            key.SetValue("IconUri", icon);
-        _registered = true;
-    }
-
-    public void Show(NotificationItem item, string sourceName)
-    {
-        if (State != ToastState.Ready)
-            return;
+        if (!OperatingSystem.IsWindows() || Environment.ProcessPath is not { } exe)
+            return Surface = ToastSurface.None;
+        if (portable)
+            return Surface = ToastSurface.Balloon;
 
         try
         {
-            var document = new XmlDocument();
-            document.LoadXml(ToastContent.Xml(item, sourceName));
-
-            var tag = ToastContent.Tag(item);
-            var toast = new ToastNotification(document) { Tag = tag, Group = ToastContent.Group };
-            toast.Activated += (_, args) =>
-                Pressed?.Invoke(ToastContent.Parse((args as ToastActivatedEventArgs)?.Arguments));
-            toast.Dismissed += (_, _) => _live.Remove(tag);
-
-            // One per tag: a changed condition replaces its own toast rather than stacking.
-            Remove(tag);
-            _live[tag] = toast;
-            ToastNotificationManager.CreateToastNotifier(AppId).Show(toast);
+            EnsureShortcut(exe);
+            EnsureProtocol(exe);
+            return Surface = ToastSurface.Toast;
         }
         catch (Exception ex)
         {
-            _log($"A toast could not be shown: {ex.Message}");
-        }
-    }
-
-    /// <summary>Takes one down from the screen and the action centre, if it is there.</summary>
-    public void Remove(string tag)
-    {
-        _live.Remove(tag);
-        try
-        {
-            ToastNotificationManager.History.Remove(tag, ToastContent.Group, AppId);
-        }
-        catch (Exception)
-        {
-            // Not there, or never was. Either way it is not there now.
+            log($"Toasts fall back to tray balloons: {ex.Message}");
+            return Surface = ToastSurface.Balloon;
         }
     }
 
     /// <summary>
-    /// Every Meows toast out of the action centre. On quitting, because nothing would answer
-    /// their buttons afterwards.
+    /// Says it. Buttons only reach a toast; a balloon has one line and no buttons, and clicking
+    /// it does nothing more than a notification would. Never throws.
     /// </summary>
-    public void Clear()
+    public static void Show(string title, string text, bool trouble, Action<string> log, IReadOnlyList<(string Label, string Argument)>? buttons = null)
     {
-        _live.Clear();
         try
         {
-            if (_registered)
-                ToastNotificationManager.History.Clear(AppId);
+            switch (Surface)
+            {
+                case ToastSurface.Toast:
+                    if (!ShowToast(title, text, buttons ?? []))
+                        ShowBalloon(title, text, trouble, log);
+                    break;
+                case ToastSurface.Balloon:
+                    ShowBalloon(title, text, trouble, log);
+                    break;
+            }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            log($"Could not say it outside the window: {ex.Message}");
         }
     }
 
-    /// <summary>How many of Meows' toasts Windows is holding, for the test button to report.</summary>
-    public int InActionCentre
+    /// <summary>For a process about to exit: lets the balloons it raised be seen first.</summary>
+    public static void Settle(TimeSpan most)
     {
-        get
+        Task[] waiting;
+        lock (Pending)
+            waiting = [.. Pending];
+        if (waiting.Length > 0)
+            Task.WaitAll(waiting, most);
+    }
+
+    /// <summary>The toast's XML, escaped: a title or a file name with an ampersand must not break it.</summary>
+    public static string ToastXml(string title, string text, IReadOnlyList<(string Label, string Argument)> buttons)
+    {
+        var xml = new StringBuilder();
+        xml.Append($"<toast launch=\"{Scheme}:open\" activationType=\"protocol\">");
+        xml.Append("<visual><binding template=\"ToastGeneric\">");
+        xml.Append($"<text>{SecurityElement.Escape(title)}</text>");
+        if (text.Length > 0)
+            xml.Append($"<text>{SecurityElement.Escape(text)}</text>");
+        xml.Append("</binding></visual>");
+        if (buttons.Count > 0)
+        {
+            xml.Append("<actions>");
+            foreach (var (label, argument) in buttons.Take(5))
+                xml.Append($"<action content=\"{SecurityElement.Escape(label)}\" activationType=\"protocol\" arguments=\"{SecurityElement.Escape(argument)}\" />");
+            xml.Append("</actions>");
+        }
+        xml.Append("</toast>");
+        return xml.ToString();
+    }
+
+    /// <summary>
+    /// Through Windows PowerShell, which can reach the notification API without Meows carrying
+    /// the Windows SDK projection for one call. The XML goes in as a base64 string, so nothing in
+    /// a title can become part of the script.
+    /// </summary>
+    private static bool ShowToast(string title, string text, IReadOnlyList<(string Label, string Argument)> buttons)
+    {
+        var payload = Convert.ToBase64String(Encoding.UTF8.GetBytes(ToastXml(title, text, buttons)));
+        var script =
+            "[Windows.UI.Notifications.ToastNotificationManager, Windows.UI.Notifications, ContentType = WindowsRuntime] > $null;" +
+            "[Windows.Data.Xml.Dom.XmlDocument, Windows.Data.Xml.Dom.XmlDocument, ContentType = WindowsRuntime] > $null;" +
+            $"$x = New-Object Windows.Data.Xml.Dom.XmlDocument; $x.LoadXml([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('{payload}')));" +
+            $"[Windows.UI.Notifications.ToastNotificationManager]::CreateToastNotifier('{AppId}').Show((New-Object Windows.UI.Notifications.ToastNotification $x))";
+
+        var start = new ProcessStartInfo("powershell.exe")
+        {
+            UseShellExecute = false,
+            CreateNoWindow = true,
+            WindowStyle = ProcessWindowStyle.Hidden,
+        };
+        foreach (var argument in (string[])["-NoProfile", "-NonInteractive", "-ExecutionPolicy", "Bypass", "-EncodedCommand",
+                     Convert.ToBase64String(Encoding.Unicode.GetBytes(script))])
+            start.ArgumentList.Add(argument);
+        using var process = Process.Start(start);
+        return process is not null;
+    }
+
+    // ---- the Start menu shortcut that carries the AppUserModelID ----
+
+    private static string ShortcutPath => Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.Programs), "Meows.lnk");
+
+    /// <summary>Written once, and again when Meows has moved since, pointing at this exe and carrying the id.</summary>
+    private static void EnsureShortcut(string exe)
+    {
+        var path = ShortcutPath;
+        if (File.Exists(path) && string.Equals(Mouserless.TargetOf(path), exe, StringComparison.OrdinalIgnoreCase))
+            return;
+
+        var link = (IShellLinkW)new CShellLink();
+        link.SetPath(exe);
+        link.SetWorkingDirectory(Path.GetDirectoryName(exe)!);
+        link.SetDescription("Meows");
+
+        var store = (IPropertyStore)link;
+        var key = new PropertyKey(new Guid("9F4C2855-9F79-4B39-A8D0-E1D42DE1D5F3"), 5);
+        var value = new PropVariant(AppId);
+        try
+        {
+            Check(store.SetValue(ref key, ref value));
+            Check(store.Commit());
+        }
+        finally
+        {
+            value.Clear();
+        }
+
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        ((IPersistFile)link).Save(path, true);
+    }
+
+    /// <summary>meows: under the user's own classes, so a toast's button can start Meows with its argument. No administrator.</summary>
+    [System.Runtime.Versioning.SupportedOSPlatform("windows")]
+    private static void EnsureProtocol(string exe)
+    {
+        using var root = Microsoft.Win32.Registry.CurrentUser.CreateSubKey($@"Software\Classes\{Scheme}");
+        root.SetValue("", "URL:Meows");
+        root.SetValue("URL Protocol", "");
+        using var command = root.CreateSubKey(@"shell\open\command");
+        command.SetValue("", $"\"{exe}\" \"%1\"");
+    }
+
+    private static void Check(int hresult)
+    {
+        if (hresult < 0)
+            Marshal.ThrowExceptionForHR(hresult);
+    }
+
+    /// <summary>Where a shortcut points, read by the shell's own interface since this is the shell's own shortcut.</summary>
+    private static class Mouserless
+    {
+        public static string? TargetOf(string path)
         {
             try
             {
-                return ToastNotificationManager.History.GetHistory(AppId).Count;
+                var link = (IShellLinkW)new CShellLink();
+                ((IPersistFile)link).Load(path, 0);
+                var buffer = new StringBuilder(1024);
+                link.GetPath(buffer, buffer.Capacity, IntPtr.Zero, 0);
+                return buffer.ToString();
             }
             catch (Exception)
             {
-                return 0;
+                return null;
             }
         }
     }
+
+    [ComImport, Guid("00021401-0000-0000-C000-000000000046")]
+    private class CShellLink;
+
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("000214F9-0000-0000-C000-000000000046")]
+    private interface IShellLinkW
+    {
+        void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder file, int max, IntPtr findData, int flags);
+        void GetIDList(out IntPtr list);
+        void SetIDList(IntPtr list);
+        void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder name, int max);
+        void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string name);
+        void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder dir, int max);
+        void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string dir);
+        void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder args, int max);
+        void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string args);
+        void GetHotkey(out short hotkey);
+        void SetHotkey(short hotkey);
+        void GetShowCmd(out int show);
+        void SetShowCmd(int show);
+        void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder path, int max, out int icon);
+        void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string path, int icon);
+        void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string path, int reserved);
+        void Resolve(IntPtr hwnd, int flags);
+        void SetPath([MarshalAs(UnmanagedType.LPWStr)] string file);
+    }
+
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("0000010B-0000-0000-C000-000000000046")]
+    private interface IPersistFile
+    {
+        void GetClassID(out Guid id);
+        [PreserveSig] int IsDirty();
+        void Load([MarshalAs(UnmanagedType.LPWStr)] string file, int mode);
+        void Save([MarshalAs(UnmanagedType.LPWStr)] string file, [MarshalAs(UnmanagedType.Bool)] bool remember);
+        void SaveCompleted([MarshalAs(UnmanagedType.LPWStr)] string file);
+        void GetCurFile([MarshalAs(UnmanagedType.LPWStr)] out string file);
+    }
+
+    [ComImport, InterfaceType(ComInterfaceType.InterfaceIsIUnknown), Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99")]
+    private interface IPropertyStore
+    {
+        [PreserveSig] int GetCount(out uint count);
+        [PreserveSig] int GetAt(uint index, out PropertyKey key);
+        [PreserveSig] int GetValue(ref PropertyKey key, out PropVariant value);
+        [PreserveSig] int SetValue(ref PropertyKey key, ref PropVariant value);
+        [PreserveSig] int Commit();
+    }
+
+    [StructLayout(LayoutKind.Sequential, Pack = 4)]
+    private struct PropertyKey(Guid format, uint id)
+    {
+        public Guid Format = format;
+        public uint Id = id;
+    }
+
+    /// <summary>A PROPVARIANT holding one wide string, which is all an AppUserModelID is.</summary>
+    [StructLayout(LayoutKind.Explicit)]
+    private struct PropVariant
+    {
+        [FieldOffset(0)] private ushort _type;
+        [FieldOffset(8)] private IntPtr _pointer;
+
+        public PropVariant(string value)
+        {
+            _type = 31; // VT_LPWSTR
+            _pointer = Marshal.StringToCoTaskMemUni(value);
+        }
+
+        public void Clear()
+        {
+            if (_pointer != IntPtr.Zero)
+                Marshal.FreeCoTaskMem(_pointer);
+            _pointer = IntPtr.Zero;
+        }
+    }
+
+    // ---- the tray balloon, for a portable Meows or when a toast will not go ----
+
+    /// <summary>
+    /// A notification-area icon of its own for a few seconds, carrying the balloon, on a thread
+    /// of its own so nothing waits for it. Windows 10 and 11 show the balloon as a notification
+    /// under Meows' name and icon.
+    /// </summary>
+    private static void ShowBalloon(string title, string text, bool trouble, Action<string> log)
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+        var shown = Task.Factory.StartNew(() =>
+        {
+            var window = IntPtr.Zero;
+            var data = new NotifyIconData();
+            try
+            {
+                window = CreateWindowExW(0, "STATIC", "Meows", 0, 0, 0, 0, 0, new IntPtr(-3), IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+                if (window == IntPtr.Zero)
+                    return;
+                data = new NotifyIconData
+                {
+                    Size = (uint)Marshal.SizeOf<NotifyIconData>(),
+                    Window = window,
+                    Id = 0x4D45,
+                    Flags = IconFlag | TipFlag | InfoFlag,
+                    Icon = Environment.ProcessPath is { } exe ? ExtractIconW(IntPtr.Zero, exe, 0) : IntPtr.Zero,
+                    Tip = "Meows",
+                    InfoTitle = Clip(title, 63),
+                    Info = Clip(text.Length == 0 ? title : text, 255),
+                    InfoFlags = trouble ? WarningIcon : InfoIcon,
+                };
+                if (!Shell_NotifyIconW(Add, ref data))
+                {
+                    log("The tray would not take a balloon.");
+                    return;
+                }
+                Thread.Sleep(TimeSpan.FromSeconds(8));
+            }
+            finally
+            {
+                if (window != IntPtr.Zero)
+                {
+                    Shell_NotifyIconW(Delete, ref data);
+                    DestroyWindow(window);
+                }
+                if (data.Icon != IntPtr.Zero)
+                    DestroyIcon(data.Icon);
+            }
+        }, TaskCreationOptions.LongRunning);
+
+        lock (Pending)
+        {
+            Pending.RemoveAll(t => t.IsCompleted);
+            Pending.Add(shown);
+        }
+    }
+
+    private static string Clip(string text, int most) => text.Length <= most ? text : text[..(most - 1)] + "…";
+
+    private const uint Add = 0, Delete = 2;
+    private const uint IconFlag = 0x2, TipFlag = 0x4, InfoFlag = 0x10;
+    private const uint InfoIcon = 0x1, WarningIcon = 0x2;
+
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+    private struct NotifyIconData
+    {
+        public uint Size;
+        public IntPtr Window;
+        public uint Id;
+        public uint Flags;
+        public uint CallbackMessage;
+        public IntPtr Icon;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 128)] public string Tip;
+        public uint State;
+        public uint StateMask;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 256)] public string Info;
+        public uint TimeoutOrVersion;
+        [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 64)] public string InfoTitle;
+        public uint InfoFlags;
+        public Guid Item;
+        public IntPtr BalloonIcon;
+    }
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern bool Shell_NotifyIconW(uint message, ref NotifyIconData data);
+
+    [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr ExtractIconW(IntPtr instance, string file, int index);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern IntPtr CreateWindowExW(uint exStyle, string className, string windowName, uint style,
+        int x, int y, int width, int height, IntPtr parent, IntPtr menu, IntPtr instance, IntPtr param);
+
+    [DllImport("user32.dll")]
+    private static extern bool DestroyWindow(IntPtr window);
+
+    [DllImport("user32.dll")]
+    private static extern bool DestroyIcon(IntPtr icon);
 }
 
 /// <summary>
-/// Between the notification centre and Windows: decides, shows, takes down, and turns a pressed
-/// button back into the notification's own action.
+/// The buttons of toasts already raised, so the one pressed can be found when its argument comes
+/// back through a second start of Meows. Kept for the life of the process, the last hundred.
 /// </summary>
-public sealed class ToastRelay : IDisposable
+public sealed class ToastButtons
 {
-    private readonly NotificationCenter _center;
-    private readonly WindowsToasts _toasts;
-    private readonly Func<string> _mode;
-    private readonly Func<bool> _windowInFront;
-    private readonly Action _showWindow;
-    private readonly Action<string> _log;
+    private readonly Dictionary<string, Action> _waiting = [];
+    private readonly Queue<string> _order = new();
 
-    public ToastRelay(
-        NotificationCenter center,
-        WindowsToasts toasts,
-        Func<string> mode,
-        Func<bool> windowInFront,
-        Action showWindow,
-        Action<string> log)
+    public string Remember(Action press)
     {
-        _center = center;
-        _toasts = toasts;
-        _mode = mode;
-        _windowInFront = windowInFront;
-        _showWindow = showWindow;
-        _log = log;
-
-        _center.Arrived += OnArrived;
-        _center.Removed += OnRemoved;
-        _toasts.Pressed += OnPressed;
+        var id = Guid.NewGuid().ToString("N")[..12];
+        _waiting[id] = press;
+        _order.Enqueue(id);
+        while (_order.Count > 100)
+            _waiting.Remove(_order.Dequeue());
+        return Toasts.ActPrefix + id;
     }
 
-    private void OnArrived(NotificationItem item, NotificationItem? replaced)
+    /// <summary>Presses the button an argument stands for. False when it is not one, or too old to know.</summary>
+    public bool Press(string argument)
     {
-        if (!ToastRule.ShouldToast(item, replaced, _mode(), _windowInFront()))
-            return;
-        _toasts.Show(item, item.SourceName);
-    }
-
-    /// <summary>
-    /// Dealt with in the app, so gone from the action centre too. A date marked done should not
-    /// still be sitting in Windows asking to be marked done.
-    /// </summary>
-    private void OnRemoved(NotificationItem item)
-    {
-        // A condition's toast is shared by every item that has stood under its key, so it only
-        // goes when the key is clear, not when one item was replaced by the next.
-        if (item.IsCondition && _center.Condition(item.Source, item.ConditionKey!) is not null)
-            return;
-        _toasts.Remove(ToastContent.Tag(item));
-    }
-
-    private void OnPressed(ToastTarget? target) =>
-        Avalonia.Threading.Dispatcher.UIThread.Post(() => Press(target));
-
-    /// <summary>
-    /// What pressing did. The toast itself opens the window; a button does what the same button
-    /// in the panel does, and the window stays where it is, since "done" does not need a window.
-    /// </summary>
-    public void Press(ToastTarget? target)
-    {
-        var item = target switch
-        {
-            { IsCondition: true } => _center.Condition(target.Source!, target.ConditionKey!),
-            { EventId: { } id } => _center.Find(id),
-            _ => null,
-        };
-
-        if (target is null || target.IsBody || item is null || target.Button >= item.Actions.Count)
-        {
-            _showWindow();
-            return;
-        }
-
-        var action = item.Actions[target.Button];
-        try
-        {
-            action.Invoke();
-        }
-        catch (Exception ex)
-        {
-            _log($"The '{action.Label}' button from a toast failed: {ex.Message}");
-            _showWindow();
-            return;
-        }
-
-        if (action.DismissesAfter && item.CanDismiss)
-            _center.Dismiss(item);
-    }
-
-    public void Dispose()
-    {
-        _center.Arrived -= OnArrived;
-        _center.Removed -= OnRemoved;
-        _toasts.Pressed -= OnPressed;
-        _toasts.Clear();
+        if (!argument.StartsWith(Toasts.ActPrefix, StringComparison.OrdinalIgnoreCase))
+            return false;
+        var id = argument[Toasts.ActPrefix.Length..].TrimEnd('/');
+        if (!_waiting.Remove(id, out var press))
+            return false;
+        press();
+        return true;
     }
 }

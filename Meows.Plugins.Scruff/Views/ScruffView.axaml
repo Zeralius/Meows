@@ -94,6 +94,37 @@
                        TextWrapping="Wrap" />
         </Border>
 
+        <!-- Before posting: everything the switched-on places would say, once, above the button. -->
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,1,0,0"
+                Padding="14,8"
+                IsVisible="{Binding HasBeforePosting}">
+            <StackPanel Spacing="3">
+                <TextBlock Classes="label" Text="{m:Tr scruff.lick.title}" />
+                <ItemsControl ItemsSource="{Binding BeforePosting}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:BeforePostingLine">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="8" Margin="0,1">
+                                <TextBlock Grid.Column="0" Text="{Binding Places}" FontWeight="SemiBold" FontSize="12" />
+                                <TextBlock Grid.Column="1" Text="{Binding Text}" FontSize="12" TextWrapping="Wrap"
+                                           Foreground="{DynamicResource MeowsWarnText}" />
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,1,0,0"
+                Padding="14,6"
+                IsVisible="{Binding IsAllClear}">
+            <TextBlock Classes="label" Text="{m:Tr scruff.lick.clear}" />
+        </Border>
+
         <!-- Bottom bar: the two things this tab does -->
         <Border DockPanel.Dock="Bottom"
                 Background="{DynamicResource MeowsBar}"

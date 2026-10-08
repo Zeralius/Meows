@@ -26,9 +26,27 @@ public sealed class PurrgeSettings
 
     /// <summary>Whether a copy with the same size and date is taken as identical without being read.</summary>
     public bool TrustTimestamps { get; set; }
+
+    /// <summary>The third job: pictures that look alike. Only one of this and <see cref="CompareMode"/> is ever on.</summary>
+    public bool LookalikeMode { get; set; }
+
+    /// <summary>How many of 64 bits two pictures may differ in and still count as looking alike.</summary>
+    public int LookalikeThreshold { get; set; } = Services.LookalikeScanner.DefaultThreshold;
+
+    /// <summary>Whether look-alikes also looks at videos, which needs ffmpeg and takes far longer.</summary>
+    public bool LookalikeVideos { get; set; }
+
+    /// <summary>The fourth job: renaming. Only one of the modes is ever on.</summary>
+    public bool GroomMode { get; set; }
+
+    /// <summary>The rename last set up, kept so the tab opens on it.</summary>
+    public Services.GroomRule GroomRule { get; set; } = new();
+
+    /// <summary>The last rename carried out, kept until it is undone or replaced.</summary>
+    public Services.GroomRun? LastGroomRun { get; set; }
 }
 
-public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable, IGlanceable
+public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTarget, ISearchable, IActionTarget, IGlanceable
 {
     private const int ThumbnailWidth = 96;
     private const int PreviewWidth = 720;
@@ -70,6 +88,16 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         RevealCommand = new RelayCommand(RevealSelected, () => SelectedFile is not null);
         SelectFileCommand = new RelayCommand(SelectFile);
         Compare = new CompareViewModel(host, () => _settings, SaveSettings);
+        Lookalikes = new LookalikeViewModel(host, () => _settings, SaveSettings);
+        Groom = new GroomViewModel(host, () => _settings, SaveSettings);
+        if (_settings.GroomMode)
+            Groom.Folder = _scanRoot;
+        FindLookalikesCommand = new RelayCommand(() => Lookalikes.Start(ScanRoot), () => ScanRoot.Length > 0 && !Lookalikes.IsRunning);
+        Lookalikes.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(LookalikeViewModel.IsRunning))
+                FindLookalikesCommand.RaiseCanExecuteChanged();
+        };
         UseAsSourceCommand = new RelayCommand(() => Compare.Source = ScanRoot, () => ScanRoot.Length > 0);
         UseAsCopyCommand = new RelayCommand(() => Compare.Copy = ScanRoot, () => ScanRoot.Length > 0);
 
@@ -77,11 +105,22 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         {
             OnEverythingChanged();
             Compare.Reread();
+            Lookalikes.Reread();
+            Groom.Reread();
         });
     }
 
     /// <summary>The other thing this tab does: check that a copy is really a copy.</summary>
     public CompareViewModel Compare { get; }
+
+    /// <summary>And the third: pictures that look alike without being the same bytes.</summary>
+    public LookalikeViewModel Lookalikes { get; }
+
+    /// <summary>And the fourth: tidying the names in the folder picked in the tree.</summary>
+    public GroomViewModel Groom { get; }
+
+    /// <summary>Looks for look-alikes under the folder picked in the tree.</summary>
+    public RelayCommand FindLookalikesCommand { get; }
 
     public RelayCommand UseAsSourceCommand { get; }
 
@@ -94,21 +133,49 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
     public bool IsCompareMode
     {
         get => _settings.CompareMode;
-        set
-        {
-            if (_settings.CompareMode == value)
-                return;
-            _settings.CompareMode = value;
-            SaveSettings();
-            OnPropertyChanged();
-            OnPropertyChanged(nameof(IsDuplicatesMode));
-        }
+        set { if (value) SetMode(compare: true, lookalike: false, groom: false); }
+    }
+
+    public bool IsLookalikeMode
+    {
+        get => _settings.LookalikeMode;
+        set { if (value) SetMode(compare: false, lookalike: true, groom: false); }
+    }
+
+    public bool IsGroomMode
+    {
+        get => _settings.GroomMode;
+        set { if (value) SetMode(compare: false, lookalike: false, groom: true); }
     }
 
     public bool IsDuplicatesMode
     {
-        get => !IsCompareMode;
-        set => IsCompareMode = !value;
+        get => !_settings.CompareMode && !_settings.LookalikeMode && !_settings.GroomMode;
+        set
+        {
+            if (value)
+                SetMode(compare: false, lookalike: false, groom: false);
+        }
+    }
+
+    /// <summary>
+    /// A radio button going off is only ever the other half of one going on, so a mode is only
+    /// ever switched on here, never off; turning Compare off from code means turning another on.
+    /// </summary>
+    private void SetMode(bool compare, bool lookalike, bool groom)
+    {
+        if (_settings.CompareMode == compare && _settings.LookalikeMode == lookalike && _settings.GroomMode == groom)
+            return;
+        _settings.CompareMode = compare;
+        _settings.LookalikeMode = lookalike;
+        _settings.GroomMode = groom;
+        SaveSettings();
+        if (groom)
+            Groom.Folder = ScanRoot;
+        OnPropertyChanged(nameof(IsCompareMode));
+        OnPropertyChanged(nameof(IsLookalikeMode));
+        OnPropertyChanged(nameof(IsGroomMode));
+        OnPropertyChanged(nameof(IsDuplicatesMode));
     }
 
     public ObservableCollection<FolderNodeViewModel> Roots { get; }
@@ -186,7 +253,10 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
                 return;
             ScanCommand.RaiseCanExecuteChanged();
             UseAsSourceCommand.RaiseCanExecuteChanged();
+            FindLookalikesCommand.RaiseCanExecuteChanged();
             UseAsCopyCommand.RaiseCanExecuteChanged();
+            if (IsGroomMode)
+                Groom.Folder = value;
         }
     }
 
@@ -387,9 +457,20 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
                     await Dispatcher.UIThread.InvokeAsync(() => StatusMessage = _host.Text["purrge.status.cancelled"]);
                     throw;
                 }
+                catch (Exception ex)
+                {
+                    await Dispatcher.UIThread.InvokeAsync(() => ErrorMessage = ex.Message);
+                    throw;
+                }
                 finally
                 {
-                    await Dispatcher.UIThread.InvokeAsync(() => IsScanning = false);
+                    await Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        IsScanning = false;
+                        // A rule waiting on a walk that ended without results hears why.
+                        _ruleWaiting?.TrySetResult(ErrorMessage ?? StatusMessage ?? "");
+                        _ruleWaiting = null;
+                    });
                 }
             });
 
@@ -616,7 +697,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
                 var chosenFile = file;
                 hits.Add(new SearchHit(file.FileName, $"{set.Header} · {file.Folder}", () =>
                 {
-                    IsCompareMode = false;
+                    IsDuplicatesMode = true;
                     SelectedSet = chosenSet;
                     SelectedFile = chosenFile;
                 }));
@@ -649,7 +730,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         if (!Accepts(handoff) || IsScanning)
             return;
 
-        IsCompareMode = false;
+        IsDuplicatesMode = true;
         _askedBy = handoff.WantsReply ? handoff : null;
         if (handoff.Verb == HandoffVerbs.Files)
         {
@@ -669,6 +750,40 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
     /// <summary>Set by a Files handoff for the scan that follows: the files whose copies are wanted.</summary>
     private IReadOnlyList<string>? _copiesOf;
 
+    /// <summary>A rule waiting to hear what the walk it asked for found.</summary>
+    private TaskCompletionSource<string>? _ruleWaiting;
+
+    /// <summary>
+    /// A rule's "look for duplicates": the folder the event was about, or the folder of the file
+    /// it was about, walked the way the Scan button walks it. The answer is the summary the tab
+    /// ends on. A walk already running is not interrupted; the rule is told so.
+    /// </summary>
+    public async Task<string> Perform(ActionRequest request, CancellationToken token)
+    {
+        if (request.Action != PurrgePlugin.ScanAction)
+            throw new ActionDeclinedException(_host.Text.Format("purrge.action.unknown", request.Action));
+
+        var path = request.Path;
+        var folder = Directory.Exists(path) ? path
+            : File.Exists(path) ? Path.GetDirectoryName(path)
+            : null;
+        if (folder is null)
+            throw new ActionDeclinedException(_host.Text.Format("purrge.action.gone", path));
+        if (IsScanning)
+            throw new ActionDeclinedException(_host.Text["purrge.action.busy"]);
+
+        var done = new TaskCompletionSource<string>(TaskCreationOptions.RunContinuationsAsynchronously);
+        IsDuplicatesMode = true;
+        _askedBy = new Handoff(HandoffVerbs.Folder, [folder]) { Reply = found => done.TrySetResult(found) };
+        _ruleWaiting = done;
+        _copiesOf = null;
+        ScanRoot = folder;
+        StartScan();
+
+        await using (token.Register(() => done.TrySetCanceled(token)))
+            return await done.Task;
+    }
+
     private void SaveSettings()
     {
         try
@@ -685,6 +800,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
     {
         _language.Dispose();
         Compare.Dispose();
+        Lookalikes.Dispose();
         _scanTask?.Dispose();
         CancelThumbnails();
         PreviewImage = null;

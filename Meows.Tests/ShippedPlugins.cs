@@ -35,6 +35,17 @@ internal static class ShippedPlugins
         typeof(Plugins.Rehome.RehomePlugin),
         typeof(Plugins.Scoop.ScoopPlugin),
         typeof(Plugins.Trail.TrailPlugin),
+        typeof(Plugins.Larder.LarderPlugin),
+        typeof(Plugins.Carry.CarryPlugin),
+        typeof(Plugins.Cattery.CatteryPlugin),
+        typeof(Plugins.Nest.NestPlugin),
+        typeof(Plugins.Basket.BasketPlugin),
+        typeof(Plugins.Backlog.BacklogPlugin),
+        typeof(Plugins.Screenshot.ScreenshotPlugin),
+        typeof(Plugins.Pantry.PantryPlugin),
+        typeof(Plugins.Bookshelf.BookshelfPlugin),
+        typeof(Plugins.Vet.VetPlugin),
+        typeof(Plugins.Naptime.NaptimePlugin),
         // kitten: next plugin goes here
     ];
 }

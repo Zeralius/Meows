@@ -124,6 +124,12 @@
                                   Padding="10,2"
                                   IsChecked="{Binding FelineNames}"
                                   ToolTip.Tip="{m:Tr shell.names.tip}" />
+                    <!-- Personas: named sets of switched-on plugins, one pick to switch. -->
+                    <ComboBox ItemsSource="{Binding PersonaNames}"
+                              SelectedItem="{Binding SelectedPersonaName}"
+                              PlaceholderText="{m:Tr shell.persona.hint}"
+                              MinWidth="110"
+                              VerticalAlignment="Center" />
                     <ToggleButton Content="{Binding TaskBadge}"
                                   Padding="10,2"
                                   IsChecked="{Binding IsTasksOpen}" />

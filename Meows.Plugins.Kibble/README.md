@@ -189,6 +189,13 @@ anyway. Kibble refuses when:
   on single files. A comic you build here is a new archive, so there is nothing yet to match it
   against.
 - **a comic archive has no pages in it.**
+- **its name lies about something the bot never posts.** The first bytes are checked against the
+  extension: a `.png` that is a login page, a `.cbz` that is really a RAR. The reason says what it
+  says and what it is. A page like that in a pick being bundled into a comic refuses the bundle.
+
+A name that lies about something the bot *does* post, a PNG called `.jpg`, a video called
+`.gif`, is put right on the way in instead: the file goes into the queue under the extension its
+bytes call for, and the status line says so. Only the name changes.
 
 Dedupe is deliberately **per destination**. Two groups wanting the same picture is normal, so
 the same file being queued elsewhere is not a reason to refuse it here.
