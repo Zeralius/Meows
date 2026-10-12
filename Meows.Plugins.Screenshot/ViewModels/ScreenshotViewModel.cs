@@ -501,7 +501,7 @@ public sealed class ScreenshotViewModel : ObservableObject, IDisposable, ISearch
 
         ErrorMessage = null;
         _kept.Remove(selected.Path);
-        _host.Store.Record("recycled", System.IO.Path.GetFileName(selected.Path));
+        Recycled.Record(_host.Store, [selected.Path], subject: System.IO.Path.GetFileName(selected.Path));
         Refresh();
         Status = _host.Text.Format("screenshot.status.recycled", 1);
     }
@@ -524,7 +524,7 @@ public sealed class ScreenshotViewModel : ObservableObject, IDisposable, ISearch
         foreach (var path in paths)
             _kept.Remove(path);
         var freed = victims.Sum(v => v.Size);
-        _host.Store.Record("recycled", _host.Text.Format("screenshot.records.recycled", victims.Count, Shots.Humanise(freed)));
+        Recycled.Record(_host.Store, paths, subject: _host.Text.Format("screenshot.records.recycled", victims.Count, Shots.Humanise(freed)));
         Refresh();
         Status = _host.Text.Format("screenshot.status.recycled", victims.Count);
     }
@@ -549,7 +549,8 @@ public sealed class ScreenshotViewModel : ObservableObject, IDisposable, ISearch
         foreach (var victim in victims)
             _kept.Remove(victim.Path);
         var freed = victims.Sum(v => v.Size);
-        _host.Store.Record("recycled", _host.Text.Format("screenshot.records.recycled", victims.Count, Shots.Humanise(freed)));
+        Recycled.Record(_host.Store, victims.Select(v => v.Path).ToList(),
+            subject: _host.Text.Format("screenshot.records.recycled", victims.Count, Shots.Humanise(freed)));
         Save();
 
         return Task.FromResult(_host.Text.Format("screenshot.status.recycled", victims.Count));

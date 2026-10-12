@@ -80,7 +80,7 @@ public sealed class InstinctActionTests : IDisposable
             .Order()
             .ToList();
 
-        Assert.Equal(["meows.backlog", "meows.basket", "meows.bookshelf", "meows.collar", "meows.naptime", "meows.pantry", "meows.portion", "meows.purrge", "meows.screenshot", "meows.scruff", "meows.weighin"], offering);
+        Assert.Equal(["meows.backlog", "meows.basket", "meows.bookshelf", "meows.chonk", "meows.collar", "meows.naptime", "meows.pantry", "meows.portion", "meows.purrge", "meows.screenshot", "meows.scruff"], offering);
         Assert.All(performers, t => Assert.True(typeof(IActionTarget).IsAssignableFrom(t), t.Name));
     }
 

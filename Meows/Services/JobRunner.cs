@@ -121,8 +121,12 @@ public static class JobRunner
     }
 
     /// <summary>The name a job goes by on the command line: the plugin id without "meows.", a dot, the job.</summary>
-    public static string NameOf(PluginDescriptor plugin, PluginJob job) =>
-        (plugin.Id.StartsWith("meows.", StringComparison.Ordinal) ? plugin.Id["meows.".Length..] : plugin.Id) + "." + job.Id;
+    public static string NameOf(PluginDescriptor plugin, PluginJob job)
+    {
+        // A page's job keeps the name it had before its plugin became a page.
+        var id = (plugin.Plugin as PagedPlugin)?.OwnerOf(job.Id) ?? plugin.Id;
+        return (id.StartsWith("meows.", StringComparison.Ordinal) ? id["meows.".Length..] : id) + "." + job.Id;
+    }
 
     public static async Task<JobResult> RunAsync(
         IEnumerable<PluginDescriptor> found,
@@ -136,7 +140,9 @@ public static class JobRunner
         if (Parse(name) is not var (pluginId, jobId))
             return new JobResult(Unknown, text.Format("do.unknown", name));
 
-        var plugin = found.FirstOrDefault(d => d.IsCompatible && string.Equals(d.Id, pluginId, StringComparison.OrdinalIgnoreCase));
+        var plugin = found.FirstOrDefault(d => d.IsCompatible && string.Equals(d.Id, pluginId, StringComparison.OrdinalIgnoreCase))
+                     ?? found.FirstOrDefault(d => d.IsCompatible && d.Plugin is PagedPlugin paged &&
+                                                  paged.Absorbed.Any(a => string.Equals(a.Id, pluginId, StringComparison.OrdinalIgnoreCase)));
         var job = plugin is null ? null : SafeJobs(plugin).FirstOrDefault(j => string.Equals(j.Id, jobId, StringComparison.OrdinalIgnoreCase));
         if (plugin is null || job is null)
             return new JobResult(Unknown, text.Format("do.unknown", name));

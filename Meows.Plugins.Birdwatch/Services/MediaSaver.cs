@@ -123,11 +123,26 @@ public sealed class MediaSaver
     /// </summary>
     public Func<string, string?>? SeenBefore { get; set; }
 
+    /// <summary>
+    /// Longest one picture or video may take to arrive. HttpClient's own timeout covers the
+    /// headers only when the body is streamed, so a server that stalls halfway held the save
+    /// open for good.
+    /// </summary>
+    public static readonly TimeSpan DownloadLimit = TimeSpan.FromMinutes(3);
+
+    /// <summary>The most one file may be. Far past any post's video, short of filling a disk.</summary>
+    public const long MaxBytes = 1024L * 1024 * 1024;
+
     public async Task<SaveResult> SaveAsync(
-        FeedPost post, FeedMedia media, int index, string intakeFolder, CancellationToken token)
+        FeedPost post, FeedMedia media, int index, string intakeFolder, CancellationToken cancel)
     {
         if (media.FullUrl is not { Length: > 0 } url)
             return new SaveResult(SaveOutcome.NotSaveable, null, null);
+
+        using var limit = CancellationTokenSource.CreateLinkedTokenSource(cancel);
+        limit.CancelAfter(DownloadLimit);
+        var token = limit.Token;
+        string? partial = null;
 
         try
         {
@@ -147,12 +162,25 @@ public sealed class MediaSaver
             if (File.Exists(target))
                 return new SaveResult(SaveOutcome.AlreadyThere, target, null);
 
+            if (response.Content.Headers.ContentLength is > MaxBytes)
+                return new SaveResult(SaveOutcome.Failed, null, $"larger than {MaxBytes / 1024 / 1024} MB");
+
             // Written beside itself first. A half downloaded file with the final name is one
             // Kibble would happily pick up and queue.
-            var partial = target + ".part";
+            partial = target + ".part";
             await using (var file = File.Create(partial))
+            await using (var body = await response.Content.ReadAsStreamAsync(token))
             {
-                await response.Content.CopyToAsync(file, token);
+                var buffer = new byte[81920];
+                long total = 0;
+                int read;
+                while ((read = await body.ReadAsync(buffer, token)) > 0)
+                {
+                    total += read;
+                    if (total > MaxBytes)
+                        throw new InvalidDataException($"larger than {MaxBytes / 1024 / 1024} MB");
+                    await file.WriteAsync(buffer.AsMemory(0, read), token);
+                }
             }
 
             // The same picture from a second account, or one Kibble already sorted, is not
@@ -165,15 +193,34 @@ public sealed class MediaSaver
             }
 
             File.Move(partial, target, overwrite: false);
+            partial = null;
             return new SaveResult(SaveOutcome.Saved, target, null) { Hash = hash };
+        }
+        catch (OperationCanceledException) when (cancel.IsCancellationRequested)
+        {
+            throw;
         }
         catch (OperationCanceledException)
         {
-            throw;
+            return new SaveResult(SaveOutcome.Failed, null, $"took longer than {DownloadLimit.TotalMinutes:0} minutes");
         }
         catch (Exception ex)
         {
             return new SaveResult(SaveOutcome.Failed, null, ex.Message);
+        }
+        finally
+        {
+            // A cancelled, stalled or refused download leaves no .part behind for anything to find.
+            if (partial is not null)
+            {
+                try
+                {
+                    File.Delete(partial);
+                }
+                catch (Exception)
+                {
+                }
+            }
         }
     }
 }

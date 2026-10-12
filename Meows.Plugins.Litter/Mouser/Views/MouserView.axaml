@@ -1,0 +1,202 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.Mouser.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.Mouser.Views.MouserView"
+             x:DataType="vm:MouserViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.section">
+            <Setter Property="Margin" Value="14,12,14,6" />
+        </Style>
+
+        <Style Selector="Button.bucket">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Background" Value="{DynamicResource MeowsCard}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLine}" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="CornerRadius" Value="6" />
+            <Setter Property="Padding" Value="10,7" />
+            <Setter Property="Margin" Value="0,0,0,5" />
+        </Style>
+        <Style Selector="Button.bucket.on">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsSelectionLine}" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding Root}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Classes="label" Text="{Binding Summary}" />
+                        <TextBlock Classes="label" Text="{Binding Status}" />
+                    </StackPanel>
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <CheckBox Content="{m:Tr mouser.skipsystem}"
+                              IsChecked="{Binding SkipSystemFolders}"
+                              FontSize="11"
+                              VerticalAlignment="Center" />
+                    <CheckBox Content="{m:Tr mouser.confirmdeletes}"
+                              IsChecked="{Binding ConfirmDeletes}"
+                              FontSize="11"
+                              VerticalAlignment="Center" />
+                    <Button Name="PickFolderButton" Command="{Binding PickFolderCommand}" Content="{m:Tr mouser.folder}" />
+                    <Button Content="{m:Tr mouser.lookagain}" Command="{Binding ScanCommand}" />
+                    <Button Content="{m:Tr mouser.stop}" Command="{Binding CancelCommand}" IsVisible="{Binding IsScanning}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsWarn}"
+                BorderBrush="{DynamicResource MeowsWarnLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding WasStopped}">
+            <TextBlock Text="{Binding StoppedNote}" Foreground="{DynamicResource MeowsWarnText}" TextWrapping="Wrap" FontSize="12" />
+        </Border>
+
+        <Panel>
+        <Grid ColumnDefinitions="250,4,*">
+
+            <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr mouser.showonly}" />
+                    <StackPanel DockPanel.Dock="Bottom" Margin="8,4,8,12" Spacing="2">
+                        <TextBlock Classes="section" Margin="0,6,0,2" Text="{m:Tr mouser.shadow.heading}" />
+                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr mouser.shadow.hint}" Margin="0,0,0,4" />
+                        <ItemsControl ItemsSource="{Binding ShadowRules}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ShadowRuleViewModel">
+                                    <CheckBox Content="{Binding Name}" IsChecked="{Binding IsOn}" FontSize="11" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                    <Button DockPanel.Dock="Bottom"
+                            Content="{m:Tr mouser.showall}"
+                            Command="{Binding ClearFilterCommand}"
+                            Margin="8,6,8,0"
+                            FontSize="11"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center" />
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding Kinds}" Margin="8,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:KindViewModel">
+                                    <Button Classes="bucket"
+                                            Classes.on="{Binding IsOn}"
+                                            Command="{Binding $parent[UserControl].((vm:MouserViewModel)DataContext).FilterCommand}"
+                                            CommandParameter="{Binding}">
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                            <TextBlock Text="{Binding Detail}" Classes="label" />
+                                        </StackPanel>
+                                    </Button>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <DockPanel Grid.Column="2">
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="14,10,14,6" ColumnSpacing="10">
+                    <TextBlock Grid.Column="0" Classes="label" Text="{Binding SelectionText}" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                        <Button Content="{m:Tr mouser.explore}" Command="{Binding ExploreCommand}" FontSize="11" />
+                        <Button Content="{m:Tr mouser.recycle}"
+                                Command="{Binding DeleteCommand}"
+                                Classes="danger"
+                                FontSize="11" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock DockPanel.Dock="Top"
+                           Margin="14,4,14,10"
+                           Foreground="{DynamicResource MeowsTextMuted}"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsEmpty}"
+                           Text="{m:Tr mouser.empty}" />
+
+                <ListBox Name="FindingList"
+                         ItemsSource="{Binding Findings}"
+                         SelectionMode="Multiple"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8,0,8,8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:FindingViewModel">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                <TextBlock Grid.Column="0"
+                                           Text="{Binding Glyph}"
+                                           FontSize="13"
+                                           VerticalAlignment="Top" />
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Folder}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Detail}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+        </Grid>
+
+        <Border IsVisible="{Binding IsAsking}" Background="{DynamicResource MeowsVeil}" m:Veil.HoldsFocus="True">
+            <Border Background="{DynamicResource MeowsCard}"
+                    BorderBrush="{DynamicResource MeowsDangerLine}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="20,16"
+                    MaxWidth="440"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="{Binding ConfirmPrompt}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding ConfirmDetail}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+                    <CheckBox Content="{m:Tr mouser.dontask}" IsChecked="{Binding DoNotAskAgain}" FontSize="11" Margin="0,4,0,0" />
+                    <Grid ColumnDefinitions="*,8,*">
+                        <Button Grid.Column="0"
+                                Content="{m:Tr mouser.cancel}"
+                                Command="{Binding CancelDeleteCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="2"
+                                Content="{m:Tr mouser.recycle}"
+                                Command="{Binding ConfirmDeleteCommand}"
+                                Classes="danger"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+        </Panel>
+
+    </DockPanel>
+
+</UserControl>

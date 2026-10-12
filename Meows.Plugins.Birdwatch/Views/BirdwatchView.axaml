@@ -6,27 +6,15 @@
              x:DataType="vm:BirdwatchViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
         <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="14,12,14,6" />
         </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
-        </Style>
+
         <Style Selector="ListBoxItem">
             <Setter Property="Padding" Value="6" />
             <Setter Property="CornerRadius" Value="5" />
         </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
+
     </UserControl.Styles>
 
     <DockPanel>
@@ -165,6 +153,7 @@
                                                     Padding="6,2"
                                                     VerticalAlignment="Center"
                                                     ToolTip.Tip="{m:Tr birdwatch.remove}"
+                                                    AutomationProperties.Name="{m:Tr birdwatch.remove}"
                                                     Command="{Binding $parent[UserControl].((vm:BirdwatchViewModel)DataContext).RemoveHandleCommand}"
                                                     CommandParameter="{Binding}" />
                                         </Grid>
@@ -182,7 +171,7 @@
             <DockPanel Grid.Column="2">
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,14,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding IsEmpty}"
                            Text="{m:Tr birdwatch.empty}" />
@@ -216,7 +205,7 @@
                                                 HorizontalAlignment="Left"
                                                 VerticalAlignment="Top"
                                                 IsVisible="{Binding IsSaved}">
-                                            <TextBlock Text="{m:Tr birdwatch.saved}" FontSize="9" Foreground="White" />
+                                            <TextBlock Text="{m:Tr birdwatch.saved}" FontSize="10" Foreground="White" />
                                         </Border>
 
                                         <Border Background="{DynamicResource MeowsDangerBadge}"
@@ -226,7 +215,7 @@
                                                 HorizontalAlignment="Right"
                                                 VerticalAlignment="Top"
                                                 IsVisible="{Binding IsVideo}">
-                                            <TextBlock Text="{m:Tr birdwatch.video}" FontSize="9" Foreground="White" />
+                                            <TextBlock Text="{m:Tr birdwatch.video}" FontSize="10" Foreground="White" />
                                         </Border>
 
                                         <Border Background="{DynamicResource MeowsVeil}"
@@ -236,7 +225,7 @@
                                                 HorizontalAlignment="Right"
                                                 VerticalAlignment="Bottom"
                                                 IsVisible="{Binding IsRepost}">
-                                            <TextBlock Text="{m:Tr birdwatch.repost}" FontSize="9" Foreground="White" />
+                                            <TextBlock Text="{m:Tr birdwatch.repost}" FontSize="10" Foreground="White" />
                                         </Border>
                                     </Panel>
                                 </Border>

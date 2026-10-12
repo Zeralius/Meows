@@ -542,6 +542,14 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
     /// It does not run straight away: turning it on means "from now on", and anyone wanting a
     /// look this second has a Refresh button right there.
     /// </summary>
+    private bool _rateLimited;
+    private TimeSpan _backoff;
+    private DateTime _quietUntil;
+
+    private static bool IsRateLimit(Exception ex) =>
+        ex is RateLimitedException ||
+        ex is HttpRequestException { StatusCode: System.Net.HttpStatusCode.TooManyRequests };
+
     private void StartAutoRefresh()
     {
         _auto?.Cancel();
@@ -559,12 +567,32 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
                 if (context.Token.IsCancellationRequested)
                     return;
 
+                // A site that said "too many requests" is left alone for a while, longer each
+                // time it says it again: asking every minute regardless is what got it said.
+                if (DateTime.UtcNow < _quietUntil)
+                {
+                    context.Report(_host.Text["birdwatch.task.quiet"]);
+                    return;
+                }
+
                 // Everything below touches the grid, which belongs to the UI thread.
                 await Dispatcher.UIThread.InvokeAsync(async () =>
                 {
                     // Never on top of a look somebody asked for themselves.
-                    if (!IsBusy)
-                        await LoadAsync(more: false);
+                    if (IsBusy)
+                        return;
+                    _rateLimited = false;
+                    await LoadAsync(more: false);
+                    if (_rateLimited)
+                    {
+                        _backoff = _backoff == TimeSpan.Zero ? every : TimeSpan.FromTicks(Math.Min(_backoff.Ticks * 2, TimeSpan.FromHours(1).Ticks));
+                        _quietUntil = DateTime.UtcNow + _backoff;
+                        _host.Log(LogLevel.Warning, $"Birdwatch was rate limited; next automatic look in {_backoff.TotalMinutes:0} minutes.");
+                    }
+                    else
+                    {
+                        _backoff = TimeSpan.Zero;
+                    }
                 });
             },
             runImmediately: false);
@@ -684,6 +712,8 @@ public sealed class BirdwatchViewModel : ObservableObject, IDisposable, ISearcha
                 {
                     // One account being wrong should not stop the others. A typo in a handle is
                     // the usual cause and the message says which one.
+                    if (IsRateLimit(ex))
+                        _rateLimited = true;
                     watched.Status = _host.Text["birdwatch.watched.failed"];
                     failures.Add($"{watched.Handle}: {Explain(ex)}");
                     _host.Log(LogLevel.Warning, $"Birdwatch could not read {watched.Handle}: {ex.Message}");

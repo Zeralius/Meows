@@ -68,7 +68,15 @@ public sealed record GroomRun(string Folder, IReadOnlyList<GroomMove> Moves, Dat
 public sealed record GroomMove(string From, string To);
 
 /// <summary>What happened when a run or its undo was carried out.</summary>
-public sealed record GroomOutcome(int Moved, IReadOnlyList<string> Failed);
+public sealed record GroomOutcome(int Moved, IReadOnlyList<string> Failed)
+{
+    /// <summary>
+    /// Files that could take neither their new name nor their old one back, and are under the
+    /// temporary name the rename parked them on: old name, then where it is now. Rare, and the
+    /// one case where a person has to go and look.
+    /// </summary>
+    public IReadOnlyList<(string Was, string Now)> Stranded { get; init; } = [];
+}
 
 /// <summary>
 /// Groom, the bulk renamer. Purrge found the duplicates and showed how they got there: a (1)
@@ -251,13 +259,14 @@ public static class Groom
         }
 
         var (outcome, _) = Move(run.Folder, possible);
-        return outcome with { Failed = [.. failed, .. outcome.Failed] };
+        return outcome with { Failed = [.. failed, .. outcome.Failed], Stranded = outcome.Stranded };
     }
 
     private static (GroomOutcome, List<GroomMove>) Move(string folder, IReadOnlyList<GroomMove> moves)
     {
         var parked = new List<(GroomMove Move, string Temporary)>();
         var failed = new List<string>();
+        var stranded = new List<(string Was, string Now)>();
 
         foreach (var move in moves)
         {
@@ -292,10 +301,13 @@ public static class Groom
                 }
                 catch (Exception)
                 {
+                    // Neither name would have it. It is safe, under the temporary name, and the
+                    // outcome says so rather than leaving a file nobody can find.
+                    stranded.Add((move.From, temporary));
                 }
             }
         }
 
-        return (new GroomOutcome(done.Count, failed), done);
+        return (new GroomOutcome(done.Count, failed) { Stranded = stranded }, done);
     }
 }

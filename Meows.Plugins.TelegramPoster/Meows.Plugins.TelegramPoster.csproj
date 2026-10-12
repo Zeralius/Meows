@@ -25,6 +25,12 @@
       </EmbeddedResource>
     </ItemGroup>
 
+    <!-- Perch is a page of this plugin now, with a plugin class the shell does not see; the
+         tests still build it on its own. -->
+    <ItemGroup>
+      <InternalsVisibleTo Include="Meows.Tests" />
+    </ItemGroup>
+
     <ItemGroup>
       <!-- The shell supplies Avalonia and the contract at runtime; copying them into the
            plugin folder would only invite a second, incompatible copy. -->

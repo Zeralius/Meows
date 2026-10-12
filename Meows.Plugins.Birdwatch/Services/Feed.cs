@@ -102,3 +102,6 @@ public interface IFeedSource
     /// </summary>
     Task<FeedPage> FetchAsync(string handle, string? cursor, CancellationToken token);
 }
+
+/// <summary>A site said "too many requests". The automatic refresh backs off when it sees one.</summary>
+public sealed class RateLimitedException(string message) : InvalidOperationException(message);

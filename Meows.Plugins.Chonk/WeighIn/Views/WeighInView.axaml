@@ -1,0 +1,182 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Meows.Plugins.WeighIn.ViewModels"
+             xmlns:m="using:Meows.Plugins.Abstractions"
+             x:Class="Meows.Plugins.WeighIn.Views.WeighInView"
+             x:DataType="vm:WeighInViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="TextBlock.section">
+            <Setter Property="Margin" Value="14,12,14,6" />
+        </Style>
+
+        <Style Selector="TextBlock.delta">
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.delta.grew">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsWarnText}" />
+        </Style>
+        <Style Selector="TextBlock.delta.shrank">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsGoodText}" />
+        </Style>
+        <Style Selector="TextBlock.over">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsDangerText}" />
+            <Setter Property="Opacity" Value="1" />
+        </Style>
+    </UserControl.Styles>
+
+    <DockPanel>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLineSoft}"
+                BorderThickness="0,0,0,1"
+                Padding="14,10">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="14">
+                <StackPanel Grid.Column="0" Spacing="2">
+                    <TextBlock Text="{Binding SummaryText}" FontWeight="SemiBold" />
+                    <TextBlock Classes="label" Text="{Binding Status}" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
+                    <TextBlock Classes="label" Text="{m:Tr weighin.window}" VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{Binding WindowChoices}" SelectedItem="{Binding Window}" FontSize="11" VerticalAlignment="Center" />
+                    <Button Content="{m:Tr weighin.readnow}" Command="{Binding ReadNowCommand}" IsVisible="{Binding !IsReading}" />
+                    <Button Content="{m:Tr weighin.stop}" Command="{Binding CancelCommand}" IsVisible="{Binding IsReading}" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Border DockPanel.Dock="Top"
+                Background="{DynamicResource MeowsDanger}"
+                BorderBrush="{DynamicResource MeowsDangerLine}"
+                BorderThickness="0,0,0,1"
+                Padding="14,8"
+                IsVisible="{Binding HasError}">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
+        </Border>
+
+        <TextBlock DockPanel.Dock="Top"
+                   Margin="14,14,14,10"
+                   Foreground="{DynamicResource MeowsTextMuted}"
+                   TextWrapping="Wrap"
+                   IsVisible="{Binding IsEmpty}"
+                   Text="{m:Tr weighin.empty}" />
+
+        <Grid ColumnDefinitions="260,4,*,4,300">
+
+            <!-- Drives -->
+            <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr weighin.drives}" />
+                    <ListBox ItemsSource="{Binding Drives}"
+                             SelectedItem="{Binding SelectedDrive}"
+                             Background="Transparent"
+                             BorderThickness="0"
+                             Margin="6,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DriveViewModel">
+                                <StackPanel Spacing="3">
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <TextBlock Grid.Column="0" Text="{Binding Root}" FontWeight="SemiBold" />
+                                        <TextBlock Grid.Column="1" Text="{Binding DeltaText}" Classes="delta" Classes.grew="{Binding Grew}" Classes.shrank="{Binding Shrank}" FontSize="11" />
+                                    </Grid>
+                                    <TextBlock Text="{Binding UsedText}" Classes="label" />
+                                    <ProgressBar Value="{Binding Fraction}" Maximum="1" Height="4" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+            </Border>
+
+            <GridSplitter Grid.Column="1" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <!-- What moved -->
+            <DockPanel Grid.Column="2">
+                <TextBlock DockPanel.Dock="Top" Text="{Binding DriveHeadline}" Margin="14,12,14,4" FontWeight="SemiBold" TextWrapping="Wrap" IsVisible="{Binding HasDrive}" />
+                <TextBlock DockPanel.Dock="Top" Classes="label" Text="{m:Tr weighin.growth.hint}" Margin="14,0,14,8" TextWrapping="Wrap" IsVisible="{Binding HasDrive}" />
+                <TextBlock DockPanel.Dock="Top" Classes="label" Text="{m:Tr weighin.growth.none}" Margin="14,4" IsVisible="{Binding !HasGrowthRows}" />
+                <ListBox ItemsSource="{Binding Growth}"
+                         SelectedItem="{Binding SelectedGrowth}"
+                         Background="Transparent"
+                         BorderThickness="0"
+                         Margin="8,0,8,8">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GrowthViewModel">
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                                <StackPanel Grid.Column="0" Spacing="3">
+                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Text="{Binding Parent}" Classes="label" TextTrimming="CharacterEllipsis" />
+                                    <ProgressBar Value="{Binding Fraction}" Maximum="1" Height="3" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                    <TextBlock Text="{Binding DeltaText}" Classes="delta" Classes.grew="{Binding Grew}" HorizontalAlignment="Right" />
+                                    <TextBlock Text="{Binding SizeText}" Classes="label" HorizontalAlignment="Right" />
+                                </StackPanel>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <GridSplitter Grid.Column="3" Background="{DynamicResource MeowsRaised}" ResizeDirection="Columns" />
+
+            <!-- The selected folder, and the dials -->
+            <Border Grid.Column="4" Classes="panel" BorderThickness="1,0,0,0">
+                <ScrollViewer Padding="16,12">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="{m:Tr weighin.selected}" FontWeight="SemiBold" FontSize="13" />
+                        <TextBlock Text="{m:Tr weighin.nothingselected}" Classes="label" IsVisible="{Binding !HasGrowth}" />
+                        <StackPanel Spacing="6" IsVisible="{Binding HasGrowth}">
+                            <TextBlock Text="{Binding SelectedGrowth.Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                            <TextBlock Text="{Binding SelectedGrowth.DeltaText}" FontSize="20" />
+                            <TextBlock Text="{Binding SelectedGrowth.SizeText}" Classes="label" />
+                            <TextBlock Text="{Binding SelectedGrowth.Path}" Classes="label" TextWrapping="Wrap" />
+                            <Button Content="{m:Tr weighin.chonk}" Command="{Binding MeasureInChonkCommand}" IsVisible="{Binding CanReachChonk}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" Margin="0,6,0,0" />
+                            <Button Content="{m:Tr weighin.explore}" Command="{Binding ExploreCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                            <Button Content="{m:Tr weighin.budget.set}" Command="{Binding BudgetSelectedCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+                        </StackPanel>
+
+                        <!-- Budgets: a line per folder, set by hand, checked at every reading. -->
+                        <TextBlock Text="{m:Tr weighin.budgets}" FontWeight="SemiBold" FontSize="13" Margin="0,14,0,0" />
+                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr weighin.budgets.hint}" />
+                        <ItemsControl ItemsSource="{Binding BudgetRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:BudgetRowViewModel">
+                                    <StackPanel Spacing="3" Margin="0,4,0,4">
+                                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="6">
+                                            <TextBlock Grid.Column="0" Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" ToolTip.Tip="{Binding Path}" />
+                                            <NumericUpDown Grid.Column="1" Value="{Binding Gigabytes}" Minimum="0.1" Maximum="100000" Increment="1" FormatString="0.#" FontSize="11" Width="96"
+                                                           ToolTip.Tip="{m:Tr weighin.budget.gb}" />
+                                            <Button Grid.Column="2" Content="✕" FontSize="11" Padding="6,2"
+                                                    Command="{Binding $parent[UserControl].((vm:WeighInViewModel)DataContext).RemoveBudgetCommand}"
+                                                    CommandParameter="{Binding}"
+                                                    ToolTip.Tip="{m:Tr weighin.budget.remove}"
+                                                    AutomationProperties.Name="{m:Tr weighin.budget.remove}" />
+                                        </Grid>
+                                        <TextBlock Classes="label" Classes.over="{Binding IsOver}" Text="{Binding StandingText}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Content="{m:Tr weighin.budget.add}" Command="{Binding AddBudgetCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
+
+                        <TextBlock Text="{m:Tr weighin.dials}" FontWeight="SemiBold" FontSize="13" Margin="0,14,0,0" />
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <TextBlock Grid.Column="0" Classes="label" Text="{m:Tr weighin.threshold}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                            <NumericUpDown Grid.Column="1" Value="{Binding ThresholdMegabytes}" Minimum="1" Maximum="100000" Increment="50" FontSize="11" Width="100" />
+                        </Grid>
+                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                            <TextBlock Grid.Column="0" Classes="label" Text="{m:Tr weighin.depth}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                            <NumericUpDown Grid.Column="1" Value="{Binding Depth}" Minimum="1" Maximum="4" Increment="1" FontSize="11" Width="100" />
+                        </Grid>
+                        <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr weighin.about}" />
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+        </Grid>
+
+    </DockPanel>
+
+</UserControl>

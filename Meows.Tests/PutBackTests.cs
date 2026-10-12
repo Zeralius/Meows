@@ -46,7 +46,8 @@ public sealed class PutBackTests : IDisposable
         history.Selected = history.Lines.Single(l => l.Kind == "undone");
         Assert.False(history.CanPutBack);
 
-        // Purrge is not open, or does not reverse. Either way, no button.
+        // Purrge is not open, and nothing of b.png is in the Recycle Bin for the shell to put
+        // back. Either way, no button.
         history.Selected = history.Lines.Single(l => l.Kind == "recycled");
         Assert.False(history.CanPutBack);
 

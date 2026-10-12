@@ -19,7 +19,12 @@ public sealed class MoltPlugin : IMeowsPlugin
 
     public string Category => "group.disk";
 
-    public PluginTopics Topics => PluginTopics.Files;
+    public PluginTopics Topics => PluginTopics.Files | PluginTopics.Developer;
+
+    public IReadOnlyList<RecordedKind> Records =>
+    [
+        new("recycled", "molt.records.recycled"),
+    ];
 
     public Control CreateView(IMeowsHost host) => new MoltView
     {

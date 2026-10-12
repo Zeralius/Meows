@@ -1353,11 +1353,8 @@ public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchab
             });
 
             var scale = (double)w / item.Item.Width;
-            KeepOriginal(kit.Folder, path);
-            var target = Path.ChangeExtension(path, bytes.Length > 0 && bytes[0] == 0x89 ? ".png" : ".webp");
-            File.WriteAllBytes(target, bytes);
-            if (!string.Equals(target, path, StringComparison.OrdinalIgnoreCase))
-                File.Delete(path);
+            KeepOriginal(kit.Folder, item.Item, path);
+            var target = Rewrite(path, bytes.Length > 0 && bytes[0] == 0x89 ? ".png" : ".webp", bytes);
 
             item.Item.File = Path.GetRelativePath(kit.Folder, target).Replace('\\', '/');
             item.Item.Width = w;
@@ -1410,11 +1407,8 @@ public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchab
                 return (bytes, pad, bitmap.Width + 2 * pad, bitmap.Height + 2 * pad);
             });
 
-            KeepOriginal(kit.Folder, path);
-            var target = Path.ChangeExtension(path, ".png");
-            File.WriteAllBytes(target, png);
-            if (!string.Equals(target, path, StringComparison.OrdinalIgnoreCase))
-                File.Delete(path);
+            KeepOriginal(kit.Folder, item.Item, path);
+            var target = Rewrite(path, ".png", png);
 
             item.Item.File = Path.GetRelativePath(kit.Folder, target).Replace('\\', '/');
             item.Item.Width = w;
@@ -1457,11 +1451,8 @@ public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchab
                 return Pictures.MakeToken(bitmap, ring, crop, 512, background);
             });
 
-            KeepOriginal(kit.Folder, path);
-            var target = Path.ChangeExtension(path, ".png");
-            File.WriteAllBytes(target, png);
-            if (!string.Equals(target, path, StringComparison.OrdinalIgnoreCase))
-                File.Delete(path);
+            KeepOriginal(kit.Folder, item.Item, path);
+            var target = Rewrite(path, ".png", png);
 
             item.Item.File = Path.GetRelativePath(kit.Folder, target).Replace('\\', '/');
             item.Item.Width = 512;
@@ -1493,16 +1484,57 @@ public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchab
 
     /// <summary>
     /// The picture before anything was done to it, under originals/ beside its folder, once: a
-    /// second change keeps the first original, since that is the one worth going back to.
+    /// second change keeps the first original, since that is the one worth going back to. Which
+    /// one is this item's is recorded on the item, and a name already taken there gets a new
+    /// one rather than being written over: it is some other picture's original.
     /// </summary>
-    private static void KeepOriginal(string kitFolder, string path)
+    private static void KeepOriginal(string kitFolder, KitItem item, string path)
     {
+        if (item.Original is { } kept && File.Exists(Path.Combine(kitFolder, kept)))
+            return;
+
         var originals = Path.Combine(kitFolder, "originals");
         Directory.CreateDirectory(originals);
+        var copy = FreeName(Path.Combine(originals, Path.GetFileName(path)));
+        File.Copy(path, copy);
+        item.Original = Path.GetRelativePath(kitFolder, copy).Replace('\\', '/');
+    }
+
+    /// <summary>
+    /// Writes the new picture beside the old one under the extension it now has, and removes the
+    /// old one. Through a temporary name, so a failed write leaves the picture as it was, and
+    /// never over a different file that already has the new name: tavern.jpg turned to PNG next
+    /// to an existing tavern.png becomes tavern-2.png.
+    /// </summary>
+    private static string Rewrite(string path, string extension, byte[] bytes)
+    {
+        var target = Path.ChangeExtension(path, extension);
+        var inPlace = string.Equals(target, path, StringComparison.OrdinalIgnoreCase);
+        if (!inPlace)
+            target = FreeName(target);
+
+        var temp = target + ".writing";
+        File.WriteAllBytes(temp, bytes);
+        File.Move(temp, target, overwrite: inPlace);
+        if (!inPlace)
+            File.Delete(path);
+        return target;
+    }
+
+    /// <summary>The path itself if nothing is there, otherwise the first free name-2, name-3 beside it.</summary>
+    private static string FreeName(string path)
+    {
+        if (!File.Exists(path))
+            return path;
+        var folder = Path.GetDirectoryName(path)!;
         var stem = Path.GetFileNameWithoutExtension(path);
-        if (Directory.EnumerateFiles(originals, stem + ".*").Any())
-            return;
-        File.Copy(path, Path.Combine(originals, Path.GetFileName(path)));
+        var extension = Path.GetExtension(path);
+        for (var n = 2; ; n++)
+        {
+            var candidate = Path.Combine(folder, $"{stem}-{n}{extension}");
+            if (!File.Exists(candidate))
+                return candidate;
+        }
     }
 
     private void Move(int delta)
@@ -1535,6 +1567,7 @@ public sealed class FamiliarViewModel : ObservableObject, IDisposable, ISearchab
         }
 
         var name = item.Name;
+        Disk.Recycled.Record(_host.Store, [item.Path], detail: _host.Text.Format("familiar.status.removed", name));
         _manifest.Reconcile(kit.Folder);
         SaveManifest();
         LoadKit();

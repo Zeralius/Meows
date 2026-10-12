@@ -31,8 +31,8 @@ shell supplies Avalonia and the contract at runtime. Both must stay a single cop
 cannot host the control you hand back.
 
 ```xml
-<PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-<PackageReference Include="Meows.Plugins.Abstractions" Version="1.5.0" ExcludeAssets="runtime" PrivateAssets="all" />
+<PackageReference Include="Avalonia" Version="12.1.4" ExcludeAssets="runtime" />
+<PackageReference Include="Meows.Plugins.Abstractions" Version="1.8.0" ExcludeAssets="runtime" PrivateAssets="all" />
 ```
 
 There is a `dotnet new` template that writes all of this for you:
@@ -109,6 +109,19 @@ rather than failing later. An older minor is fine, since additions stay backward
 changed. What came with it: `IMeowsHost.Pick`, the shell's file dialogs for a view model, and
 `IMeowsPlugin.WhileOff`, a way to be searched from Ctrl+K while switched off, through
 `IMeowsDormantHost`. Both have defaults. Plugins built against 0.x need a rebuild.
+
+Since then, each minor added and took nothing away:
+
+| Version | Added |
+|---|---|
+| 1.1.0 | `IGlanceable`, a line on the Home tab |
+| 1.2.0 | `IMeowsPlugin.Actions` and `Records`, `IActionTarget`, for the Rules tab |
+| 1.3.0 | `Reach`, the server a plugin can copy a folder to |
+| 1.4.0 | `IMeowsPlugin.GlanceWhileOff`, the Home line with no window |
+| 1.5.0 | `IMeowsPlugin.Jobs` and `RunJob`, for `Meows.exe --do` |
+| 1.6.0 | `IMultiGlance`, up to three lines on the Home card |
+| 1.7.0 | `IMeowsPlugin.Topics`, for the filter on the Plugins tab |
+| 1.8.0 | `Veil.HoldsFocus`, a confirmation the keyboard follows; `PagedPlugin`, one plugin taking others in as pages |
 
 Full documentation: **[PLUGIN-GUIDE.md](https://github.com/Zeralius/Meows/blob/main/PLUGIN-GUIDE.md)**
 

@@ -5,6 +5,15 @@ never finished downloading at all.
 
 Plugin id `meows.litter`. Windows only, because deletion goes through the shell's Recycle Bin.
 
+## Pages
+
+Since 6.1.0 Litter is Clutter, in three pages along the top of its tab: **Downloads**, which is
+everything below; **[Catnip](Catnip/README.md)**, what was downloaded and never opened; and
+**[Mouser](Mouser/README.md)**, empty folders, empty files and shortcuts to nothing. The other two
+were plugins of their own until then. Their settings now live under Litter's folder, in
+`meows.catnip` and `meows.mouser`, and their history lines are Litter's. Anything any page sends
+to the Recycle Bin can be put back from the History tab.
+
 ## The two columns
 
 | | |

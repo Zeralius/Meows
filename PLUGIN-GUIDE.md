@@ -33,7 +33,7 @@ Copy an existing plugin's `.csproj`. Three things are load-bearing:
 <ItemGroup>
     <!-- The shell supplies both at runtime. Copying them here would invite a second,
          incompatible copy. -->
-    <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
+    <PackageReference Include="Avalonia" Version="12.1.4" ExcludeAssets="runtime" />
     <ProjectReference Include="..\Meows.Plugins.Abstractions\Meows.Plugins.Abstractions.csproj"
                       Private="false" ExcludeAssets="runtime" />
 </ItemGroup>
@@ -141,8 +141,8 @@ contract version the template was published with. No `ProjectReference`, no Meow
 
 ```xml
 <ItemGroup>
-    <PackageReference Include="Avalonia" Version="12.1.1" ExcludeAssets="runtime" />
-    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.7.0" ExcludeAssets="runtime" PrivateAssets="all" />
+    <PackageReference Include="Avalonia" Version="12.1.4" ExcludeAssets="runtime" />
+    <PackageReference Include="Meows.Plugins.Abstractions" Version="1.8.0" ExcludeAssets="runtime" PrivateAssets="all" />
 </ItemGroup>
 ```
 
@@ -233,8 +233,8 @@ The shell checks this for you. At discovery it reads the contract version your a
 compiled against and refuses anything it cannot honour, **before constructing your plugin**, so
 none of your code runs. The reason appears on your plugin's card in place of its toggle:
 
-> Built for Meows contract 1.8.0, which is newer than this shell's 1.7.0. Update Meows, or rebuild
-> the plugin against 1.7.0.
+> Built for Meows contract 1.9.0, which is newer than this shell's 1.8.0. Update Meows, or rebuild
+> the plugin against 1.8.0.
 
 A mismatched **major** is refused either way, since a major bump means members may have been
 removed. A **newer** minor or patch is refused; an older one loads fine, because additive
@@ -256,21 +256,22 @@ dotnet publish Meows/Meows.csproj -c Release -r win-x64 --self-contained true -o
 ```
 
 Then build each plugin in Release. Release output goes to `bin/`, deliberately *not* to the dev
-`plugins/` folder, so this cannot disturb a Debug shell you have running:
+`plugins/` folder, so this cannot disturb a Debug shell you have running. Every folder named
+`Meows.Plugins.*` but the contract is a plugin, which is how the release workflow finds them too:
 
 ```bash
-for p in Meows.Plugins.TelegramPoster Meows.Plugins.Purrge Meows.Plugins.Kibble Meows.Plugins.Chonk; do dotnet build "$p/$p.csproj" -c Release; done
+for p in Meows.Plugins.*/; do p=${p%/}; [ "$p" = Meows.Plugins.Abstractions ] && continue; dotnet build "$p/$p.csproj" -c Release; done
 ```
 
 Stage each one into the folder the deployed shell scans. Copy the **whole** build output rather
 than just the plugin DLL. A plugin's own libraries are loaded from its folder, so a plugin with
 any dependency fails at activation if you cherry-pick, and it fails long after the build looked
-fine. Telegram Poster, Kibble, Perch and Portion need `Meows.Bot.Core.dll` this way; Purrge,
-Chonk, Scruff and Portion need `Meows.Disk.dll`, as does `Meows.Bot.Core` itself; and Scruff and
-Portion need `Meows.Media.dll`:
+fine. Most of them carry `Meows.Disk.dll` or `Meows.Bot.Core.dll` or both, and the ones that
+read pictures and videos carry `Meows.Media.dll` with SkiaSharp; copy the whole folder and which
+one needs what never has to be remembered:
 
 ```bash
-for p in Meows.Plugins.TelegramPoster Meows.Plugins.Purrge Meows.Plugins.Kibble Meows.Plugins.Chonk; do mkdir -p "artifacts/Meows-win-x64/plugins/$p" && cp "$p"/bin/Release/*.dll "$p"/bin/Release/*.deps.json "artifacts/Meows-win-x64/plugins/$p/"; done
+for p in Meows.Plugins.*/; do p=${p%/}; [ "$p" = Meows.Plugins.Abstractions ] && continue; mkdir -p "artifacts/Meows-win-x64/plugins/$p" && cp -r "$p"/bin/Release/. "artifacts/Meows-win-x64/plugins/$p/"; done
 ```
 
 Avalonia and `Meows.Plugins.Abstractions` are not in that output to be copied, because the csproj
@@ -369,7 +370,10 @@ public sealed class MyPlugin : IMeowsPlugin
 ```
 
 Public, with a parameterless constructor, since the shell instantiates it by reflection. `Id` is
-the identity for stored settings and activation state, so changing it later orphans both.
+the identity for stored settings and activation state, so changing it later orphans both. It is
+also a folder name, so it is letters, digits, dots, dashes and underscores, starting with a letter
+or digit, with no `..`; `meows.shell` is the shell's own. A plugin with any other id is shown
+on its card as refused, with the reason, and cannot be switched on.
 
 `PlainName` is what the plugin is when the feline name is switched off on the Settings tab:
 Purrge is Duplicates, Chonk is Disk usage. Return a key from your catalogue so it is translated.
@@ -537,12 +541,18 @@ added `IMeowsPlugin.Jobs` and `RunJob`, `IMeowsJobHost`, `JobDeclinedException` 
 `IMeowsHost.RunsFromOutside`, for [work without a window](#work-without-a-window). **1.6.0**
 added `IMultiGlance`, [up to three lines on the Home card](#a-line-on-the-home-tab), and
 nothing else. **1.7.0** added `IMeowsPlugin.Topics` and the `PluginTopics` flags, for the
-[filter on the Plugins tab](#3-the-entry-point), and nothing else.
+[filter on the Plugins tab](#3-the-entry-point), and nothing else. **1.8.0** added `Veil`,
+[a confirmation the keyboard follows](#a-confirmation-over-the-view), and `PagedPlugin` with its
+nested hosts, [one plugin taking in another](#pages-one-plugin-taking-in-another).
 
 ### `DataDirectory`
 
 A writable folder at `%APPDATA%\Meows\plugins\<your-id>\`, created before you see it. Put caches
 and databases here. Never write inside the repository or next to the executable.
+
+Everything in it travels in a settings bundle (*Moving house* on the Settings tab), except a file
+whose name ends in `.private.json`: keep what is personal there, account numbers, addresses,
+anything that should not reach another machine with the rest. Secrets go in `Secrets` instead.
 
 ### `Log`
 
@@ -695,8 +705,8 @@ public Glance? Glance() => Summary.Length == 0 ? null : new Glance(Summary, Entr
 ```
 
 One sentence, what the plugin would say if asked "anything?": Collar's "1 have passed, 2 more
-coming up", Portion's "2 would fail to post, 1 of them shrinkable", Purr's "9 watches across 6
-plugins 1 stopped".
+coming up", Portion's "2 would fail to post, 1 of them shrinkable", Chonk's "C: grew 4 GB since
+last week".
 `IsTrouble` paints it red, which is for something that wants doing, not for something that
 merely happened. Null means nothing worth a line right now, and the card falls back to the
 shell's words; Portion answers null before its first scan, because "press Scan" is not news.
@@ -746,8 +756,8 @@ text. It may be called with no window and off the UI thread, so a file or two, n
 drive, never the network. The neat way to keep the two lines the same is the one Collar and
 Weigh-In use: a static method that works the sentence out from the kept data, called by both
 `Glance()` and `GlanceWhileOff`. Null, the default, gets the shell's own line in the output, the
-last thing the plugin recorded; Portion and Purr answer null, because what they would say only
-exists once they have looked.
+last thing the plugin recorded; Portion answers null, because what it would say only exists once
+it has looked.
 
 ### Work without a window
 
@@ -787,7 +797,7 @@ exactly that. Keep the work in a static method both call, as Weigh-In, Nest and 
 ### `Watches`
 
 Every schedule every plugin has running, deliberately not scoped, with the times the shell
-records as passes finish and the reason a schedule stopped. Purr is the one plugin that reads
+records as passes finish and the reason a schedule stopped. The shell's Watches tab (the Purr plugin until 6.1.0) is what reads
 it; you will not usually need to. `Changed` fires on the UI thread whenever a watch starts,
 passes, fails or ends.
 
@@ -795,7 +805,7 @@ passes, fails or ends.
 schedule (`DateTime.MaxValue` for "until I say") and `Resume(id)` lets it look again at once.
 The plugin that owns the schedule is not told; its passes simply do not run, and `PausedUntil`
 on the info says so. Both return false on a shell older than 0.10.0 or for a watch that has
-stopped. Purr puts three buttons on it; nothing else needs to.
+stopped. The Watches tab puts three buttons on it; nothing else needs to.
 
 ### `Pick`
 
@@ -906,12 +916,81 @@ follows a theme change on its own.
 | `MeowsInfo` / `MeowsInfoLine` / `MeowsInfoText` | saying something, nothing wrong |
 | `MeowsWarn` / `MeowsWarnLine` / `MeowsWarnText` | worth reading before carrying on |
 | `MeowsDanger` / `MeowsDangerLine` / `MeowsDangerText` / `MeowsDangerStrong` | something is wrong |
+| `MeowsTextMuted` | secondary text: labels, hints, times, empty states |
 | `MeowsGoodText` | healthy |
 | `MeowsBadge` / `MeowsDangerBadge` | a badge over a thumbnail, carrying its own opacity |
 | `MeowsVeil` | dims the window behind a confirmation |
 
 Text and controls come from the Fluent theme and follow the variant without you doing anything,
 so leave `Foreground` alone unless you mean something by it.
+
+**Quieter text is a colour, not an opacity.** `Opacity="0.5"` on a `TextBlock` looks fine on a
+dark window and falls to about 2.4:1 on a light one, which many people cannot read. Use
+`Foreground="{DynamicResource MeowsTextMuted}"`, or `Classes="muted"`, which holds 4.5:1 on
+every surface in both themes and in every colour scheme. Keep opacity for things that are
+disabled.
+
+**Shared styles.** The shell gives every view a few classes, so a plugin does not carry its own
+copy: `TextBlock.label` (a status line), `TextBlock.section` (the small heading over a field),
+`TextBlock.muted`, `Border.panel` (a pane beside a list), `Button.danger` (deletes, empties,
+forgets; it keeps its colour through hover and press), `Button.info`, and the list rows and the
+selected one. A view's own style with the same selector still wins, for a margin of its own.
+
+**A small word on a row**, "missing" or "will fail", is a `Border` with the `mark` class and one
+of `info`, `warn` or `danger`, and a `TextBlock` inside: the shell styles all three from the
+banner colours, so they hold their contrast too. White on a `...Line` colour does not.
+
+```xml
+<Border Classes="mark danger" IsVisible="{Binding WillFail}">
+    <TextBlock Text="{m:Tr myplugin.willfail}" />
+</Border>
+```
+
+### Pages: one plugin taking in another
+
+Two plugins that answer the same question can become one tab with a page each, without either
+being rewritten: derive the plugin class from `PagedPlugin`, hand it the plugin that keeps its id
+first and the ones it takes in after, and make those other plugin classes `internal`, so the
+shell does not find them as plugins of their own.
+
+```csharp
+public sealed class ChonkPlugin() : PagedPlugin(new MeasurePage(), new WeighInPlugin())
+{
+    public override string PlainName => "chonk.name.plain";
+    public override string Description => "chonk.description";
+}
+```
+
+Each page keeps its own view and view model. A page that came from another plugin gets a host of
+its own (`NestedHost`): the main plugin's, with a data folder, settings and secrets under the id it
+used to have. The tab shows a button per page; a search hit, a handoff or a rule's action lands on
+the page that answers it. The shell carries over what was the absorbed plugin's: switched on, in a
+persona, in a rule, on Home, its history, and its data folder, and refuses an old copy of it left
+in the plugins folder. A job keeps its old name, `weighin.measure`, so a scheduled task still finds it.
+
+### A confirmation over the view
+
+A question drawn over the tab, a veil with a card on it, needs the keyboard to come with it. Set
+`m:Veil.HoldsFocus="True"` on the veil: when it appears, focus moves to Cancel (the first button
+in the card, or the one with the `safe` class), Tab stays inside the card until it is answered,
+and when it closes focus goes back where it was. Without it a screen reader never hears the
+question, and Tab walks through whatever the veil is covering.
+
+```xml
+<Border IsVisible="{Binding IsAsking}"
+        Background="{DynamicResource MeowsVeil}"
+        m:Veil.HoldsFocus="True">
+    <Border Background="{DynamicResource MeowsCard}" ...>
+        <!-- the question, then Cancel, then the button that does it -->
+    </Border>
+</Border>
+```
+
+Answer Escape too, from the view's code-behind; Litter's view does both.
+
+**Name what has no words.** A button whose content is a symbol (✕, ↑, ⧉, +) is read aloud as
+the symbol. Give it `AutomationProperties.Name="{m:Tr myplugin.remove}"`, and its tooltip the
+same words.
 
 ### Language
 

@@ -74,7 +74,7 @@ public sealed class MoltViewModel : ObservableObject, IDisposable, ISearchable, 
         ScanCommand = new RelayCommand(StartScan, () => !IsScanning);
         CancelCommand = new RelayCommand(() => _scan?.Cancel(), () => IsScanning);
         ShedCommand = new RelayCommand(Ask, () => PickedCount > 0 && !IsScanning);
-        ConfirmCommand = new RelayCommand(Shed, () => IsAsking);
+        ConfirmCommand = new RelayCommand(() => _ = ShedAsync(), () => IsAsking);
         CancelShedCommand = new RelayCommand(() => IsAsking = false, () => IsAsking);
         PickAllCommand = new RelayCommand(() => SetAllPicked(true));
         PickNoneCommand = new RelayCommand(() => SetAllPicked(false));
@@ -282,7 +282,11 @@ public sealed class MoltViewModel : ObservableObject, IDisposable, ISearchable, 
         IsAsking = true;
     }
 
-    private void Shed()
+    /// <summary>
+    /// On a worker thread: a cache can be gigabytes in tens of thousands of files, and deleting
+    /// them on the window's thread stood the whole of Meows still until it was done.
+    /// </summary>
+    private async Task ShedAsync()
     {
         IsAsking = false;
 
@@ -294,7 +298,22 @@ public sealed class MoltViewModel : ObservableObject, IDisposable, ISearchable, 
         var expected = picked.Sum(i => i.Item.Size);
         var mode = Permanent ? ShedMode.Permanent : ShedMode.RecycleBin;
 
-        var result = Shedder.Shed(paths, mode, expected);
+        IsScanning = true;
+        Status = _host.Text["molt.status.shedding"];
+        ShedResult result;
+        try
+        {
+            result = await Task.Run(() => Shedder.Shed(paths, mode, expected));
+        }
+        finally
+        {
+            IsScanning = false;
+        }
+
+        // Into the bin, recorded the shared way so History can put it back; outright, nothing to put back.
+        if (mode == ShedMode.RecycleBin)
+            Recycled.Record(_host.Store, paths.Where(p => !File.Exists(p) && !Directory.Exists(p)).ToList(),
+                detail: _host.Text.Format("molt.status.done.bin", FolderSize.Humanise(result.Freed)));
 
         // Whole sentences rather than a size glued to a phrase. German puts the verb somewhere
         // else entirely, so there is nothing to glue it to.

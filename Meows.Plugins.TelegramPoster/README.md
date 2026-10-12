@@ -3,6 +3,11 @@
 A Meows plugin for [telegram-posting-bot](https://github.com/Zeralius/telegram-posting-bot).
 Browse its groups and queues, see what goes out next, edit group settings, and run it.
 
+Since 6.1.0 it has two pages: **Groups and queues**, which is everything below, and
+**[Perch](Perch/README.md)**, one timeline of what the bot will send tonight and after, every group
+merged. Perch was a plugin of its own until then; its settings now live under this plugin's folder,
+in `meows.perch`.
+
 The bot is public, so the setup panel prefills its URL. You can clone it from inside Meows
 without having the link to hand.
 

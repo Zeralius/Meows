@@ -376,6 +376,7 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable, I
         _now = now ?? (() => DateTime.Now);
         _host = host;
         _settings = host.LoadSettings<TinSettings>() ?? new TinSettings();
+        LoadAccounts();
         _account = _settings.Account;
 
         RefreshCommand = new RelayCommand(RefreshInBackground);
@@ -1183,11 +1184,80 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable, I
         }
     }
 
+    /// <summary>
+    /// The account numbers live in a file of their own, accounts.private.json, which a settings
+    /// bundle and a shared plugin file both leave out: they are this person's IBANs, and a bundle
+    /// is something that gets handed to another machine or another person.
+    /// </summary>
+    private string AccountsFile => Path.Combine(_host.DataDirectory, "accounts.private.json");
+
+    private sealed class TinAccounts
+    {
+        public Dictionary<string, string> AccountNames { get; set; } = new();
+
+        public Dictionary<string, string> FileAccounts { get; set; } = new();
+
+        public string Account { get; set; } = "";
+    }
+
+    private static readonly System.Text.Json.JsonSerializerOptions AccountsJson = new()
+    {
+        WriteIndented = true,
+        PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+    };
+
+    /// <summary>From the private file; or, the first time, from the settings they used to be in, which are then saved without them.</summary>
+    private void LoadAccounts()
+    {
+        try
+        {
+            if (File.Exists(AccountsFile) &&
+                System.Text.Json.JsonSerializer.Deserialize<TinAccounts>(File.ReadAllText(AccountsFile), AccountsJson) is { } kept)
+            {
+                _settings.AccountNames = kept.AccountNames;
+                _settings.FileAccounts = kept.FileAccounts;
+                _settings.Account = kept.Account;
+                return;
+            }
+        }
+        catch (Exception ex)
+        {
+            _host.Log(LogLevel.Warning, $"Could not read Tin's accounts file: {ex.Message}");
+            return;
+        }
+
+        if (_settings.AccountNames.Count > 0 || _settings.FileAccounts.Count > 0 || _settings.Account.Length > 0)
+            Save();
+    }
+
     private void Save()
     {
         try
         {
-            _host.SaveSettings(_settings);
+            var accounts = new TinAccounts
+            {
+                AccountNames = _settings.AccountNames,
+                FileAccounts = _settings.FileAccounts,
+                Account = _settings.Account,
+            };
+            var temporary = AccountsFile + $".{Guid.NewGuid():N}.writing";
+            File.WriteAllText(temporary, System.Text.Json.JsonSerializer.Serialize(accounts, AccountsJson));
+            File.Move(temporary, AccountsFile, overwrite: true);
+
+            // settings.json without them, put back in memory straight after.
+            _settings.AccountNames = new();
+            _settings.FileAccounts = new();
+            _settings.Account = "";
+            try
+            {
+                _host.SaveSettings(_settings);
+            }
+            finally
+            {
+                _settings.AccountNames = accounts.AccountNames;
+                _settings.FileAccounts = accounts.FileAccounts;
+                _settings.Account = accounts.Account;
+            }
         }
         catch (Exception ex)
         {

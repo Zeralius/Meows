@@ -1,4 +1,3 @@
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Meows.Disk;
@@ -167,7 +166,7 @@ public static class Carry
                         skipped++;
                         continue;
                     }
-                    var ok = CopyOne(file, target);
+                    var ok = VerifiedCopy.Copy(Long(file.FullName), Long(target), token, FileMode.Create, FileShare.ReadWrite);
                     files++;
                     bytes += file.Length;
                     if (ok)
@@ -194,55 +193,6 @@ public static class Carry
         }
 
         return new CopyOutcome(files, bytes, verified, skipped, failed, newest);
-    }
-
-    /// <summary>Copies one file, hashing the source on the way through, and reads the copy back to compare.</summary>
-    private static bool CopyOne(FileInfo file, string target)
-    {
-        var buffer = new byte[1024 * 1024];
-        string sourceHash;
-        using (var input = new FileStream(Long(file.FullName), FileMode.Open, FileAccess.Read, FileShare.ReadWrite, buffer.Length))
-        using (var output = new FileStream(Long(target), FileMode.Create, FileAccess.Write, FileShare.None, buffer.Length))
-        using (var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
-        {
-            int read;
-            while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                output.Write(buffer, 0, read);
-                hash.AppendData(buffer, 0, read);
-            }
-            sourceHash = Convert.ToHexString(hash.GetHashAndReset());
-        }
-
-        try
-        {
-            File.SetLastWriteTime(Long(target), file.LastWriteTime);
-            File.SetCreationTime(Long(target), file.CreationTime);
-        }
-        catch (Exception)
-        {
-            // The bytes matter more than the stamps.
-        }
-
-        var copyHash = HashOf(Long(target), buffer);
-        return copyHash == sourceHash;
-    }
-
-    private static string? HashOf(string path, byte[] buffer)
-    {
-        try
-        {
-            using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, buffer.Length);
-            using var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-            int read;
-            while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
-                hash.AppendData(buffer, 0, read);
-            return Convert.ToHexString(hash.GetHashAndReset());
-        }
-        catch (Exception)
-        {
-            return null;
-        }
     }
 
     /// <summary>A path past the old limit needs the prefix, or Windows refuses it; a short one must not have it, or Explorer does.</summary>

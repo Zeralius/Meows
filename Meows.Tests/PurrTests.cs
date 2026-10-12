@@ -1,5 +1,6 @@
+using Avalonia.Headless.XUnit;
 using Meows.Plugins.Abstractions;
-using Meows.Plugins.Purr.ViewModels;
+using Meows.ViewModels;
 
 namespace Meows.Tests;
 
@@ -27,7 +28,7 @@ public sealed class PurrTests : IDisposable
         return (new PurrViewModel(host), host);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Nothing_watched_says_so_rather_than_showing_an_empty_list()
     {
         var (model, _) = Open();
@@ -37,7 +38,7 @@ public sealed class PurrTests : IDisposable
         Assert.False(model.HasStopped);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void The_summary_counts_watches_and_plugins_and_the_stopped_ones()
     {
         var (model, _) = Open(
@@ -50,7 +51,7 @@ public sealed class PurrTests : IDisposable
         Assert.Equal(3, model.Watches.Count);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void A_stopped_watch_comes_first_and_says_why()
     {
         var (model, _) = Open(
@@ -65,7 +66,7 @@ public sealed class PurrTests : IDisposable
         Assert.Equal("✕", first.Glyph);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void A_healthy_watch_says_when_it_looked_and_when_it_will_again()
     {
         var (model, _) = Open(Watch("Collar", "Dates", TimeSpan.FromHours(1), last: DateTime.Now.AddMinutes(-3), passes: 4));
@@ -78,7 +79,7 @@ public sealed class PurrTests : IDisposable
         Assert.Equal("●", watch.Glyph);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void A_pass_in_progress_says_what_it_reported()
     {
         var (model, _) = Open(Watch("Birdwatch", "Refresh", TimeSpan.FromMinutes(30), busy: true, status: "2 of 5 accounts"));
@@ -87,7 +88,7 @@ public sealed class PurrTests : IDisposable
         Assert.Equal("not looked yet", model.Watches[0].LastText);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void The_shell_saying_something_changed_rereads_the_list_and_keeps_the_selection()
     {
         var (model, host) = Open(Watch("Collar", "Dates", TimeSpan.FromHours(1)));
@@ -100,7 +101,7 @@ public sealed class PurrTests : IDisposable
         Assert.Equal("Dates", model.Selected?.Title);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Purr_keeps_the_times_fresh_with_a_watch_of_its_own()
     {
         var (_, host) = Open();
@@ -109,7 +110,7 @@ public sealed class PurrTests : IDisposable
         Assert.Contains(host.Work.Scheduled, w => w.Title == "Keeping the times fresh");
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void Search_finds_a_watch_by_title_or_plugin_and_selects_it()
     {
         var (model, _) = Open(
@@ -122,7 +123,7 @@ public sealed class PurrTests : IDisposable
         Assert.Equal("Refresh", model.Selected?.Title);
     }
 
-    [Fact]
+    [AvaloniaFact]
     public void A_watch_can_be_paused_from_the_tab_and_resumed()
     {
         var (model, host) = Open(

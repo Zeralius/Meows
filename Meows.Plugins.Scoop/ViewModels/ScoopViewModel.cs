@@ -98,6 +98,7 @@ public sealed class ScoopViewModel : ObservableObject, IDisposable, ISearchable,
     private string? _status;
     private string? _errorMessage;
     private string? _confirmingEmptyOf;
+    private DateTime _emptyArmedAt;
     private bool _isReading;
     private bool _hasRead;
 
@@ -109,7 +110,7 @@ public sealed class ScoopViewModel : ObservableObject, IDisposable, ISearchable,
 
         RefreshCommand = new RelayCommand(Refresh, () => !_isReading);
         RestoreCommand = new RelayCommand(Restore, () => SelectedItem is { IsBlocked: false } && !_isReading);
-        EmptyCommand = new RelayCommand(Empty, () => SelectedDrive is { Drive.Count: > 0 } && !_isReading);
+        EmptyCommand = new RelayCommand(() => _ = EmptyAsync(), () => SelectedDrive is { Drive.Count: > 0 } && !_isReading);
         ShowOriginCommand = new RelayCommand(ShowOrigin, () => SelectedItem is not null);
 
         Refresh();
@@ -379,7 +380,8 @@ public sealed class ScoopViewModel : ObservableObject, IDisposable, ISearchable,
         ? _host.Text.Format("scoop.empty.sure", SelectedDrive?.Root ?? "")
         : _host.Text.Format("scoop.empty.drive", SelectedDrive?.Root ?? "");
 
-    private void Empty()
+    /// <summary>The emptying itself on a worker thread: a full bin is a lot for the shell to delete.</summary>
+    private async Task EmptyAsync()
     {
         if (SelectedDrive is not { } drive || drive.Drive.Count == 0)
             return;
@@ -387,7 +389,20 @@ public sealed class ScoopViewModel : ObservableObject, IDisposable, ISearchable,
         if (!IsConfirmingEmpty)
         {
             _confirmingEmptyOf = drive.Root;
+            _emptyArmedAt = DateTime.UtcNow;
             RaiseEmpty();
+            return;
+        }
+
+        // The second press has to be a decision. One this soon after arming is the same
+        // double-click, and one long after is somebody who forgot it was armed: that one
+        // arms it again rather than doing it.
+        var since = DateTime.UtcNow - _emptyArmedAt;
+        if (since < TimeSpan.FromMilliseconds(500))
+            return;
+        if (since > TimeSpan.FromSeconds(10))
+        {
+            _emptyArmedAt = DateTime.UtcNow;
             return;
         }
 
@@ -396,7 +411,8 @@ public sealed class ScoopViewModel : ObservableObject, IDisposable, ISearchable,
         _confirmingEmptyOf = null;
         RaiseEmpty();
 
-        var failure = RecycleBinContents.Empty(drive.Root);
+        var root = drive.Root;
+        var failure = await Task.Run(() => RecycleBinContents.Empty(root));
         if (failure is not null)
         {
             ErrorMessage = _host.Text.Format("scoop.empty.failed", drive.Root, failure);

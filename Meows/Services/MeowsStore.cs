@@ -423,6 +423,45 @@ public sealed class MeowsStore
         }
     }
 
+    /// <summary>
+    /// Everything recorded under one plugin id moved to another, for a plugin taken in as a page
+    /// of another: its history lines become the new plugin's, and its small facts too, under the
+    /// page's own prefix, which is how the page reads them now. Returns how many lines moved;
+    /// nothing, the second time.
+    /// </summary>
+    public int Retag(string from, string to)
+    {
+        try
+        {
+            using var connection = Open();
+            using var transaction = connection.BeginTransaction();
+            using var events = connection.CreateCommand();
+            events.CommandText = "UPDATE events SET plugin = $to WHERE plugin = $from";
+            events.Parameters.AddWithValue("$from", from);
+            events.Parameters.AddWithValue("$to", to);
+            var moved = events.ExecuteNonQuery();
+
+            using var facts = connection.CreateCommand();
+            facts.CommandText = """
+                INSERT OR IGNORE INTO facts (plugin, key, value)
+                    SELECT $to, $from || ':' || key, value FROM facts WHERE plugin = $from;
+                DELETE FROM facts WHERE plugin = $from;
+                UPDATE seen SET plugin = $to WHERE plugin = $from;
+                """;
+            facts.Parameters.AddWithValue("$from", from);
+            facts.Parameters.AddWithValue("$to", to);
+            facts.ExecuteNonQuery();
+
+            transaction.Commit();
+            return moved;
+        }
+        catch (Exception ex)
+        {
+            _log($"Could not move {from}'s history to {to}: {ex.Message}");
+            return 0;
+        }
+    }
+
     public void Remove(string plugin, string key)
     {
         try

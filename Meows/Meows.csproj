@@ -12,7 +12,7 @@
 
         <!-- The app version. Moves independently of the plugin contract version;
              see the versioning section in README.md. -->
-        <Version>6.0.2</Version>
+        <Version>6.1.0</Version>
         <!-- Where the shell looks for its own newer release, the same way it does for a plugin. -->
         <RepositoryUrl>https://github.com/Zeralius/Meows</RepositoryUrl>
         <IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
@@ -62,6 +62,9 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Meows.Plugins.Abstractions\Meows.Plugins.Abstractions.csproj" />
+      <!-- For History's Put back, which reads the Recycle Bin the way Scoop does. Plugins keep
+           their own copy beside them; the load context gives each plugin its own. -->
+      <ProjectReference Include="..\Meows.Disk\Meows.Disk.csproj" />
     </ItemGroup>
 
 </Project>

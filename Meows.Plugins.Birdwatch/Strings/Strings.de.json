@@ -48,6 +48,7 @@
   "birdwatch.status.seen": "Nicht gespeichert: dasselbe Bild kam schon über {0} herein.",
   "birdwatch.status.start": "Ein Konto hinzufügen und auf Neu laden drücken.",
   "birdwatch.task.auto": "Hält Ausschau nach neuen Beiträgen",
+  "birdwatch.task.quiet": "Wartet: eine Seite bat um weniger Anfragen",
   "birdwatch.trial.failed": "@{0}: {1}",
   "birdwatch.trial.found": "@{0} auf {1}: {2} Beiträge auf der letzten Seite, {3} Bilder zum Speichern, {4} Reposts; neuester {5}.",
   "birdwatch.trial.nothing": "@{0} auf {1}: nichts auf der letzten Seite. Richtiges Konto?",

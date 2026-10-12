@@ -48,6 +48,7 @@
   "birdwatch.status.seen": "Not saved: the same picture already came in via {0}.",
   "birdwatch.status.start": "Add an account and press Refresh.",
   "birdwatch.task.auto": "Watching for new posts",
+  "birdwatch.task.quiet": "Waiting: a site asked for fewer requests",
   "birdwatch.trial.failed": "@{0}: {1}",
   "birdwatch.trial.found": "@{0} on {1}: {2} posts on the last page, {3} pictures to save, {4} reposts; newest {5}.",
   "birdwatch.trial.nothing": "@{0} on {1}: nothing on the last page. Right account?",

@@ -83,6 +83,23 @@ internal static class Program
             return;
         }
 
+        // Started by Restart: wait for the Meows that started this one to finish quitting, so this
+        // one becomes the one Meows rather than handing itself to the one on its way out.
+        var afterAt = Array.FindIndex(args, a => a.Equals("--after", StringComparison.OrdinalIgnoreCase));
+        if (afterAt >= 0 && afterAt + 1 < args.Length && int.TryParse(args[afterAt + 1], out var previous))
+        {
+            try
+            {
+                using var old = System.Diagnostics.Process.GetProcessById(previous);
+                old.WaitForExit(TimeSpan.FromSeconds(30));
+            }
+            catch (Exception)
+            {
+                // Already gone.
+            }
+            args = [.. args.Where((_, i) => i != afterAt && i != afterAt + 1)];
+        }
+
         // One Meows per user. A second start hands its arguments to the first and leaves; the
         // first shows its window, unless the second was only asked for the tray.
         Instance = Meows.Services.SingleInstance.TryClaim();
@@ -116,6 +133,7 @@ internal static class Program
             var log = new ShellLog(Path.Combine(Path.GetTempPath(), "meows-list-plugins.log"));
             var catalog = new Plugins.PluginCatalog(log);
             var found = catalog.Discover();
+            found = Plugins.PluginMerges.RefuseAbsorbed(found, Plugins.PluginMerges.Map(found));
 
             Console.WriteLine($"plugins directory: {catalog.PluginsDirectory ?? "(none found)"}");
 
@@ -176,6 +194,13 @@ internal static class Program
                 ? new MeowsStore(settings.Root, message => log.Write("store", message))
                 : null;
 
+            // The first thing to run after an update can be this, from a status bar, before the
+            // window has ever opened; plugins taken in as pages are carried over here too.
+            var merges = Plugins.PluginMerges.Map(found);
+            foreach (var line in Plugins.PluginMerges.Apply(merges, settings, preferences, store))
+                log.Write("plugins", line);
+            found = Plugins.PluginMerges.RefuseAbsorbed(found, merges);
+
             var lines = GlanceReport.Gather(found, settings.LoadActivatedPlugins(), settings, store, message => log.Write("glance", message));
             Console.OutputEncoding = System.Text.Encoding.UTF8;
             Console.WriteLine(json ? GlanceReport.AsJson(lines, DateTimeOffset.Now) : GlanceReport.AsText(lines));
@@ -210,6 +235,17 @@ internal static class Program
             var found = new Plugins.PluginCatalog(log).Discover();
             foreach (var plugin in found.Where(d => d.Plugin is not null))
                 text.Add(plugin.Plugin!.GetType().Assembly);
+
+            // A scheduled task can be the first thing to run after an update, before the window
+            // has ever opened: plugins taken in as pages are carried over here too.
+            var merges = Plugins.PluginMerges.Map(found);
+            if (merges.Count > 0)
+            {
+                var early = new MeowsStore(settings.Root, message => log.Write("store", message));
+                foreach (var line in Plugins.PluginMerges.Apply(merges, settings, preferences, early))
+                    log.Write("plugins", line);
+                found = Plugins.PluginMerges.RefuseAbsorbed(found, merges);
+            }
             var switchedOn = settings.LoadActivatedPlugins();
             Console.OutputEncoding = System.Text.Encoding.UTF8;
 

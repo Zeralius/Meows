@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.Security.Cryptography;
 
 namespace Meows.Disk;
 
@@ -66,6 +65,8 @@ public sealed record CarryOutcome(bool Done, string? Failure, long Bytes, int Fi
 /// 2. Measure the original again; if it changed while being copied, stop.
 /// 3. Give the copy its real name, then rename the original aside. A rename fails when something
 ///    has a file open, which is the question "is it in use" answered without guessing.
+///    Aside, every file is checked against the size and date it had when it was copied, which
+///    catches a file rewritten in place at the same size.
 /// 4. Put the junction where the original was, and check it leads to the copy.
 /// 5. Only then delete the original.
 /// </summary>
@@ -266,10 +267,11 @@ public static class FolderMove
         var aside = source + AsideSuffix;
 
         // 1. The copy, under a name that says it is unfinished.
+        var seen = new Dictionary<string, (long Length, DateTime Written)>(StringComparer.OrdinalIgnoreCase);
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(target)!);
-            var copied = CopyVerified(source, part, plan.Bytes, progress, token);
+            var copied = CopyVerified(source, part, plan.Bytes, progress, token, seen);
             if (copied is not null)
             {
                 TryDelete(part);
@@ -314,6 +316,23 @@ public static class FolderMove
         {
             TryDelete(target);
             return new CarryOutcome(false, "inuse", 0, 0);
+        }
+
+        // Aside now, and nothing can be holding it open, so this is the last word on whether it
+        // changed. Sizes and counts alone miss a file rewritten in place at the same size, a
+        // database or a save game, and the original is about to be deleted.
+        if (!Unchanged(aside, seen))
+        {
+            try
+            {
+                Directory.Move(aside, source);
+                TryDelete(target);
+            }
+            catch (Exception)
+            {
+                return new CarryOutcome(false, "changed", 0, 0) { Left = aside };
+            }
+            return new CarryOutcome(false, "changed", 0, 0);
         }
 
         // 4. The junction, and proof it leads to the copy.
@@ -459,12 +478,35 @@ public static class FolderMove
         }
     }
 
+    /// <summary>Whether every file under the folder is still the one that was copied: same files, sizes and dates.</summary>
+    private static bool Unchanged(string folder, Dictionary<string, (long Length, DateTime Written)> seen)
+    {
+        try
+        {
+            var count = 0;
+            foreach (var path in Directory.EnumerateFiles(folder, "*", SearchOption.AllDirectories))
+            {
+                var file = new FileInfo(path);
+                if (!seen.TryGetValue(Path.GetRelativePath(folder, path), out var was) ||
+                    was.Length != file.Length || was.Written != file.LastWriteTimeUtc)
+                    return false;
+                count++;
+            }
+            return count == seen.Count;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
+    }
+
     /// <summary>
     /// Copies a tree, every file hashed as it is read and the copy read back and compared.
     /// Empty folders, dates and attributes come too. Null when every file arrived; otherwise the
     /// first thing that went wrong.
     /// </summary>
-    private static string? CopyVerified(string from, string to, long of, IProgress<CarryProgress>? progress, CancellationToken token)
+    private static string? CopyVerified(string from, string to, long of, IProgress<CarryProgress>? progress, CancellationToken token,
+        Dictionary<string, (long Length, DateTime Written)>? seen = null)
     {
         var buffer = new byte[1024 * 1024];
         long done = 0;
@@ -490,7 +532,11 @@ public static class FolderMove
 
                 var file = (FileInfo)entry;
                 var copy = Path.Combine(destination, file.Name);
-                if (!CopyOne(file, copy, buffer, token))
+
+                // What the file looked like before its bytes were read, so a write during or after
+                // the copy can be told from the original later on.
+                seen?.TryAdd(Path.GetRelativePath(from, file.FullName), (file.Length, file.LastWriteTimeUtc));
+                if (!VerifiedCopy.Copy(file.FullName, copy, token, FileMode.CreateNew, FileShare.Read, attributes: true, buffer))
                     return file.FullName;
                 done += file.Length;
                 progress?.Report(new CarryProgress(done, of, file.FullName));
@@ -511,42 +557,6 @@ public static class FolderMove
         }
 
         return null;
-    }
-
-    private static bool CopyOne(FileInfo file, string target, byte[] buffer, CancellationToken token)
-    {
-        string sourceHash;
-        using (var input = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.Read, buffer.Length))
-        using (var output = new FileStream(target, FileMode.CreateNew, FileAccess.Write, FileShare.None, buffer.Length))
-        using (var hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
-        {
-            int read;
-            while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
-            {
-                token.ThrowIfCancellationRequested();
-                output.Write(buffer, 0, read);
-                hash.AppendData(buffer, 0, read);
-            }
-            sourceHash = Convert.ToHexString(hash.GetHashAndReset());
-        }
-
-        try
-        {
-            File.SetLastWriteTimeUtc(target, file.LastWriteTimeUtc);
-            File.SetCreationTimeUtc(target, file.CreationTimeUtc);
-            File.SetAttributes(target, file.Attributes & (FileAttributes.ReadOnly | FileAttributes.Hidden | FileAttributes.System | FileAttributes.Archive));
-        }
-        catch (Exception)
-        {
-            // The bytes matter more than the stamps.
-        }
-
-        using var check = new FileStream(target, FileMode.Open, FileAccess.Read, FileShare.Read, buffer.Length);
-        using var again = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
-        int n;
-        while ((n = check.Read(buffer, 0, buffer.Length)) > 0)
-            again.AppendData(buffer, 0, n);
-        return Convert.ToHexString(again.GetHashAndReset()) == sourceHash;
     }
 }
 

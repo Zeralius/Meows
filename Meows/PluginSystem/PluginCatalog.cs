@@ -135,7 +135,7 @@ public sealed class PluginCatalog
                      return CandidateAssemblies(directory);
                  }))
         {
-            foreach (var descriptor in LoadFrom(assemblyPath))
+            foreach (var descriptor in LoadOnce(assemblyPath))
             {
                 if (seen.Add(descriptor.Id))
                     found.Add(descriptor);
@@ -145,6 +145,36 @@ public sealed class PluginCatalog
         }
 
         _log.Write("plugins", $"Discovered {found.Count} plugin(s).");
+        return found;
+    }
+
+    /// <summary>What each plugin file gave last time, and the file's date then.</summary>
+    private readonly Dictionary<string, (DateTime Written, List<PluginDescriptor> Found)> _loaded =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// A plugin file read once and remembered until it changes. Load contexts are not
+    /// collectible, so reading every plugin again on each rescan, after every install, update
+    /// and shared import, kept every earlier copy in memory and ran their static constructors
+    /// again. Now only a file that is new or has been replaced is loaded.
+    /// </summary>
+    private IEnumerable<PluginDescriptor> LoadOnce(string assemblyPath)
+    {
+        DateTime written;
+        try
+        {
+            written = File.GetLastWriteTimeUtc(assemblyPath);
+        }
+        catch (Exception)
+        {
+            written = default;
+        }
+
+        if (_loaded.TryGetValue(assemblyPath, out var known) && known.Written == written)
+            return known.Found;
+
+        var found = LoadFrom(assemblyPath).ToList();
+        _loaded[assemblyPath] = (written, found);
         return found;
     }
 
@@ -220,7 +250,9 @@ public sealed class PluginCatalog
 
         foreach (var type in types)
         {
-            if (!typeof(IMeowsPlugin).IsAssignableFrom(type) || type.IsAbstract || type.IsInterface)
+            // Only public ones: a plugin that has taken others in as pages keeps them as plugin
+            // classes of its own assembly, and those are its pages, not plugins beside it.
+            if (!typeof(IMeowsPlugin).IsAssignableFrom(type) || type.IsAbstract || type.IsInterface || !type.IsVisible)
                 continue;
             if (type.GetConstructor(Type.EmptyTypes) is null)
             {
@@ -238,6 +270,15 @@ public sealed class PluginCatalog
             catch (Exception ex)
             {
                 _log.Write("plugins", $"{type.FullName} failed to construct: {ex.Message}");
+                continue;
+            }
+
+            if (!PluginIds.IsValid(descriptor.Id))
+            {
+                _log.Write("plugins", $"{type.FullName} calls itself '{descriptor.Id}', which is not an id a plugin may have.", LogLevel.Warning);
+                yield return PluginDescriptor.Incompatible(assemblyPath,
+                    $"Its id, '{descriptor.Id}', is not one a plugin may have: letters, digits, dots, dashes and underscores, not '..' and not meows.shell.",
+                    provenance);
                 continue;
             }
 

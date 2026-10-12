@@ -1133,6 +1133,12 @@ public sealed class MainWindowViewModel : ObservableObject
             _historyTab = new TabViewModel("shell.tab.history", "≡", new HistoryView { DataContext = _history });
             Tabs.Add(_historyTab);
         }
+
+        // What Meows is watching while the window is closed. It was a plugin, Purr, until 6.1.0;
+        // it is the shell's own list, so it is the shell's own tab, always there.
+        var watching = new PluginHost("meows.purr", "Purr", _settings, _log, _notifications, _background);
+        _watches = new PurrViewModel(watching);
+        Tabs.Add(new TabViewModel("shell.tab.watches", "😺", new PurrView { DataContext = _watches }));
         if (_instinct is not null && _store is not null)
         {
             var store = _store;
@@ -1177,8 +1183,16 @@ public sealed class MainWindowViewModel : ObservableObject
         Plugins.Clear();
         _dormant.Clear();
 
+        // A plugin that took others in as pages carries over what was theirs before anything
+        // is switched on, and an old copy of an absorbed one left in the folder is refused.
+        var discovered = _catalog.Discover();
+        var merges = PluginMerges.Map(discovered);
+        foreach (var line in PluginMerges.Apply(merges, _settings, _preferences, _store))
+            _log.Write("plugins", line);
+        discovered = PluginMerges.RefuseAbsorbed(discovered, merges);
+
         var activated = _settings.LoadActivatedPlugins();
-        foreach (var descriptor in _catalog.Discover())
+        foreach (var descriptor in discovered)
         {
             // Its strings before its card, not when it is switched on. A card carries the
             // plugin's own description, so waiting for activation left every inactive plugin
@@ -1577,11 +1591,13 @@ public sealed class MainWindowViewModel : ObservableObject
     }
 
     /// <summary>The open plugin's view model, if it reverses its own history lines. Not opened for the asking.</summary>
+    /// <summary>The plugin's own undo when its tab is open, and the shell's Recycle Bin either way.</summary>
     private IUndoTarget? UndoTargetFor(string pluginId)
     {
-        if (!_pluginTabs.TryGetValue(pluginId, out var tab))
-            return null;
-        return (tab.Content as Avalonia.Controls.Control)?.DataContext as IUndoTarget ?? tab.Content as IUndoTarget;
+        IUndoTarget? own = null;
+        if (_pluginTabs.TryGetValue(pluginId, out var tab))
+            own = (tab.Content as Avalonia.Controls.Control)?.DataContext as IUndoTarget ?? tab.Content as IUndoTarget;
+        return new PutBack(own);
     }
 
     private void ShowPlugin(string pluginId)
@@ -1833,6 +1849,9 @@ public sealed class MainWindowViewModel : ObservableObject
         _home?.Refresh();
     }
 
+    /// <summary>The Watches tab's model, which listens to the shell and the language until shut down.</summary>
+    private PurrViewModel? _watches;
+
     public void Shutdown()
     {
         _popOuts.CloseAll();
@@ -1844,6 +1863,7 @@ public sealed class MainWindowViewModel : ObservableObject
         _instinct?.Dispose();
         _background.Dispose();
         _home?.Dispose();
+        _watches?.Dispose();
 
         // The name switch is a static event; a model that has gone must stop hearing it, or
         // the next flip reaches into a window that is no longer there.

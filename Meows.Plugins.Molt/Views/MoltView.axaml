@@ -5,13 +5,6 @@
              x:Class="Meows.Plugins.Molt.Views.MoltView"
              x:DataType="vm:MoltViewModel">
 
-    <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-    </UserControl.Styles>
-
     <DockPanel>
 
         <Border DockPanel.Dock="Top"
@@ -62,8 +55,7 @@
                     <Button Content="{m:Tr molt.picknone}" Command="{Binding PickNoneCommand}" FontSize="11" />
                     <Button Content="{m:Tr molt.shed}"
                             Command="{Binding ShedCommand}"
-                            Background="{DynamicResource MeowsDanger}"
-                            BorderBrush="{DynamicResource MeowsDangerLine}" />
+                            Classes="danger" />
                 </StackPanel>
             </Grid>
         </Border>
@@ -97,7 +89,7 @@
                                                        FontSize="11"
                                                        TextWrapping="Wrap" />
                                             <TextBlock Text="{Binding Where}"
-                                                       Opacity="0.35"
+                                                       Foreground="{DynamicResource MeowsTextMuted}"
                                                        FontSize="10"
                                                        TextWrapping="Wrap" />
                                         </StackPanel>
@@ -130,7 +122,7 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <Border IsVisible="{Binding IsAsking}" Background="{DynamicResource MeowsVeil}">
+            <Border IsVisible="{Binding IsAsking}" Background="{DynamicResource MeowsVeil}" m:Veil.HoldsFocus="True">
                 <Border Background="{DynamicResource MeowsCard}"
                         BorderBrush="{DynamicResource MeowsDangerLine}"
                         BorderThickness="1"
@@ -151,8 +143,7 @@
                             <Button Grid.Column="2"
                                     Content="{m:Tr molt.goahead}"
                                     Command="{Binding ConfirmCommand}"
-                                    Background="{DynamicResource MeowsDanger}"
-                                    BorderBrush="{DynamicResource MeowsDangerLine}"
+                                    Classes="danger"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center" />
                         </Grid>

@@ -18,19 +18,20 @@ public static class Personas
     /// <summary>
     /// The ones Meows comes with, by name key and plugin ids. Fixed lists rather than "everything
     /// about Gaming", so they are personas like any other once added: renamed, changed or deleted
-    /// as the person likes, and a plugin installed later never joins one by itself. Purr is in
-    /// every one, since what is being watched matters whatever the hat. An id that is not
-    /// installed is ignored when applied, as it is in any persona.
+    /// as the person likes, and a plugin installed later never joins one by itself. What is being
+    /// watched matters whatever the hat, which is why it is a tab of the shell's own since 6.1.0
+    /// rather than a plugin in every persona. An id that is not installed is ignored when
+    /// applied, as it is in any persona.
     /// </summary>
     public static IReadOnlyList<(string NameKey, string[] PluginIds)> ReadyMade { get; } =
     [
-        ("persona.gamer", ["meows.larder", "meows.backlog", "meows.screenshot", "meows.nest", "meows.purr"]),
-        ("persona.gamemaster", ["meows.familiar", "meows.collar", "meows.nest", "meows.purr"]),
+        ("persona.gamer", ["meows.larder", "meows.backlog", "meows.screenshot", "meows.nest"]),
+        ("persona.gamemaster", ["meows.familiar", "meows.collar", "meows.nest"]),
         ("persona.household", ["meows.collar", "meows.basket", "meows.pantry", "meows.naptime", "meows.tin",
-            "meows.bookshelf", "meows.vet", "meows.purr"]),
-        ("persona.creator", ["meows.scruff", "meows.birdwatch", "meows.saucer", "meows.kibble", "meows.perch",
-            "meows.portion", "meows.telegram-poster", "meows.screenshot", "meows.purr"]),
-        ("persona.developer", ["meows.cattery", "meows.trail", "meows.molt", "meows.chonk", "meows.purr"]),
+            "meows.bookshelf", "meows.vet"]),
+        ("persona.creator", ["meows.scruff", "meows.birdwatch", "meows.saucer", "meows.kibble",
+            "meows.portion", "meows.telegram-poster", "meows.screenshot"]),
+        ("persona.developer", ["meows.cattery", "meows.trail", "meows.molt", "meows.chonk"]),
     ];
 
     /// <summary>

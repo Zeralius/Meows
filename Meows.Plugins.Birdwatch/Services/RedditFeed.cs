@@ -62,7 +62,7 @@ public sealed partial class RedditFeed : IFeedSource
 
         using var response = await _http.GetAsync(url, token);
         if (response.StatusCode == HttpStatusCode.TooManyRequests)
-            throw new InvalidOperationException("Reddit is rate limiting; try again in a minute");
+            throw new RateLimitedException("Reddit is rate limiting; try again in a minute");
         if (response.StatusCode is HttpStatusCode.NotFound or HttpStatusCode.Forbidden)
             throw new InvalidOperationException($"{handle} is not there, or is private");
         response.EnsureSuccessStatusCode();

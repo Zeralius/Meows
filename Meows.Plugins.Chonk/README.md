@@ -4,6 +4,14 @@ Measures where the room on a drive went, biggest first, and clears out what you 
 
 Plugin id `meows.chonk`. Windows only, because deletion goes through the shell's Recycle Bin.
 
+## Pages
+
+Since 6.1.0 Chonk has two pages: **Right now**, which is everything below, and
+**[Weigh-In](WeighIn/README.md)**, every drive measured once a day and what grew. Weigh-In was a
+plugin of its own until then; its readings now live under Chonk's folder, in `meows.weighin`, its
+job is still `Meows.exe --do weighin.measure`, and its "show me that folder" lands on the first
+page, which measures it. Chonk also takes a folder handed over by any other plugin now.
+
 ## The three columns
 
 | | |

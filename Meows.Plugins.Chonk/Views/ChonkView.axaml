@@ -6,27 +6,10 @@
              x:DataType="vm:ChonkViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
         <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="14,12,14,6" />
         </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
-        </Style>
-        <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="10,7" />
-            <Setter Property="CornerRadius" Value="5" />
-        </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
+
     </UserControl.Styles>
 
     <DockPanel>
@@ -166,7 +149,7 @@
                                                 Command="{Binding $parent[UserControl].((vm:ChonkViewModel)DataContext).GoToCommand}"
                                                 CommandParameter="{Binding}" />
                                         <TextBlock Text="›"
-                                                   Opacity="0.35"
+                                                   Foreground="{DynamicResource MeowsTextMuted}"
                                                    VerticalAlignment="Center"
                                                    IsVisible="{Binding !IsLast}" />
                                     </StackPanel>
@@ -178,7 +161,7 @@
 
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,4,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding !HasResults}"
                            Text="{m:Tr chonk.empty}" />
@@ -335,8 +318,7 @@
 
                             <Button Content="{m:Tr chonk.recycle}"
                                     Command="{Binding DeleteCommand}"
-                                    Background="{DynamicResource MeowsDanger}"
-                                    BorderBrush="{DynamicResource MeowsDangerLine}"
+                                    Classes="danger"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center" />
 
@@ -351,7 +333,7 @@
         </Grid>
 
         <!-- The safeguard. Over everything, so the question cannot be missed or clicked past. -->
-        <Border IsVisible="{Binding IsAsking}" Background="{DynamicResource MeowsVeil}">
+        <Border IsVisible="{Binding IsAsking}" Background="{DynamicResource MeowsVeil}" m:Veil.HoldsFocus="True">
             <Border Background="{DynamicResource MeowsCard}"
                     BorderBrush="{DynamicResource MeowsDangerLine}"
                     BorderThickness="1"
@@ -370,7 +352,7 @@
                                FontSize="12"
                                TextWrapping="Wrap" />
                     <TextBlock Text="{Binding PendingDelete.Path}"
-                               Opacity="0.4"
+                               Foreground="{DynamicResource MeowsTextMuted}"
                                FontSize="11"
                                TextWrapping="Wrap" />
 
@@ -388,8 +370,7 @@
                         <Button Grid.Column="2"
                                 Content="{m:Tr chonk.recycle}"
                                 Command="{Binding ConfirmDeleteCommand}"
-                                Background="{DynamicResource MeowsDanger}"
-                                BorderBrush="{DynamicResource MeowsDangerLine}"
+                                Classes="danger"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center" />
                     </Grid>
@@ -398,7 +379,7 @@
         </Border>
 
         <!-- Unpacking asks too: the cost is the thing worth seeing before it starts. -->
-        <Border IsVisible="{Binding IsAskingExtract}" Background="{DynamicResource MeowsVeil}">
+        <Border IsVisible="{Binding IsAskingExtract}" Background="{DynamicResource MeowsVeil}" m:Veil.HoldsFocus="True">
             <Border Background="{DynamicResource MeowsCard}"
                     BorderBrush="{DynamicResource MeowsLine}"
                     BorderThickness="1"
@@ -410,7 +391,7 @@
                 <StackPanel Spacing="10">
                     <TextBlock Text="{Binding ExtractPrompt}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
                     <TextBlock Text="{Binding ExtractDetail}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
-                    <TextBlock Text="{m:Tr chonk.extract.promise}" Opacity="0.55" FontSize="11" TextWrapping="Wrap" />
+                    <TextBlock Text="{m:Tr chonk.extract.promise}" Foreground="{DynamicResource MeowsTextMuted}" FontSize="11" TextWrapping="Wrap" />
                     <Grid ColumnDefinitions="*,8,*">
                         <Button Grid.Column="0"
                                 Content="{m:Tr chonk.cancel}"

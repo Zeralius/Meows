@@ -6,27 +6,10 @@
              x:DataType="vm:LitterViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
         <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="14,12,14,6" />
         </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
-        </Style>
-        <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="10,7" />
-            <Setter Property="CornerRadius" Value="5" />
-        </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
+
         <Style Selector="Button.bucket">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -121,15 +104,14 @@
                         <Button Content="{m:Tr litter.explore}" Command="{Binding ExploreCommand}" FontSize="11" />
                         <Button Content="{m:Tr litter.recycle}"
                                 Command="{Binding DeleteCommand}"
-                                Background="{DynamicResource MeowsDanger}"
-                                BorderBrush="{DynamicResource MeowsDangerLine}"
+                                Classes="danger"
                                 FontSize="11" />
                     </StackPanel>
                 </Grid>
 
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,4,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding IsEmpty}"
                            Text="{m:Tr litter.empty}" />
@@ -154,7 +136,7 @@
                                         Padding="5,1"
                                         VerticalAlignment="Center"
                                         IsVisible="{Binding IsJunk}">
-                                    <TextBlock Text="{m:Tr litter.unfinished}" FontSize="9" />
+                                    <TextBlock Text="{m:Tr litter.unfinished}" FontSize="10" />
                                 </Border>
                                 <TextBlock Grid.Column="3"
                                            Text="{Binding AgeText}"
@@ -173,7 +155,7 @@
 
         </Grid>
 
-        <Border IsVisible="{Binding IsAsking}" Background="{DynamicResource MeowsVeil}">
+        <Border IsVisible="{Binding IsAsking}" Background="{DynamicResource MeowsVeil}" m:Veil.HoldsFocus="True">
             <Border Background="{DynamicResource MeowsCard}"
                     BorderBrush="{DynamicResource MeowsDangerLine}"
                     BorderThickness="1"
@@ -195,8 +177,7 @@
                         <Button Grid.Column="2"
                                 Content="{m:Tr litter.recycle}"
                                 Command="{Binding ConfirmDeleteCommand}"
-                                Background="{DynamicResource MeowsDanger}"
-                                BorderBrush="{DynamicResource MeowsDangerLine}"
+                                Classes="danger"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center" />
                     </Grid>

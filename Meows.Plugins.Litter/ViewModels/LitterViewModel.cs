@@ -97,11 +97,11 @@ public sealed class LitterViewModel : ObservableObject, IDisposable, ISearchable
         _settings = host.LoadSettings<LitterSettings>() ?? new LitterSettings();
         _settings.Folder ??= DefaultDownloads();
 
-        RefreshCommand = new RelayCommand(Refresh);
+        RefreshCommand = new RelayCommand(Refresh, () => !_reading);
         FilterCommand = new RelayCommand(p => ApplyFilter((p as BucketViewModel)?.Key));
         ClearFilterCommand = new RelayCommand(() => ApplyFilter(null));
         DeleteCommand = new RelayCommand(AskToDelete, () => Selected.Count > 0);
-        ConfirmDeleteCommand = new RelayCommand(() => Remove(_pendingDelete), () => IsAsking);
+        ConfirmDeleteCommand = new RelayCommand(() => _ = RemoveAsync(_pendingDelete), () => IsAsking);
         CancelDeleteCommand = new RelayCommand(() => PendingCount = 0, () => IsAsking);
         ExploreCommand = new RelayCommand(() => Open(SelectedOne?.Path), () => SelectedOne is not null);
         OpenFolderCommand = new RelayCommand(() => Open(Folder), () => Directory.Exists(Folder));
@@ -254,19 +254,41 @@ public sealed class LitterViewModel : ObservableObject, IDisposable, ISearchable
         Refresh();
     }
 
-    public void Refresh()
+    private bool _reading;
+
+    public void Refresh() => _ = RefreshAsync();
+
+    /// <summary>
+    /// Read on a worker thread: a downloads folder can hold whole unpacked installers, and
+    /// summing every folder's size on the window's thread stood Meows still while it did.
+    /// </summary>
+    public async Task RefreshAsync()
     {
+        if (_reading)
+            return;
         ErrorMessage = null;
 
-        if (!Directory.Exists(Folder))
+        var folder = Folder;
+        if (!Directory.Exists(folder))
         {
-            ErrorMessage = _host.Text.Format("litter.error.nofolder", Folder);
+            ErrorMessage = _host.Text.Format("litter.error.nofolder", folder);
             _all = [];
             Rebuild();
             return;
         }
 
-        _all = LitterScan.Read(Folder, DateTime.Now);
+        _reading = true;
+        RefreshCommand.RaiseCanExecuteChanged();
+        Status = _host.Text["litter.status.reading"];
+        try
+        {
+            _all = await Task.Run(() => LitterScan.Read(folder, DateTime.Now));
+        }
+        finally
+        {
+            _reading = false;
+            RefreshCommand.RaiseCanExecuteChanged();
+        }
         BuildBuckets();
         Rebuild();
         Status = _all.Count == 0 ? _host.Text["litter.status.empty"] : "";
@@ -334,33 +356,40 @@ public sealed class LitterViewModel : ObservableObject, IDisposable, ISearchable
 
         if (!ConfirmDeletes)
         {
-            Remove(_pendingDelete);
+            _ = RemoveAsync(_pendingDelete);
             return;
         }
 
         PendingCount = _pendingDelete.Count;
     }
 
-    private void Remove(List<ItemViewModel> items)
+    private async Task RemoveAsync(List<ItemViewModel> items)
     {
+        items = [.. items];
         PendingCount = 0;
         if (items.Count == 0)
             return;
 
-        var freed = items.Sum(i => i.Item.Size);
-        var outcome = RecycleBin.Send(items.Select(i => i.Path).ToList());
+        var outcome = await Task.Run(() => RecycleBin.Send(items.Select(i => i.Path).ToList()));
+
+        // What went, recorded the shared way, so History can put it back; whatever stayed is
+        // not, and the error says why.
+        var gone = items.Where(i => !File.Exists(i.Path) && !Directory.Exists(i.Path)).ToList();
+        var freed = gone.Sum(i => i.Item.Size);
+        Recycled.Record(_host.Store, gone.Select(i => i.Path).ToList(),
+            detail: _host.Text.Format("litter.status.removed", gone.Count, LitterScan.Humanise(freed)));
 
         if (!outcome.Succeeded)
         {
             ErrorMessage = outcome.FailureReason ?? _host.Text["litter.error.nothing"];
-            _host.Log(LogLevel.Warning, $"Litter could not remove {items.Count} item(s): {ErrorMessage}");
-            Refresh();
+            _host.Log(LogLevel.Warning, $"Litter could not remove {items.Count - gone.Count} of {items.Count} item(s): {ErrorMessage}");
+            await RefreshAsync();
             return;
         }
 
         Status = _host.Text.Format("litter.status.removed", outcome.Deleted, LitterScan.Humanise(freed));
         _host.Log($"Litter sent {outcome.Deleted} item(s) to the Recycle Bin, {LitterScan.Humanise(freed)} freed");
-        Refresh();
+        await RefreshAsync();
     }
 
     /// <summary>Where Windows keeps downloads, which is where this is nearly always pointed.</summary>

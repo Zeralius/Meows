@@ -168,21 +168,7 @@ public static class NestPlaces
             try
             {
                 Directory.CreateDirectory(target.DirectoryName!);
-                string hash;
-                using (var input = new FileStream(file.FullName, FileMode.Open, FileAccess.Read, FileShare.ReadWrite, buffer.Length))
-                using (var output = new FileStream(part, FileMode.Create, FileAccess.Write, FileShare.None, buffer.Length))
-                using (var sha = IncrementalHash.CreateHash(HashAlgorithmName.SHA256))
-                {
-                    int read;
-                    while ((read = input.Read(buffer, 0, buffer.Length)) > 0)
-                    {
-                        output.Write(buffer, 0, read);
-                        sha.AppendData(buffer, 0, read);
-                    }
-                    hash = Convert.ToHexString(sha.GetHashAndReset());
-                }
-
-                if (ContentHash.Full(part) != hash)
+                if (!VerifiedCopy.Copy(file.FullName, part, token, FileMode.Create, FileShare.ReadWrite, buffer: buffer))
                 {
                     File.Delete(part);
                     failed.Add(relative);

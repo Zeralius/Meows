@@ -17,20 +17,16 @@ to install.
 
 | Plugin | What it does |
 |---|---|
-| **[Chonk](Meows.Plugins.Chonk/README.md)** | Measures where the room on a drive went, biggest first, says what each folder actually is, notices an archive sitting beside its own extracted contents, and clears out what you no longer want |
+| **[Chonk](Meows.Plugins.Chonk/README.md)** | Measures where the room on a drive went, biggest first, says what each folder actually is, notices an archive sitting beside its own extracted contents, and clears out what you no longer want; on its second page, [Weigh-In](Meows.Plugins.Chonk/WeighIn/README.md), measures every drive once a day and says what grew since last week |
 | **[Purrge](Meows.Plugins.Purrge/README.md)** | Finds files with identical content anywhere on the machine, groups them, and removes the copies you do not want; also checks that a backup copy is really complete and identical, without touching either side |
 | **[Molt](Meows.Plugins.Molt/README.md)** | Sheds caches and build output that can be rebuilt, and tells you what losing each one costs first |
-| **[Mouser](Meows.Plugins.Mouser/README.md)** | Hunts down dead weight: empty folders, empty files, shortcuts pointing at things that are gone |
-| **[Litter](Meows.Plugins.Litter/README.md)** | Sorts out the downloads folder by age and kind, and calls out the downloads that never finished |
+| **[Litter](Meows.Plugins.Litter/README.md)** | Clutter, in three pages: the downloads folder by age and kind with the downloads that never finished; [Catnip](Meows.Plugins.Litter/Catnip/README.md), what was downloaded and never opened; and [Mouser](Meows.Plugins.Litter/Mouser/README.md), empty folders, empty files and shortcuts pointing at things that are gone |
 | **[Saucer](Meows.Plugins.Saucer/README.md)** | Keeps what you copy, images included, and drops images into a folder for sorting |
 | **[Birdwatch](Meows.Plugins.Birdwatch/README.md)** | Watches accounts on Bluesky, Mastodon and Reddit, and any RSS feed with pictures in it, and saves what they post into that same folder, with no login anywhere |
 | **[Tin](Meows.Plugins.Tin/README.md)** | Reads the exports and statements your bank hands out, CSV or PDF, and says what is recurring, what quietly went up, and what is still going out for something you stopped using |
 | **[Collar](Meows.Plugins.Collar/README.md)** | Keeps the dates that matter and the paper behind them, and says so on the notification surface when one comes round |
 | **[Scruff](Meows.Plugins.Scruff/README.md)** | Takes the metadata out of pictures, posts them to Bluesky, Mastodon, Discord, DeviantArt and Tumblr, and hands them to FurAffinity, X, Instagram and Reddit with every field spelled that site's way |
-| **[Purr](Meows.Plugins.Purr/README.md)** | Says what Meows is watching, when it last looked, and which watch quietly stopped |
 | **[Familiar](Meows.Plugins.Familiar/README.md)** | The wizard's cat for the table: maps gridded or gridless, tokens cut round, handouts framed, on the bench or as a one-shot kit with its run sheet, handed to Foundry or Roll20 the way each wants it |
-| **[Weigh-In](Meows.Plugins.WeighIn/README.md)** | Measures every drive once a day and says what grew: which drive lost how much since last week, and the folders responsible |
-| **[Catnip](Meows.Plugins.Catnip/README.md)** | Finds what was downloaded and never opened, least recently touched first, without opening anything itself |
 | **[Rehome](Meows.Plugins.Rehome/README.md)** | Packs the machine up before a clean Windows install: what is installed and how to get it back, what the wipe takes and where to keep it, and the way back afterwards |
 | **[Scoop](Meows.Plugins.Scoop/README.md)** | Every drive's Recycle Bin in one list: what is in it, how big, how old, put back one at a time or emptied per drive |
 | **[Trail](Meows.Plugins.Trail/README.md)** | PATH read and explained: entries pointing nowhere, the same tool on there twice, and which one actually wins |
@@ -46,11 +42,15 @@ to install.
 | **[Vet](Meows.Plugins.Vet/README.md)** | Family PC health: disk room, reboot needed, backup age, diagnostic zip |
 | **[Naptime](Meows.Plugins.Naptime/README.md)** | Habit tracker: daily ticks, weekly targets, streaks with one miss forgiven |
 | **[Kibble](Meows.Plugins.Kibble/README.md)** | Sorts a folder of new material into queues, one key press at a time, and can bundle a pick into a comic |
-| **[Perch](Meows.Plugins.Perch/README.md)** | One timeline of what the posting bot will send and when, every group merged, out as far as the queues last |
 | **[Portion](Meows.Plugins.Portion/README.md)** | Finds what the bot will fail on in every queue before it fails at night, and shrinks the pictures that can be shrunk |
-| **[Telegram Poster](Meows.Plugins.TelegramPoster/README.md)** | Drives a [Telegram posting bot](https://github.com/Zeralius/telegram-posting-bot): its groups, queues and schedule, including slowing a group down so a short queue lasts |
+| **[Telegram Poster](Meows.Plugins.TelegramPoster/README.md)** | Drives a [Telegram posting bot](https://github.com/Zeralius/telegram-posting-bot): its groups, queues and schedule, including slowing a group down so a short queue lasts; on its second page, [Perch](Meows.Plugins.TelegramPoster/Perch/README.md), one timeline of what it will send and when, every group merged |
 
-The last four are built around a specific posting bot. The rest are general purpose.
+The last three are built around a specific posting bot. The rest are general purpose.
+
+Since 6.1.0 a few that answered the same question are pages of one tab: Catnip and Mouser of
+Litter, Weigh-In of Chonk, Perch of Telegram Poster. Their settings, history, rules and personas
+came with them. What Meows is watching, which was the Purr plugin, is the shell's own **Watches**
+tab.
 
 ## Getting it
 
@@ -100,7 +100,7 @@ one plugin honestly is worse than none.
 **Tabs come in groups.** Each group is a coloured chip on the strip with its tabs after it, and
 clicking the chip shuts the group behind it, which is what keeps twenty-odd tabs on one row. The
 groups are the same ones the Plugins tab has always used, the category each plugin declares for
-itself, so a fresh install is already sorted: the disk tools together, the four built around the
+itself, so a fresh install is already sorted: the disk tools together, the three built around the
 posting bot together, Meows' own tabs under one chip. Home is never in a group and always first.
 
 **Drag a tab** anywhere on the strip: a line shows which side of what it would land on, and
@@ -121,10 +121,12 @@ when that screen is plugged in, and which tabs were out is remembered across a r
 **Bring it back** where the tab was, or close the window. The main window is remembered the
 same way.
 
-**Keys.** Ctrl+K is the palette: a plugin by either of its names, a setting, something an open
+**Keys.** Ctrl+K (or Ctrl+P) is the palette: a plugin by either of its names, a setting, something an open
 plugin is showing, a line from the history. Ctrl+Shift+K is the same box over only the tab in
 front. Ctrl+1 to Ctrl+9 pick a tab in the order they are shown, counting only the tabs that can
-be seen, so a shut group does not make the numbers skip. In the palette, `>` lists the
+be seen, so a shut group does not make the numbers skip. Ctrl+Shift+Left and Right move the
+tab in front one place along the strip, into the next group at an edge, which is dragging
+without the mouse. In the palette, `>` lists the
 things to do rather than the places to go: pop a tab out or bring it back, the theme, the
 language, the names, rescan the plugins folder. `+` adds instead of going: pick what takes
 it — Collar's list, Basket's board, a habit's tick — type the words, and Enter hands them
@@ -133,8 +135,9 @@ over. What came back arrives as one notification, with the tab a click away.
 Starting `Meows.exe` while one is already running does not start a second: the one that is
 running shows its window and the second start ends.
 
-The cards sit under headings a plugin picks for itself, so the disk tools are together and the two
-built around the posting bot are together. **Install plugin…** on that tab takes a plugin
+The cards sit under headings a plugin picks for itself, so the disk tools are together and the three
+built around the posting bot are together. A search box over them finds one by either name or
+its description. **Install plugin…** on that tab takes a plugin
 someone else built, as a zip, or drop the zip on the tab; its card then says who made it and
 offers **Uninstall**, and once a day Meows looks at the plugin's repository for a newer release
 and offers that on the card too. **Open plugins folder** takes you to where they are read from.
@@ -146,7 +149,10 @@ that plugin keeps into one file for someone; **Install shared…** (or a dropped
 `.meows-share.zip`) puts such a file where the plugin reads it, keeping what was there
 aside, and only while the plugin is switched off.
 
-The **Settings** tab has two choices, and both take effect as you make them:
+The **Settings** tab takes effect as you choose, nothing to save:
+
+- **Text size**: the whole window drawn bigger, 100 to 175%, or like Windows, which follows the
+  Text size slider in Windows' accessibility settings.
 
 - **Tab strip**: compact, normal or large. How big the tabs and group chips along the top are
   drawn; larger ones are easier to hit and take another row when the strip wraps.
@@ -176,11 +182,11 @@ The **Settings** tab has two choices, and both take effect as you make them:
   with the window open. It writes one entry to the per-user startup list, which needs no admin
   rights and shows up in the Task Manager's Startup tab like anything else.
 
-**Ctrl+K** opens the command palette: type a plugin under either of its names, a setting, a
-word from the history, or anything an open plugin is showing, a file in Kibble's grid, a folder
-Chonk measured, a date in Collar, a payee in Tin, and Enter lands on it. Every plugin is named after the cat; each also says what
+What an open plugin is showing is in the palette too: a file in Kibble's grid, a folder Chonk
+measured, a date in Collar, a payee in Tin, and Enter lands on it. Every plugin is named after the cat; each also says what
 it is in plain words, and the paw in the bottom bar, or the Settings tab, picks which name is on
-the tabs and cards: Purrge or Duplicates, Chonk or Disk usage, Kibble or Sorting.
+the tabs and cards: Purrge or Duplicates, Chonk or Disk usage, Kibble or Sorting. A new install
+starts with the plain names; the paw turns the cat ones on.
 
 The **History** tab is what the plugins did, all of them in one list: what Kibble queued where,
 what Purrge recycled, what Scruff posted, what Portion shrank, which date Collar dealt with. It
@@ -188,12 +194,14 @@ is kept in a small database beside the settings and survives the window closing,
 being switched off, and the undo list being emptied. A line the plugin that wrote it can still
 reverse, a Kibble send whose file is still in the queue, carries a **Put back** button while that
 plugin is open; the shell asks the plugin first, so the button is only there when pressing it
-would do something. The tab's bottom bar says how big the database file is and how many lines it
+would do something. Anything any plugin sent to the Recycle Bin, Litter's downloads, Molt's
+caches, Chonk's folders, Purrge's copies, can be put back from its line whether that plugin is
+open or not, for as long as it is still in the bin and nothing has taken its place. The tab's bottom bar says how big the database file is and how many lines it
 holds, with **Forget…** older than a month, three months, six months, a year or everything, for
 every plugin or only the one being shown, which asks first and says how many lines would go, and
 **Compact**, which gives the room back. The Settings tab has the standing rule, **keep everything**
 by default, or a year, six months, three months or a month, applied when Meows starts and once a
-day while it runs; Purr lists that pass under Meows. Neither forgetting ever touches the facts a
+day while it runs; the Watches tab lists that pass under Meows. Neither forgetting ever touches the facts a
 plugin keeps or the hashes anything has seen.
 
 The **Rules** tab joins the plugins up: *when* one plugin records something, *then* ask another
@@ -234,12 +242,16 @@ regardless.
 
 The Settings tab's **Moving house** section exports all of that as one zip and imports it again on
 another machine: preferences, which plugins are on, the bot folder, the history, every plugin's
-settings and data, never the secrets and never the log. An import keeps what it writes over as a
-bundle of its own beside the settings, so it can be undone by importing that.
+settings and data, never the secrets and never the log. An import is read in when Meows starts
+again, before anything has those files open, and keeps what it writes over as a bundle of its
+own beside the settings, so it can be undone by importing that. The server plugins copy to stays
+this machine's own, and rules that were not here arrive switched off.
 
 Settings, logs and that history live in `%APPDATA%\Meows`, never inside the folder you unzipped,
-so deleting that folder resets Meows completely. `meows.log` there is also where a crash gets written, stack
-trace and all, which is worth attaching to a bug report. The log stays in English whatever the
+so deleting that folder resets Meows completely. `meows.log` there is this run, and
+`meows.prev.log` the one before, so starting Meows again after a crash does not lose it. A crash
+also goes to `meows.crash.log`, stack trace and all, which no start clears and which is worth
+attaching to a bug report. The log stays in English whatever the
 window is set to, because it is the thing that gets pasted into a bug report.
 
 To check an install without opening the window:
@@ -455,7 +467,8 @@ a plugin can copy a folder to. **1.4.0**, with Meows 4.4.0, added a plugin's Hom
 window, for `--glance`. **1.5.0**, with Meows 4.17.0, added the jobs a plugin can do with no
 window, for `--do`. **1.6.0**, with Meows 5.0.0, added the extra lines a plugin can put on
 its Home card. **1.7.0**, with Meows 5.1.0, added the topics a plugin is filed under for the
-filter on the Plugins tab.
+filter on the Plugins tab. **1.8.0**, with Meows 6.0.0, added the
+veil that takes the keyboard with a confirmation, and, with 6.1.0, a plugin taking others in as pages.
 
 Meows checks that version when it loads a plugin and refuses anything it cannot honour, with the
 reason on the plugin's card rather than a crash later:
@@ -500,10 +513,11 @@ anything was refused or is missing a private library. Asking the app is not the 
 file names: a plugin whose shared library did not get staged loads perfectly and then fails the
 moment it is switched on, which is exactly how three plugins once shipped broken.
 
-To cut a release:
+To cut a release, with `<Version>` in `Meows/Meows.csproj` already saying the same number (the
+workflow refuses a tag that disagrees with it):
 
 ```bash
-git tag v3.1.0 && git push origin v3.1.0
+git tag v6.1.0 && git push origin v6.1.0
 ```
 
 ## Licence

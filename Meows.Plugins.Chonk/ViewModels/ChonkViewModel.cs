@@ -102,7 +102,7 @@ public sealed class CrumbViewModel(DiskEntry entry, bool isLast) : ObservableObj
     public bool IsLast { get; } = isLast;
 }
 
-public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable
+public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable, IGlanceable, IHandoffTarget
 {
     private readonly IMeowsHost _host;
     private ChonkSettings _settings;
@@ -140,7 +140,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable,
         FindDuplicatesCommand = new RelayCommand(() => HandTo(KnownPlugins.Purrge), () => Selected is { CanDrillInto: true });
         SortWithKibbleCommand = new RelayCommand(() => HandTo(KnownPlugins.Kibble), () => Selected is { CanDrillInto: true });
         CarryElsewhereCommand = new RelayCommand(() => HandTo(CarryPlugin), () => Selected is { CanDrillInto: true });
-        ConfirmDeleteCommand = new RelayCommand(() => Remove(PendingDelete), () => PendingDelete is not null);
+        ConfirmDeleteCommand = new RelayCommand(() => _ = RemoveAsync(PendingDelete), () => PendingDelete is not null);
         ExtractCommand = new RelayCommand(() => _ = PlanExtractAsync(), () => CanExtract);
         ConfirmExtractCommand = new RelayCommand(RunExtract, () => PendingExtract is { CanGo: true });
         CancelExtractCommand = new RelayCommand(() => PendingExtract = null, () => PendingExtract is not null);
@@ -731,6 +731,20 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable,
         }
     }
 
+    /// <summary>
+    /// A folder handed over, from Weigh-In's "this folder grew" or anything else that wants one
+    /// measured: it is measured. Weigh-In has offered this since it was built, and Chonk never
+    /// took it, so the button did nothing.
+    /// </summary>
+    public bool Accepts(Handoff handoff) =>
+        handoff.Verb == HandoffVerbs.Folder && handoff.Paths.Count == 1 && Directory.Exists(handoff.Paths[0]) && !IsScanning;
+
+    public void Receive(Handoff handoff)
+    {
+        if (Accepts(handoff))
+            StartScan(handoff.Paths[0]);
+    }
+
     public void StartScan(string? root)
     {
         if (IsScanning || string.IsNullOrWhiteSpace(root))
@@ -890,10 +904,11 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable,
             return;
         }
 
-        Remove(row);
+        _ = RemoveAsync(row);
     }
 
-    private void Remove(EntryViewModel? row)
+    /// <summary>On a worker thread: a big folder into the bin takes the shell a while to move.</summary>
+    private async Task RemoveAsync(EntryViewModel? row)
     {
         PendingDelete = null;
 
@@ -902,7 +917,7 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable,
 
         var entry = row.Entry;
         var what = entry.IsFolder ? "folder" : "file";
-        var outcome = RecycleBin.Send([entry.Path]);
+        var outcome = await Task.Run(() => RecycleBin.Send([entry.Path]));
 
         if (!outcome.Succeeded)
         {
@@ -912,6 +927,8 @@ public sealed class ChonkViewModel : ObservableObject, IDisposable, ISearchable,
         }
 
         var freed = entry.Size;
+        Recycled.Record(_host.Store, [entry.Path], detail: _host.Text.Format("chonk.status.removed", entry.Name, DiskScan.Humanise(freed)),
+            data: new Dictionary<string, string> { ["size"] = freed.ToString() });
         DiskScan.Forget(entry);
 
         // Rebuild this level rather than the whole tree: the numbers above have already been

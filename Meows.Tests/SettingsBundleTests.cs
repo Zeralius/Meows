@@ -124,6 +124,81 @@ public sealed class SettingsBundleTests : IDisposable
         Assert.Empty(Directory.GetFiles(to));
     }
 
+    [Fact]
+    public void An_import_waits_for_the_next_start_and_nothing_is_written_until_then()
+    {
+        var from = Settings("staged-from");
+        Populate(from);
+        var zip = Path.Combine(_root, "staged.zip");
+        SettingsBundle.Export(from, zip, "9.9.9");
+
+        var to = Settings("staged-to");
+        Directory.CreateDirectory(to);
+        File.WriteAllText(Path.Combine(to, "preferences.json"), "{\"theme\":\"light\"}");
+
+        var staged = SettingsBundle.Stage(to, zip);
+
+        Assert.True(staged.Ok);
+        Assert.Equal(4, staged.Files);
+        Assert.Equal("{\"theme\":\"light\"}", File.ReadAllText(Path.Combine(to, "preferences.json")));
+
+        var applied = SettingsBundle.ApplyPending(to, "9.9.9");
+
+        Assert.NotNull(applied);
+        Assert.True(applied!.Ok);
+        Assert.Contains("dark", File.ReadAllText(Path.Combine(to, "preferences.json")));
+        Assert.False(File.Exists(Path.Combine(to, SettingsBundle.Pending)));
+        Assert.Null(SettingsBundle.ApplyPending(to, "9.9.9"));
+    }
+
+    [Fact]
+    public void A_bundle_cannot_point_this_machine_at_another_server_or_bring_rules_that_act_unseen()
+    {
+        var zip = Path.Combine(_root, "theirs.zip");
+        using (var archive = ZipFile.Open(zip, ZipArchiveMode.Create))
+        {
+            using (var m = new StreamWriter(archive.CreateEntry(SettingsBundle.Manifest).Open()))
+                m.Write("{}");
+            using (var p = new StreamWriter(archive.CreateEntry("preferences.json").Open()))
+                p.Write("""
+                        {"theme":"dark",
+                         "reach":{"kind":"sftp","host":"their.server","hostKey":"THEIRS"},
+                         "rules":[{"id":"mine","enabled":true},{"id":"theirs","enabled":true}]}
+                        """);
+        }
+
+        var to = Settings("server");
+        Directory.CreateDirectory(to);
+        File.WriteAllText(Path.Combine(to, "preferences.json"), """
+                                                               {"theme":"light",
+                                                                "reach":{"kind":"folder","folder":"Z:\\"},
+                                                                "rules":[{"id":"mine","enabled":true}]}
+                                                               """);
+
+        SettingsBundle.Stage(to, zip);
+        var applied = SettingsBundle.ApplyPending(to, "9.9.9");
+
+        var after = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(Path.Combine(to, "preferences.json")))!;
+        Assert.Equal("dark", (string?)after["theme"]);
+        Assert.Equal("folder", (string?)after["reach"]!["kind"]);
+        Assert.Null(after["reach"]!["hostKey"]);
+        var rules = after["rules"]!.AsArray();
+        Assert.True((bool)rules.Single(r => (string?)r!["id"] == "mine")!["enabled"]!);
+        Assert.False((bool)rules.Single(r => (string?)r!["id"] == "theirs")!["enabled"]!);
+        Assert.Equal(1, applied!.RulesSwitchedOff);
+    }
+
+    [Theory]
+    [InlineData("meows.db-journal")]
+    [InlineData("meows.db-wal")]
+    [InlineData("meows.db-shm")]
+    [InlineData("plugins/meows.kibble/settings.json.writing")]
+    [InlineData("plugins/meows.tin/accounts.private.json")]
+    public void What_belongs_to_one_open_database_or_one_unfinished_save_or_is_private_does_not_travel(string name)
+    {
+        Assert.False(SettingsBundle.Belongs(name));
+    }
+
     public void Dispose()
     {
         try

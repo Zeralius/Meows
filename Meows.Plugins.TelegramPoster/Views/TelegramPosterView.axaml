@@ -7,20 +7,10 @@
              x:DataType="vm:TelegramPosterViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
         <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="0,14,0,6" />
         </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
-        </Style>
+
         <!-- Default padding is wide enough to lose a whole column off the grid. -->
         <Style Selector="ListBox.grid > ListBoxItem">
             <Setter Property="Padding" Value="4" />
@@ -107,7 +97,7 @@
                         x:DataType="vm:BotSetupViewModel">
 
                 <TextBlock Text="{m:Tr tp.setup.title}" FontSize="21" FontWeight="SemiBold" />
-                <TextBlock Opacity="0.55" TextWrapping="Wrap"
+                <TextBlock Foreground="{DynamicResource MeowsTextMuted}" TextWrapping="Wrap"
                            Text="{m:Tr tp.setup.intro}" />
 
                 <Border Background="{DynamicResource MeowsDanger}" BorderBrush="{DynamicResource MeowsDangerLine}" BorderThickness="1"
@@ -127,7 +117,7 @@
                 </Grid>
                 <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,8,0,0">
                     <Button Content="{m:Tr tp.setup.clone}" Command="{Binding CloneCommand}" />
-                    <TextBlock VerticalAlignment="Center" Opacity="0.6" Text="{Binding StatusMessage}" />
+                    <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource MeowsTextMuted}" Text="{Binding StatusMessage}" />
                 </StackPanel>
                 <TextBlock Classes="label" TextWrapping="Wrap" Margin="0,4,0,0"
                            Text="{m:Tr tp.setup.credentials}" />
@@ -136,7 +126,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="10">
                     <Button Content="{m:Tr tp.setup.install}" Command="{Binding InstallCommand}" />
                     <Button Content="{m:Tr tp.setup.check}" Command="{Binding CheckDependenciesCommand}" />
-                    <TextBlock VerticalAlignment="Center" Opacity="0.6" Text="{Binding DependencyStatusText}" />
+                    <TextBlock VerticalAlignment="Center" Foreground="{DynamicResource MeowsTextMuted}" Text="{Binding DependencyStatusText}" />
                 </StackPanel>
                 <TextBlock Classes="label" Text="{Binding ToolStatusText}" Margin="0,4,0,0" />
                 <TextBlock Classes="label" TextWrapping="Wrap"
@@ -201,10 +191,10 @@
                                         </StackPanel>
                                         <TextBlock Text="{Binding QueueSummary}"
                                                    FontSize="11"
-                                                   Opacity="0.55" />
+                                                   Foreground="{DynamicResource MeowsTextMuted}" />
                                         <TextBlock Text="{Binding NextPostText}"
                                                    FontSize="11"
-                                                   Opacity="0.4" />
+                                                   Foreground="{DynamicResource MeowsTextMuted}" />
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -239,7 +229,7 @@
                         <TextBlock Grid.Column="2"
                                    VerticalAlignment="Center"
                                    Margin="10,0"
-                                   Opacity="0.5"
+                                   Foreground="{DynamicResource MeowsTextMuted}"
                                    Text="{Binding MediaCountText}" />
                         <Button Grid.Column="3" Content="{m:Tr tp.refresh}" Command="{Binding RefreshMediaCommand}" />
                         <Button Grid.Column="4" Content="{m:Tr tp.openfolder}" Command="{Binding OpenQueueFolderCommand}" />
@@ -270,7 +260,7 @@
                                                IsVisible="{Binding HasThumbnail}" />
                                         <TextBlock Text="{Binding KindGlyph}"
                                                    FontSize="26"
-                                                   Opacity="0.35"
+                                                   Foreground="{DynamicResource MeowsTextMuted}"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"
                                                    IsVisible="{Binding ShowGlyph}" />
@@ -281,7 +271,7 @@
                                                 HorizontalAlignment="Left"
                                                 VerticalAlignment="Top"
                                                 IsVisible="{Binding IsComic}">
-                                            <TextBlock Text="{m:Tr tp.comic}" FontSize="9" />
+                                            <TextBlock Text="{m:Tr tp.comic}" FontSize="10" />
                                         </Border>
                                         <!-- What Portion would say, on the tile, before the night it fails. -->
                                         <Border Background="{DynamicResource MeowsDanger}"
@@ -293,7 +283,7 @@
                                                 HorizontalAlignment="Right"
                                                 VerticalAlignment="Top"
                                                 IsVisible="{Binding WillFail}">
-                                            <TextBlock Text="{m:Tr tp.willfail}" FontSize="9" Foreground="{DynamicResource MeowsDangerText}" />
+                                            <TextBlock Text="{m:Tr tp.willfail}" FontSize="10" Foreground="{DynamicResource MeowsDangerText}" />
                                         </Border>
                                         <Border Background="{DynamicResource MeowsWarn}"
                                                 BorderBrush="{DynamicResource MeowsWarnLine}"
@@ -304,7 +294,7 @@
                                                 HorizontalAlignment="Right"
                                                 VerticalAlignment="Top"
                                                 IsVisible="{Binding HasNote}">
-                                            <TextBlock Text="{m:Tr tp.note}" FontSize="9" Foreground="{DynamicResource MeowsWarnText}" />
+                                            <TextBlock Text="{m:Tr tp.note}" FontSize="10" Foreground="{DynamicResource MeowsWarnText}" />
                                         </Border>
                                     </Panel>
                                 </Border>
@@ -354,10 +344,10 @@
                                             IsVisible="{Binding !HasPreviewImage}">
                                     <TextBlock Text="{Binding DetailItem.KindGlyph}"
                                                FontSize="34"
-                                               Opacity="0.35"
+                                               Foreground="{DynamicResource MeowsTextMuted}"
                                                HorizontalAlignment="Center" />
                                     <TextBlock Text="{m:Tr tp.nopreview}"
-                                               Opacity="0.35"
+                                               Foreground="{DynamicResource MeowsTextMuted}"
                                                FontSize="11" />
                                 </StackPanel>
                             </Panel>
@@ -371,7 +361,7 @@
                                 <TextBlock Classes="label" Text="{Binding DetailItem.ModifiedText}" />
                             </StackPanel>
                             <TextBlock Text="{Binding DetailComicText}"
-                                       Opacity="0.6"
+                                       Foreground="{DynamicResource MeowsTextMuted}"
                                        FontSize="11"
                                        TextWrapping="Wrap"
                                        IsVisible="{Binding HasDetailComicText}" />

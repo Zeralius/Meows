@@ -6,14 +6,7 @@
              x:DataType="vm:PurrgeViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
         <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="14,12,14,6" />
         </Style>
         <Style Selector="Button.row">
@@ -26,10 +19,7 @@
             <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
             <Setter Property="BorderBrush" Value="{DynamicResource MeowsSelectionLine}" />
         </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
-        </Style>
+
         <!-- The mode switch reads as two tabs rather than two radio circles. -->
         <Style Selector="RadioButton.mode">
             <Setter Property="Template">
@@ -52,16 +42,6 @@
         </Style>
         <Style Selector="RadioButton.mode:pointerover /template/ ContentPresenter">
             <Setter Property="Opacity" Value="1" />
-        </Style>
-        <Style Selector="Border.mark">
-            <Setter Property="CornerRadius" Value="3" />
-            <Setter Property="Padding" Value="5,1" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
-        <Style Selector="Border.mark TextBlock">
-            <Setter Property="FontSize" Value="9" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="White" />
         </Style>
     </UserControl.Styles>
 
@@ -229,7 +209,7 @@
 
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,0,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding !Compare.HasReport}"
                            Text="{m:Tr purrge.compare.empty}" />
@@ -270,19 +250,19 @@
                                         CommandParameter="{Binding}">
                                     <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="10">
                                         <Panel Grid.Column="0" Width="78">
-                                            <Border Classes="mark" Background="{DynamicResource MeowsDangerStrong}" IsVisible="{Binding IsMissing}">
+                                            <Border Classes="mark danger" IsVisible="{Binding IsMissing}">
                                                 <TextBlock Text="{Binding KindText}" />
                                             </Border>
-                                            <Border Classes="mark" Background="{DynamicResource MeowsWarnLine}" IsVisible="{Binding IsStale}">
+                                            <Border Classes="mark warn" IsVisible="{Binding IsStale}">
                                                 <TextBlock Text="{Binding KindText}" />
                                             </Border>
-                                            <Border Classes="mark" Background="{DynamicResource MeowsDangerLine}" IsVisible="{Binding IsDifferent}">
+                                            <Border Classes="mark danger" IsVisible="{Binding IsDifferent}">
                                                 <TextBlock Text="{Binding KindText}" />
                                             </Border>
-                                            <Border Classes="mark" Background="{DynamicResource MeowsBadge}" IsVisible="{Binding IsExtra}">
+                                            <Border Classes="mark info" IsVisible="{Binding IsExtra}">
                                                 <TextBlock Text="{Binding KindText}" />
                                             </Border>
-                                            <Border Classes="mark" Background="{DynamicResource MeowsVeil}" IsVisible="{Binding IsUnreadable}">
+                                            <Border Classes="mark neutral" IsVisible="{Binding IsUnreadable}">
                                                 <TextBlock Text="{Binding KindText}" />
                                             </Border>
                                         </Panel>
@@ -311,7 +291,7 @@
                 <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.groom.preview}" />
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,0,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding !Groom.HasRows}"
                            Text="{m:Tr purrge.groom.empty}" />
@@ -323,7 +303,7 @@
                                         Background="{DynamicResource MeowsCard}">
                                     <Grid ColumnDefinitions="*,Auto,*" ColumnSpacing="10">
                                         <TextBlock Grid.Column="0" Text="{Binding From}" TextTrimming="CharacterEllipsis" Opacity="0.7" FontSize="12" />
-                                        <TextBlock Grid.Column="1" Text="→" Opacity="0.45" IsVisible="{Binding Changes}" />
+                                        <TextBlock Grid.Column="1" Text="→" Foreground="{DynamicResource MeowsTextMuted}" IsVisible="{Binding Changes}" />
                                         <StackPanel Grid.Column="2" Spacing="1">
                                             <TextBlock Text="{Binding To}" TextTrimming="CharacterEllipsis" FontWeight="SemiBold" FontSize="12" IsVisible="{Binding Changes}" />
                                             <TextBlock Text="{Binding ProblemText}" Foreground="{DynamicResource MeowsDangerText}" FontSize="11" TextWrapping="Wrap" IsVisible="{Binding IsProblem}" />
@@ -341,7 +321,7 @@
                 <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr purrge.lookalike.grouped}" />
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,0,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding !Lookalikes.HasSets}"
                            Text="{m:Tr purrge.lookalike.empty}" />
@@ -377,7 +357,7 @@
                                                             </StackPanel>
                                                             <TextBlock Grid.Column="1" Text="{Binding PixelsText}" FontSize="11" VerticalAlignment="Center" />
                                                             <TextBlock Grid.Column="2" Text="{Binding SizeText}" FontSize="11" VerticalAlignment="Center" />
-                                                            <Border Grid.Column="3" Classes="mark" Background="{DynamicResource MeowsInfo}" IsVisible="{Binding IsKeeper}">
+                                                            <Border Grid.Column="3" Classes="mark info" IsVisible="{Binding IsKeeper}">
                                                                 <TextBlock Text="{m:Tr purrge.lookalike.keeper}" FontSize="10" Foreground="{DynamicResource MeowsInfoText}" />
                                                             </Border>
                                                             <TextBlock Grid.Column="3" Text="{Binding DistanceText}" Classes="label" VerticalAlignment="Center" IsVisible="{Binding !IsKeeper}" />
@@ -400,7 +380,7 @@
 
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,0,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding !HasResults}"
                            Text="{m:Tr purrge.empty}" />
@@ -418,7 +398,7 @@
                                     <StackPanel Spacing="8">
                                         <StackPanel Orientation="Horizontal" Spacing="10">
                                             <TextBlock Text="{Binding Header}" FontWeight="SemiBold" />
-                                            <TextBlock Text="{Binding SubHeader}" Opacity="0.5" />
+                                            <TextBlock Text="{Binding SubHeader}" Foreground="{DynamicResource MeowsTextMuted}" />
                                         </StackPanel>
 
                                         <ItemsControl ItemsSource="{Binding Files}">
@@ -547,8 +527,7 @@
                             <Button Content="{m:Tr purrge.explore}" Command="{Binding Lookalikes.RevealCommand}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center" />
                             <Button Content="{m:Tr purrge.lookalike.recycle}"
                                     Command="{Binding Lookalikes.RecycleCommand}"
-                                    Background="{DynamicResource MeowsDanger}"
-                                    BorderBrush="{DynamicResource MeowsDangerLine}"
+                                    Classes="danger"
                                     HorizontalAlignment="Stretch"
                                     HorizontalContentAlignment="Center" />
                             <TextBlock Classes="label" TextWrapping="Wrap" Text="{m:Tr purrge.lookalike.rule}" />
@@ -574,7 +553,7 @@
                                        MaxHeight="430"
                                        IsVisible="{Binding Compare.HasPreview}" />
                                 <TextBlock Text="{m:Tr purrge.nopreview}"
-                                           Opacity="0.35"
+                                           Foreground="{DynamicResource MeowsTextMuted}"
                                            FontSize="11"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"
@@ -633,7 +612,7 @@
                                        MaxHeight="430"
                                        IsVisible="{Binding HasPreviewImage}" />
                                 <TextBlock Text="{m:Tr purrge.nopreview}"
-                                           Opacity="0.35"
+                                           Foreground="{DynamicResource MeowsTextMuted}"
                                            FontSize="11"
                                            HorizontalAlignment="Center"
                                            VerticalAlignment="Center"

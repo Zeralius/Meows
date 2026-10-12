@@ -500,7 +500,7 @@ public sealed class BookshelfViewModel : ObservableObject, IDisposable, ISearcha
         }
 
         ErrorMessage = null;
-        _host.Store.Record("recycled", System.IO.Path.GetFileName(selected.Path));
+        Recycled.Record(_host.Store, [selected.Path], subject: System.IO.Path.GetFileName(selected.Path));
         Refresh();
         Status = _host.Text.Format("bookshelf.status.recycled", 1);
     }

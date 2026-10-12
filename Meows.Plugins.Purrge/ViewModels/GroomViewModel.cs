@@ -218,6 +218,7 @@ public sealed class GroomViewModel : ObservableObject
             _host.Log($"Groom renamed {run.Moves.Count} file(s) in {run.Folder}.");
         }
 
+        SayStranded(outcome);
         Status = outcome.Failed.Count == 0
             ? _host.Text.Format("purrge.groom.done", outcome.Moved)
             : _host.Text.Format("purrge.groom.done.failed", outcome.Moved, outcome.Failed.Count, string.Join(", ", outcome.Failed.Take(3)));
@@ -236,10 +237,22 @@ public sealed class GroomViewModel : ObservableObject
             new Dictionary<string, string> { ["count"] = outcome.Moved.ToString(), ["undo"] = "true" });
         _host.Log($"Groom put back {outcome.Moved} name(s) in {run.Folder}.");
 
+        SayStranded(outcome);
         Status = outcome.Failed.Count == 0
             ? _host.Text.Format("purrge.groom.undone", outcome.Moved)
             : _host.Text.Format("purrge.groom.undone.failed", outcome.Moved, outcome.Failed.Count, string.Join(", ", outcome.Failed.Take(3)));
         Settled();
+    }
+
+    /// <summary>A file left under a temporary name is worth a notification, with both names in it.</summary>
+    private void SayStranded(GroomOutcome outcome)
+    {
+        if (outcome.Stranded.Count == 0)
+            return;
+        var lines = outcome.Stranded.Select(s => _host.Text.Format("purrge.groom.stranded", s.Was, s.Now));
+        _host.Notifications.Post(NotificationSeverity.Warning, _host.Text["purrge.groom.stranded.title"], string.Join("\n", lines));
+        foreach (var (was, now) in outcome.Stranded)
+            _host.Log(LogLevel.Warning, $"Groom left {was} as {now}: neither name could be used.");
     }
 
     private void Settled()

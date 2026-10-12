@@ -37,7 +37,26 @@ public static class Shedder
         if (paths.Count == 0)
             return new ShedResult(0, 0, 0, null);
 
-        return mode == ShedMode.RecycleBin ? ToBin(paths, expected) : Permanently(paths, expected);
+        var result = mode == ShedMode.RecycleBin ? ToBin(paths, expected) : Permanently(paths, expected);
+
+        // What actually went, not what was hoped: whatever is still there is measured and taken
+        // off. It used to report the whole of what was picked, however much stayed behind.
+        var left = paths.Sum(SizeOf);
+        return result with { Freed = Math.Max(0, expected - left) };
+    }
+
+    private static long SizeOf(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                return new FileInfo(path).Length;
+            return Directory.Exists(path) ? FolderSize.Of(path) : 0;
+        }
+        catch (Exception)
+        {
+            return 0;
+        }
     }
 
     private static ShedResult ToBin(IReadOnlyList<string> paths, long expected)
@@ -79,7 +98,7 @@ public static class Shedder
 
         var reason = failed == 0
             ? null
-            : $"{failed} item(s) were in use and stayed where they are.";
+            : Meows.Plugins.Abstractions.MeowsText.Current.Format("molt.shed.inuse", failed);
 
         return new ShedResult(removed, failed, expected, reason);
     }

@@ -11,6 +11,27 @@ namespace Meows.Disk;
 /// </summary>
 public static class AccessTime
 {
+    /// <summary>
+    /// Whether Windows is keeping last-access times at all. It can be told not to (fsutil
+    /// behavior set disablelastaccess 1), and then every file reads as last opened whenever it
+    /// was made, so "never opened since" says nothing. Null when it cannot be read.
+    /// </summary>
+    public static bool? Recorded()
+    {
+        if (!OperatingSystem.IsWindows())
+            return null;
+        try
+        {
+            using var key = Microsoft.Win32.Registry.LocalMachine.OpenSubKey(@"SYSTEM\CurrentControlSet\Control\FileSystem");
+            // 0 and 2 keep them, 1 and 3 do not; the high bit only says whether Windows chose.
+            return key?.GetValue("NtfsDisableLastAccessUpdate") is int value ? (value & 1) == 0 : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
     /// <summary>The stamp as it was, or null when it could not be read, in which case there is nothing to restore.</summary>
     public static DateTime? Remember(string path)
     {

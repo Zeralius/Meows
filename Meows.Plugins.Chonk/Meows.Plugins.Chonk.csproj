@@ -21,6 +21,12 @@
       </EmbeddedResource>
     </ItemGroup>
 
+    <!-- Weigh-In is a page of this plugin now, with a plugin class the shell does not see; the
+         tests still build it on its own. -->
+    <ItemGroup>
+      <InternalsVisibleTo Include="Meows.Tests" />
+    </ItemGroup>
+
     <ItemGroup>
       <PackageReference Include="Avalonia" Version="12.1.4" ExcludeAssets="runtime" />
       <ProjectReference Include="..\Meows.Disk\Meows.Disk.csproj" />
