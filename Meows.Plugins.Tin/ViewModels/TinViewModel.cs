@@ -365,8 +365,15 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable, I
     private RowViewModel? _selected;
     private SourceViewModel? _selectedSource;
 
-    public TinViewModel(IMeowsHost host)
+    /// <summary>
+    /// What "now" is, for deciding what has lapsed and which months are whole. The real clock
+    /// unless a test pins it: fixtures written for one month went stale the month after.
+    /// </summary>
+    private readonly Func<DateTime> _now;
+
+    public TinViewModel(IMeowsHost host, Func<DateTime>? now = null)
     {
+        _now = now ?? (() => DateTime.Now);
         _host = host;
         _settings = host.LoadSettings<TinSettings>() ?? new TinSettings();
         _account = _settings.Account;
@@ -886,7 +893,7 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable, I
     {
         // Only what belongs to the account being looked at, which is also what makes a monthly
         // total mean anything when a folder holds two people's statements.
-        _series = Recurring.Find(Mine(_reading.Charges), DateTime.Now);
+        _series = Recurring.Find(Mine(_reading.Charges), _now());
 
         Sources.Clear();
         foreach (var source in _reading.Sources.Where(s => _account.Length == 0 || s.Account == _account))
@@ -914,8 +921,8 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable, I
         foreach (var slice in Spending.ByPayee(mine))
             Slices.Add(new SliceViewModel(slice, index++, Currency));
 
-        _out = Spending.Monthly(mine, DateTime.Now, incoming: false, _reading.AccountOf);
-        _in = Spending.Monthly(mine, DateTime.Now, incoming: true, _reading.AccountOf);
+        _out = Spending.Monthly(mine, _now(), incoming: false, _reading.AccountOf);
+        _in = Spending.Monthly(mine, _now(), incoming: true, _reading.AccountOf);
 
         OnEverythingChanged();
     }
@@ -938,7 +945,7 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable, I
         {
             Accounts.Add(new AccountViewModel("", null,
                 _reading.Sources.Count, _reading.Charges.Count,
-                Recurring.Find(_reading.Charges, DateTime.Now).Sum(s => s.Ongoing), Currency));
+                Recurring.Find(_reading.Charges, _now()).Sum(s => s.Ongoing), Currency));
         }
 
         AccountChoices.Add(new AccountChoice("", ""));
@@ -950,7 +957,7 @@ public sealed class TinViewModel : ObservableObject, IDisposable, ISearchable, I
             var named = _settings.AccountNames.GetValueOrDefault(key, "");
 
             Accounts.Add(new AccountViewModel(key, named, files, charges.Count,
-                Recurring.Find(charges, DateTime.Now).Sum(s => s.Ongoing), Currency));
+                Recurring.Find(charges, _now()).Sum(s => s.Ongoing), Currency));
 
             AccountChoices.Add(new AccountChoice(key,
                 named.Length > 0 ? $"{named} ({Iban.Mask(key)})" : Iban.Mask(key)));

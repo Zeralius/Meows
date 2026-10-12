@@ -15,7 +15,14 @@ namespace Meows.Services;
 /// </summary>
 public static class CrashLog
 {
+    private const long MaxCrashFile = 1024 * 1024;
+
     private static string? _file;
+
+    /// <summary>meows.crash.log beside meows.log: every crash, never cleared by a start.</summary>
+    public static string CrashFileOf(string logFile) =>
+        Path.Combine(Path.GetDirectoryName(logFile) ?? "", Path.GetFileNameWithoutExtension(logFile) + ".crash" + Path.GetExtension(logFile));
+
     private static Exception? _alreadyWritten;
 
     /// <summary>
@@ -73,6 +80,14 @@ public static class CrashLog
                 .ToString();
 
             File.AppendAllText(_file, text);
+
+            // And to a file of its own that no start clears, so a crash is still there however
+            // many times Meows has been opened since. Kept small: past a megabyte the older half
+            // of the story is moved aside rather than the file growing for ever.
+            var crashes = CrashFileOf(_file);
+            if (File.Exists(crashes) && new FileInfo(crashes).Length > MaxCrashFile)
+                File.Move(crashes, Path.ChangeExtension(crashes, ".old.log"), overwrite: true);
+            File.AppendAllText(crashes, text);
         }
         catch (Exception)
         {

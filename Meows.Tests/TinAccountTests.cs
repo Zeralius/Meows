@@ -145,7 +145,7 @@ public sealed class AccountSortingTests : IDisposable
             "03.06.2026;STREAMING AG;-12,99", "03.07.2026;STREAMING AG;-12,99", "03.08.2026;STREAMING AG;-12,99");
 
         var host = new FakeHost(Path.Combine(_root, "data"));
-        using var model = new TinViewModel(host);
+        using var model = new TinViewModel(host, () => new DateTime(2026, 9, 11));
         model.SetFolder(_root);
 
         // Everything, plus one entry for each account.
@@ -170,7 +170,7 @@ public sealed class AccountSortingTests : IDisposable
 
         var host = new FakeHost(Path.Combine(_root, "data"));
 
-        using (var model = new TinViewModel(host))
+        using (var model = new TinViewModel(host, () => new DateTime(2026, 9, 11)))
         {
             model.SetFolder(_root);
             model.AccountCommand.Execute(model.Accounts.Single(a => a.Key == Hers));
@@ -178,7 +178,7 @@ public sealed class AccountSortingTests : IDisposable
         }
 
         // A second opening reads the settings file rather than the object that wrote it.
-        using var again = new TinViewModel(host);
+        using var again = new TinViewModel(host, () => new DateTime(2026, 9, 11));
         again.Refresh();
 
         Assert.Equal("Mama", again.AccountName);
@@ -194,7 +194,7 @@ public sealed class AccountSortingTests : IDisposable
         Export("a.csv", Hers, "01.08.2026;FITNESS NORD;-29,90");
 
         var host = new FakeHost(Path.Combine(_root, "data"));
-        using var model = new TinViewModel(host);
+        using var model = new TinViewModel(host, () => new DateTime(2026, 9, 11));
         model.SetFolder(_root);
 
         Assert.False(model.HasAccounts);

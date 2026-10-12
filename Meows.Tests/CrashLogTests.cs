@@ -40,6 +40,31 @@ public sealed class CrashLogTests : IDisposable
     }
 
     [Fact]
+    public void A_crash_is_still_there_after_Meows_is_started_again()
+    {
+        CrashLog.Watch(File_);
+        CrashLog.Write("test", new InvalidOperationException("before the restart"));
+
+        // What anyone does after a crash: start it again, which starts meows.log afresh.
+        _ = new ShellLog(File_);
+        _ = new ShellLog(File_);
+
+        Assert.DoesNotContain("before the restart", System.IO.File.ReadAllText(File_));
+        Assert.Contains("before the restart", System.IO.File.ReadAllText(CrashLog.CrashFileOf(File_)));
+    }
+
+    [Fact]
+    public void The_run_before_is_kept_beside_the_log()
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(File_)!);
+        System.IO.File.WriteAllText(File_, "last time");
+
+        _ = new ShellLog(File_);
+
+        Assert.Equal("last time", System.IO.File.ReadAllText(ShellLog.PreviousOf(File_)));
+    }
+
+    [Fact]
     public void The_same_crash_is_not_written_twice()
     {
         CrashLog.Watch(File_);

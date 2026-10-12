@@ -33,7 +33,12 @@ public sealed class ShellLog
 
         try
         {
-            // Fresh each run. This is for "what just happened", not an audit trail.
+            // Fresh each run. This is for "what just happened", not an audit trail. But the run
+            // before is kept beside it: after a crash the first thing anyone does is start Meows
+            // again, and that must not wipe the stack trace a bug report needs.
+            if (File.Exists(logFile))
+                File.Move(logFile, PreviousOf(logFile), overwrite: true);
+
             File.WriteAllText(logFile, $"--- Meows started {DateTime.Now:yyyy-MM-dd HH:mm:ss} ---{Environment.NewLine}");
         }
         catch (Exception)
@@ -41,6 +46,10 @@ public sealed class ShellLog
             _logFile = null;
         }
     }
+
+    /// <summary>Where the run before this one's log is kept: meows.prev.log beside meows.log.</summary>
+    public static string PreviousOf(string logFile) =>
+        Path.Combine(Path.GetDirectoryName(logFile) ?? "", Path.GetFileNameWithoutExtension(logFile) + ".prev" + Path.GetExtension(logFile));
 
     public DateTime StartedAt { get; } = DateTime.Now;
 

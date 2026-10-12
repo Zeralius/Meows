@@ -577,7 +577,7 @@ public sealed class TinAdviceTests : IDisposable
 
     private TinViewModel Model()
     {
-        var model = new TinViewModel(new FakeHost(Path.Combine(_root, "data")));
+        var model = new TinViewModel(new FakeHost(Path.Combine(_root, "data")), () => new DateTime(2026, 9, 11));
         model.SetFolder(_folder);
         return model;
     }
@@ -594,7 +594,7 @@ public sealed class TinAdviceTests : IDisposable
         var host = new FakeHost(Path.Combine(_root, "data"));
         host.SaveSettings(new TinSettings { Folder = _folder });
 
-        using var model = new TinViewModel(host);
+        using var model = new TinViewModel(host, () => new DateTime(2026, 9, 11));
 
         Assert.Contains("Tin reading the statements", host.Work.Requested);
         Assert.Empty(model.Sources);

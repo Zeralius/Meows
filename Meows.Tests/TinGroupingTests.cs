@@ -140,7 +140,9 @@ public sealed class FamilyRowTests : IDisposable
 
     private TinViewModel Model()
     {
-        // Up to the month the tests run in, so nothing here has had time to look cancelled.
+        // April to September, seen from September, so nothing here has had time to look
+        // cancelled. The clock is pinned: written against the real one, this went stale the
+        // month after it was written.
         var rows = new List<string>();
         for (var month = 4; month <= 9; month++)
         {
@@ -153,7 +155,7 @@ public sealed class FamilyRowTests : IDisposable
             "Buchungstag;Beguenstigter;Betrag" + Environment.NewLine +
             string.Join(Environment.NewLine, rows) + Environment.NewLine);
 
-        var model = new TinViewModel(new FakeHost(Path.Combine(_root, "data")));
+        var model = new TinViewModel(new FakeHost(Path.Combine(_root, "data")), () => new DateTime(2026, 9, 11));
         model.SetFolder(_root);
         return model;
     }

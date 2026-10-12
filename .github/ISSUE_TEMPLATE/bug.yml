@@ -23,5 +23,5 @@ body:
     id: log
     attributes:
       label: Log excerpt
-      description: From %APPDATA%\Meows\meows.log. Stack trace if there is one; trim the noise around it.
+      description: From %APPDATA%\Meows, or the data folder beside Meows.exe if it runs portable. meows.crash.log for a crash, otherwise meows.log, or meows.prev.log if Meows has been started again since. Stack trace if there is one; trim the noise around it.
       render: text
