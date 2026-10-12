@@ -5,7 +5,8 @@ using Meows.Plugins.Larder.Views;
 
 namespace Meows.Plugins.Larder;
 
-public sealed class LarderPlugin : IMeowsPlugin
+/// <summary>A page of Backlog since 6.2.0, under its own id for its settings; not a plugin of its own.</summary>
+internal sealed class LarderPlugin : IMeowsPlugin
 {
     /// <summary>Stable forever. It is the settings key and the activation record.</summary>
     public string Id => "meows.larder";

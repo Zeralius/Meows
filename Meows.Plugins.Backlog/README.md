@@ -4,6 +4,13 @@ Which game to play next: backlog, ratings and a picker.
 
 Plugin id `meows.backlog`.
 
+## Pages
+
+Since 6.2.0 Backlog is *Games*, in two pages: **What next**, which is everything below, and
+**[Larder](Larder/README.md)**, every installed Steam game by size and when it was last played.
+Larder was a plugin of its own until then; its settings now live under Backlog's folder, in
+`meows.larder`, and it is in the Everyday group with Backlog rather than with the disk tools.
+
 ## What it does
 
 Reads Steam's own manifests (the same ones Larder reads) and folds every installed game into

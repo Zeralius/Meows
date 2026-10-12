@@ -92,6 +92,35 @@
                                                        Foreground="{DynamicResource MeowsTextMuted}"
                                                        FontSize="10"
                                                        TextWrapping="Wrap" />
+                                            <!-- Every folder on the card, to leave one out. -->
+                                            <Expander Header="{m:Tr molt.parts}"
+                                                      IsVisible="{Binding HasParts}"
+                                                      Padding="4"
+                                                      Margin="0,4,0,0">
+                                                <ListBox ItemsSource="{Binding Parts}"
+                                                         MaxHeight="260"
+                                                         Background="Transparent">
+                                                    <ListBox.ItemTemplate>
+                                                        <DataTemplate x:DataType="vm:SheddablePartViewModel">
+                                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                                                <CheckBox Grid.Column="0"
+                                                                          IsChecked="{Binding IsPicked}"
+                                                                          AutomationProperties.Name="{Binding Path}" />
+                                                                <TextBlock Grid.Column="1"
+                                                                           Text="{Binding Path}"
+                                                                           FontSize="11"
+                                                                           TextTrimming="PathSegmentEllipsis"
+                                                                           ToolTip.Tip="{Binding Path}"
+                                                                           VerticalAlignment="Center" />
+                                                                <TextBlock Grid.Column="2"
+                                                                           Text="{Binding SizeText}"
+                                                                           Classes="label"
+                                                                           VerticalAlignment="Center" />
+                                                            </Grid>
+                                                        </DataTemplate>
+                                                    </ListBox.ItemTemplate>
+                                                </ListBox>
+                                            </Expander>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Top">
                                             <TextBlock Text="{Binding SizeText}"

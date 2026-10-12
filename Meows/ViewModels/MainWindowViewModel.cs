@@ -71,7 +71,7 @@ public sealed class MainWindowViewModel : ObservableObject
         // The shell's own sealed secrets, beside the settings: for now only the server's key.
         _shellSecrets = new SecretStore(settings.Root);
         _reach = new ShellReach(() => _preferences.Reach, _shellSecrets, (line, level) => _log.Write("reach", line, level));
-        _popOuts = new PopOutWindows(() => Window, _preferences, SavePreferences, _log);
+        _popOuts = new PopOutWindows(() => Window, _preferences, SavePreferences, _log, () => UiScale);
         PopOutCommand = new RelayCommand(p => { if (p is TabViewModel tab) _popOuts.PopOut(tab); });
         BringBackCommand = new RelayCommand(p => { if (p is TabViewModel tab) _popOuts.BringBack(tab); });
 
@@ -1121,7 +1121,11 @@ public sealed class MainWindowViewModel : ObservableObject
         _settingsViewModel = new SettingsViewModel(_settings, _text, _log, _preferences)
         {
             TabSizeChanged = () => Strip.Resize(),
-            TextScaleChanged = () => OnPropertyChanged(nameof(UiScale)),
+            TextScaleChanged = () =>
+            {
+                OnPropertyChanged(nameof(UiScale));
+                _popOuts.Rescale();
+            },
             Server = new ServerViewModel(_preferences.Reach, _reach, _shellSecrets, _picker, SavePreferences,
                 line => _log.Write("reach", line)),
         };

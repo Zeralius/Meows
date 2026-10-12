@@ -32,7 +32,18 @@ public sealed class Sheddable
     /// <summary>The actual files and folders that would go.</summary>
     public List<string> Paths { get; } = [];
 
+    /// <summary>What each of <see cref="Paths"/> measured, so one can be left out and the total still be right.</summary>
+    public Dictionary<string, long> Sizes { get; } = new(StringComparer.OrdinalIgnoreCase);
+
     public long Size { get; set; }
+
+    /// <summary>One more thing that would go, and how big it is.</summary>
+    public void Add(string path, long size)
+    {
+        Paths.Add(path);
+        Sizes[path] = size;
+        Size += size;
+    }
 
     public bool Exists => Paths.Count > 0;
 }
@@ -136,14 +147,15 @@ public static class MoltCatalog
                 if (file.LastWriteTime >= cutoff)
                     continue;
 
-                entry.Paths.Add(file.FullName);
+                long length = 0;
                 try
                 {
-                    entry.Size += file.Length;
+                    length = file.Length;
                 }
                 catch (Exception)
                 {
                 }
+                entry.Add(file.FullName, length);
             }
 
             foreach (var folder in FolderWalk.Into(root, skipSystemFolders: false))
@@ -152,8 +164,7 @@ public static class MoltCatalog
                 if (folder.LastWriteTime >= cutoff)
                     continue;
 
-                entry.Paths.Add(folder.FullName);
-                entry.Size += FolderSize.Of(folder);
+                entry.Add(folder.FullName, FolderSize.Of(folder));
             }
         }
         catch (OperationCanceledException)
@@ -182,10 +193,9 @@ public static class MoltCatalog
             // exists and are happier finding it empty than missing.
             foreach (var child in root.EnumerateFileSystemInfos())
             {
-                entry.Paths.Add(child.FullName);
-                entry.Size += child is DirectoryInfo directory
+                entry.Add(child.FullName, child is DirectoryInfo directory
                     ? FolderSize.Of(directory)
-                    : SafeLength(child);
+                    : SafeLength(child));
             }
         }
         catch (Exception)
@@ -263,15 +273,13 @@ public static class MoltCatalog
             {
                 if (isBuildProject && child.Name is "bin" or "obj")
                 {
-                    build.Paths.Add(child.FullName);
-                    build.Size += FolderSize.Of(child);
+                    build.Add(child.FullName, FolderSize.Of(child));
                     continue;
                 }
 
                 if (isUnityProject && child.Name is "Library" or "Temp")
                 {
-                    unity.Paths.Add(child.FullName);
-                    unity.Size += FolderSize.Of(child);
+                    unity.Add(child.FullName, FolderSize.Of(child));
                     continue;
                 }
 

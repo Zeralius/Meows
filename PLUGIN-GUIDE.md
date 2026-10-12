@@ -988,6 +988,11 @@ question, and Tab walks through whatever the veil is covering.
 
 Answer Escape too, from the view's code-behind; Litter's view does both.
 
+**Rows in a list are named for you.** When a row of a `ListBox`, `TreeView` or `ComboBox` takes
+focus, the shell names it from the first three lines of text it shows, so a screen reader says
+"Holiday photos, 4.2 GB" rather than the view model's type. Set `AutomationProperties.Name` on
+the row yourself when its text does not say what it is.
+
 **Name what has no words.** A button whose content is a symbol (✕, ↑, ⧉, +) is read aloud as
 the symbol. Give it `AutomationProperties.Name="{m:Tr myplugin.remove}"`, and its tooltip the
 same words.

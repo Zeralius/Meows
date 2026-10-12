@@ -298,6 +298,30 @@ public sealed class MoltPickingTests
     }
 
     [Fact]
+    public void One_folder_on_a_card_can_be_left_out_and_the_totals_follow()
+    {
+        var host = new FakeHost(Path.Combine(Path.GetTempPath(), "moltvm-" + Guid.NewGuid().ToString("N")[..8]));
+        var model = new MoltViewModel(host);
+        var build = new Sheddable { Id = "build", Name = "bin and obj", Where = @"F:\Projects", What = "what", Cost = "cost" };
+        build.Add(@"F:\Projects\A\bin", 4000);
+        build.Add(@"F:\Projects\A\obj", 1000);
+        build.Add(@"F:\Projects\Tool\bin", 9000);
+        model.Show([build]);
+        var card = model.Items.Single();
+        card.IsPicked = true;
+        Assert.Equal(14000, model.PickedSize);
+        Assert.True(card.HasParts);
+
+        // The tool's bin is the one somebody wants kept.
+        card.Parts.Single(p => p.Path == @"F:\Projects\Tool\bin").IsPicked = false;
+
+        Assert.Equal(5000, model.PickedSize);
+        Assert.Equal([@"F:\Projects\A\bin", @"F:\Projects\A\obj"], card.PickedPaths);
+        Assert.Contains("2", card.CountText);
+        Assert.Contains("3", card.CountText);
+    }
+
+    [Fact]
     public void Unticking_it_again_puts_everything_back()
     {
         var model = Model(out _);

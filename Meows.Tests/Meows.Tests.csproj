@@ -64,7 +64,6 @@
     <ProjectReference Include="..\Meows.Plugins.Rehome\Meows.Plugins.Rehome.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Scoop\Meows.Plugins.Scoop.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Trail\Meows.Plugins.Trail.csproj" />
-    <ProjectReference Include="..\Meows.Plugins.Larder\Meows.Plugins.Larder.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Carry\Meows.Plugins.Carry.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Cattery\Meows.Plugins.Cattery.csproj" />
     <ProjectReference Include="..\Meows.Plugins.Nest\Meows.Plugins.Nest.csproj" />

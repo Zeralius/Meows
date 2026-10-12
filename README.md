@@ -30,12 +30,11 @@ to install.
 | **[Rehome](Meows.Plugins.Rehome/README.md)** | Packs the machine up before a clean Windows install: what is installed and how to get it back, what the wipe takes and where to keep it, and the way back afterwards |
 | **[Scoop](Meows.Plugins.Scoop/README.md)** | Every drive's Recycle Bin in one list: what is in it, how big, how old, put back one at a time or emptied per drive |
 | **[Trail](Meows.Plugins.Trail/README.md)** | PATH read and explained: entries pointing nowhere, the same tool on there twice, and which one actually wins |
-| **[Larder](Meows.Plugins.Larder/README.md)** | Every installed Steam game with its size, when it was last played and which library it is in, the never-touched largest first |
 | **[Carry](Meows.Plugins.Carry/README.md)** | Moves a folder to a drive with room, checks every file, and leaves a junction behind so every path that pointed at it still works |
 | **[Cattery](Meows.Plugins.Cattery/README.md)** | Every git repository under your project folders: its branch, uncommitted work, what is not pushed, and how long since anyone committed, the most neglected first |
 | **[Nest](Meows.Plugins.Nest/README.md)** | Game saves, maps, project files and keys: the few things that cannot be downloaded again, how much there is, and how long since each was copied somewhere else |
 | **[Basket](Meows.Plugins.Basket/README.md)** | Local task board with lists, cards and due dates. No account, no cloud |
-| **[Backlog](Meows.Plugins.Backlog/README.md)** | Which game to play next: backlog, ratings and a picker |
+| **[Backlog](Meows.Plugins.Backlog/README.md)** | Games, in two pages: which to play next, with ratings and a picker; and [Larder](Meows.Plugins.Backlog/Larder/README.md), every installed Steam game with its size, when it was last played and which library it is in, the never-touched largest first |
 | **[Screenshot](Meows.Plugins.Screenshot/README.md)** | Sorts game screenshots by game: duplicates out, best-of picks to Scruff |
 | **[Pantry](Meows.Plugins.Pantry/README.md)** | Recipe box with expiry dates and a weekly cooking plan |
 | **[Bookshelf](Meows.Plugins.Bookshelf/README.md)** | Ebook library: dedupe by content, unfinished first, staging for the ereader |
@@ -48,7 +47,7 @@ to install.
 The last three are built around a specific posting bot. The rest are general purpose.
 
 Since 6.1.0 a few that answered the same question are pages of one tab: Catnip and Mouser of
-Litter, Weigh-In of Chonk, Perch of Telegram Poster. Their settings, history, rules and personas
+Litter, Weigh-In of Chonk, Perch of Telegram Poster, and since 6.2.0 Larder of Backlog. Their settings, history, rules and personas
 came with them. What Meows is watching, which was the Purr plugin, is the shell's own **Watches**
 tab.
 
@@ -513,11 +512,16 @@ anything was refused or is missing a private library. Asking the app is not the 
 file names: a plugin whose shared library did not get staged loads perfectly and then fails the
 moment it is switched on, which is exactly how three plugins once shipped broken.
 
+Each release carries a `SHA256SUMS.txt` beside the zip. `Meows.exe` and the DLLs of Meows' own
+are Authenticode signed when the repository has two secrets, `SIGNING_CERTIFICATE` (the `.pfx`,
+base64 encoded) and `SIGNING_PASSWORD`; without them the release goes out unsigned and Windows
+SmartScreen may warn on first start.
+
 To cut a release, with `<Version>` in `Meows/Meows.csproj` already saying the same number (the
 workflow refuses a tag that disagrees with it):
 
 ```bash
-git tag v6.1.0 && git push origin v6.1.0
+git tag v6.2.0 && git push origin v6.2.0
 ```
 
 ## Licence

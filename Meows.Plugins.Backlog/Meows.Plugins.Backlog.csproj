@@ -21,6 +21,12 @@
       </EmbeddedResource>
     </ItemGroup>
 
+    <!-- Larder is a page of this plugin now, with a plugin class the shell does not see; the
+         tests still build it on its own. -->
+    <ItemGroup>
+      <InternalsVisibleTo Include="Meows.Tests" />
+    </ItemGroup>
+
     <!-- Avalonia and the contract come from the shell, so neither is copied: the plugin
          folder holds only what is its own. Add Meows.Disk, Meows.Media or Meows.Bot.Core
          as plain ProjectReferences if it needs them; those do get copied. -->

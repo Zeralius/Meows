@@ -5,8 +5,8 @@ using Meows.Services;
 namespace Meows.Tests;
 
 /// <summary>
-/// Plugins taken in as pages of another (6.1.0): Catnip and Mouser into Litter, Weigh-In into
-/// Chonk, Perch into Telegram Poster. What was theirs carries over, an old copy of one is refused,
+/// Plugins taken in as pages of another: Catnip and Mouser into Litter, Weigh-In into Chonk,
+/// Perch into Telegram Poster (6.1.0), Larder into Backlog (6.2.0). What was theirs carries over, an old copy of one is refused,
 /// and a job keeps the name a scheduled task knows it by.
 /// </summary>
 public sealed class PluginMergeTests : IDisposable
@@ -31,7 +31,8 @@ public sealed class PluginMergeTests : IDisposable
         Assert.Equal("meows.litter", map["meows.mouser"]);
         Assert.Equal("meows.chonk", map["meows.weighin"]);
         Assert.Equal("meows.telegram-poster", map["meows.perch"]);
-        Assert.Equal(4, map.Count);
+        Assert.Equal("meows.backlog", map["meows.larder"]);
+        Assert.Equal(5, map.Count);
     }
 
     [Fact]

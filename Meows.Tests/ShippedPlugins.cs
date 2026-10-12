@@ -30,7 +30,6 @@ internal static class ShippedPlugins
         typeof(Plugins.Rehome.RehomePlugin),
         typeof(Plugins.Scoop.ScoopPlugin),
         typeof(Plugins.Trail.TrailPlugin),
-        typeof(Plugins.Larder.LarderPlugin),
         typeof(Plugins.Carry.CarryPlugin),
         typeof(Plugins.Cattery.CatteryPlugin),
         typeof(Plugins.Nest.NestPlugin),

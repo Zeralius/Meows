@@ -25,7 +25,7 @@ public static class Personas
     /// </summary>
     public static IReadOnlyList<(string NameKey, string[] PluginIds)> ReadyMade { get; } =
     [
-        ("persona.gamer", ["meows.larder", "meows.backlog", "meows.screenshot", "meows.nest"]),
+        ("persona.gamer", ["meows.backlog", "meows.screenshot", "meows.nest"]),
         ("persona.gamemaster", ["meows.familiar", "meows.collar", "meows.nest"]),
         ("persona.household", ["meows.collar", "meows.basket", "meows.pantry", "meows.naptime", "meows.tin",
             "meows.bookshelf", "meows.vet"]),

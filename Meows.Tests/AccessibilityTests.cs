@@ -125,6 +125,40 @@ public sealed class AccessibilityTests
         Assert.NotEqual(unselected, tab.AccessibleName);
     }
 
+    [Avalonia.Headless.XUnit.AvaloniaFact]
+    public void A_row_in_a_list_is_read_out_as_the_words_it_shows()
+    {
+        Meows.Views.ListItemNames.Register();
+        var list = new Avalonia.Controls.ListBox
+        {
+            ItemsSource = new[] { ("Holiday photos", "4.2 GB"), ("Old installers", "900 MB") },
+            ItemTemplate = new Avalonia.Controls.Templates.FuncDataTemplate<(string Name, string Size)>((row, _) =>
+                new Avalonia.Controls.StackPanel
+                {
+                    Children =
+                    {
+                        new Avalonia.Controls.TextBlock { Text = row.Name },
+                        new Avalonia.Controls.TextBlock { Text = row.Size },
+                    },
+                }),
+        };
+        var window = new Avalonia.Controls.Window { Content = list };
+        window.Show();
+        list.SelectedIndex = 0;
+        var row = (Avalonia.Controls.ListBoxItem)list.ContainerFromIndex(0)!;
+
+        row.Focus();
+
+        Assert.Equal("Holiday photos, 4.2 GB", Avalonia.Automation.AutomationProperties.GetName(row));
+
+        // A row that names itself keeps its own name.
+        var other = (Avalonia.Controls.ListBoxItem)list.ContainerFromIndex(1)!;
+        Avalonia.Automation.AutomationProperties.SetName(other, "Installers, nearly a gigabyte");
+        other.Focus();
+        Assert.Equal("Installers, nearly a gigabyte", Avalonia.Automation.AutomationProperties.GetName(other));
+        window.Close();
+    }
+
     [Fact]
     public void A_two_step_button_wants_a_second_press_that_is_not_the_same_double_click()
     {

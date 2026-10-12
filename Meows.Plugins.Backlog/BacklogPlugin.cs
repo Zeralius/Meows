@@ -3,26 +3,18 @@ using Meows.Plugins.Abstractions;
 using Meows.Plugins.Backlog.Services;
 using Meows.Plugins.Backlog.ViewModels;
 using Meows.Plugins.Backlog.Views;
+using Meows.Plugins.Larder;
 
 namespace Meows.Plugins.Backlog;
 
-public sealed class BacklogPlugin : IMeowsPlugin
+/// <summary>
+/// Games, in two pages: what to play next, with ratings and a picker, and every installed Steam
+/// game by size and when it was last played (Larder until 6.2.0). Both read the same Steam
+/// libraries and were two tabs about one shelf. Backlog keeps its id, so its pile, ratings and
+/// history carry straight on; Larder reads its own settings from a folder under Backlog's.
+/// </summary>
+public sealed class BacklogPlugin() : PagedPlugin(new PilePage(), new LarderPlugin())
 {
-    /// <summary>Stable forever. It is the settings key and the activation record.</summary>
-    public string Id => "meows.backlog";
-
-    public string DisplayName => "Backlog";
-
-    public string PlainName => "backlog.name.plain";
-
-    public string Description => "backlog.description";
-
-    public string Icon => "🎮";
-
-    public string Category => "group.disk";
-
-    public PluginTopics Topics => PluginTopics.Gaming;
-
     /// <summary>A handoff Backlog sends itself: show this game. The note carries the entry's id.</summary>
     public const string ShowVerb = "backlog.show";
 
@@ -32,9 +24,34 @@ public sealed class BacklogPlugin : IMeowsPlugin
     /// <summary>The job that picks a game with no window.</summary>
     public const string PickJob = "pick";
 
+    public override string PlainName => "backlog.name.plain";
+
+    public override string Description => "backlog.description";
+
+    public override string? Category => "group.everyday";
+}
+
+/// <summary>The first page: the pile, as Backlog has always kept it.</summary>
+internal sealed class PilePage : IMeowsPlugin
+{
+    /// <summary>Stable forever. It is the settings key and the activation record.</summary>
+    public string Id => "meows.backlog";
+
+    public string DisplayName => "Backlog";
+
+    public string PlainName => "backlog.page.plain";
+
+    public string Description => "backlog.page.description";
+
+    public string Icon => "🎮";
+
+    public string Category => "group.everyday";
+
+    public PluginTopics Topics => PluginTopics.Gaming;
+
     public IReadOnlyList<PluginAction> Actions =>
     [
-        new(PickAction, "backlog.action.pick", "backlog.action.pick.hint"),
+        new(BacklogPlugin.PickAction, "backlog.action.pick", "backlog.action.pick.hint"),
     ];
 
     public IReadOnlyList<RecordedKind> Records =>
@@ -46,7 +63,7 @@ public sealed class BacklogPlugin : IMeowsPlugin
 
     public IReadOnlyList<PluginJob> Jobs =>
     [
-        new(PickJob, "backlog.job.pick", "backlog.job.pick.hint"),
+        new(BacklogPlugin.PickJob, "backlog.job.pick", "backlog.job.pick.hint"),
     ];
 
     public Control CreateView(IMeowsHost host) => new BacklogView
@@ -75,7 +92,7 @@ public sealed class BacklogPlugin : IMeowsPlugin
 
     public Task<string> RunJob(string jobId, IMeowsJobHost host, CancellationToken token)
     {
-        if (jobId != PickJob)
+        if (jobId != BacklogPlugin.PickJob)
             throw new JobDeclinedException(host.Text.Format("backlog.job.unknown", jobId));
 
         var settings = host.LoadSettings<BacklogSettings>() ?? new BacklogSettings();
@@ -105,7 +122,7 @@ public sealed class BacklogPlugin : IMeowsPlugin
 
                 var id = entry.Id;
                 hits.Add(new SearchHit(title, host.Text[Pile.Describe(entry.Status)],
-                    () => host.Handoff.Send(host.PluginId, new Handoff(ShowVerb, [], id))));
+                    () => host.Handoff.Send(host.PluginId, new Handoff(BacklogPlugin.ShowVerb, [], id))));
             }
 
             return hits;

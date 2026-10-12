@@ -15,11 +15,59 @@ public sealed class MoltSettings
     public bool Permanent { get; set; }
 }
 
-public sealed class SheddableViewModel(Sheddable item) : ObservableObject
+/// <summary>One file or folder on a card, which can be left out of what the card sheds.</summary>
+public sealed class SheddablePartViewModel(string path, long size, Action changed) : ObservableObject
+{
+    private bool _isPicked = true;
+
+    public string Path { get; } = path;
+
+    public long Size { get; } = size;
+
+    public string SizeText => FolderSize.Humanise(Size);
+
+    public bool IsPicked
+    {
+        get => _isPicked;
+        set
+        {
+            if (SetField(ref _isPicked, value))
+                changed();
+        }
+    }
+}
+
+public sealed class SheddableViewModel : ObservableObject
 {
     private bool _isPicked;
+    private List<SheddablePartViewModel>? _parts;
 
-    public Sheddable Item { get; } = item;
+    public SheddableViewModel(Sheddable item) => Item = item;
+
+    public Sheddable Item { get; }
+
+    /// <summary>
+    /// Every file and folder on the card, each ticked to start with. A card is all-or-nothing
+    /// otherwise, and "bin and obj under F:\Kadsenstuff" can hold one folder somebody wants kept.
+    /// Built the first time it is opened, since the temp card can hold thousands.
+    /// </summary>
+    public IReadOnlyList<SheddablePartViewModel> Parts => _parts ??=
+        [.. Item.Paths.Select(p => new SheddablePartViewModel(p, Item.Sizes.GetValueOrDefault(p), PartsChanged))];
+
+    /// <summary>More than one thing on the card, so there is something to leave out.</summary>
+    public bool HasParts => Item.Paths.Count > 1;
+
+    /// <summary>What the card would shed now: everything, unless some of it was unticked.</summary>
+    public IReadOnlyList<string> PickedPaths => _parts is null ? Item.Paths : [.. _parts.Where(p => p.IsPicked).Select(p => p.Path)];
+
+    public long PickedSize => _parts is null ? Item.Size : _parts.Where(p => p.IsPicked).Sum(p => p.Size);
+
+    /// <summary>A part ticked or unticked: the card's size and count, and through them the tab's totals.</summary>
+    private void PartsChanged()
+    {
+        OnPropertyChanged(nameof(SizeText));
+        OnPropertyChanged(nameof(CountText));
+    }
 
     /// <summary>
     /// The catalogue hands us keys, so this is where they become words. A real path in Where is
@@ -36,11 +84,18 @@ public sealed class SheddableViewModel(Sheddable item) : ObservableObject
 
     public string Cost => MeowsText.Current[Item.Cost];
 
-    public string SizeText => FolderSize.Humanise(Item.Size);
+    public string SizeText => FolderSize.Humanise(PickedSize);
 
-    public string CountText => Item.Paths.Count == 1
-        ? MeowsText.Current["molt.items.one"]
-        : MeowsText.Current.Format("molt.items.many", Item.Paths.Count);
+    public string CountText
+    {
+        get
+        {
+            var picked = PickedPaths.Count;
+            if (picked != Item.Paths.Count)
+                return MeowsText.Current.Format("molt.items.some", picked, Item.Paths.Count);
+            return picked == 1 ? MeowsText.Current["molt.items.one"] : MeowsText.Current.Format("molt.items.many", picked);
+        }
+    }
 
     public bool IsPicked
     {
@@ -174,7 +229,7 @@ public sealed class MoltViewModel : ObservableObject, IDisposable, ISearchable, 
 
     public int PickedCount => Items.Count(i => i.IsPicked);
 
-    public long PickedSize => Items.Where(i => i.IsPicked).Sum(i => i.Item.Size);
+    public long PickedSize => Items.Where(i => i.IsPicked).Sum(i => i.PickedSize);
 
     public string PickedText => PickedCount == 0
         ? _host.Text["molt.picked.none"]
@@ -269,7 +324,8 @@ public sealed class MoltViewModel : ObservableObject, IDisposable, ISearchable, 
 
     private void OnItemChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(SheddableViewModel.IsPicked))
+        // A card ticked or unticked, or one of its folders left out.
+        if (e.PropertyName is nameof(SheddableViewModel.IsPicked) or nameof(SheddableViewModel.SizeText))
             Repick();
     }
 
@@ -294,8 +350,10 @@ public sealed class MoltViewModel : ObservableObject, IDisposable, ISearchable, 
         if (picked.Count == 0)
             return;
 
-        var paths = picked.SelectMany(i => i.Item.Paths).ToList();
-        var expected = picked.Sum(i => i.Item.Size);
+        var paths = picked.SelectMany(i => i.PickedPaths).ToList();
+        var expected = picked.Sum(i => i.PickedSize);
+        if (paths.Count == 0)
+            return;
         var mode = Permanent ? ShedMode.Permanent : ShedMode.RecycleBin;
 
         IsScanning = true;

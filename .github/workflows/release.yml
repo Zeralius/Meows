@@ -165,6 +165,47 @@ jobs:
           }
           "all $expected plugin(s) present and loadable"
 
+      # Authenticode, when a certificate has been given: Meows.exe and every DLL of our own,
+      # timestamped so the signature outlives the certificate. Without the two secrets the
+      # release goes out unsigned, as before, and says so in the log. A fork without them still
+      # gets a release.
+      #   SIGNING_CERTIFICATE  the .pfx, base64 encoded
+      #   SIGNING_PASSWORD     its password
+      - name: Sign what we built
+        shell: pwsh
+        env:
+          CERTIFICATE: ${{ secrets.SIGNING_CERTIFICATE }}
+          PASSWORD: ${{ secrets.SIGNING_PASSWORD }}
+        run: |
+          if (-not $env:CERTIFICATE) {
+            "No SIGNING_CERTIFICATE secret: this release is not signed."
+            exit 0
+          }
+
+          $pfx = Join-Path $env:RUNNER_TEMP 'signing.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:CERTIFICATE))
+          try {
+            $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin\*\x64\signtool.exe" |
+              Sort-Object FullName -Descending | Select-Object -First 1
+            if (-not $signtool) { throw "signtool.exe is not on this runner" }
+
+            # Ours only: Meows*.dll and the exe. Avalonia, SkiaSharp and the rest are signed by
+            # whoever made them, or not, and are not ours to sign.
+            $files = @(Get-Item artifacts/Meows-win-x64/Meows.exe) +
+                     @(Get-ChildItem artifacts/Meows-win-x64 -Recurse -Filter 'Meows*.dll')
+            "signing $($files.Count) file(s)"
+
+            & $signtool.FullName sign /f $pfx /p $env:PASSWORD /fd SHA256 `
+              /tr http://timestamp.digicert.com /td SHA256 $files.FullName
+            if ($LASTEXITCODE -ne 0) { throw "signtool failed" }
+
+            & $signtool.FullName verify /pa $files[0].FullName
+            if ($LASTEXITCODE -ne 0) { throw "The signature on Meows.exe does not verify" }
+          }
+          finally {
+            Remove-Item $pfx -Force -ErrorAction SilentlyContinue
+          }
+
       - name: Zip it
         shell: pwsh
         run: |
@@ -311,7 +352,7 @@ jobs:
                     (Get-ChildItem artifacts/nuget/*.nupkg | ForEach-Object { $_.FullName })
 
           # What each file should hash to, as a file of its own beside them, so a download can
-          # be checked against what this build made. Nothing here is signed yet.
+          # be checked against what this build made, signed or not.
           $sums = "artifacts/SHA256SUMS.txt"
           $assets | ForEach-Object {
             "$((Get-FileHash $_ -Algorithm SHA256).Hash.ToLower())  $(Split-Path $_ -Leaf)"

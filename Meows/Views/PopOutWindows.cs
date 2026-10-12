@@ -22,9 +22,13 @@ public sealed class PopOutWindows
     private readonly Action _savePreferences;
     private readonly ShellLog _log;
     private readonly Dictionary<TabViewModel, Window> _open = [];
+    private readonly Func<double> _scale;
 
-    public PopOutWindows(Func<Window?> mainWindow, ShellPreferences preferences, Action savePreferences, ShellLog log)
+    /// <param name="scale">The text size the main window is drawn at, 1 at 100%, which a tab keeps in a window of its own.</param>
+    public PopOutWindows(Func<Window?> mainWindow, ShellPreferences preferences, Action savePreferences, ShellLog log,
+        Func<double>? scale = null)
     {
+        _scale = scale ?? (() => 1);
         _mainWindow = mainWindow;
         _preferences = preferences;
         _savePreferences = savePreferences;
@@ -63,7 +67,7 @@ public sealed class PopOutWindows
         window.Closing += (_, _) =>
         {
             Remember(tab, window);
-            window.Content = null;
+            Release(window);
             _open.Remove(tab);
             // The tab takes its content back once the window has let go of it.
             Dispatcher.UIThread.Post(() => tab.IsPoppedOut = false);
@@ -101,8 +105,29 @@ public sealed class PopOutWindows
             RememberOut();
             return;
         }
-        window.Content = control;
+        // Drawn at the same text size as the main window: a tab taken out of it should not
+        // shrink back to 100% because it is in a window of its own.
+        window.Content = new LayoutTransformControl { Child = control, LayoutTransform = Transform(_scale()) };
         window.Show();
+    }
+
+    /// <summary>The text size changed: every window out redraws at it.</summary>
+    public void Rescale()
+    {
+        foreach (var window in _open.Values)
+            if (window.Content is LayoutTransformControl zoom)
+                zoom.LayoutTransform = Transform(_scale());
+    }
+
+    private static Avalonia.Media.ScaleTransform? Transform(double scale) =>
+        Math.Abs(scale - 1) < 0.001 ? null : new Avalonia.Media.ScaleTransform(scale, scale);
+
+    /// <summary>Lets go of the tab's content, so the tab can take it back.</summary>
+    private static void Release(Window window)
+    {
+        if (window.Content is LayoutTransformControl zoom)
+            zoom.Child = null;
+        window.Content = null;
     }
 
     public void BringBack(TabViewModel tab)
@@ -117,7 +142,7 @@ public sealed class PopOutWindows
         if (_open.TryGetValue(tab, out var window))
         {
             Remember(tab, window);
-            window.Content = null;
+            Release(window);
             _open.Remove(tab);
             window.Close();
         }
@@ -132,7 +157,7 @@ public sealed class PopOutWindows
         foreach (var (tab, window) in _open.ToList())
         {
             Remember(tab, window);
-            window.Content = null;
+            Release(window);
             window.Close();
         }
         _open.Clear();
