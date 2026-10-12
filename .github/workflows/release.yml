@@ -9,6 +9,11 @@ on:
         description: 'Version to build, without the leading v (e.g. 0.1.0)'
         required: true
 
+# Two releases at once would race to create the same GitHub release and push the same package.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 permissions:
   contents: write
   # Lets the job ask GitHub for the short lived token NuGet exchanges for a publishing key.
@@ -20,25 +25,36 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v5
+      # Actions pinned to a commit, the tag in the comment: a tag can be moved to other code,
+      # and this job can write releases and publish to NuGet.
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           # Every tag, so the NuGet step can read the contract version the previous release had.
           fetch-depth: 0
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
           dotnet-version: '10.0.x'
 
+      # The typed version and the tag reach the script through the environment, never pasted
+      # into its text: pasted, a version typed as '; anything; ' ran before the check below.
       - name: Work out the version
         id: version
         shell: pwsh
+        env:
+          EVENT: ${{ github.event_name }}
+          TYPED: ${{ inputs.version }}
+          TAG: ${{ github.ref_name }}
         run: |
-          $v = if ('${{ github.event_name }}' -eq 'workflow_dispatch') {
-            '${{ inputs.version }}'
-          } else {
-            '${{ github.ref_name }}' -replace '^v', ''
-          }
+          $v = if ($env:EVENT -eq 'workflow_dispatch') { $env:TYPED } else { $env:TAG -replace '^v', '' }
           if ($v -notmatch '^\d+\.\d+\.\d+$') { throw "Version '$v' is not major.minor.patch" }
+
+          # The version shown in the window and stamped into the exe is the csproj's; a tag that
+          # disagrees with it would ship a build that calls itself something else.
+          $csproj = Get-Content Meows/Meows.csproj -Raw
+          if ($csproj -notmatch '<Version>([^<]+)</Version>') { throw "Meows.csproj has no <Version>" }
+          if ($Matches[1] -ne $v) { throw "Releasing $v, but Meows/Meows.csproj says $($Matches[1])" }
+
           "value=$v" >> $env:GITHUB_OUTPUT
           "Building $v"
 
@@ -188,7 +204,7 @@ jobs:
       - name: Get a short lived NuGet key
         id: login
         if: steps.nuget.outputs.publish == 'true'
-        uses: NuGet/login@v1
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1
         with:
           # The nuget.org profile name, not an email address.
           user: ${{ secrets.NUGET_USER }}
@@ -196,6 +212,8 @@ jobs:
       - name: Publish the contract and template to NuGet
         if: steps.nuget.outputs.publish == 'true'
         shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ steps.login.outputs.NUGET_API_KEY }}
         run: |
           # Listed here rather than handed to dotnet as a wildcard. PowerShell passes
           # artifacts/nuget/*.nupkg through untouched, and whether dotnet expands it varies, so
@@ -262,7 +280,7 @@ jobs:
             "pushing $id $version"
             dotnet nuget push $package.FullName `
               --source https://api.nuget.org/v3/index.json `
-              --api-key ${{ steps.login.outputs.NUGET_API_KEY }}
+              --api-key $env:NUGET_API_KEY
 
             if ($LASTEXITCODE -ne 0) { throw "Pushing $id $version to NuGet failed" }
           }
@@ -273,8 +291,9 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.value }}
         run: |
-          $v = '${{ steps.version.outputs.value }}'
+          $v = $env:VERSION
           $notes = @"
           Self-contained Windows x64 build. No .NET runtime needed.
 
@@ -290,6 +309,14 @@ jobs:
           "@
           $assets = @("artifacts/Meows-$v-win-x64.zip") +
                     (Get-ChildItem artifacts/nuget/*.nupkg | ForEach-Object { $_.FullName })
+
+          # What each file should hash to, as a file of its own beside them, so a download can
+          # be checked against what this build made. Nothing here is signed yet.
+          $sums = "artifacts/SHA256SUMS.txt"
+          $assets | ForEach-Object {
+            "$((Get-FileHash $_ -Algorithm SHA256).Hash.ToLower())  $(Split-Path $_ -Leaf)"
+          } | Set-Content -Path $sums -Encoding ascii
+          $assets += $sums
 
           # Re-pushing a tag is normal, whether from a history rewrite or a rebuilt asset, so
           # update an existing release rather than failing on it. The try/catch is because a
@@ -311,5 +338,7 @@ jobs:
             gh release upload "v$v" @assets --clobber
           } else {
             Write-Host "Creating release v$v."
-            gh release create "v$v" @assets --title "Meows $v" --notes $notes
+            # --target: without it a tag that does not exist yet, which is what a manual run
+            # makes, is put on the default branch's tip rather than on the commit just built.
+            gh release create "v$v" @assets --title "Meows $v" --notes $notes --target $env:GITHUB_SHA
           }

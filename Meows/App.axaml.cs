@@ -14,6 +14,31 @@ public partial class App : Application
 {
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
+    private TrayPresence? _tray;
+
+    /// <summary>
+    /// Starts Meows again: a new process told to wait until this one has gone, so it can claim
+    /// being the one Meows, and then this one quits the way the tray's Quit does.
+    /// </summary>
+    public static void Restart()
+    {
+        if (Current is not App { _tray: { } tray } || Environment.ProcessPath is not { } exe)
+            return;
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(exe)
+            {
+                ArgumentList = { "--after", Environment.ProcessId.ToString() },
+                UseShellExecute = false,
+            });
+        }
+        catch (Exception)
+        {
+            return;
+        }
+        tray.Quit();
+    }
+
     public override void OnFrameworkInitializationCompleted()
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
@@ -30,6 +55,16 @@ public partial class App : Application
             if (settings.StartupNote is { } note)
                 log.Write("settings", note);
 
+            // A settings bundle imported last run is read in now, before anything has a settings
+            // file or the history open: read in while Meows ran, the running app wrote over it.
+            var imported = SettingsBundle.ApplyPending(settings.Root, MainWindowViewModel.AppVersionText);
+            if (imported is not null)
+                log.Write("settings", imported.Ok
+                    ? $"Read in the staged bundle: {imported.Files} file(s), {imported.Skipped} skipped, " +
+                      $"{imported.RulesSwitchedOff} new rule(s) switched off, previous settings in {imported.BackupPath}"
+                    : $"The staged bundle could not be read in: {imported.Error}",
+                    imported.Ok ? LogLevel.Info : LogLevel.Warning);
+
             // Both of these before the first control exists. The theme has to be right on the
             // first frame rather than flashing dark and correcting itself, and the strings have
             // to be there before anything asks for one.
@@ -43,6 +78,13 @@ public partial class App : Application
             MeowsText.Use(text);
 
             var notifications = new NotificationCenter();
+            if (imported is not null)
+                notifications.Post("meows.shell", imported.Ok ? NotificationSeverity.Info : NotificationSeverity.Warning,
+                    text[imported.Ok ? "settings.bundle.arrived" : "settings.bundle.failed.title"],
+                    imported.Ok
+                        ? text.Format(imported.RulesSwitchedOff > 0 ? "settings.bundle.arrived.rules" : "settings.bundle.arrived.text",
+                            imported.Files, Path.GetFileName(imported.BackupPath), imported.RulesSwitchedOff)
+                        : text.Format("settings.bundle.failed", imported.Error), action: null);
             var background = new BackgroundTaskService(notifications, log);
             var catalog = new PluginCatalog(log);
             var store = new MeowsStore(settings.Root, message => log.Write("store", message));
@@ -61,7 +103,7 @@ public partial class App : Application
             // and closing the window hides it unless the Settings tab says a close is a quit. Started
             // with --tray, as the login entry does when asked, there is no window until it is wanted.
             desktop.ShutdownMode = ShutdownMode.OnExplicitShutdown;
-            var tray = new TrayPresence(
+            var tray = _tray = new TrayPresence(
                 desktop,
                 () => new MainWindow { DataContext = viewModel },
                 preferences,

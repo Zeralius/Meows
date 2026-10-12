@@ -51,7 +51,21 @@ public sealed class SecretStore : IMeowsSecrets
     public void Set(string name, string value)
     {
         Directory.CreateDirectory(_directory);
-        File.WriteAllBytes(PathFor(name), Protect(Encoding.UTF8.GetBytes(value)));
+
+        // Through a temporary file: written in place, a crash halfway left a sealed blob that
+        // would not unseal, which Get reports as no secret at all.
+        var path = PathFor(name);
+        var temporary = $"{path}.{Guid.NewGuid():N}.writing";
+        try
+        {
+            File.WriteAllBytes(temporary, Protect(Encoding.UTF8.GetBytes(value)));
+            File.Move(temporary, path, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporary))
+                File.Delete(temporary);
+        }
     }
 
     public void Forget(string name)

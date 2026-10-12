@@ -10,10 +10,16 @@ namespace Meows.Plugins;
 /// </summary>
 internal sealed class PluginLoadContext : AssemblyLoadContext
 {
-    private static readonly string[] SharedPrefixes =
+    /// <summary>Always the shell's copy: their types cross between the shell and the plugin.</summary>
+    private static readonly string[] MustShare =
     [
         "Meows.Plugins.Abstractions",
         "Avalonia",
+    ];
+
+    /// <summary>The shell's copy when it has one at least as new as the plugin asks for.</summary>
+    private static readonly string[] PreferShared =
+    [
         "System.",
         "Microsoft.",
         "netstandard",
@@ -34,12 +40,43 @@ internal sealed class PluginLoadContext : AssemblyLoadContext
         if (name is null)
             return null;
 
-        // Returning null uses the default context, which is how the types stay identical.
-        if (SharedPrefixes.Any(p => name.StartsWith(p, StringComparison.OrdinalIgnoreCase)))
+        var own = _resolver.ResolveAssemblyToPath(assemblyName);
+        var mustShare = MustShare.Any(p => name.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+        var preferShared = PreferShared.Any(p => name.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+
+        if (!mustShare && !preferShared)
+            return own is null ? null : LoadFromAssemblyPath(own);
+
+        // Returning null uses the default context, which is how the types stay identical. But
+        // only when the shell has the assembly to give: a name merely starting with System.,
+        // Microsoft. or Avalonia used to be sent there whatever it was, so a plugin bringing
+        // System.Reactive or Avalonia.Controls.DataGrid, which the shell does not carry, failed
+        // to load, and one bringing a newer Microsoft.Data.Sqlite got the shell's older copy and
+        // a MissingMethodException later.
+        if (own is null)
             return null;
 
-        var path = _resolver.ResolveAssemblyToPath(assemblyName);
-        return path is null ? null : LoadFromAssemblyPath(path);
+        var shell = ShellVersionOf(assemblyName);
+        if (shell is null)
+            return LoadFromAssemblyPath(own);
+        if (mustShare)
+            return null;
+
+        var wanted = assemblyName.Version;
+        return wanted is null || shell >= wanted ? null : LoadFromAssemblyPath(own);
+    }
+
+    /// <summary>The version the shell would hand out under this name, or null when it has none.</summary>
+    private static Version? ShellVersionOf(AssemblyName assemblyName)
+    {
+        try
+        {
+            return Default.LoadFromAssemblyName(new AssemblyName(assemblyName.Name!)).GetName().Version;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     protected override nint LoadUnmanagedDll(string unmanagedDllName)

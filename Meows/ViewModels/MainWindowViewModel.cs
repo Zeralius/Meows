@@ -592,7 +592,7 @@ public sealed class MainWindowViewModel : ObservableObject
     /// the rescan swaps them if Windows lets the old folder be renamed; the notice says which
     /// happened, since the rescan knows and the install did not.
     /// </summary>
-    public void InstallPlugin(string zipPath, string? source = null)
+    public void InstallPlugin(string zipPath, string? source = null, string? repository = null)
     {
         if (_catalog.InstallDirectory is not { } directory)
         {
@@ -600,7 +600,7 @@ public sealed class MainWindowViewModel : ObservableObject
             return;
         }
 
-        var report = PluginInstaller.Install(zipPath, directory, source);
+        var report = PluginInstaller.Install(zipPath, directory, source, repository);
         if (!report.Ok)
         {
             InstallNotice = _text.Format("plugins.install.failed", report.Error);
@@ -656,7 +656,11 @@ public sealed class MainWindowViewModel : ObservableObject
         PluginShare.SharedImport report;
         try
         {
-            report = PluginShare.Import(_settings.Root, zipPath);
+            report = PluginShare.Import(_settings.Root, zipPath, id =>
+            {
+                var known = Plugins.FirstOrDefault(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase));
+                return known is { IsCompatible: true } && !_pluginTabs.ContainsKey(known.Id);
+            });
         }
         catch (Exception ex)
         {
@@ -744,7 +748,8 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         var candidates = await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => Plugins
             .Where(p => p.IsInstalled && p.Provenance.Homepage is not null)
-            .Select(p => new UpdateCandidate(p.Id, p.Provenance.Homepage!, p.Provenance.Version))
+            .Select(p => new UpdateCandidate(p.Id, p.Provenance.Homepage!, p.Provenance.Version,
+                PluginInstaller.RecordOf(p.Descriptor.Folder)?.Repository))
             .ToList());
 
         // The shell asks about itself the same way, from the repository stamped into its own
@@ -809,13 +814,21 @@ public sealed class MainWindowViewModel : ObservableObject
             return;
 
         var name = entry.DisplayName;
+
+        // Where this plugin's updates come from from now on: the repository it was first
+        // updated from, or the one the installed build names if this is the first time.
+        var pinned = PluginInstaller.RecordOf(entry.Descriptor.Folder)?.Repository
+                     ?? (entry.Provenance.Homepage is { } homepage && GitHubReleases.Parse(homepage) is { } repo
+                         ? $"{repo.Owner}/{repo.Repo}"
+                         : null);
+
         _background.RunForShell(_text.Format("plugins.update.download", name), async context =>
         {
             context.Report(update.ZipName);
             var path = await _updater.DownloadAsync(update, new ProgressTo(context), context.Token);
             try
             {
-                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => InstallPlugin(path, update.ReleaseUrl));
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => InstallPlugin(path, update.ReleaseUrl, pinned));
             }
             finally
             {
@@ -1481,7 +1494,14 @@ public sealed class MainWindowViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            // Mark it failed and carry on. One bad plugin should not close the window.
+            // Mark it failed and carry on. One bad plugin should not close the window. Whatever
+            // it started before it threw goes with it: work scheduled in CreateView kept running
+            // with no tab to show it and a card that said the plugin had failed.
+            _background.CancelAllFor(entry.Id);
+            if (_sourceById.TryGetValue(entry.Id, out var source))
+                _notifications.RemoveAllFrom(source);
+            if (_pluginTabs.Remove(entry.Id, out var half))
+                Tabs.Remove(half);
             entry.Error = Explain(ex);
             entry.SetActivatedSilently(false);
             _log.Write("shell", $"'{entry.DisplayName}' failed to activate: {ex}");

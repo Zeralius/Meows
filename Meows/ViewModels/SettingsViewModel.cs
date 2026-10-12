@@ -627,15 +627,27 @@ public sealed class SettingsViewModel : ObservableObject
 
     public void Import(string zipPath)
     {
-        var report = SettingsBundle.Import(_settings.Root, zipPath, MainWindowViewModel.AppVersionText);
+        var report = SettingsBundle.Stage(_settings.Root, zipPath);
         BundleNotice = report.Ok
-            ? _text.Format("settings.bundle.imported", report.Files, report.Skipped, Path.GetFileName(report.BackupPath))
+            ? _text.Format("settings.bundle.staged", report.Files)
             : _text.Format("settings.bundle.failed", report.Error);
+        IsRestartWaiting = report.Ok;
         _log.Write("settings", report.Ok
-            ? $"Imported {report.Files} file(s) from {zipPath}, {report.Skipped} skipped, previous settings kept in {report.BackupPath}"
+            ? $"Staged {zipPath} ({report.Files} file(s)) to be read in at the next start"
             : $"Import failed: {report.Error}",
             report.Ok ? Plugins.Abstractions.LogLevel.Info : Plugins.Abstractions.LogLevel.Warning);
     }
+
+    /// <summary>A bundle is staged and waits for Meows to start again.</summary>
+    public bool IsRestartWaiting
+    {
+        get => _isRestartWaiting;
+        private set => SetField(ref _isRestartWaiting, value);
+    }
+
+    private bool _isRestartWaiting;
+
+    public RelayCommand RestartCommand { get; } = new(App.Restart);
 
     private void OpenSettingsFolder()
     {

@@ -21,6 +21,7 @@ public sealed class BackgroundTaskItem : INotifyPropertyChanged, IBackgroundTask
         Source = source;
         Title = title;
         _cts = CancellationTokenSource.CreateLinkedTokenSource(parent);
+        _token = _cts.Token;
         _onFinished = onFinished;
     }
 
@@ -36,7 +37,11 @@ public sealed class BackgroundTaskItem : INotifyPropertyChanged, IBackgroundTask
 
     public string Title { get; }
 
-    public CancellationToken Token => _cts.Token;
+    // Kept apart from the source, which is disposed when the work finishes: a token stays
+    // readable after that, the source's Token property does not.
+    private readonly CancellationToken _token;
+
+    public CancellationToken Token => _token;
 
     // ---- what a schedule keeps about itself, read by Purr through IMeowsWatches ----
 
@@ -173,6 +178,10 @@ public sealed class BackgroundTaskItem : INotifyPropertyChanged, IBackgroundTask
     {
         OnUiThread(() => IsRunning = false);
         _onFinished(this);
+
+        // A linked source holds a registration on its parent until disposed, and the parent
+        // for the shell's own work lives as long as Meows does, so every finished run left one.
+        _cts.Dispose();
     }
 
     public void Dispose()

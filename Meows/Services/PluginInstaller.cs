@@ -14,7 +14,11 @@ public sealed record InstallReport(string? Name, bool Pending, string? Error)
 /// put there through the Plugins tab and can be taken away through it. A built-in plugin and a
 /// folder copied by hand have none, and the shell leaves those alone.
 /// </summary>
-public sealed record InstallRecord(string From, DateTime On, string? Source = null);
+/// <param name="Repository">
+/// owner/repo on GitHub, pinned the first time the plugin is updated through its card and kept
+/// through every update after: later updates are only ever fetched from there.
+/// </param>
+public sealed record InstallRecord(string From, DateTime On, string? Source = null, string? Repository = null);
 
 /// <summary>
 /// A plugin's release is its build folder as a zip. This puts that folder where the shell scans,
@@ -83,7 +87,7 @@ public static class PluginInstaller
         }
     }
 
-    public static InstallReport Install(string zipPath, string pluginsDirectory, string? source = null)
+    public static InstallReport Install(string zipPath, string pluginsDirectory, string? source = null, string? repository = null)
     {
         string? staging = null;
         try
@@ -121,8 +125,10 @@ public static class PluginInstaller
                 entry.ExtractToFile(destination, overwrite: true);
             }
 
+            // A pin, once made, stays with the plugin through every install over it.
+            repository = RecordOf(target)?.Repository ?? repository;
             File.WriteAllText(Path.Combine(staging, Marker), JsonSerializer.Serialize(
-                new InstallRecord(Path.GetFileName(zipPath), DateTime.Now, source),
+                new InstallRecord(Path.GetFileName(zipPath), DateTime.Now, source, repository),
                 new JsonSerializerOptions { WriteIndented = true }));
 
             if (!Directory.Exists(target))

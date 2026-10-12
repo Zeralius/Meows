@@ -90,6 +90,78 @@ public sealed class PluginUpdatesTests
         Assert.False(provenance.IsInstalled);
     }
 
+    /// <summary>Answers each address from a table, and remembers what was asked.</summary>
+    private sealed class Canned(Dictionary<string, byte[]> replies) : HttpMessageHandler
+    {
+        public List<string> Asked { get; } = [];
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
+        {
+            var url = request.RequestUri!.ToString();
+            Asked.Add(url);
+            return Task.FromResult(replies.TryGetValue(url, out var body)
+                ? new HttpResponseMessage(System.Net.HttpStatusCode.OK) { Content = new ByteArrayContent(body) }
+                : new HttpResponseMessage(System.Net.HttpStatusCode.NotFound));
+        }
+    }
+
+    private static string Release(string zipUrl, string? digest = null) => $$"""
+        {
+          "tag_name": "v2.0.0",
+          "html_url": "https://github.com/someone/Thing/releases/tag/v2.0.0",
+          "assets": [ { "name": "Thing-2.0.0.zip", "browser_download_url": "{{zipUrl}}", "size": 3{{(digest is null ? "" : $", \"digest\": \"sha256:{digest}\"")}} } ]
+        }
+        """;
+
+    [Fact]
+    public async Task A_zip_from_anywhere_but_the_repository_s_own_releases_is_not_offered()
+    {
+        var http = new Canned(new()
+        {
+            [GitHubReleases.LatestReleaseApi("someone", "Thing")] =
+                System.Text.Encoding.UTF8.GetBytes(Release("https://evil.example/Thing-2.0.0.zip")),
+        });
+        var updates = new PluginUpdates("0.0.0-test", new HttpClient(http));
+
+        var (found, said) = await updates.CheckAsync([new UpdateCandidate("thing", "https://github.com/someone/Thing", "1.0.0")], CancellationToken.None);
+
+        Assert.Empty(found);
+        Assert.Contains(said, line => line.Contains("not one of its own release assets"));
+    }
+
+    [Fact]
+    public async Task A_plugin_once_updated_is_asked_about_where_it_was_first_updated_from()
+    {
+        // The installed build now names another repository; the pin wins.
+        var http = new Canned(new()
+        {
+            [GitHubReleases.LatestReleaseApi("someone", "Thing")] =
+                System.Text.Encoding.UTF8.GetBytes(Release("https://github.com/someone/Thing/releases/download/v2.0.0/Thing-2.0.0.zip")),
+        });
+        var updates = new PluginUpdates("0.0.0-test", new HttpClient(http));
+
+        var (found, _) = await updates.CheckAsync(
+            [new UpdateCandidate("thing", "https://github.com/stranger/Elsewhere", "1.0.0", Pinned: "someone/Thing")],
+            CancellationToken.None);
+
+        Assert.Single(found);
+        Assert.DoesNotContain(http.Asked, a => a.Contains("stranger"));
+    }
+
+    [Fact]
+    public async Task A_download_that_is_not_what_was_released_is_refused_and_leaves_nothing()
+    {
+        const string url = "https://github.com/someone/Thing/releases/download/v2.0.0/Thing-2.0.0.zip";
+        var http = new Canned(new() { [url] = [1, 2, 3] });
+        var updates = new PluginUpdates("0.0.0-test", new HttpClient(http));
+        var update = GitHubReleases.Read(Release(url, new string('0', 64)))!;
+        var before = Directory.GetFiles(Path.GetTempPath(), "meows-update-*").Length;
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => updates.DownloadAsync(update, null, CancellationToken.None));
+
+        Assert.Equal(before, Directory.GetFiles(Path.GetTempPath(), "meows-update-*").Length);
+    }
+
     [Fact]
     public void Nothing_to_read_is_nothing()
     {

@@ -12,7 +12,11 @@ namespace Meows.Services;
 public sealed class SingleInstance : IDisposable
 {
     private const string MutexName = @"Local\Meows.Single";
-    private const string PipeName = "Meows.Instance";
+    // The mutex is per session, so the pipe has to be too: one machine-wide name meant a second
+    // person signed in got a listener that could never open it, and a start of theirs knocked on
+    // the first person's Meows. The user name and session keep two people apart.
+    private static readonly string PipeName =
+        $"Meows.Instance.{Environment.UserName}.{System.Diagnostics.Process.GetCurrentProcess().SessionId}";
 
     private readonly Mutex _mutex;
     private CancellationTokenSource? _listening;
@@ -48,7 +52,7 @@ public sealed class SingleInstance : IDisposable
     {
         try
         {
-            using var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
+            using var pipe = new NamedPipeClientStream(".", PipeName, PipeDirection.Out, PipeOptions.CurrentUserOnly);
             pipe.Connect(2000);
             using var writer = new StreamWriter(pipe) { AutoFlush = true };
             writer.WriteLine(string.Join('\t', args));
@@ -75,15 +79,21 @@ public sealed class SingleInstance : IDisposable
             {
                 try
                 {
+                    // CurrentUserOnly: nobody else on the machine can connect, or hold the name first.
                     using var server = new NamedPipeServerStream(PipeName, PipeDirection.In, 1,
-                        PipeTransmissionMode.Byte, PipeOptions.Asynchronous);
+                        PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
                     server.WaitForConnectionAsync(token).GetAwaiter().GetResult();
                     using var reader = new StreamReader(server);
-                    var line = reader.ReadLine() ?? "";
+
+                    // A client that connects and never writes would otherwise hold the only
+                    // listener for good. Five seconds is far longer than one line takes.
+                    using var patience = CancellationTokenSource.CreateLinkedTokenSource(token);
+                    patience.CancelAfter(TimeSpan.FromSeconds(5));
+                    var line = reader.ReadLineAsync(patience.Token).AsTask().GetAwaiter().GetResult() ?? "";
                     var args = line.Length == 0 ? [] : line.Split('\t');
                     onSignal(args);
                 }
-                catch (OperationCanceledException)
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
                     return;
                 }

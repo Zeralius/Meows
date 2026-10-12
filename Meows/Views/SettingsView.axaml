@@ -386,10 +386,16 @@
                             CornerRadius="4"
                             Padding="8,6"
                             IsVisible="{Binding HasBundleNotice}">
-                        <TextBlock Text="{Binding BundleNotice}"
-                                   Foreground="{DynamicResource MeowsInfoText}"
-                                   TextWrapping="Wrap"
-                                   FontSize="12" />
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{Binding BundleNotice}"
+                                       Foreground="{DynamicResource MeowsInfoText}"
+                                       TextWrapping="Wrap"
+                                       FontSize="12" />
+                            <Button Content="{m:Tr settings.bundle.restart}"
+                                    Command="{Binding RestartCommand}"
+                                    IsVisible="{Binding IsRestartWaiting}"
+                                    HorizontalAlignment="Left" />
+                        </StackPanel>
                     </Border>
                 </StackPanel>
             </Border>

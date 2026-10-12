@@ -63,14 +63,20 @@ public static class PluginShare
     }
 
     /// <summary>What an import found: whose settings, and whether anything was kept aside.</summary>
-    public sealed record SharedImport(string PluginId, string Name, bool BackedUp);
+    public sealed record SharedImport(string PluginId, string Name, bool BackedUp, bool Written = true);
 
     /// <summary>
     /// Reads a shared zip back in: validates the manifest, keeps the current settings aside
     /// when there are any, and puts the shared ones where the plugin reads them. Throws with
     /// the reason when the zip is not a shared one.
     /// </summary>
-    public static SharedImport Import(string settingsRoot, string zipPath)
+    /// <param name="mayWrite">
+    /// Asked with the plugin's id once the zip has been read and checked, before anything is
+    /// written: false leaves the current settings exactly as they were, for a plugin that is not
+    /// installed or is switched on. A plugin that is on writes its own settings back over a file
+    /// changed underneath it, so writing first and saying "switch it off" after lost the import.
+    /// </param>
+    public static SharedImport Import(string settingsRoot, string zipPath, Func<string, bool>? mayWrite = null)
     {
         SharedManifest manifest;
         string settings;
@@ -97,6 +103,8 @@ public static class PluginShare
 
         if (string.IsNullOrWhiteSpace(manifest.PluginId))
             throw new InvalidOperationException("That zip names no plugin, so there is nowhere to put it.");
+        if (!Meows.Plugins.PluginIds.IsValid(manifest.PluginId))
+            throw new InvalidOperationException($"That zip names '{manifest.PluginId}', which is not a plugin id Meows would ever use.");
 
         // Validated JSON in, validated JSON out: shared settings that do not parse are refused
         // rather than landing as a file the plugin cannot read.
@@ -108,6 +116,9 @@ public static class PluginShare
         {
             throw new InvalidOperationException("The settings in that zip do not parse, so they were left alone.");
         }
+
+        if (mayWrite is not null && !mayWrite(manifest.PluginId))
+            return new SharedImport(manifest.PluginId, manifest.Name, false, Written: false);
 
         var safe = string.Concat(manifest.PluginId.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
         var directory = Path.Combine(settingsRoot, "plugins", safe);

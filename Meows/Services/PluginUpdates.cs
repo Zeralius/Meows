@@ -5,10 +5,18 @@ using System.Text.RegularExpressions;
 namespace Meows.Services;
 
 /// <summary>A newer release of an installed plugin: what it is called, and the zip to fetch.</summary>
-public sealed record AvailableUpdate(string Version, string ZipName, string ZipUrl, long Size, string ReleaseUrl);
+public sealed record AvailableUpdate(string Version, string ZipName, string ZipUrl, long Size, string ReleaseUrl)
+{
+    /// <summary>The asset's SHA-256 as GitHub reports it, lower-case hex, when it reports one.</summary>
+    public string? Sha256 { get; init; }
+}
 
 /// <summary>What the shell knows about one installed plugin when it goes asking.</summary>
-public sealed record UpdateCandidate(string Id, string Homepage, string? Version);
+/// <param name="Pinned">
+/// The repository, as owner/repo, this plugin was first updated from. Asked instead of whatever
+/// the installed build now names, so a release cannot point the next update somewhere else.
+/// </param>
+public sealed record UpdateCandidate(string Id, string Homepage, string? Version, string? Pinned = null);
 
 /// <summary>
 /// Reads GitHub's "latest release" for a repository: the tag is the version and the first zip
@@ -29,6 +37,18 @@ public static partial class GitHubReleases
 
     public static string LatestReleaseApi(string owner, string repo) =>
         $"https://api.github.com/repos/{owner}/{repo}/releases/latest";
+
+    /// <summary>"owner/repo" back into its parts, or null.</summary>
+    public static (string Owner, string Repo)? ParsePinned(string? pinned) =>
+        pinned?.Split('/') is [{ Length: > 0 } owner, { Length: > 0 } repo] ? (owner, repo) : null;
+
+    /// <summary>
+    /// Whether a download address is one of this repository's own release assets. The reply's
+    /// address is whatever the reply says; this keeps it to github.com, over https, under the
+    /// repository that was asked.
+    /// </summary>
+    public static bool IsAssetOf(string url, string owner, string repo) =>
+        url.StartsWith($"https://github.com/{owner}/{repo}/releases/download/", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>The release in the reply, or null when it has no zip to offer or is not a release at all.</summary>
     public static AvailableUpdate? Read(string json)
@@ -56,7 +76,13 @@ public static partial class GitHubReleases
                     continue;
 
                 var size = asset.TryGetProperty("size", out var s) && s.TryGetInt64(out var bytes) ? bytes : 0;
-                return new AvailableUpdate(tag.Trim(), name, url, size, page);
+                var digest = asset.TryGetProperty("digest", out var d) ? d.GetString() : null;
+                return new AvailableUpdate(tag.Trim(), name, url, size, page)
+                {
+                    Sha256 = digest is not null && digest.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase)
+                        ? digest["sha256:".Length..].Trim().ToLowerInvariant()
+                        : null,
+                };
             }
 
             return null;
@@ -100,7 +126,7 @@ public sealed class PluginUpdates
         {
             token.ThrowIfCancellationRequested();
 
-            if (GitHubReleases.Parse(candidate.Homepage) is not { } repo)
+            if ((GitHubReleases.ParsePinned(candidate.Pinned) ?? GitHubReleases.Parse(candidate.Homepage)) is not { } repo)
                 continue;
 
             try
@@ -110,6 +136,12 @@ public sealed class PluginUpdates
                 if (latest is null)
                 {
                     said.Add($"{candidate.Id}: the latest release at {repo.Owner}/{repo.Repo} has no zip attached.");
+                    continue;
+                }
+
+                if (!GitHubReleases.IsAssetOf(latest.ZipUrl, repo.Owner, repo.Repo))
+                {
+                    said.Add($"{candidate.Id}: the latest release at {repo.Owner}/{repo.Repo} offers a zip from {latest.ZipUrl}, which is not one of its own release assets; not offered.");
                     continue;
                 }
 
@@ -141,26 +173,57 @@ public sealed class PluginUpdates
     }
 
     /// <summary>The zip, into a temporary file the installer reads and the caller deletes.</summary>
+    /// <remarks>
+    /// The asset name comes from the reply, so only its file name is used, with anything a path
+    /// cannot hold taken out. A download that fails or is cancelled leaves nothing behind, and
+    /// one whose bytes do not match the SHA-256 GitHub reported for the asset is refused.
+    /// </remarks>
     public async Task<string> DownloadAsync(AvailableUpdate update, IProgress<double?>? progress, CancellationToken token)
     {
-        var path = Path.Combine(Path.GetTempPath(), $"meows-update-{Guid.NewGuid():N}-{update.ZipName}");
-        using var response = await _http.GetAsync(update.ZipUrl, HttpCompletionOption.ResponseHeadersRead, token);
-        response.EnsureSuccessStatusCode();
+        if (!update.ZipUrl.StartsWith("https://github.com/", StringComparison.OrdinalIgnoreCase))
+            throw new InvalidOperationException($"refused to download {update.ZipUrl}: not a GitHub release asset");
 
-        var total = response.Content.Headers.ContentLength ?? (update.Size > 0 ? update.Size : (long?)null);
-        await using var source = await response.Content.ReadAsStreamAsync(token);
-        await using var file = File.Create(path);
-
-        var buffer = new byte[81920];
-        long done = 0;
-        int read;
-        while ((read = await source.ReadAsync(buffer, token)) > 0)
+        var safeName = string.Concat(Path.GetFileName(update.ZipName).Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+        var path = Path.Combine(Path.GetTempPath(), $"meows-update-{Guid.NewGuid():N}-{safeName}");
+        try
         {
-            await file.WriteAsync(buffer.AsMemory(0, read), token);
-            done += read;
-            progress?.Report(total is > 0 ? (double)done / total.Value : null);
-        }
+            using var response = await _http.GetAsync(update.ZipUrl, HttpCompletionOption.ResponseHeadersRead, token);
+            response.EnsureSuccessStatusCode();
 
-        return path;
+            var total = response.Content.Headers.ContentLength ?? (update.Size > 0 ? update.Size : (long?)null);
+            using var hash = System.Security.Cryptography.IncrementalHash.CreateHash(System.Security.Cryptography.HashAlgorithmName.SHA256);
+            await using (var source = await response.Content.ReadAsStreamAsync(token))
+            await using (var file = File.Create(path))
+            {
+                var buffer = new byte[81920];
+                long done = 0;
+                int read;
+                while ((read = await source.ReadAsync(buffer, token)) > 0)
+                {
+                    await file.WriteAsync(buffer.AsMemory(0, read), token);
+                    hash.AppendData(buffer, 0, read);
+                    done += read;
+                    progress?.Report(total is > 0 ? (double)done / total.Value : null);
+                }
+            }
+
+            var got = Convert.ToHexString(hash.GetHashAndReset()).ToLowerInvariant();
+            if (update.Sha256 is { } expected && got != expected)
+                throw new InvalidOperationException($"{safeName} did not arrive as released: its SHA-256 is {got}, GitHub says {expected}");
+
+            return path;
+        }
+        catch
+        {
+            try
+            {
+                File.Delete(path);
+            }
+            catch (Exception)
+            {
+                // Temp is temp.
+            }
+            throw;
+        }
     }
 }

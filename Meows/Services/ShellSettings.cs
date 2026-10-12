@@ -318,15 +318,57 @@ public sealed class ShellSettings
     /// ones, never half of each. A write interrupted by a crash is how you get the unreadable
     /// file the method above has to deal with.
     /// </summary>
+    /// <summary>One lock per file, for two threads of this process saving the same settings.</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, object> Gates =
+        new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Through a temporary file and a rename, so a crash mid-write leaves the old file whole.
+    /// The temporary name is this write's own: with one fixed name, the window and a --do job
+    /// saving the same plugin's settings wrote into each other's half-finished file. A rename
+    /// that meets a file somebody else has open is tried again for a moment before giving up.
+    /// </summary>
     private static void WriteWholly(string file, string contents)
     {
-        var temporary = file + ".writing";
-        File.WriteAllText(temporary, contents);
-
-        if (File.Exists(file))
-            File.Replace(temporary, file, destinationBackupFileName: null);
-        else
-            File.Move(temporary, file);
+        lock (Gates.GetOrAdd(Path.GetFullPath(file), _ => new object()))
+        {
+            var temporary = $"{file}.{Guid.NewGuid():N}.writing";
+            try
+            {
+                File.WriteAllText(temporary, contents);
+                for (var attempt = 0; ; attempt++)
+                {
+                    try
+                    {
+                        if (File.Exists(file))
+                            File.Replace(temporary, file, destinationBackupFileName: null);
+                        else
+                            File.Move(temporary, file);
+                        return;
+                    }
+                    catch (IOException) when (attempt < 5)
+                    {
+                        Thread.Sleep(40 * (attempt + 1));
+                    }
+                    catch (UnauthorizedAccessException) when (attempt < 5)
+                    {
+                        Thread.Sleep(40 * (attempt + 1));
+                    }
+                }
+            }
+            finally
+            {
+                try
+                {
+                    if (File.Exists(temporary))
+                        File.Delete(temporary);
+                }
+                catch (Exception)
+                {
+                    // A stray .writing file is left out of bundles and harms nothing.
+                }
+            }
+        }
     }
 }
 
