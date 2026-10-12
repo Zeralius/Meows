@@ -84,6 +84,10 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         CancelScanCommand = new RelayCommand(() => _scanTask?.Cancel(), () => IsScanning);
         KeepOldestCommand = new RelayCommand(() => _ = KeepAsync(keepOldest: true), CanAct);
         KeepNewestCommand = new RelayCommand(() => _ = KeepAsync(keepOldest: false), CanAct);
+        KeepAllOldestCommand = new RelayCommand(() => AskKeepAll(keepOldest: true), CanActOnAll);
+        KeepAllNewestCommand = new RelayCommand(() => AskKeepAll(keepOldest: false), CanActOnAll);
+        ConfirmKeepAllCommand = new RelayCommand(() => _ = KeepAllAsync(), () => _pendingKeepAll is not null);
+        CancelKeepAllCommand = new RelayCommand(() => PendingKeepAll = null);
         DeleteSelectedCommand = new RelayCommand(() => _ = DeleteSelectedAsync(), CanDeleteSelected);
         RevealCommand = new RelayCommand(RevealSelected, () => SelectedFile is not null);
         SelectFileCommand = new RelayCommand(SelectFile);
@@ -190,6 +194,15 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
 
     public RelayCommand KeepNewestCommand { get; }
 
+    /// <summary>Keep oldest, in every set the scan found, after asking.</summary>
+    public RelayCommand KeepAllOldestCommand { get; }
+
+    public RelayCommand KeepAllNewestCommand { get; }
+
+    public RelayCommand ConfirmKeepAllCommand { get; }
+
+    public RelayCommand CancelKeepAllCommand { get; }
+
     public RelayCommand DeleteSelectedCommand { get; }
 
     public RelayCommand RevealCommand { get; }
@@ -229,6 +242,8 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
             OnPropertyChanged();
             OnPropertyChanged(nameof(KeepOldestLabel));
             OnPropertyChanged(nameof(KeepNewestLabel));
+            OnPropertyChanged(nameof(KeepAllOldestLabel));
+            OnPropertyChanged(nameof(KeepAllNewestLabel));
             OnPropertyChanged(nameof(AgeBasisHint));
             OnPropertyChanged(nameof(SelectedAgeBasis));
         }
@@ -238,6 +253,10 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
     public string KeepOldestLabel => _host.Text.Format("purrge.keepoldest", BasisWord);
 
     public string KeepNewestLabel => _host.Text.Format("purrge.keepnewest", BasisWord);
+
+    public string KeepAllOldestLabel => _host.Text.Format("purrge.keepall.oldest", BasisWord);
+
+    public string KeepAllNewestLabel => _host.Text.Format("purrge.keepall.newest", BasisWord);
 
     public string AgeBasisHint =>
         _host.Text[AgeBasis == AgeBasis.Modified ? "purrge.hint.modified" : "purrge.hint.created"];
@@ -363,6 +382,18 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         }
     }
 
+    /// <summary>How many files the whole-scan buttons are about to take, across every set.</summary>
+    public string PendingAllText
+    {
+        get
+        {
+            var sets = Sets.Count(s => s.Count > 1);
+            if (sets == 0)
+                return "";
+            return _host.Text.Format("purrge.keepall.pending", Sets.Sum(s => Math.Max(0, s.Count - 1)), sets);
+        }
+    }
+
     /// <summary>How many files the button is about to take. No surprises.</summary>
     public string PendingActionText
     {
@@ -390,10 +421,12 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         RaiseActionState();
     }
 
-    private bool CanAct() => !IsScanning && SelectedSet is { Count: > 1 };
+    private bool CanAct() => !IsScanning && !_isRemoving && SelectedSet is { Count: > 1 };
+
+    private bool CanActOnAll() => !IsScanning && !_isRemoving && Sets.Any(s => s.Count > 1);
 
     /// <summary>Never let the last copy go. A set always keeps one.</summary>
-    private bool CanDeleteSelected() => !IsScanning && SelectedFile is not null && SelectedSet is { Count: > 1 };
+    private bool CanDeleteSelected() => !IsScanning && !_isRemoving && SelectedFile is not null && SelectedSet is { Count: > 1 };
 
     /// <summary>
     /// Runs through the shell, so it survives a tab switch, shows up in the task panel, and
@@ -402,6 +435,7 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
     private void StartScan()
     {
         ErrorMessage = null;
+        PendingKeepAll = null;
         CancelThumbnails();
         ClearSets();
 
@@ -534,6 +568,129 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
             return;
 
         await RemoveAsync(set, [SelectedFile], _host.Text["purrge.what.deletedone"]);
+    }
+
+    // ---- Every set at once ---------------------------------------------------------------------
+
+    /// <summary>Which of the two whole-scan buttons is waiting on its question; null when none is.</summary>
+    private bool? _pendingKeepAll;
+
+    /// <summary>Set while a removal is under way, so nothing else is removed on top of it.</summary>
+    private bool _isRemoving;
+
+    public bool? PendingKeepAll
+    {
+        get => _pendingKeepAll;
+        private set
+        {
+            if (!SetField(ref _pendingKeepAll, value))
+                return;
+            OnPropertyChanged(nameof(IsAskingKeepAll));
+            OnPropertyChanged(nameof(KeepAllPrompt));
+            OnPropertyChanged(nameof(KeepAllDetail));
+            ConfirmKeepAllCommand.RaiseCanExecuteChanged();
+        }
+    }
+
+    public bool IsAskingKeepAll => _pendingKeepAll is not null;
+
+    public string KeepAllPrompt => _pendingKeepAll is not { } oldest
+        ? ""
+        : _host.Text.Format(oldest ? "purrge.keepall.ask.oldest" : "purrge.keepall.ask.newest", Sets.Count(s => s.Count > 1));
+
+    public string KeepAllDetail
+    {
+        get
+        {
+            if (_pendingKeepAll is null)
+                return "";
+            var files = Sets.Sum(s => Math.Max(0, s.Count - 1));
+            var bytes = Sets.Sum(s => s.RedundantBytes);
+            return _host.Text.Format("purrge.keepall.detail", files, DuplicateSetViewModel.Format(bytes), BasisWord);
+        }
+    }
+
+    /// <summary>Hundreds of files on one click is worth one question first.</summary>
+    private void AskKeepAll(bool keepOldest)
+    {
+        if (CanActOnAll())
+            PendingKeepAll = keepOldest;
+    }
+
+    /// <summary>
+    /// The per-set keep, over every set. Each set is checked on its own the way the single keep
+    /// checks it: a set that changed since the scan is left whole and counted, and the rest go to
+    /// the bin in one shell operation.
+    /// </summary>
+    private async Task KeepAllAsync()
+    {
+        if (_pendingKeepAll is not { } keepOldest)
+            return;
+        PendingKeepAll = null;
+        ErrorMessage = null;
+
+        var basis = AgeBasis;
+        var plan = new List<(DuplicateSetViewModel Set, List<DuplicateFileViewModel> Doomed, DuplicateFileViewModel Survivor)>();
+        foreach (var set in Sets.Where(s => s.Count > 1))
+        {
+            var survivor = keepOldest ? set.Oldest(basis) : set.Newest(basis);
+            if (survivor is not null)
+                plan.Add((set, set.Files.Where(f => !ReferenceEquals(f, survivor)).ToList(), survivor));
+        }
+        if (plan.Count == 0)
+            return;
+
+        _isRemoving = true;
+        RaiseActionState();
+        try
+        {
+            var safe = await Task.Run(() => plan
+                .Where(p => StillAsScanned(p.Survivor.File) && p.Doomed.All(d => StillAsScanned(d.File)))
+                .ToList());
+            var skipped = plan.Count - safe.Count;
+
+            var paths = safe.SelectMany(p => p.Doomed).Select(d => d.FullPath).ToList();
+            var outcome = paths.Count == 0 ? null : await Task.Run(() => RecycleBin.Send(paths));
+
+            // Only rows for files that actually went, as with a single set.
+            var gone = await Task.Run(() => safe
+                .Select(p => (p.Set, Gone: p.Doomed.Where(d => !File.Exists(d.FullPath)).ToList()))
+                .ToList());
+
+            var what = _host.Text.Format(keepOldest ? "purrge.what.keptalloldest" : "purrge.what.keptallnewest", safe.Count);
+            SelectedFile = null;
+            foreach (var (set, removed) in gone)
+            {
+                foreach (var file in removed)
+                    _host.Store.Record("recycled", file.FullPath, what, new Dictionary<string, string> { ["size"] = file.File.Size.ToString() });
+                set.Remove(removed);
+                if (set.Count < 2)
+                {
+                    Sets.Remove(set);
+                    set.Dispose();
+                }
+            }
+            _selectedSet = null;
+            SelectedSet = Sets.FirstOrDefault();
+            RaiseResultState();
+
+            var problems = new List<string>();
+            if (skipped > 0)
+                problems.Add(_host.Text.Format("purrge.keepall.skipped", skipped));
+            if (outcome?.FailureReason is not null)
+                problems.Add(outcome.FailureReason);
+            if (problems.Count > 0)
+                ErrorMessage = string.Join(" ", problems);
+
+            var deleted = outcome?.Deleted ?? 0;
+            StatusMessage = _host.Text.Format("purrge.status.removed", what, deleted);
+            _host.Log(LogLevel.Warning, $"Purrge {what}: {deleted} deleted, {outcome?.Failed ?? 0} failed, {skipped} set(s) left alone as changed since the scan");
+        }
+        finally
+        {
+            _isRemoving = false;
+            RaiseActionState();
+        }
     }
 
     private async Task RemoveAsync(DuplicateSetViewModel set, IReadOnlyList<DuplicateFileViewModel> doomed, string what)
@@ -683,8 +840,11 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
     private void RaiseActionState()
     {
         OnPropertyChanged(nameof(PendingActionText));
+        OnPropertyChanged(nameof(PendingAllText));
         KeepOldestCommand.RaiseCanExecuteChanged();
         KeepNewestCommand.RaiseCanExecuteChanged();
+        KeepAllOldestCommand.RaiseCanExecuteChanged();
+        KeepAllNewestCommand.RaiseCanExecuteChanged();
         DeleteSelectedCommand.RaiseCanExecuteChanged();
         RevealCommand.RaiseCanExecuteChanged();
     }

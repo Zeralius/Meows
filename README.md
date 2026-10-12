@@ -521,7 +521,7 @@ To cut a release, with `<Version>` in `Meows/Meows.csproj` already saying the sa
 workflow refuses a tag that disagrees with it):
 
 ```bash
-git tag v6.2.0 && git push origin v6.2.0
+git tag v6.2.1 && git push origin v6.2.1
 ```
 
 ## Licence

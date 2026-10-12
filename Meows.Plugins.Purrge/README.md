@@ -25,8 +25,14 @@ holding one of the asked files are shown. Windows only, because deletion goes th
 | **Middle** | Duplicate sets, ordered by how much space each would free. Every file shows its thumbnail, folder, and *both* timestamps |
 | **Right** | Preview of the selected file, then the actions |
 
-Under the preview: **Keep oldest**, **Keep newest**, **Delete selected file**, and **Show in
+Under the preview: **Keep newest**, **Keep oldest**, **Delete selected file**, and **Show in
 Explorer**.
+
+Below those, under **The whole scan**, the same two keeps for every set at once: *Keep newest
+in every set* and *Keep oldest in every set*. They ask first, naming how many files and how much
+space, then send everything in one Recycle Bin operation. Each set is checked against the disk on
+its own, so a set that changed since the scan is left whole and counted rather than stopping the
+rest.
 
 ## How the scan works
 
@@ -52,9 +58,9 @@ the strength of an automated judgement, so every removal has to stay recoverable
 than trusted from the return code. A partial failure stays visible instead of quietly dropping
 rows from the list.
 
-**A set always keeps a survivor.** Keep oldest and keep newest leave one by construction, and
-*Delete selected file* switches off once a set is down to its last copy. There is no path
-through the UI that removes every copy of something.
+**A set always keeps a survivor.** Keep newest and keep oldest, for one set or for all of them,
+leave one by construction, and *Delete selected file* switches off once a set is down to its last
+copy. There is no path through the UI that removes every copy of something.
 
 ## Oldest and newest
 

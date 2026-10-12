@@ -173,6 +173,7 @@
             <TextBlock Text="{Binding ErrorMessage}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" />
         </Border>
 
+        <Panel>
         <Grid ColumnDefinitions="300,4,*,4,400">
 
             <!-- Folder tree -->
@@ -649,12 +650,12 @@
                                    TextWrapping="Wrap"
                                    Margin="0,8,0,0" />
 
-                        <Button Content="{Binding KeepOldestLabel}"
-                                Command="{Binding KeepOldestCommand}"
-                                HorizontalAlignment="Stretch"
-                                HorizontalContentAlignment="Center" />
                         <Button Content="{Binding KeepNewestLabel}"
                                 Command="{Binding KeepNewestCommand}"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                        <Button Content="{Binding KeepOldestLabel}"
+                                Command="{Binding KeepOldestCommand}"
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center" />
                         <Button Content="{m:Tr purrge.deleteselected}"
@@ -666,11 +667,59 @@
                                 HorizontalAlignment="Stretch"
                                 HorizontalContentAlignment="Center" />
 
+                        <!-- The same keep over every set the scan found, asked first -->
+                        <StackPanel Spacing="8" Margin="0,14,0,0" IsVisible="{Binding HasResults}">
+                            <TextBlock Text="{m:Tr purrge.keepall.title}" FontWeight="SemiBold" FontSize="13" />
+                            <TextBlock Text="{Binding PendingAllText}"
+                                       Classes="label"
+                                       TextWrapping="Wrap" />
+                            <Button Content="{Binding KeepAllNewestLabel}"
+                                    Command="{Binding KeepAllNewestCommand}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
+                            <Button Content="{Binding KeepAllOldestLabel}"
+                                    Command="{Binding KeepAllOldestCommand}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center" />
+                        </StackPanel>
+
                     </StackPanel>
                 </ScrollViewer>
             </Border>
 
         </Grid>
+
+        <!-- Every set at once is a lot of files on one click, so it asks. -->
+        <Border IsVisible="{Binding IsAskingKeepAll}" Background="{DynamicResource MeowsVeil}" m:Veil.HoldsFocus="True">
+            <Border Background="{DynamicResource MeowsCard}"
+                    BorderBrush="{DynamicResource MeowsDangerLine}"
+                    BorderThickness="1"
+                    CornerRadius="8"
+                    Padding="20,16"
+                    MaxWidth="440"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center">
+                <StackPanel Spacing="10">
+                    <TextBlock Text="{Binding KeepAllPrompt}" FontWeight="SemiBold" FontSize="15" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding KeepAllDetail}" Opacity="0.7" FontSize="12" TextWrapping="Wrap" />
+                    <Grid ColumnDefinitions="*,8,*">
+                        <Button Grid.Column="0"
+                                Content="{m:Tr purrge.keepall.cancel}"
+                                Command="{Binding CancelKeepAllCommand}"
+                                Classes="safe"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                        <Button Grid.Column="2"
+                                Content="{m:Tr purrge.keepall.go}"
+                                Command="{Binding ConfirmKeepAllCommand}"
+                                Classes="danger"
+                                HorizontalAlignment="Stretch"
+                                HorizontalContentAlignment="Center" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+        </Border>
+        </Panel>
 
     </DockPanel>
 
