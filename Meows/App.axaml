@@ -22,6 +22,7 @@
         <Style Selector="ListBoxItem:selected TextBlock">
             <Setter Property="Foreground" Value="{DynamicResource MeowsSelectionText}" />
         </Style>
+        <StyleInclude Source="avares://Meows/Themes/Controls.axaml" />
     </Application.Styles>
 
 </Application>

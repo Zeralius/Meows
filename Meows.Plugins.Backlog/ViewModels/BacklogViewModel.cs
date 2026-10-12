@@ -267,6 +267,8 @@ public sealed class BacklogViewModel : ObservableObject, IDisposable, ISearchabl
             if (!SetField(ref _selected, value))
                 return;
             OnPropertyChanged(nameof(HasSelection));
+            _forgetArmed = false;
+            OnPropertyChanged(nameof(ForgetText));
             foreach (var command in new[] { ForgetCommand, PlayCommand, DoneCommand })
                 command.RaiseCanExecuteChanged();
         }
@@ -449,12 +451,38 @@ public sealed class BacklogViewModel : ObservableObject, IDisposable, ISearchabl
         Status = _host.Text.Format("backlog.status.manual", name);
     }
 
+    /// <summary>"Forget this game", then "Sure? The note and rating go too" once pressed.</summary>
+    public string ForgetText => _host.Text[_forgetArmed ? "backlog.forget.sure" : "backlog.forget"];
+
+    private bool _forgetArmed;
+    private DateTime _forgetArmedAt;
+
     private void Forget()
     {
         if (Selected is not { } selected)
             return;
 
-        // No confirmation, deliberately. This forgets what the pile thought, never a game folder.
+        // It never touches a game folder, but the note and the rating written by hand go with
+        // it and nothing brings them back, so it asks once: the same two presses as Uninstall,
+        // with a double-click not counting as the second.
+        if (!_forgetArmed)
+        {
+            _forgetArmed = true;
+            _forgetArmedAt = DateTime.UtcNow;
+            OnPropertyChanged(nameof(ForgetText));
+            return;
+        }
+        var since = DateTime.UtcNow - _forgetArmedAt;
+        if (since < TimeSpan.FromMilliseconds(500))
+            return;
+        if (since > TimeSpan.FromSeconds(10))
+        {
+            _forgetArmedAt = DateTime.UtcNow;
+            return;
+        }
+        _forgetArmed = false;
+        OnPropertyChanged(nameof(ForgetText));
+
         var name = selected.Shown;
         _settings.Entries.RemoveAll(e => e.Id == selected.Id);
         Save();

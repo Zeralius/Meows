@@ -21,6 +21,9 @@ public sealed class SettingsViewModel : ObservableObject
     /// <summary>Told after the tab size changes, so the strip redraws at the new one.</summary>
     public Action? TabSizeChanged { get; set; }
 
+    /// <summary>Told when the text size changes, so the window can redraw at it straight away.</summary>
+    public Action? TextScaleChanged { get; set; }
+
     /// <summary>The Server section: where plugins can copy to. Null in a test that did not give one.</summary>
     public ServerViewModel? Server { get; init; }
 
@@ -36,6 +39,10 @@ public sealed class SettingsViewModel : ObservableObject
         OpenSettingsFolderCommand = new RelayCommand(OpenSettingsFolder);
         CustomizeCommand = new RelayCommand(Customize);
         ResetAppearanceCommand = new RelayCommand(ResetAppearance);
+        ResetAppearanceStep = new TwoStep(() => MeowsText.Current["settings.scheme.reset"],
+            () => MeowsText.Current[_preferences.CustomLight is not null || _preferences.CustomDark is not null
+                ? "settings.scheme.reset.sure.custom"
+                : "settings.scheme.reset.sure"]);
         _editDark = _preferences.Theme == Appearance.Dark;
         UpdateAppearanceEditor();
     }
@@ -466,8 +473,14 @@ public sealed class SettingsViewModel : ObservableObject
         UpdateAppearanceEditor();
     }
 
+    /// <summary>"Restore original", or the question once pressed: it also throws away a scheme made by hand.</summary>
+    public TwoStep ResetAppearanceStep { get; }
+
     private void ResetAppearance()
     {
+        if (!ResetAppearanceStep.Press())
+            return;
+
         _preferences.Theme = Appearance.System;
         _preferences.ColourScheme = Appearance.OriginalScheme;
         _preferences.Accent = Appearance.DefaultAccent;
@@ -525,6 +538,29 @@ public sealed class SettingsViewModel : ObservableObject
         foreach (var colour in Colours)
             colour.Reread();
         OnPropertyChanged(nameof(ContrastNotice));
+    }
+
+    /// <summary>"Like Windows (125%)" first, then the fixed sizes.</summary>
+    public IReadOnlyList<TextScaleChoice> TextScales { get; } = BuildTextScales();
+
+    private static IReadOnlyList<TextScaleChoice> BuildTextScales() =>
+    [
+        new TextScaleChoice(null, MeowsText.Current.Format("settings.textsize.windows", TextScale.Windows() ?? 100)),
+        .. TextScale.Choices.Select(p => new TextScaleChoice(p, $"{p}%")),
+    ];
+
+    public TextScaleChoice SelectedTextScale
+    {
+        get => TextScales.FirstOrDefault(c => c.Percent == _preferences.TextScale) ?? TextScales[0];
+        set
+        {
+            if (value is null || value.Percent == _preferences.TextScale)
+                return;
+            _preferences.TextScale = value.Percent;
+            Save();
+            TextScaleChanged?.Invoke();
+            OnPropertyChanged();
+        }
     }
 
     public void SetTabSize(string choice)
@@ -711,4 +747,10 @@ public sealed class AppearancePreview : ObservableObject
     public IBrush WarningText => Brush(Colours.WarningText);
     public IBrush Danger => Brush(Colours.Danger);
     public IBrush DangerText => Brush(Colours.DangerText);
+}
+
+/// <summary>One line of the text size list: a percentage, or null for "like Windows".</summary>
+public sealed record TextScaleChoice(int? Percent, string Name)
+{
+    public override string ToString() => Name;
 }

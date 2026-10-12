@@ -83,6 +83,8 @@ public sealed class TabMenuViewModel : ObservableObject
         MoveRightCommand = new RelayCommand(() => strip.MoveTab(tabKey, 1));
         ResetCommand = new RelayCommand(() => strip.ResetTab(tabKey));
         NewGroupCommand = new RelayCommand(() => strip.MoveTabToNewGroup(tabKey, NewGroupName));
+        AskNewGroupCommand = new RelayCommand(() => strip.Prompt.Ask(
+            MeowsText.Current["strip.tab.newgroup.title"], "", name => strip.MoveTabToNewGroup(tabKey, name)));
     }
 
     /// <summary>Every group but the one it is already in.</summary>
@@ -103,6 +105,9 @@ public sealed class TabMenuViewModel : ObservableObject
     public RelayCommand ResetCommand { get; }
 
     public RelayCommand NewGroupCommand { get; }
+
+    /// <summary>The menu's way in: asks for the name on a card of its own, then makes the group.</summary>
+    public RelayCommand AskNewGroupCommand { get; }
 }
 
 /// <summary>
@@ -123,6 +128,8 @@ public sealed class GroupChipViewModel : ObservableObject
         MoveLeftCommand = new RelayCommand(() => strip.MoveGroup(Key, -1));
         MoveRightCommand = new RelayCommand(() => strip.MoveGroup(Key, 1));
         RenameCommand = new RelayCommand(() => strip.Rename(Key, RenameTo));
+        AskRenameCommand = new RelayCommand(() => strip.Prompt.Ask(
+            MeowsText.Current.Format("strip.rename.title", Name), Name, name => strip.Rename(Key, name)));
         Colours = [.. GroupColours.All.Select(c => new GroupColourChoice(c, colour => strip.Recolour(Key, colour)))];
     }
 
@@ -141,6 +148,10 @@ public sealed class GroupChipViewModel : ObservableObject
     public string CountText => Group.Tabs.Count.ToString();
 
     public string Arrow => IsCollapsed ? "▸" : "▾";
+
+    /// <summary>What a screen reader says for the chip: that it is a group, how many tabs, and whether it is shut.</summary>
+    public string AccessibleName =>
+        MeowsText.Current.Format(IsCollapsed ? "strip.a11y.chip.shut" : "strip.a11y.chip.open", Name, Group.Tabs.Count);
 
     /// <summary>Set while something is being dragged over this chip, and cleared when it leaves.</summary>
     public DropHint Hint
@@ -178,6 +189,9 @@ public sealed class GroupChipViewModel : ObservableObject
 
     public RelayCommand RenameCommand { get; }
 
+    /// <summary>The menu's way in: asks for the new name on a card of its own.</summary>
+    public RelayCommand AskRenameCommand { get; }
+
     public IReadOnlyList<GroupColourChoice> Colours { get; }
 
     public string CollapseText => MeowsText.Current[IsCollapsed ? "strip.expand" : "strip.collapse"];
@@ -194,6 +208,9 @@ public sealed class GroupChipViewModel : ObservableObject
 /// </summary>
 public sealed class TabStripViewModel : ObservableObject
 {
+    /// <summary>The card that asks for a name, shared by every chip and tab menu.</summary>
+    public PromptViewModel Prompt { get; } = new();
+
     private readonly ObservableCollection<TabViewModel> _tabs;
     private readonly ShellPreferences _preferences;
     private readonly Action _save;
@@ -280,6 +297,7 @@ public sealed class TabStripViewModel : ObservableObject
         if (byKey.TryGetValue(TabGroups.HomeKey, out var home))
         {
             home.GroupColour = null;
+            home.GroupName = null;
             Items.Add(home);
         }
 
@@ -293,6 +311,7 @@ public sealed class TabStripViewModel : ObservableObject
                 if (!byKey.TryGetValue(key, out var tab))
                     continue;
                 tab.GroupColour = group.Colour;
+                tab.GroupName = NameOf(group.Key);
                 tab.Menu = MenuFor(key, group.Key);
                 Items.Add(tab);
             }

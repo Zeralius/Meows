@@ -6,22 +6,6 @@
              x:DataType="vm:CollarViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="10,7" />
-            <Setter Property="CornerRadius" Value="5" />
-        </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
         <Style Selector="Border.marker">
             <Setter Property="Width" Value="4" />
             <Setter Property="CornerRadius" Value="2" />
@@ -73,7 +57,7 @@
             <DockPanel Grid.Column="0">
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,14,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding IsEmpty}"
                            Text="{m:Tr collar.empty}" />
@@ -218,8 +202,7 @@
                                 <TextBlock Text="{m:Tr collar.handled.hint}" Classes="label" TextWrapping="Wrap" />
                                 <Button Content="{m:Tr collar.delete}"
                                         Command="{Binding DeleteCommand}"
-                                        Background="{DynamicResource MeowsDanger}"
-                                        BorderBrush="{DynamicResource MeowsDangerLine}"
+                                        Classes="danger"
                                         HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Center" />
                             </StackPanel>

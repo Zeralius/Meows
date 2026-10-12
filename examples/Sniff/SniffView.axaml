@@ -27,7 +27,7 @@
                 </StackPanel>
                 <!-- The bar and the running status live in the Tasks panel, bottom right, for
                      every plugin alike. The tab only says where it stands. -->
-                <TextBlock Text="{Binding Status}" Opacity="0.6" FontSize="12" />
+                <TextBlock Text="{Binding Status}" Foreground="{DynamicResource MeowsTextMuted}" FontSize="12" />
                 <TextBlock Text="{Binding ResultText}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding HasResult}" />

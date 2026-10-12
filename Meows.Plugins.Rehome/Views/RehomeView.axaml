@@ -6,14 +6,7 @@
              x:DataType="vm:RehomeViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
         <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="14,12,14,6" />
         </Style>
         <Style Selector="TextBlock.warn">
@@ -25,10 +18,7 @@
         <Style Selector="TextBlock.good">
             <Setter Property="Foreground" Value="{DynamicResource MeowsGoodText}" />
         </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
-        </Style>
+
         <Style Selector="Border.row">
             <Setter Property="Background" Value="{DynamicResource MeowsCard}" />
             <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
@@ -41,9 +31,7 @@
             <Setter Property="Padding" Value="10,6" />
             <Setter Property="CornerRadius" Value="5" />
         </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
+
         <Style Selector="Button.small">
             <Setter Property="FontSize" Value="11" />
             <Setter Property="Padding" Value="8,3" />
@@ -110,7 +98,7 @@
             <!-- The middle: one list per step -->
             <Panel Grid.Column="2">
 
-                <TextBlock Margin="14,14" Opacity="0.45" TextWrapping="Wrap" Text="{m:Tr rehome.empty}">
+                <TextBlock Margin="14,14" Foreground="{DynamicResource MeowsTextMuted}" TextWrapping="Wrap" Text="{m:Tr rehome.empty}">
                     <TextBlock.IsVisible>
                         <MultiBinding Converter="{x:Static BoolConverters.And}">
                             <Binding Path="!HasScanned" />
@@ -195,7 +183,7 @@
                                                         <TextBlock Grid.Column="1" Text="{Binding SizeText}" FontWeight="SemiBold" />
                                                     </Grid>
                                                     <TextBlock Text="{Binding DetailText}" Classes="label" TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Text="{Binding Path}" Opacity="0.35" FontSize="10" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Text="{Binding Path}" Foreground="{DynamicResource MeowsTextMuted}" FontSize="10" TextTrimming="CharacterEllipsis" />
                                                     <TextBlock Text="{Binding Note}" Classes="label warn" TextWrapping="Wrap" IsVisible="{Binding HasNote}" />
                                                 </StackPanel>
                                             </Grid>
@@ -246,7 +234,7 @@
                                             <StackPanel Grid.Column="1" Spacing="2">
                                                 <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
                                                 <TextBlock Text="{Binding Note}" Classes="label" TextWrapping="Wrap" />
-                                                <TextBlock Text="{Binding Source}" Opacity="0.35" FontSize="10" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Source}" Foreground="{DynamicResource MeowsTextMuted}" FontSize="10" TextTrimming="CharacterEllipsis" />
                                             </StackPanel>
                                             <TextBlock Grid.Column="2" Text="{Binding Detail}" Classes="label" VerticalAlignment="Top" />
                                         </Grid>

@@ -7,32 +7,16 @@
              x:DataType="vm:TinViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
         <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="14,12,14,6" />
         </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
-        </Style>
+
         <Style Selector="Border.badge">
             <Setter Property="CornerRadius" Value="3" />
             <Setter Property="Padding" Value="5,1" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
-        <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="10,7" />
-            <Setter Property="CornerRadius" Value="5" />
-        </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
+
         <Style Selector="Button.bucket">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -138,7 +122,6 @@
                      change. Bound both ways so a width dragged out stays dragged out. -->
                 <ColumnDefinition Width="{Binding ChartWidth, Mode=TwoWay}" MinWidth="240" MaxWidth="680" />
             </Grid.ColumnDefinitions>
-
 
             <Border Grid.Column="0" Classes="panel" BorderThickness="0,0,1,0">
                 <DockPanel>
@@ -325,7 +308,7 @@
 
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,12,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding IsEmpty}"
                            Text="{m:Tr tin.empty}" />
@@ -353,12 +336,12 @@
                                     <Border Classes="badge"
                                             Background="{DynamicResource MeowsWarnLine}"
                                             IsVisible="{Binding WentUp}">
-                                        <TextBlock Text="{m:Tr tin.badge.up}" FontSize="9" />
+                                        <TextBlock Text="{m:Tr tin.badge.up}" FontSize="10" />
                                     </Border>
                                     <Border Classes="badge"
                                             Background="{DynamicResource MeowsLine}"
                                             IsVisible="{Binding Lapsed}">
-                                        <TextBlock Text="{m:Tr tin.badge.stopped}" FontSize="9" />
+                                        <TextBlock Text="{m:Tr tin.badge.stopped}" FontSize="10" />
                                     </Border>
                                 </StackPanel>
 
@@ -408,12 +391,12 @@
                                     <Border Classes="badge"
                                             Background="{DynamicResource MeowsWarnLine}"
                                             IsVisible="{Binding WentUp}">
-                                        <TextBlock Text="{m:Tr tin.badge.up}" FontSize="9" />
+                                        <TextBlock Text="{m:Tr tin.badge.up}" FontSize="10" />
                                     </Border>
                                     <Border Classes="badge"
                                             Background="{DynamicResource MeowsLine}"
                                             IsVisible="{Binding Lapsed}">
-                                        <TextBlock Text="{m:Tr tin.badge.stopped}" FontSize="9" />
+                                        <TextBlock Text="{m:Tr tin.badge.stopped}" FontSize="10" />
                                     </Border>
                                 </StackPanel>
 

@@ -15,6 +15,7 @@ public sealed class PluginEntryViewModel : ObservableObject
     private bool _isActivated;
     private string? _error;
     private bool _isConfirmingUninstall;
+    private DateTime _uninstallArmedAt;
     private AvailableUpdate? _update;
 
     private readonly Func<string, PluginHealth>? _health;
@@ -100,8 +101,10 @@ public sealed class PluginEntryViewModel : ObservableObject
         get => _isConfirmingUninstall;
         private set
         {
-            if (SetField(ref _isConfirmingUninstall, value))
-                OnPropertyChanged(nameof(UninstallText));
+            if (!SetField(ref _isConfirmingUninstall, value))
+                return;
+            OnPropertyChanged(nameof(UninstallText));
+            OnPropertyChanged(nameof(UninstallName));
         }
     }
 
@@ -112,6 +115,19 @@ public sealed class PluginEntryViewModel : ObservableObject
         if (!IsConfirmingUninstall)
         {
             IsConfirmingUninstall = true;
+            _uninstallArmedAt = DateTime.UtcNow;
+            return;
+        }
+
+        // The second press has to be a decision. One this soon after arming is the same
+        // double-click, and one long after is somebody who forgot it was armed: that one
+        // arms it again rather than doing it.
+        var since = DateTime.UtcNow - _uninstallArmedAt;
+        if (since < TimeSpan.FromMilliseconds(500))
+            return;
+        if (since > TimeSpan.FromSeconds(10))
+        {
+            _uninstallArmedAt = DateTime.UtcNow;
             return;
         }
 
@@ -196,12 +212,25 @@ public sealed class PluginEntryViewModel : ObservableObject
 
     public string OtherName => Descriptor.OtherName;
 
+    /// <summary>
+    /// What a screen reader says for the card's switch and buttons. Every card has the same
+    /// three, so "Active" alone, thirty-two times over, says nothing about which plugin.
+    /// </summary>
+    public string SwitchName => MeowsText.Current.Format("plugins.a11y.switch", DisplayName);
+
+    public string UninstallName => MeowsText.Current.Format("plugins.a11y.uninstall", UninstallText, DisplayName);
+
+    public string ShareName => MeowsText.Current.Format("plugins.a11y.share", DisplayName);
+
     public bool HasOtherName => Descriptor.OtherName.Length > 0;
 
     /// <summary>The names read differently now: the switch flipped, or the language did.</summary>
     public void Rename()
     {
         OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(SwitchName));
+        OnPropertyChanged(nameof(UninstallName));
+        OnPropertyChanged(nameof(ShareName));
         OnPropertyChanged(nameof(OtherName));
         OnPropertyChanged(nameof(HasOtherName));
     }

@@ -77,6 +77,10 @@ public sealed class MainWindowViewModel : ObservableObject
 
         RescanCommand = new RelayCommand(Rescan);
         SavePersonaCommand = new RelayCommand(SavePersona, () => !string.IsNullOrWhiteSpace(NewPersonaName));
+        SavePersonaStep = new TwoStep(() => _text["plugins.persona.save"],
+            () => _text.Format("plugins.persona.save.sure", NewPersonaName.Trim()));
+        DeletePersonaStep = new TwoStep(() => _text["plugins.persona.delete"],
+            () => _text.Format("plugins.persona.delete.sure", SelectedPersonaName ?? ""));
         DeletePersonaCommand = new RelayCommand(DeletePersona, () => SelectedPersonaName is not null);
         AddReadyMadePersonasCommand = new RelayCommand(AddReadyMadePersonas, ReadyMadePersonasMissing);
         OpenPluginsFolderCommand = new RelayCommand(OpenPluginsFolder, () => _catalog.PluginsDirectories.Count > 0);
@@ -96,6 +100,12 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             foreach (var entry in Plugins)
                 entry.RefreshCost();
+
+            // Each tab knows whether its plugin has work running, so the window can say so under
+            // the strip: most plugins only said it in a small grey status line.
+            var busy = _background.Running.Select(t => t.PluginId).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            foreach (var tab in Tabs)
+                tab.IsBusy = tab.IsPlugin && busy.Contains(tab.Key);
         };
         _background.WatchesChanged += OnWatchesChanged;
         if (_store is not null)
@@ -279,6 +289,17 @@ public sealed class MainWindowViewModel : ObservableObject
     /// the ones that can be seen. Counting past a collapsed group would make the number depend
     /// on something not on screen.
     /// </summary>
+    /// <summary>How much bigger than designed the window is drawn: 1 at 100%, 1.5 at 150%.</summary>
+    public double UiScale => TextScale.Resolve(_preferences.TextScale) / 100d;
+
+    /// <summary>The tab in front, one step along the strip, crossing into the next group at an edge. Home stays first.</summary>
+    public void MoveSelectedTab(int direction)
+    {
+        if (SelectedTab is not { } tab || ReferenceEquals(tab, Tabs[0]))
+            return;
+        Strip.MoveTab(tab.Key, direction);
+    }
+
     public void SelectTabByNumber(int number)
     {
         var visible = Strip.Visible;
@@ -910,10 +931,20 @@ public sealed class MainWindowViewModel : ObservableObject
         return GlanceAt(entry) is { } single ? [single] : null;
     }
 
+    /// <summary>
+    /// The three drawers along the bottom, log, notifications and tasks, open one at a time:
+    /// together they stood up to 490 pixels tall in a window that can be 560.
+    /// </summary>
     public bool IsLogVisible
     {
         get => _isLogVisible;
-        set => SetField(ref _isLogVisible, value);
+        set
+        {
+            if (!SetField(ref _isLogVisible, value) || !value)
+                return;
+            IsNotificationsOpen = false;
+            IsTasksOpen = false;
+        }
     }
 
     public bool IsNotificationsOpen
@@ -921,8 +952,10 @@ public sealed class MainWindowViewModel : ObservableObject
         get => _isNotificationsOpen;
         set
         {
-            if (SetField(ref _isNotificationsOpen, value) && value)
-                IsTasksOpen = false;
+            if (!SetField(ref _isNotificationsOpen, value) || !value)
+                return;
+            IsTasksOpen = false;
+            IsLogVisible = false;
         }
     }
 
@@ -931,8 +964,10 @@ public sealed class MainWindowViewModel : ObservableObject
         get => _isTasksOpen;
         set
         {
-            if (SetField(ref _isTasksOpen, value) && value)
-                IsNotificationsOpen = false;
+            if (!SetField(ref _isTasksOpen, value) || !value)
+                return;
+            IsNotificationsOpen = false;
+            IsLogVisible = false;
         }
     }
 
@@ -949,6 +984,16 @@ public sealed class MainWindowViewModel : ObservableObject
         ? _text["shell.tasks"]
         : _text.Format("shell.tasks.count", _background.RunningCount);
 
+    /// <summary>The badge in words, for a screen reader: "⛔ 3" read aloud is "no entry three".</summary>
+    public string NotificationBadgeName => _notifications.Count == 0
+        ? _text["shell.alerts"]
+        : _text.Format(_notifications.Worst switch
+        {
+            NotificationSeverity.Error => "shell.alerts.a11y.error",
+            NotificationSeverity.Warning => "shell.alerts.a11y.warning",
+            _ => "shell.alerts.a11y.info",
+        }, _notifications.Count);
+
     private static string Glyph(NotificationSeverity? severity) => severity switch
     {
         NotificationSeverity.Error => "⛔",
@@ -960,6 +1005,7 @@ public sealed class MainWindowViewModel : ObservableObject
     {
         OnPropertyChanged(nameof(HasNotifications));
         OnPropertyChanged(nameof(NotificationBadge));
+        OnPropertyChanged(nameof(NotificationBadgeName));
     }
 
     private void RaiseTaskState()
@@ -1053,12 +1099,16 @@ public sealed class MainWindowViewModel : ObservableObject
         _home = new HomeViewModel(Plugins, p => _pluginTabs.ContainsKey(p.Id), GlanceAt, OpenPlugin, _notifications, _background,
             _store, PluginName, () => _preferences.LastSeen, InvokeNotificationAction,
             GlancesAt, _preferences.HomeOrder, _preferences.HomeHidden, SavePreferences, _picker);
+        _home.Personas = PersonaNames;
+        _home.ChoosePersona = name => SelectedPersonaName = name;
+        _home.OpenPlugins = () => SelectedTab = _pluginsTab;
         Tabs.Add(new TabViewModel("shell.tab.home", "🏠", new HomeView { DataContext = _home }));
         _pluginsTab = new TabViewModel("shell.tab.plugins", "⛭", new PluginsView { DataContext = this });
         Tabs.Add(_pluginsTab);
         _settingsViewModel = new SettingsViewModel(_settings, _text, _log, _preferences)
         {
             TabSizeChanged = () => Strip.Resize(),
+            TextScaleChanged = () => OnPropertyChanged(nameof(UiScale)),
             Server = new ServerViewModel(_preferences.Reach, _reach, _shellSecrets, _picker, SavePreferences,
                 line => _log.Write("reach", line)),
         };
@@ -1156,8 +1206,38 @@ public sealed class MainWindowViewModel : ObservableObject
             PluginFilters.Add(new PluginFilterViewModel(topic, count, topic == selected, PickTopic));
 
         PluginGroups.Clear();
-        foreach (var group in PluginGroupViewModel.Arrange(Plugins.Where(p => PluginFilter.Shows(p.Descriptor.Topics, selected))))
+        foreach (var group in PluginGroupViewModel.Arrange(Plugins.Where(p =>
+                     PluginFilter.Shows(p.Descriptor.Topics, selected) && Matches(p, _pluginQuery))))
             PluginGroups.Add(group);
+        OnPropertyChanged(nameof(NothingMatches));
+    }
+
+    private string _pluginQuery = "";
+
+    /// <summary>
+    /// Words typed over the cards: either name, or the description. Thirty-odd cards under a few
+    /// chips are still a lot to read through for the one that finds duplicates.
+    /// </summary>
+    public string PluginQuery
+    {
+        get => _pluginQuery;
+        set
+        {
+            if (SetField(ref _pluginQuery, value ?? ""))
+                Regroup();
+        }
+    }
+
+    /// <summary>Something was typed and no card answers to it.</summary>
+    public bool NothingMatches => HasPlugins && PluginGroups.Count == 0 && _pluginQuery.Trim().Length > 0;
+
+    private static bool Matches(PluginEntryViewModel plugin, string query)
+    {
+        var words = query.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (words.Length == 0)
+            return true;
+        var haystack = $"{plugin.DisplayName} {plugin.OtherName} {plugin.Description}";
+        return words.All(w => haystack.Contains(w, StringComparison.CurrentCultureIgnoreCase));
     }
 
     private void PickTopic(PluginTopics? topic)
@@ -1318,6 +1398,13 @@ public sealed class MainWindowViewModel : ObservableObject
 
         var ids = Plugins.Where(p => p.IsActivated).Select(p => p.Id).ToList();
         var existing = _preferences.Personas.FirstOrDefault(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
+
+        // A new name saves straight away. The name of one already there asks first, since its
+        // list of plugins is about to be replaced by whatever happens to be on right now.
+        if (existing is not null && !SavePersonaStep.Press())
+            return;
+        SavePersonaStep.Disarm();
+
         if (existing is null)
             _preferences.Personas.Add(new PersonaSetting { Name = name, PluginIds = ids });
         else
@@ -1330,6 +1417,8 @@ public sealed class MainWindowViewModel : ObservableObject
     private void DeletePersona()
     {
         if (SelectedPersonaName is not { } name)
+            return;
+        if (!DeletePersonaStep.Press())
             return;
 
         _preferences.Personas.RemoveAll(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase));
@@ -1682,6 +1771,7 @@ public sealed class MainWindowViewModel : ObservableObject
         {
             if (!SetField(ref _selectedPersona, value))
                 return;
+            DeletePersonaStep.Disarm();
             if (value is not null)
                 ApplyPersona(value);
         }
@@ -1692,14 +1782,22 @@ public sealed class MainWindowViewModel : ObservableObject
         get => _newPersonaName;
         set
         {
-            if (SetField(ref _newPersonaName, value ?? ""))
-                SavePersonaCommand.RaiseCanExecuteChanged();
+            if (!SetField(ref _newPersonaName, value ?? ""))
+                return;
+            SavePersonaCommand.RaiseCanExecuteChanged();
+            SavePersonaStep.Disarm();
         }
     }
 
     public RelayCommand SavePersonaCommand { get; }
 
     public RelayCommand DeletePersonaCommand { get; }
+
+    /// <summary>"Save these", or "Replace Household?" when the name is taken.</summary>
+    public TwoStep SavePersonaStep { get; }
+
+    /// <summary>"Delete", or "Delete Household?" once pressed.</summary>
+    public TwoStep DeletePersonaStep { get; }
 
     /// <summary>The ready-made personas that are not there, added back.</summary>
     public RelayCommand AddReadyMadePersonasCommand { get; }

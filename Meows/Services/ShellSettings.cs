@@ -470,8 +470,12 @@ public sealed class ShellPreferences
     /// <summary>When that notification last went out; null until the first week has passed.</summary>
     public DateTime? LastRecapUtc { get; set; }
 
-    /// <summary>Purrge and Chonk, or Duplicates and Disk usage. On, because it is the app's character.</summary>
-    public bool FelineNames { get; set; } = true;
+    /// <summary>
+    /// Purrge and Chonk, or Duplicates and Disk usage. Off for someone new, who is looking for
+    /// the duplicate finder and not yet in on the joke; the paw in the bottom bar turns the cat
+    /// names on. A settings file from before 6.0.0 says true and keeps them.
+    /// </summary>
+    public bool FelineNames { get; set; }
 
     /// <summary>
     /// How long a line in the history is kept, in days, before the shell forgets it on its own.
@@ -510,6 +514,12 @@ public sealed class ShellPreferences
     /// normal size are small to hit, and a strip that wraps anyway has room to be taller.
     /// </summary>
     public string TabSize { get; set; } = TabSizes.Normal;
+
+    /// <summary>
+    /// How big the whole window is drawn, in percent. Null follows Windows' own text size
+    /// setting, which is what nearly everyone wants and what an older settings file gets.
+    /// </summary>
+    public int? TextScale { get; set; }
 
     /// <summary>The Plugins tab as one card per row, as before 5.1.0, rather than the grid.</summary>
     public bool PluginsAsList { get; set; }

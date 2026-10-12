@@ -24,8 +24,16 @@
         <Style Selector="Button.tab:pointerover /template/ ContentPresenter, Button.chip:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource MeowsRaised}" />
         </Style>
-        <Style Selector="Button.tab.selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+        <!-- The tab in front: the selection colour and a line in the text colour along its
+             bottom. Base on Bar, which is what it was, is 1.04:1, so only the weight told it apart;
+             the line is its own, separate from the group's coloured underline. -->
+        <Style Selector="Button.tab /template/ ContentPresenter">
+            <Setter Property="BorderThickness" Value="0,0,0,2" />
+            <Setter Property="BorderBrush" Value="Transparent" />
+        </Style>
+        <Style Selector="Button.tab.selected /template/ ContentPresenter, Button.tab.selected:pointerover /template/ ContentPresenter">
+            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource MeowsForeground}" />
         </Style>
         <Style Selector="Button.tab.selected">
             <Setter Property="FontWeight" Value="SemiBold" />
@@ -81,6 +89,8 @@
         </Style>
     </Window.Styles>
 
+    <!-- The whole window, drawn at the text size picked on the Settings tab or Windows' own. -->
+    <LayoutTransformControl Name="Zoom">
     <Panel>
 
     <DockPanel>
@@ -91,10 +101,13 @@
                 BorderThickness="0,1,0,0"
                 Padding="10,4">
             <Grid ColumnDefinitions="Auto,*,Auto">
+                <!-- Where the plugins are read from, on the version's tooltip: it is worth knowing
+                     when something is not loading, and noise in the bar the rest of the time. -->
                 <TextBlock Grid.Column="0"
                            Text="{Binding AppVersionText}"
                            FontWeight="SemiBold"
-                           Opacity="0.55"
+                           Foreground="{DynamicResource MeowsTextMuted}"
+                           ToolTip.Tip="{Binding PluginsDirectoryText}"
                            VerticalAlignment="Center" />
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Margin="12,0" Spacing="12">
                     <!-- A newer Meows on the releases page. A link, not a download: the running exe
@@ -104,14 +117,8 @@
                             IsVisible="{Binding HasShellUpdate}"
                             Padding="8,1"
                             FontSize="12"
-                            Background="{DynamicResource MeowsInfo}"
-                            BorderBrush="{DynamicResource MeowsInfoLine}"
-                            Foreground="{DynamicResource MeowsInfoText}"
+                            Classes="info"
                             VerticalAlignment="Center" />
-                    <TextBlock Opacity="0.45"
-                               VerticalAlignment="Center"
-                               TextTrimming="CharacterEllipsis"
-                               Text="{Binding PluginsDirectoryText}" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
                     <Button Content="{m:Tr shell.palette}"
@@ -123,17 +130,20 @@
                                   FontFamily="Segoe UI Emoji"
                                   Padding="10,2"
                                   IsChecked="{Binding FelineNames}"
-                                  ToolTip.Tip="{m:Tr shell.names.tip}" />
+                                  ToolTip.Tip="{m:Tr shell.names.tip}"
+                                  AutomationProperties.Name="{m:Tr shell.names.tip}" />
                     <!-- Personas: named sets of switched-on plugins, one pick to switch. -->
                     <ComboBox ItemsSource="{Binding PersonaNames}"
                               SelectedItem="{Binding SelectedPersonaName}"
                               PlaceholderText="{m:Tr shell.persona.hint}"
+                              AutomationProperties.Name="{m:Tr shell.persona.hint}"
                               MinWidth="110"
                               VerticalAlignment="Center" />
                     <ToggleButton Content="{Binding TaskBadge}"
                                   Padding="10,2"
                                   IsChecked="{Binding IsTasksOpen}" />
                     <ToggleButton Content="{Binding NotificationBadge}"
+                                  AutomationProperties.Name="{Binding NotificationBadgeName}"
                                   Padding="10,2"
                                   IsChecked="{Binding IsNotificationsOpen}" />
                     <ToggleButton Content="{m:Tr shell.log}"
@@ -151,7 +161,7 @@
                 IsVisible="{Binding IsNotificationsOpen}">
             <DockPanel>
                 <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="12,8,12,4">
-                    <TextBlock Grid.Column="0" Text="{m:Tr shell.notifications}" FontWeight="SemiBold" Opacity="0.6" />
+                    <TextBlock Grid.Column="0" Text="{m:Tr shell.notifications}" FontWeight="SemiBold" Foreground="{DynamicResource MeowsTextMuted}" />
                     <Button Grid.Column="1"
                             Content="{m:Tr shell.notifications.clear}"
                             FontSize="11"
@@ -160,7 +170,7 @@
                 </Grid>
                 <TextBlock DockPanel.Dock="Top"
                            Margin="12,4,12,10"
-                           Opacity="0.4"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            FontSize="11"
                            IsVisible="{Binding !HasNotifications}"
                            Text="{m:Tr shell.notifications.empty}" />
@@ -189,8 +199,8 @@
                                                        TextWrapping="Wrap"
                                                        IsVisible="{Binding HasMessage}" />
                                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                                <TextBlock Text="{Binding SourceName}" Opacity="0.4" FontSize="10" />
-                                                <TextBlock Text="{Binding TimeText}" Opacity="0.4" FontSize="10" />
+                                                <TextBlock Text="{Binding SourceName}" Foreground="{DynamicResource MeowsTextMuted}" FontSize="10" />
+                                                <TextBlock Text="{Binding TimeText}" Foreground="{DynamicResource MeowsTextMuted}" FontSize="10" />
                                             </StackPanel>
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
@@ -212,6 +222,8 @@
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
                                             <Button Content="✕"
+                                                    AutomationProperties.Name="{m:Tr shell.dismiss}"
+                                                    ToolTip.Tip="{m:Tr shell.dismiss}"
                                                     FontSize="11"
                                                     Padding="7,2"
                                                     IsVisible="{Binding CanDismiss}"
@@ -237,11 +249,11 @@
                 <TextBlock DockPanel.Dock="Top"
                            Text="{m:Tr shell.tasks.title}"
                            FontWeight="SemiBold"
-                           Opacity="0.6"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            Margin="12,8,12,4" />
                 <TextBlock DockPanel.Dock="Top"
                            Margin="12,4,12,10"
-                           Opacity="0.4"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            FontSize="11"
                            IsVisible="{Binding !HasRunningTasks}"
                            Text="{m:Tr shell.tasks.empty}" />
@@ -259,7 +271,7 @@
                                         <StackPanel Grid.Column="0" Spacing="2">
                                             <TextBlock Text="{Binding Title}" FontWeight="SemiBold" />
                                             <TextBlock Text="{Binding Status}" Opacity="0.65" FontSize="11" TextWrapping="Wrap" />
-                                            <TextBlock Text="{Binding SourceName}" Opacity="0.4" FontSize="10" />
+                                            <TextBlock Text="{Binding SourceName}" Foreground="{DynamicResource MeowsTextMuted}" FontSize="10" />
                                         </StackPanel>
                                         <ProgressBar Grid.Column="1"
                                                      Width="140"
@@ -334,7 +346,8 @@
                         <DataTemplate x:DataType="vm:GroupChipViewModel">
                             <Button Classes="chip"
                                     Command="{Binding ToggleCommand}"
-                                    ToolTip.Tip="{Binding Name}">
+                                    ToolTip.Tip="{Binding Name}"
+                                    AutomationProperties.Name="{Binding AccessibleName}">
                                 <StackPanel Orientation="Horizontal" Spacing="5">
                                     <!-- Where a drop would land. A line either side rather than a
                                          highlight on the whole thing, because "into this group"
@@ -353,23 +366,14 @@
                                             IsVisible="{Binding IsCollapsed}">
                                         <TextBlock Text="{Binding CountText}" FontSize="11" Opacity="0.8" />
                                     </Border>
-                                    <TextBlock Text="{Binding Arrow}" VerticalAlignment="Center" Opacity="0.5" FontSize="10" />
+                                    <TextBlock Text="{Binding Arrow}" VerticalAlignment="Center" Foreground="{DynamicResource MeowsTextMuted}" FontSize="10" />
                                     <Border Classes="marker" IsVisible="{Binding HintAfter}" />
                                 </StackPanel>
                                 <Button.ContextMenu>
                                     <ContextMenu>
                                         <MenuItem Header="{Binding CollapseText}" Command="{Binding ToggleCommand}" />
                                         <Separator />
-                                        <MenuItem Header="{m:Tr strip.rename}">
-                                            <MenuItem StaysOpenOnClick="True">
-                                                <MenuItem.Header>
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <TextBox Text="{Binding RenameTo}" Width="160" />
-                                                        <Button Content="{m:Tr strip.rename.go}" Command="{Binding RenameCommand}" />
-                                                    </StackPanel>
-                                                </MenuItem.Header>
-                                            </MenuItem>
-                                        </MenuItem>
+                                        <MenuItem Header="{m:Tr strip.rename}" Command="{Binding AskRenameCommand}" />
                                         <MenuItem Header="{m:Tr strip.colour}" ItemsSource="{Binding Colours}">
                                             <MenuItem.ItemContainerTheme>
                                                 <ControlTheme TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}" x:DataType="vm:GroupColourChoice">
@@ -391,6 +395,7 @@
                         <DataTemplate x:DataType="vm:TabViewModel">
                             <Button Classes="tab"
                                     Classes.selected="{Binding IsSelected}"
+                                    AutomationProperties.Name="{Binding AccessibleName}"
                                     Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).SelectTabCommand}"
                                     CommandParameter="{Binding}">
                                 <StackPanel Spacing="3">
@@ -405,16 +410,20 @@
                                                    FontFamily="Segoe UI Emoji"
                                                    VerticalAlignment="Center" />
                                         <TextBlock Text="{Binding Header}" VerticalAlignment="Center" />
-                                        <!-- Into a window of its own. Shown faintly so the strip stays a strip. -->
+                                        <!-- Into a window of its own. Quieter than the name so the strip stays a
+                                             strip. Not a stop for Tab: the same thing is on the tab's menu, and a
+                                             stop inside every tab would double the keypresses along the strip. -->
                                         <Button Content="⧉"
                                                 FontSize="11"
                                                 Padding="3,0"
                                                 MinHeight="0"
                                                 Background="Transparent"
                                                 BorderThickness="0"
-                                                Opacity="0.4"
+                                                Classes="quiet"
+                                                IsTabStop="False"
                                                 VerticalAlignment="Center"
-                                                ToolTip.Tip="{m:Tr shell.popout}"
+                                                ToolTip.Tip="{Binding PopOutName}"
+                                                AutomationProperties.Name="{Binding PopOutName}"
                                                 IsVisible="{Binding !IsPoppedOut}"
                                                 Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).PopOutCommand}"
                                                 CommandParameter="{Binding}" />
@@ -441,16 +450,7 @@
                                                 </ControlTheme>
                                             </MenuItem.ItemContainerTheme>
                                         </MenuItem>
-                                        <MenuItem Header="{m:Tr strip.tab.newgroup}">
-                                            <MenuItem StaysOpenOnClick="True">
-                                                <MenuItem.Header>
-                                                    <StackPanel Orientation="Horizontal" Spacing="6">
-                                                        <TextBox Text="{Binding Menu.NewGroupName}" Width="160" PlaceholderText="{m:Tr strip.tab.newgroup.name}" />
-                                                        <Button Content="{m:Tr strip.tab.newgroup.go}" Command="{Binding Menu.NewGroupCommand}" />
-                                                    </StackPanel>
-                                                </MenuItem.Header>
-                                            </MenuItem>
-                                        </MenuItem>
+                                        <MenuItem Header="{m:Tr strip.tab.newgroup}" Command="{Binding Menu.AskNewGroupCommand}" />
                                         <Separator />
                                         <MenuItem Header="{m:Tr strip.tab.reset}" Command="{Binding Menu.ResetCommand}" />
                                         <MenuItem Header="{m:Tr shell.popout}"
@@ -470,12 +470,21 @@
                 </ItemsControl>
             </Border>
 
+            <!-- The plugin in front is working: a thin moving line under the strip, the same in
+                 every plugin, rather than each saying it its own way or not at all. -->
+            <ProgressBar DockPanel.Dock="Top"
+                         IsIndeterminate="True"
+                         Height="3"
+                         MinHeight="3"
+                         CornerRadius="0"
+                         IsVisible="{Binding SelectedTab.IsBusy, FallbackValue=False}"
+                         AutomationProperties.Name="{m:Tr shell.busy}" />
             <ContentControl Content="{Binding SelectedTab.Shown}">
                 <ContentControl.DataTemplates>
                     <!-- What stands in for a tab while its content is in its own window. -->
                     <DataTemplate x:DataType="vm:PoppedOutNotice">
                         <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="12">
-                            <TextBlock Text="{m:Tr shell.popout.away}" Opacity="0.55" HorizontalAlignment="Center" />
+                            <TextBlock Text="{m:Tr shell.popout.away}" Foreground="{DynamicResource MeowsTextMuted}" HorizontalAlignment="Center" />
                             <Button Content="{m:Tr shell.popout.back}"
                                     HorizontalAlignment="Center"
                                     Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).BringBackCommand}"
@@ -494,6 +503,7 @@
     <Panel IsVisible="{Binding Palette.IsOpen}">
         <Border Background="{DynamicResource MeowsVeil}" PointerPressed="OnPaletteVeilPressed" />
         <Border Name="PaletteCard"
+                KeyboardNavigation.TabNavigation="Cycle"
                 Width="620"
                 MaxHeight="520"
                 VerticalAlignment="Top"
@@ -507,13 +517,13 @@
             <DockPanel>
                 <TextBox Name="PaletteBox"
                          DockPanel.Dock="Top"
+                         AutomationProperties.Name="{Binding Palette.Hint}"
                          Text="{Binding Palette.Query}"
                          PlaceholderText="{Binding Palette.Hint}"
                          FontSize="15"
                          Margin="0,0,0,8" />
                 <TextBlock DockPanel.Dock="Top"
-                           Classes="label"
-                           Opacity="0.45"
+                           Classes="label muted"
                            Margin="6,0,6,8"
                            IsVisible="{Binding Palette.IsEmpty}"
                            Text="{m:Tr palette.nothing}" />
@@ -523,13 +533,12 @@
                          BorderThickness="0"
                          DoubleTapped="OnPaletteRun">
                     <ListBox.Styles>
-                        <Style Selector="ListBoxItem">
+                        <Style Selector="ListBoxItem" x:DataType="vm:PaletteItem">
                             <Setter Property="Padding" Value="10,6" />
                             <Setter Property="CornerRadius" Value="6" />
+                            <Setter Property="AutomationProperties.Name" Value="{Binding Title}" />
                         </Style>
-                        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-                            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-                        </Style>
+
                     </ListBox.Styles>
                     <ListBox.ItemTemplate>
                         <DataTemplate x:DataType="vm:PaletteItem">
@@ -542,7 +551,7 @@
                                 <StackPanel Grid.Column="1" Spacing="1">
                                     <TextBlock Text="{Binding Title}" FontSize="13" TextTrimming="CharacterEllipsis" />
                                     <TextBlock Text="{Binding Subtitle}"
-                                               Opacity="0.5"
+                                               Foreground="{DynamicResource MeowsTextMuted}"
                                                FontSize="11"
                                                TextTrimming="CharacterEllipsis"
                                                IsVisible="{Binding HasSubtitle}" />
@@ -555,6 +564,35 @@
         </Border>
     </Panel>
 
+    <!-- A name asked for: a group renamed, a new group. Over everything, like the palette, and
+         the keyboard stays inside it until it is answered. -->
+    <Panel IsVisible="{Binding Strip.Prompt.IsOpen}">
+        <Border Background="{DynamicResource MeowsVeil}" />
+        <Border Name="PromptCard"
+                KeyboardNavigation.TabNavigation="Cycle"
+                Width="420"
+                VerticalAlignment="Top"
+                HorizontalAlignment="Center"
+                Margin="0,110,0,0"
+                Background="{DynamicResource MeowsCard}"
+                BorderBrush="{DynamicResource MeowsLine}"
+                BorderThickness="1"
+                CornerRadius="10"
+                Padding="16">
+            <StackPanel Spacing="12">
+                <TextBlock Name="PromptTitle" Text="{Binding Strip.Prompt.Title}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBox Name="PromptBox"
+                         Text="{Binding Strip.Prompt.Text}"
+                         AutomationProperties.LabeledBy="{Binding #PromptTitle}" />
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8">
+                    <Button Content="{m:Tr shell.cancel}" Command="{Binding Strip.Prompt.CancelCommand}" />
+                    <Button Content="{m:Tr strip.prompt.ok}" Command="{Binding Strip.Prompt.OkCommand}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
     </Panel>
+
+    </Panel>
+    </LayoutTransformControl>
 
 </Window>

@@ -23,6 +23,10 @@
             <SolidColorBrush x:Key="MeowsPanel" Color="#141418" />
             <SolidColorBrush x:Key="MeowsBase" Color="#17171C" />
             <SolidColorBrush x:Key="MeowsForeground" Color="#EAEAF0" />
+            <!-- Secondary text: labels, hints, times, empty states. A colour of its own rather
+                 than the foreground at half opacity, which fell to 2.4:1 on a light card; this
+                 holds 4.5:1 on every surface here, the selected row and the tinted ones included. -->
+            <SolidColorBrush x:Key="MeowsTextMuted" Color="#A0A0A6" />
             <SolidColorBrush x:Key="MeowsBar" Color="#1B1B20" />
             <SolidColorBrush x:Key="MeowsCard" Color="#1C1C22" />
             <SolidColorBrush x:Key="MeowsInset" Color="#1F1F26" />
@@ -83,6 +87,7 @@
             <SolidColorBrush x:Key="MeowsPanel" Color="#ECECF1" />
             <SolidColorBrush x:Key="MeowsBase" Color="#F4F4F7" />
             <SolidColorBrush x:Key="MeowsForeground" Color="#202026" />
+            <SolidColorBrush x:Key="MeowsTextMuted" Color="#5E5E63" />
             <SolidColorBrush x:Key="MeowsBar" Color="#E8E8EE" />
             <SolidColorBrush x:Key="MeowsCard" Color="#FFFFFF" />
             <SolidColorBrush x:Key="MeowsInset" Color="#EFEFF4" />

@@ -6,22 +6,6 @@
              x:DataType="vm:VetViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="10,7" />
-            <Setter Property="CornerRadius" Value="5" />
-        </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
         <!-- A low drive: the bar, its percentage and its sentence in red, not only the stripe. -->
         <Style Selector="ProgressBar.low">
             <Setter Property="Foreground" Value="{DynamicResource MeowsDangerStrong}" />

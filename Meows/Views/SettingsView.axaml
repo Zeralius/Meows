@@ -19,7 +19,7 @@
             <Setter Property="FontSize" Value="15" />
         </Style>
         <Style Selector="TextBlock.hint">
-            <Setter Property="Opacity" Value="0.55" />
+            <Setter Property="Foreground" Value="{DynamicResource MeowsTextMuted}" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
@@ -48,9 +48,10 @@
                                      Content="{m:Tr settings.theme.dark}"
                                      IsChecked="{Binding IsThemeDark}" />
                     </StackPanel>
-                    <TextBlock Classes="heading" Text="{m:Tr settings.accent}" Margin="0,6,0,0" />
+                    <TextBlock Name="AccentHeading" Classes="heading" Text="{m:Tr settings.accent}" Margin="0,6,0,0" />
                     <TextBlock Classes="hint" Text="{m:Tr settings.accent.hint}" />
                     <ComboBox ItemsSource="{Binding Accents}"
+                              AutomationProperties.LabeledBy="{Binding #AccentHeading}"
                               SelectedItem="{Binding SelectedAccent}"
                               HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate>
@@ -59,9 +60,10 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-                    <TextBlock Classes="heading" Text="{m:Tr settings.scheme}" Margin="0,8,0,0" />
+                    <TextBlock Name="SchemeHeading" Classes="heading" Text="{m:Tr settings.scheme}" Margin="0,8,0,0" />
                     <TextBlock Classes="hint" Text="{m:Tr settings.scheme.hint}" />
                     <ComboBox ItemsSource="{Binding Schemes}"
+                              AutomationProperties.LabeledBy="{Binding #SchemeHeading}"
                               SelectedItem="{Binding SelectedScheme}"
                               HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate>
@@ -126,17 +128,17 @@
                         <Button Content="{m:Tr settings.scheme.customize}"
                                 Command="{Binding CustomizeCommand}"
                                 IsVisible="{Binding !IsCustomScheme}" />
-                        <Button Content="{m:Tr settings.scheme.reset}"
+                        <Button Content="{Binding ResetAppearanceStep.Text}"
                                 Command="{Binding ResetAppearanceCommand}" />
                     </StackPanel>
                     <StackPanel Spacing="8" IsVisible="{Binding IsCustomScheme}">
                         <TextBlock Classes="hint" Text="{m:Tr settings.scheme.edit.hint}" />
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <RadioButton GroupName="scheme-variant"
-                                         Content="{m:Tr settings.theme.light}"
+                                         Content="{m:Tr settings.scheme.edit.light}"
                                          IsChecked="{Binding EditLight}" />
                             <RadioButton GroupName="scheme-variant"
-                                         Content="{m:Tr settings.theme.dark}"
+                                         Content="{m:Tr settings.scheme.edit.dark}"
                                          IsChecked="{Binding EditDark}" />
                         </StackPanel>
                         <ItemsControl ItemsSource="{Binding Colours}">
@@ -167,7 +169,13 @@
 
             <Border Classes="section">
                 <StackPanel Spacing="10">
-                    <TextBlock Classes="heading" Text="{m:Tr settings.tabsize}" />
+                    <TextBlock Name="TextSizeHeading" Classes="heading" Text="{m:Tr settings.textsize}" />
+                    <TextBlock Classes="hint" Text="{m:Tr settings.textsize.hint}" />
+                    <ComboBox ItemsSource="{Binding TextScales}"
+                              SelectedItem="{Binding SelectedTextScale}"
+                              AutomationProperties.LabeledBy="{Binding #TextSizeHeading}"
+                              MinWidth="200" />
+                    <TextBlock Classes="heading" Text="{m:Tr settings.tabsize}" Margin="0,8,0,0" />
                     <TextBlock Classes="hint" Text="{m:Tr settings.tabsize.hint}" />
                     <StackPanel Spacing="4" Margin="0,4,0,0">
                         <RadioButton GroupName="tabsize"
@@ -281,7 +289,7 @@
                     <StackPanel Spacing="8" IsVisible="{Binding IsSftp}">
                         <Grid ColumnDefinitions="2*,Auto,*" ColumnSpacing="8">
                             <TextBox Text="{Binding Host}" PlaceholderText="{m:Tr settings.server.host}" />
-                            <TextBlock Grid.Column="1" Text=":" VerticalAlignment="Center" Opacity="0.5" />
+                            <TextBlock Grid.Column="1" Text=":" VerticalAlignment="Center" Foreground="{DynamicResource MeowsTextMuted}" />
                             <NumericUpDown Grid.Column="2" Value="{Binding Port}" Minimum="1" Maximum="65535" Increment="1" FormatString="0" />
                         </Grid>
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="8">

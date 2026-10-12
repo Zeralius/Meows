@@ -272,6 +272,23 @@ public static class Appearance
         return Hex(end);
     }
 
+    /// <summary>
+    /// Secondary text for a scheme: the foreground taken as far towards the background as it
+    /// can go while still reading at 4.5:1 on every surface it can land on.
+    /// </summary>
+    private static Color Muted(Color foreground, IReadOnlyList<Color> surfaces)
+    {
+        var best = foreground;
+        for (var step = 1; step <= 20; step++)
+        {
+            var candidate = Mix(foreground, surfaces[0], step / 40d);
+            if (surfaces.Any(s => Contrast(Hex(candidate), Hex(s)) < 4.5))
+                break;
+            best = candidate;
+        }
+        return best;
+    }
+
     public static double Contrast(string first, string second)
     {
         static double Luminance(string hex)
@@ -360,6 +377,7 @@ public static class Appearance
                 ["MeowsRaised"] = Mix(card, foreground, .07),
                 ["MeowsHeader"] = Mix(panel, foreground, .08),
                 ["MeowsForeground"] = foreground,
+                ["MeowsTextMuted"] = Muted(foreground, [background, panel, card, selection, info, warning, danger]),
                 ["MeowsLine"] = border,
                 ["MeowsLineSoft"] = Mix(border, background, .55),
                 ["MeowsSelection"] = selection,
@@ -395,7 +413,7 @@ public static class Appearance
     public static IReadOnlyList<string> PaletteKeys() =>
     [
         "MeowsSunken", "MeowsPanel", "MeowsBase", "MeowsBar", "MeowsCard", "MeowsInset",
-        "MeowsRaised", "MeowsHeader", "MeowsForeground", "MeowsLine", "MeowsLineSoft",
+        "MeowsRaised", "MeowsHeader", "MeowsForeground", "MeowsTextMuted", "MeowsLine", "MeowsLineSoft",
         "MeowsSelection", "MeowsSelectionLine", "MeowsSelectionText", "MeowsInfo",
         "MeowsInfoLine", "MeowsInfoText", "MeowsWarn", "MeowsWarnLine", "MeowsWarnText",
         "MeowsDanger", "MeowsDangerLine", "MeowsDangerText", "MeowsDangerStrong",

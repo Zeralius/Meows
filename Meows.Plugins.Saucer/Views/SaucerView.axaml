@@ -6,21 +6,11 @@
              x:DataType="vm:SaucerViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
-        </Style>
         <Style Selector="ListBoxItem">
             <Setter Property="Padding" Value="8,6" />
             <Setter Property="CornerRadius" Value="5" />
         </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
+
     </UserControl.Styles>
 
     <DockPanel>
@@ -65,7 +55,7 @@
             <DockPanel Grid.Column="0">
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,12,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding IsEmpty}"
                            Text="{m:Tr saucer.empty}" />
@@ -89,7 +79,7 @@
                                                Stretch="UniformToFill"
                                                IsVisible="{Binding HasThumbnail}" />
                                         <TextBlock Text="T"
-                                                   Opacity="0.35"
+                                                   Foreground="{DynamicResource MeowsTextMuted}"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"
                                                    IsVisible="{Binding !IsImage}" />
@@ -105,12 +95,12 @@
                                         Padding="5,1"
                                         VerticalAlignment="Center"
                                         IsVisible="{Binding IsSaved}">
-                                    <TextBlock Text="{m:Tr saucer.saved}" FontSize="9" />
+                                    <TextBlock Text="{m:Tr saucer.saved}" FontSize="10" />
                                 </Border>
                                 <TextBlock Grid.Column="3"
                                            Text="{m:Tr saucer.pinned}"
-                                           FontSize="9"
-                                           Opacity="0.6"
+                                           FontSize="10"
+                                           Foreground="{DynamicResource MeowsTextMuted}"
                                            VerticalAlignment="Center"
                                            IsVisible="{Binding IsPinned}" />
                             </Grid>

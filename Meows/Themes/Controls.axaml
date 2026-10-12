@@ -1,0 +1,123 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    <!--
+        Styles every view shares, the shell's and the plugins'. Like the palette, a plugin gets
+        these without referencing the shell: application styles reach every control in the
+        window. A view's own styles come after these, so a plugin can still say otherwise.
+    -->
+
+    <!-- Secondary text. A colour that holds 4.5:1, never the foreground at half opacity. -->
+    <Style Selector="TextBlock.muted, SelectableTextBlock.muted">
+        <Setter Property="Foreground" Value="{DynamicResource MeowsTextMuted}" />
+    </Style>
+
+    <!-- A status line or a caption under something. Thirty-four views had their own copy. -->
+    <Style Selector="TextBlock.label">
+        <Setter Property="Foreground" Value="{DynamicResource MeowsTextMuted}" />
+        <Setter Property="FontSize" Value="11" />
+    </Style>
+
+    <!-- The small heading over a field or a list. A view gives it a margin of its own if it wants one. -->
+    <Style Selector="TextBlock.section">
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource MeowsTextMuted}" />
+        <Setter Property="FontSize" Value="11" />
+    </Style>
+
+    <!-- A row in a list, and the selected one in the selection colour the text style above expects. -->
+    <Style Selector="ListBoxItem">
+        <Setter Property="Padding" Value="10,7" />
+        <Setter Property="CornerRadius" Value="5" />
+    </Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
+    </Style>
+
+    <!-- A pane beside a list, recessed from the cards. -->
+    <Style Selector="Border.panel">
+        <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
+    </Style>
+
+    <!--
+        A button that deletes, empties or forgets. Set on the button alone, the colour was taken
+        away by Fluent's own hover style just as the pointer reached it; here it holds through
+        hover and press, and the words are in the danger text colour.
+    -->
+    <Style Selector="Button.danger">
+        <Setter Property="Background" Value="{DynamicResource MeowsDanger}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource MeowsDangerLine}" />
+    </Style>
+    <Style Selector="Button.danger:pointerover /template/ ContentPresenter, Button.danger:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="{DynamicResource MeowsDangerLine}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource MeowsDangerText}" />
+    </Style>
+    <Style Selector="Button.danger TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource MeowsDangerText}" />
+    </Style>
+
+    <!--
+        A small word on a row: "missing", "will fail", "comic". Drawn with the same surface, line
+        and text the banners use, so it holds its contrast in every theme and scheme. White on a
+        Line colour, which is what these were, fell to 1.2:1 on a light window.
+    -->
+    <Style Selector="Border.mark">
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="Padding" Value="5,1" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Background" Value="{DynamicResource MeowsInset}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource MeowsLine}" />
+    </Style>
+    <Style Selector="Border.mark TextBlock">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource MeowsForeground}" />
+    </Style>
+    <Style Selector="Border.mark.info">
+        <Setter Property="Background" Value="{DynamicResource MeowsInfo}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource MeowsInfoLine}" />
+    </Style>
+    <Style Selector="Border.mark.info TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource MeowsInfoText}" />
+    </Style>
+    <Style Selector="Border.mark.warn">
+        <Setter Property="Background" Value="{DynamicResource MeowsWarn}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource MeowsWarnLine}" />
+    </Style>
+    <Style Selector="Border.mark.warn TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource MeowsWarnText}" />
+    </Style>
+    <Style Selector="Border.mark.danger">
+        <Setter Property="Background" Value="{DynamicResource MeowsDanger}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource MeowsDangerLine}" />
+    </Style>
+    <Style Selector="Border.mark.danger TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource MeowsDangerText}" />
+    </Style>
+
+    <!-- A button that says something worth noticing, an update waiting, in the info colours. -->
+    <Style Selector="Button.info">
+        <Setter Property="Background" Value="{DynamicResource MeowsInfo}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource MeowsInfoLine}" />
+    </Style>
+    <Style Selector="Button.info TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource MeowsInfoText}" />
+    </Style>
+
+    <!-- A button that keeps out of the way, the pop-out on a tab: its words in the muted colour. -->
+    <Style Selector="Button.quiet TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource MeowsTextMuted}" />
+    </Style>
+
+    <!--
+        Last, so it wins: the app paints every TextBlock in the foreground colour, which also
+        reached the words inside a disabled button and made it look as enabled as the rest.
+    -->
+    <Style Selector="Button:disabled TextBlock, ToggleButton:disabled TextBlock, RadioButton:disabled TextBlock, CheckBox:disabled TextBlock">
+        <Setter Property="Foreground" Value="{DynamicResource MeowsTextMuted}" />
+        <Setter Property="Opacity" Value="0.75" />
+    </Style>
+
+</Styles>

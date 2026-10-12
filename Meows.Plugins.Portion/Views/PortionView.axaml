@@ -6,20 +6,10 @@
              x:DataType="vm:PortionViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
         <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="14,12,14,6" />
         </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
-        </Style>
+
         <Style Selector="Button.row">
             <Setter Property="Background" Value="Transparent" />
         </Style>
@@ -29,16 +19,6 @@
         <Style Selector="Button.row.selected /template/ ContentPresenter">
             <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
             <Setter Property="BorderBrush" Value="{DynamicResource MeowsSelectionLine}" />
-        </Style>
-        <Style Selector="Border.mark">
-            <Setter Property="CornerRadius" Value="3" />
-            <Setter Property="Padding" Value="5,1" />
-            <Setter Property="VerticalAlignment" Value="Center" />
-        </Style>
-        <Style Selector="Border.mark TextBlock">
-            <Setter Property="FontSize" Value="9" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="White" />
         </Style>
     </UserControl.Styles>
 
@@ -93,7 +73,7 @@
 
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,0,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding IsScanning}"
                            Text="{m:Tr portion.empty}" />
@@ -134,16 +114,16 @@
                                                        TextWrapping="Wrap" />
                                         </StackPanel>
                                         <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
-                                            <Border Classes="mark" Background="{DynamicResource MeowsBadge}" IsVisible="{Binding IsComic}">
+                                            <Border Classes="mark info" IsVisible="{Binding IsComic}">
                                                 <TextBlock Text="{m:Tr portion.mark.comic}" />
                                             </Border>
-                                            <Border Classes="mark" Background="{DynamicResource MeowsVeil}" IsVisible="{Binding IsVideo}">
+                                            <Border Classes="mark neutral" IsVisible="{Binding IsVideo}">
                                                 <TextBlock Text="{m:Tr portion.mark.video}" />
                                             </Border>
-                                            <Border Classes="mark" Background="{DynamicResource MeowsDangerStrong}" IsVisible="{Binding WillFail}">
+                                            <Border Classes="mark danger" IsVisible="{Binding WillFail}">
                                                 <TextBlock Text="{m:Tr portion.mark.fails}" />
                                             </Border>
-                                            <Border Classes="mark" Background="{DynamicResource MeowsWarnLine}" IsVisible="{Binding IsOnlyANote}">
+                                            <Border Classes="mark warn" IsVisible="{Binding IsOnlyANote}">
                                                 <TextBlock Text="{m:Tr portion.mark.note}" />
                                             </Border>
                                         </StackPanel>
@@ -169,7 +149,7 @@
                                 <Panel>
                                     <Image Source="{Binding Preview}" Stretch="Uniform" MaxHeight="400" IsVisible="{Binding HasPreview}" />
                                     <TextBlock Text="{m:Tr portion.nopreview}"
-                                               Opacity="0.35"
+                                               Foreground="{DynamicResource MeowsTextMuted}"
                                                FontSize="11"
                                                HorizontalAlignment="Center"
                                                VerticalAlignment="Center"

@@ -20,6 +20,9 @@
             <Setter Property="Foreground" Value="{DynamicResource MeowsInfoText}" />
             <Setter Property="Cursor" Value="Hand" />
         </Style>
+        <Style Selector="Button.link TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource MeowsInfoText}" />
+        </Style>
         <Style Selector="Button.link:pointerover /template/ ContentPresenter">
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="TextBlock.TextDecorations" Value="Underline" />
@@ -59,18 +62,18 @@
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" FontSize="15" />
                             <TextBlock Text="{Binding OtherName}"
-                                       Opacity="0.4"
+                                       Foreground="{DynamicResource MeowsTextMuted}"
                                        FontSize="12"
                                        VerticalAlignment="Bottom"
                                        Margin="0,0,0,2"
                                        IsVisible="{Binding HasOtherName}" />
                         </StackPanel>
-                        <TextBlock Text="{Binding Description}" Opacity="0.6" TextWrapping="Wrap" />
-                        <TextBlock Text="{Binding Origin}" Opacity="0.35" FontSize="11" />
+                        <TextBlock Text="{Binding Description}" Foreground="{DynamicResource MeowsTextMuted}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Origin}" Foreground="{DynamicResource MeowsTextMuted}" FontSize="11" />
                         <!-- Who made it and when it arrived, from the DLL and the installer's note. -->
                         <StackPanel Orientation="Horizontal" Spacing="6">
                             <TextBlock Text="{Binding ProvenanceText}"
-                                       Opacity="0.35"
+                                       Foreground="{DynamicResource MeowsTextMuted}"
                                        FontSize="11"
                                        IsVisible="{Binding HasProvenance}" />
                             <Button Classes="link"
@@ -87,14 +90,14 @@
                         </StackPanel>
                         <!-- What it last did and what it is watching, where the switch is. -->
                         <TextBlock Text="{Binding HealthText}"
-                                   Opacity="0.6"
+                                   Classes="muted"
                                    FontSize="11"
                                    TextWrapping="Wrap"
                                    IsVisible="{Binding HasHealth}"
                                    Classes.trouble="{Binding HealthIsTrouble}" />
                         <!-- What it has cost since Meows started: opening, and background work. -->
                         <TextBlock Text="{Binding CostText}"
-                                   Opacity="0.6"
+                                   Classes="muted"
                                    FontSize="11"
                                    TextWrapping="Wrap"
                                    IsVisible="{Binding HasCost}"
@@ -110,6 +113,7 @@
                     </StackPanel>
                     <StackPanel Grid.Column="2" Spacing="4" VerticalAlignment="Center">
                         <ToggleSwitch IsChecked="{Binding IsActivated}"
+                                      AutomationProperties.Name="{Binding SwitchName}"
                                       IsEnabled="{Binding IsCompatible}"
                                       OnContent="{m:Tr plugins.active}"
                                       OffContent="{m:Tr plugins.inactive}"
@@ -125,11 +129,13 @@
                         <Button Classes="small"
                                 HorizontalAlignment="Right"
                                 Content="{Binding UninstallText}"
+                                AutomationProperties.Name="{Binding UninstallName}"
                                 Command="{Binding UninstallCommand}"
                                 IsVisible="{Binding IsInstalled}" />
                         <Button Classes="small"
                                 HorizontalAlignment="Right"
                                 Content="{m:Tr plugins.share}"
+                                AutomationProperties.Name="{Binding ShareName}"
                                 Command="{Binding ShareCommand}" />
                     </StackPanel>
                 </Grid>
@@ -162,20 +168,21 @@
                                        FontSize="14"
                                        TextTrimming="CharacterEllipsis" />
                             <TextBlock Text="{Binding OtherName}"
-                                       Opacity="0.4"
+                                       Foreground="{DynamicResource MeowsTextMuted}"
                                        FontSize="11"
                                        TextTrimming="CharacterEllipsis"
                                        IsVisible="{Binding HasOtherName}" />
                         </StackPanel>
                         <ToggleSwitch Grid.Column="2"
                                       IsChecked="{Binding IsActivated}"
+                                      AutomationProperties.Name="{Binding SwitchName}"
                                       IsEnabled="{Binding IsCompatible}"
                                       IsVisible="{Binding IsCompatible}"
                                       OnContent=""
                                       OffContent=""
                                       MinWidth="0"
                                       VerticalAlignment="Center"
-                                      ToolTip.Tip="{m:Tr plugins.active}" />
+                                      ToolTip.Tip="{Binding SwitchName}" />
                         <Border Grid.Column="2"
                                 Background="{DynamicResource MeowsWarn}"
                                 BorderBrush="{DynamicResource MeowsWarnLine}"
@@ -195,16 +202,18 @@
                                 Margin="0,8,0,0">
                         <Button Classes="small"
                                 Content="{Binding UninstallText}"
+                                AutomationProperties.Name="{Binding UninstallName}"
                                 Command="{Binding UninstallCommand}"
                                 IsVisible="{Binding IsInstalled}" />
                         <Button Classes="small"
                                 Content="{m:Tr plugins.share}"
+                                AutomationProperties.Name="{Binding ShareName}"
                                 Command="{Binding ShareCommand}" />
                     </StackPanel>
 
                     <StackPanel Spacing="4">
                         <TextBlock Text="{Binding Description}"
-                                   Opacity="0.6"
+                                   Foreground="{DynamicResource MeowsTextMuted}"
                                    FontSize="12"
                                    TextWrapping="Wrap"
                                    MaxLines="4"
@@ -219,7 +228,7 @@
                             <Button Classes="small" Content="{m:Tr plugins.update}" Command="{Binding UpdateCommand}" />
                         </StackPanel>
                         <TextBlock Text="{Binding HealthText}"
-                                   Opacity="0.6"
+                                   Classes="muted"
                                    FontSize="11"
                                    TextWrapping="Wrap"
                                    MaxLines="2"
@@ -247,17 +256,17 @@
 
         <StackPanel DockPanel.Dock="Top" Spacing="4" Margin="0,0,0,18">
             <TextBlock Text="{m:Tr plugins.title}" FontSize="24" FontWeight="SemiBold" />
-            <TextBlock Opacity="0.55"
+            <TextBlock Foreground="{DynamicResource MeowsTextMuted}"
                        TextWrapping="Wrap"
                        Text="{m:Tr plugins.subtitle}" />
-            <TextBlock Opacity="0.35" FontSize="11" Text="{Binding ContractVersionText}" />
+            <TextBlock Foreground="{DynamicResource MeowsTextMuted}" FontSize="11" Text="{Binding ContractVersionText}" />
         </StackPanel>
 
         <StackPanel DockPanel.Dock="Top"
                     Orientation="Horizontal"
                     Spacing="10"
                     Margin="0,0,0,14">
-            <Button Name="InstallButton" Content="{m:Tr plugins.install}" />
+            <Button Name="InstallButton" Content="{m:Tr plugins.install}" ToolTip.Tip="{m:Tr plugins.install.hint}" />
             <Button Name="SharedButton" Content="{m:Tr plugins.shared.install}" />
             <Button Content="{m:Tr plugins.rescan}" Command="{Binding RescanCommand}" />
             <Button Content="{m:Tr plugins.open}" Command="{Binding OpenPluginsFolderCommand}" />
@@ -279,21 +288,19 @@
 
         <TextBlock DockPanel.Dock="Top"
                    Margin="0,0,0,14"
-                   Opacity="0.5"
+                   Foreground="{DynamicResource MeowsTextMuted}"
                    TextWrapping="Wrap"
                    IsVisible="{Binding !HasPlugins}"
                    Text="{m:Tr plugins.empty}" />
 
-        <TextBlock DockPanel.Dock="Top"
-                   Margin="0,0,0,14"
-                   Opacity="0.35"
-                   FontSize="11"
-                   TextWrapping="Wrap"
-                   Text="{m:Tr plugins.install.hint}" />
-
-        <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="0,0,0,14">
-            <TextBlock Text="{m:Tr plugins.persona.title}" FontWeight="SemiBold" />
-            <TextBlock Opacity="0.55"
+        <!-- Personas, folded away: they are picked from the bottom bar or Home far more often
+             than they are made, and open they pushed the cards below the fold. -->
+        <Expander DockPanel.Dock="Top"
+                  Margin="0,0,0,14"
+                  HorizontalAlignment="Stretch"
+                  Header="{m:Tr plugins.persona.title}">
+        <StackPanel Spacing="6">
+            <TextBlock Foreground="{DynamicResource MeowsTextMuted}"
                        FontSize="11"
                        TextWrapping="Wrap"
                        Text="{m:Tr plugins.persona.hint}" />
@@ -306,10 +313,10 @@
                          PlaceholderText="{m:Tr plugins.persona.name.hint}"
                          Width="200" />
                 <Button Classes="small"
-                        Content="{m:Tr plugins.persona.save}"
+                        Content="{Binding SavePersonaStep.Text}"
                         Command="{Binding SavePersonaCommand}" />
                 <Button Classes="small"
-                        Content="{m:Tr plugins.persona.delete}"
+                        Content="{Binding DeletePersonaStep.Text}"
                         Command="{Binding DeletePersonaCommand}" />
                 <Button Classes="small"
                         Content="{m:Tr plugins.persona.readymade}"
@@ -317,6 +324,24 @@
                         ToolTip.Tip="{m:Tr plugins.persona.readymade.tip}" />
             </StackPanel>
         </StackPanel>
+        </Expander>
+
+        <!-- Looking for one by its words. -->
+        <TextBox DockPanel.Dock="Top"
+                 Margin="0,0,0,10"
+                 MaxWidth="420"
+                 HorizontalAlignment="Left"
+                 MinWidth="280"
+                 Text="{Binding PluginQuery}"
+                 PlaceholderText="{m:Tr plugins.search.hint}"
+                 AutomationProperties.Name="{m:Tr plugins.search.hint}"
+                 IsVisible="{Binding HasPlugins}" />
+
+        <TextBlock DockPanel.Dock="Top"
+                   Margin="0,0,0,10"
+                   Classes="muted"
+                   IsVisible="{Binding NothingMatches}"
+                   Text="{m:Tr plugins.search.none}" />
 
         <!-- What the cards are about, and how they are laid out. -->
         <Grid DockPanel.Dock="Top"
@@ -361,10 +386,10 @@
                                 <TextBlock Text="{Binding Name}"
                                            FontWeight="SemiBold"
                                            FontSize="12"
-                                           Opacity="0.55" />
+                                           Foreground="{DynamicResource MeowsTextMuted}" />
                                 <TextBlock Text="{Binding CountText}"
                                            FontSize="11"
-                                           Opacity="0.3"
+                                           Foreground="{DynamicResource MeowsTextMuted}"
                                            VerticalAlignment="Center" />
                             </StackPanel>
 

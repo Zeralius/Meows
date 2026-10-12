@@ -25,20 +25,11 @@
         <Style Selector="TextBlock.runway.dry">
             <Setter Property="Foreground" Value="{DynamicResource MeowsDangerStrong}" />
         </Style>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
+
         <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="14,12,14,6" />
         </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
-        </Style>
+
         <Style Selector="Button.held">
             <Setter Property="Background" Value="{DynamicResource MeowsWarn}" />
             <Setter Property="BorderBrush" Value="{DynamicResource MeowsWarnLine}" />
@@ -88,7 +79,7 @@
                                IsVisible="{Binding HasSource}" />
                     <TextBlock Text="{m:Tr kibble.nofolder}"
                                FontWeight="SemiBold"
-                               Opacity="0.5"
+                               Foreground="{DynamicResource MeowsTextMuted}"
                                IsVisible="{Binding !HasSource}" />
                     <StackPanel Orientation="Horizontal" Spacing="10">
                         <TextBlock Classes="label" Text="{Binding RemainingText}" />
@@ -275,7 +266,7 @@
 
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,0,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding IsEmpty}"
                            Text="{m:Tr kibble.empty}" />
@@ -329,7 +320,7 @@
                                                IsVisible="{Binding HasThumbnail}" />
                                         <TextBlock Text="{Binding KindGlyph}"
                                                    FontSize="26"
-                                                   Opacity="0.35"
+                                                   Foreground="{DynamicResource MeowsTextMuted}"
                                                    HorizontalAlignment="Center"
                                                    VerticalAlignment="Center"
                                                    IsVisible="{Binding ShowGlyph}" />
@@ -340,7 +331,7 @@
                                                 HorizontalAlignment="Left"
                                                 VerticalAlignment="Top"
                                                 IsVisible="{Binding !IsPostable}">
-                                            <TextBlock Text="{m:Tr kibble.botskips}" FontSize="9" />
+                                            <TextBlock Text="{m:Tr kibble.botskips}" FontSize="10" />
                                         </Border>
                                         <!-- Which page this will be inside the comic. -->
                                         <Border Background="{DynamicResource MeowsBadge}"
@@ -395,7 +386,7 @@
                                    Stretch="Uniform"
                                    IsVisible="{Binding HasPreviewImage}" />
                             <TextBlock Text="{m:Tr kibble.nopreview}"
-                                       Opacity="0.35"
+                                       Foreground="{DynamicResource MeowsTextMuted}"
                                        FontSize="11"
                                        HorizontalAlignment="Center"
                                        VerticalAlignment="Center"

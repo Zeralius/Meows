@@ -170,6 +170,11 @@ public sealed class AppearanceTests
 
             model.EditDark = true;
             Assert.Equal(Appearance.Preset("paper", true).Card, model.Preview.Colours.Card);
+            // The first press asks, since a scheme made by hand is about to go.
+            model.ResetAppearanceCommand.Execute(null);
+            Assert.NotNull(settings.LoadPreferences().CustomLight);
+            Assert.True(model.ResetAppearanceStep.IsArmed);
+            Thread.Sleep(600);
             model.ResetAppearanceCommand.Execute(null);
             var reset = settings.LoadPreferences();
             Assert.Equal(Appearance.OriginalScheme, reset.ColourScheme);

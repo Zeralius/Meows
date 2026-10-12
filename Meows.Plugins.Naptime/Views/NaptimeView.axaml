@@ -5,25 +5,6 @@
              x:Class="Meows.Plugins.Naptime.Views.NaptimeView"
              x:DataType="vm:NaptimeViewModel">
 
-    <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="10,7" />
-            <Setter Property="CornerRadius" Value="5" />
-        </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
-    </UserControl.Styles>
-
     <DockPanel>
 
         <Border DockPanel.Dock="Top"
@@ -49,7 +30,7 @@
 
         <TextBlock DockPanel.Dock="Top"
                    Margin="14,14,14,10"
-                   Opacity="0.45"
+                   Foreground="{DynamicResource MeowsTextMuted}"
                    TextWrapping="Wrap"
                    IsVisible="{Binding IsEmpty}"
                    Text="{m:Tr naptime.empty}" />
@@ -87,6 +68,8 @@
                                     VerticalAlignment="Center">
                             <Button Content="−"
                                     Command="{Binding TargetDownCommand}"
+                                    AutomationProperties.Name="{m:Tr naptime.target.down}"
+                                    ToolTip.Tip="{m:Tr naptime.target.down}"
                                     FontSize="11"
                                     Padding="8,2" />
                             <TextBlock Text="{Binding TargetText}"
@@ -94,6 +77,8 @@
                                        VerticalAlignment="Center" />
                             <Button Content="+"
                                     Command="{Binding TargetUpCommand}"
+                                    AutomationProperties.Name="{m:Tr naptime.target.up}"
+                                    ToolTip.Tip="{m:Tr naptime.target.up}"
                                     FontSize="11"
                                     Padding="8,2" />
                         </StackPanel>
@@ -101,8 +86,7 @@
                         <Button Grid.Column="3"
                                 Content="{m:Tr naptime.delete}"
                                 Command="{Binding DeleteCommand}"
-                                Background="{DynamicResource MeowsDanger}"
-                                BorderBrush="{DynamicResource MeowsDangerLine}"
+                                Classes="danger"
                                 FontSize="11"
                                 VerticalAlignment="Center" />
                     </Grid>

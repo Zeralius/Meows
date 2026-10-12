@@ -6,17 +6,11 @@
              x:DataType="vm:HistoryViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
         <Style Selector="ListBoxItem">
             <Setter Property="Padding" Value="10,6" />
             <Setter Property="CornerRadius" Value="5" />
         </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
+
         <Style Selector="Border.kind">
             <Setter Property="Background" Value="{DynamicResource MeowsInset}" />
             <Setter Property="CornerRadius" Value="3" />
@@ -104,14 +98,13 @@
             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                 <TextBlock Grid.Column="0" Text="{Binding ForgetPrompt}" Foreground="{DynamicResource MeowsDangerText}" TextWrapping="Wrap" VerticalAlignment="Center" FontSize="12" />
                 <Button Grid.Column="1" Content="{m:Tr history.forget.cancel}" Command="{Binding CancelForgetCommand}" FontSize="11" />
-                <Button Grid.Column="2" Content="{m:Tr history.forget.confirm}" Command="{Binding ForgetCommand}" FontSize="11"
-                        Background="{DynamicResource MeowsDanger}" BorderBrush="{DynamicResource MeowsDangerLine}" />
+                <Button Grid.Column="2" Content="{m:Tr history.forget.confirm}" Command="{Binding ForgetCommand}" FontSize="11" Classes="danger" />
             </Grid>
         </Border>
 
         <TextBlock DockPanel.Dock="Top"
                    Margin="14,14,14,10"
-                   Opacity="0.45"
+                   Foreground="{DynamicResource MeowsTextMuted}"
                    TextWrapping="Wrap"
                    IsVisible="{Binding IsEmpty}"
                    Text="{m:Tr history.empty}" />

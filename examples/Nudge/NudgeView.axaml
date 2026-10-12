@@ -41,7 +41,7 @@
                 Padding="16,12">
             <StackPanel Spacing="10">
                 <TextBlock Text="{m:Tr nudge.receiving}" FontWeight="SemiBold" />
-                <TextBlock Text="{m:Tr nudge.arrived.none}" Opacity="0.5" IsVisible="{Binding !HasArrived}" />
+                <TextBlock Text="{m:Tr nudge.arrived.none}" Foreground="{DynamicResource MeowsTextMuted}" IsVisible="{Binding !HasArrived}" />
                 <ItemsControl ItemsSource="{Binding Arrived}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="x:String">

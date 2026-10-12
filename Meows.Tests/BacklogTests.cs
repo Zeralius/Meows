@@ -242,6 +242,12 @@ public sealed class BacklogTests : IDisposable
         model.Show(SteamLibrary.InstalledIn(library));
         model.Selected = model.Games[0];
 
+        // The first press only asks; a second straight after is the same double-click.
+        model.ForgetCommand.Execute(null);
+        model.ForgetCommand.Execute(null);
+        Assert.Single(model.Games);
+
+        Thread.Sleep(600);
         model.ForgetCommand.Execute(null);
 
         Assert.Empty(model.Games);

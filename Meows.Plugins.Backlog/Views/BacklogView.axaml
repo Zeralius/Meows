@@ -5,25 +5,6 @@
              x:Class="Meows.Plugins.Backlog.Views.BacklogView"
              x:DataType="vm:BacklogViewModel">
 
-    <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="10,7" />
-            <Setter Property="CornerRadius" Value="5" />
-        </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
-    </UserControl.Styles>
-
     <DockPanel>
 
         <Border DockPanel.Dock="Top"
@@ -67,7 +48,7 @@
             <DockPanel Grid.Column="0">
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,14,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding IsEmpty}"
                            Text="{Binding EmptyText}" />
@@ -109,6 +90,20 @@
                     Background="{DynamicResource MeowsBase}"
                     BorderBrush="{DynamicResource MeowsLineSoft}"
                     BorderThickness="1,0,0,0">
+                <!-- Adding by hand sits below whatever is selected, and is there with nothing
+                     selected too: the empty pile's own words point at it, and someone with no
+                     Steam library has no other way in. -->
+                <DockPanel>
+                <StackPanel DockPanel.Dock="Bottom" Spacing="4" Margin="16,8,16,16">
+                    <Border Background="{DynamicResource MeowsLineSoft}" Height="1" Margin="0,0,0,8" />
+                    <TextBlock Classes="section" Text="{m:Tr backlog.field.add}" />
+                    <TextBox Text="{Binding NewGameName}"
+                             PlaceholderText="{m:Tr backlog.field.add.hint}" />
+                    <Button Content="{m:Tr backlog.add}"
+                            Command="{Binding AddCommand}"
+                            HorizontalAlignment="Stretch"
+                            HorizontalContentAlignment="Center" />
+                </StackPanel>
                 <Panel>
                     <TextBlock Text="{m:Tr backlog.pickone}"
                                Classes="label"
@@ -174,20 +169,9 @@
                                         Command="{Binding DoneCommand}"
                                         HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Center" />
-                                <Button Content="{m:Tr backlog.forget}"
+                                <Button Content="{Binding ForgetText}"
                                         Command="{Binding ForgetCommand}"
-                                        Background="{DynamicResource MeowsDanger}"
-                                        BorderBrush="{DynamicResource MeowsDangerLine}"
-                                        HorizontalAlignment="Stretch"
-                                        HorizontalContentAlignment="Center" />
-                            </StackPanel>
-
-                            <StackPanel Spacing="4">
-                                <TextBlock Classes="section" Text="{m:Tr backlog.field.add}" />
-                                <TextBox Text="{Binding NewGameName}"
-                                         PlaceholderText="{m:Tr backlog.field.add.hint}" />
-                                <Button Content="{m:Tr backlog.add}"
-                                        Command="{Binding AddCommand}"
+                                        Classes="danger"
                                         HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Center" />
                             </StackPanel>
@@ -195,6 +179,7 @@
                         </StackPanel>
                     </ScrollViewer>
                 </Panel>
+                </DockPanel>
             </Border>
 
         </Grid>

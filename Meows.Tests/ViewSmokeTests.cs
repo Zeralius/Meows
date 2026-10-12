@@ -27,6 +27,10 @@ public sealed class HeadlessApp : Application
         {
             Source = new Uri("avares://Meows/Themes/Palette.axaml"),
         });
+        Styles.Add(new Avalonia.Markup.Xaml.Styling.StyleInclude(new Uri("avares://Meows/"))
+        {
+            Source = new Uri("avares://Meows/Themes/Controls.axaml"),
+        });
     }
 
     public static AppBuilder BuildAvaloniaApp() =>

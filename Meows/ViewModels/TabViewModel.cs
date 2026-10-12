@@ -12,6 +12,7 @@ public sealed class TabViewModel : ObservableObject
     private readonly Func<string>? _name;
     private bool _isPoppedOut;
     private string? _groupColour;
+    private string? _groupName;
     private bool _isSelected;
     private DropHint _hint;
     private TabMenuViewModel? _menu;
@@ -88,6 +89,34 @@ public sealed class TabViewModel : ObservableObject
 
     public bool HasGroup => _groupColour is not null;
 
+    /// <summary>The name of the group this tab is in, set with the colour, for what a screen reader says.</summary>
+    public string? GroupName
+    {
+        get => _groupName;
+        set
+        {
+            if (SetField(ref _groupName, value))
+                OnPropertyChanged(nameof(AccessibleName));
+        }
+    }
+
+    /// <summary>
+    /// What a screen reader says for the tab: its name, its group, and whether it is the one in
+    /// front. The strip shows the last two only as a colour and a weight, which say nothing aloud.
+    /// </summary>
+    public string AccessibleName
+    {
+        get
+        {
+            var text = MeowsText.Current;
+            var name = _groupName is { } group ? text.Format("strip.a11y.ingroup", Header, group) : Header;
+            return _isSelected ? text.Format("strip.a11y.selected", name) : name;
+        }
+    }
+
+    /// <summary>The pop-out button's name, since "⧉" read aloud says nothing.</summary>
+    public string PopOutName => MeowsText.Current.Format("shell.popout.one", Header);
+
     /// <summary>
     /// Whether this tab belongs to a plugin, and so can be switched off from its own menu. The
     /// shell's own tabs are not optional and do not offer it.
@@ -117,10 +146,23 @@ public sealed class TabViewModel : ObservableObject
     /// Whether this is the tab in front. The strip is an ItemsControl rather than a TabControl
     /// now, so nothing marks the selected item for us and the shell says which one it is.
     /// </summary>
+    /// <summary>Whether this tab's plugin has background work running right now. Set by the window.</summary>
+    public bool IsBusy
+    {
+        get => _isBusy;
+        set => SetField(ref _isBusy, value);
+    }
+
+    private bool _isBusy;
+
     public bool IsSelected
     {
         get => _isSelected;
-        set => SetField(ref _isSelected, value);
+        set
+        {
+            if (SetField(ref _isSelected, value))
+                OnPropertyChanged(nameof(AccessibleName));
+        }
     }
 
     /// <summary>
@@ -133,5 +175,10 @@ public sealed class TabViewModel : ObservableObject
         set => SetField(ref _menu, value);
     }
 
-    public void Retranslate() => OnPropertyChanged(nameof(Header));
+    public void Retranslate()
+    {
+        OnPropertyChanged(nameof(Header));
+        OnPropertyChanged(nameof(AccessibleName));
+        OnPropertyChanged(nameof(PopOutName));
+    }
 }

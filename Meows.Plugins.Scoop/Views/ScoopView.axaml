@@ -5,20 +5,6 @@
              x:Class="Meows.Plugins.Scoop.Views.ScoopView"
              x:DataType="vm:ScoopViewModel">
 
-    <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="10,7" />
-            <Setter Property="CornerRadius" Value="5" />
-        </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
-    </UserControl.Styles>
-
     <DockPanel>
 
         <!-- The headline: everything in every bin, which is the question the tab exists for. -->
@@ -65,7 +51,7 @@
                 <Button Grid.Column="3"
                         Content="{Binding EmptyText}"
                         Command="{Binding EmptyCommand}"
-                        Foreground="{DynamicResource MeowsDangerText}" />
+                        Classes="danger" />
             </Grid>
         </Border>
 
@@ -116,7 +102,7 @@
 
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,12"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            Text="{m:Tr scoop.empty.none}"
                            IsVisible="{Binding IsEmpty}" />

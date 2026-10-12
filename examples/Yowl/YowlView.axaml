@@ -25,14 +25,14 @@
                                    Increment="1"
                                    FormatString="0"
                                    Width="120" />
-                    <TextBlock Text="GB" VerticalAlignment="Center" Opacity="0.6" />
+                    <TextBlock Text="GB" VerticalAlignment="Center" Foreground="{DynamicResource MeowsTextMuted}" />
                 </StackPanel>
                 <TextBlock Text="{Binding Status}" TextWrapping="Wrap" />
                 <TextBlock Text="{m:Tr yowl.low}"
                            Foreground="{DynamicResource MeowsWarnText}"
                            IsVisible="{Binding IsLow}" />
                 <TextBlock Text="{m:Tr yowl.quiet}"
-                           Opacity="0.6"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            IsVisible="{Binding IsQuiet}" />
                 <Button Content="{m:Tr yowl.look}"
                         Command="{Binding LookNowCommand}"

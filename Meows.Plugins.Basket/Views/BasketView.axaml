@@ -6,22 +6,6 @@
              x:DataType="vm:BasketViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
-        <Style Selector="ListBoxItem">
-            <Setter Property="Padding" Value="10,7" />
-            <Setter Property="CornerRadius" Value="5" />
-        </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
         <Style Selector="Border.marker">
             <Setter Property="Width" Value="4" />
             <Setter Property="CornerRadius" Value="2" />
@@ -72,10 +56,14 @@
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6">
                         <Button Content="+"
                                 Command="{Binding AddListCommand}"
+                                AutomationProperties.Name="{m:Tr basket.list.add}"
+                                ToolTip.Tip="{m:Tr basket.list.add}"
                                 FontSize="11"
                                 Padding="8,2" />
                         <Button Content="−"
                                 Command="{Binding DeleteListCommand}"
+                                AutomationProperties.Name="{m:Tr basket.list.delete}"
+                                ToolTip.Tip="{m:Tr basket.list.delete}"
                                 FontSize="11"
                                 Padding="8,2" />
                     </StackPanel>
@@ -124,15 +112,14 @@
                                 FontSize="11" />
                         <Button Content="{m:Tr basket.delete.card}"
                                 Command="{Binding DeleteCardCommand}"
-                                Background="{DynamicResource MeowsDanger}"
-                                BorderBrush="{DynamicResource MeowsDangerLine}"
+                                Classes="danger"
                                 FontSize="11" />
                     </StackPanel>
                 </Grid>
 
                 <TextBlock DockPanel.Dock="Top"
                            Margin="14,0,14,10"
-                           Opacity="0.45"
+                           Foreground="{DynamicResource MeowsTextMuted}"
                            TextWrapping="Wrap"
                            IsVisible="{Binding !HasCards}"
                            Text="{m:Tr basket.empty}" />
@@ -283,6 +270,8 @@
                                                 <Button Grid.Column="2"
                                                         Content="✕"
                                                         Command="{Binding RemoveCommand}"
+                                                        AutomationProperties.Name="{m:Tr basket.check.remove}"
+                                                        ToolTip.Tip="{m:Tr basket.check.remove}"
                                                         FontSize="11"
                                                         Padding="8,2" />
                                             </Grid>
@@ -309,8 +298,7 @@
                                         HorizontalContentAlignment="Center" />
                                 <Button Content="{m:Tr basket.delete.card}"
                                         Command="{Binding DeleteCardCommand}"
-                                        Background="{DynamicResource MeowsDanger}"
-                                        BorderBrush="{DynamicResource MeowsDangerLine}"
+                                        Classes="danger"
                                         HorizontalAlignment="Stretch"
                                         HorizontalContentAlignment="Center" />
                             </StackPanel>

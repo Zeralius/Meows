@@ -6,27 +6,15 @@
              x:DataType="vm:LarderViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
         <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="14,12,14,6" />
         </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
-        </Style>
+
         <Style Selector="ListBoxItem">
             <Setter Property="Padding" Value="10,6" />
             <Setter Property="CornerRadius" Value="5" />
         </Style>
-        <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
-            <Setter Property="Background" Value="{DynamicResource MeowsSelection}" />
-        </Style>
+
     </UserControl.Styles>
 
     <DockPanel>
@@ -71,7 +59,7 @@
                         <Button Content="{m:Tr larder.uninstall}" Command="{Binding UninstallCommand}" FontSize="11" />
                     </StackPanel>
                 </Grid>
-                <TextBlock DockPanel.Dock="Top" Margin="14,12" Opacity="0.45" TextWrapping="Wrap"
+                <TextBlock DockPanel.Dock="Top" Margin="14,12" Foreground="{DynamicResource MeowsTextMuted}" TextWrapping="Wrap"
                            Text="{Binding EmptyText}" IsVisible="{Binding IsEmpty}" />
                 <ListBox ItemsSource="{Binding Games}" SelectedItem="{Binding Selected}" Margin="8,0,8,8" Background="Transparent">
                     <ListBox.ItemTemplate>
@@ -116,6 +104,8 @@
                                         <TextBlock Text="{Binding}" FontSize="12" TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
                                         <Button Grid.Column="1" Content="✕" FontSize="10" Padding="6,2"
                                                 Command="{Binding $parent[UserControl].((vm:LarderViewModel)DataContext).RemoveLibraryCommand}"
+                                                AutomationProperties.Name="{m:Tr larder.library.remove}"
+                                                ToolTip.Tip="{m:Tr larder.library.remove}"
                                                 CommandParameter="{Binding}" />
                                     </Grid>
                                 </DataTemplate>

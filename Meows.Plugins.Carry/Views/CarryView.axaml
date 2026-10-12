@@ -6,20 +6,10 @@
              x:DataType="vm:CarryViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
         <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="0,12,0,6" />
         </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
-        </Style>
+
         <Style Selector="Button.drive">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Left" />
@@ -72,7 +62,7 @@
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
                         <TextBlock Grid.Column="0" VerticalAlignment="Center" TextTrimming="CharacterEllipsis" FontWeight="SemiBold"
                                    Text="{Binding Source}" IsVisible="{Binding HasSource}" />
-                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Opacity="0.45" Text="{m:Tr carry.nosource}"
+                        <TextBlock Grid.Column="0" VerticalAlignment="Center" Foreground="{DynamicResource MeowsTextMuted}" Text="{m:Tr carry.nosource}"
                                    IsVisible="{Binding !HasSource}" />
                         <Button Grid.Column="1" Content="{m:Tr carry.pick}" Command="{Binding PickSourceCommand}" />
                     </Grid>
@@ -127,7 +117,7 @@
             <Border Grid.Column="2" Classes="panel" BorderThickness="1,0,0,0">
                 <DockPanel Margin="14,0">
                     <TextBlock DockPanel.Dock="Top" Classes="section" Text="{m:Tr carry.carried}" />
-                    <TextBlock DockPanel.Dock="Top" Opacity="0.45" TextWrapping="Wrap" Text="{m:Tr carry.carried.none}"
+                    <TextBlock DockPanel.Dock="Top" Foreground="{DynamicResource MeowsTextMuted}" TextWrapping="Wrap" Text="{m:Tr carry.carried.none}"
                                IsVisible="{Binding !HasCarried}" />
                     <ScrollViewer>
                         <ItemsControl ItemsSource="{Binding Carried}">

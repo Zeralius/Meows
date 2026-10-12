@@ -6,20 +6,10 @@
              x:DataType="vm:NestViewModel">
 
     <UserControl.Styles>
-        <Style Selector="TextBlock.label">
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
-        </Style>
         <Style Selector="TextBlock.section">
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Opacity" Value="0.5" />
-            <Setter Property="FontSize" Value="11" />
             <Setter Property="Margin" Value="14,12,14,6" />
         </Style>
-        <Style Selector="Border.panel">
-            <Setter Property="Background" Value="{DynamicResource MeowsBase}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource MeowsLineSoft}" />
-        </Style>
+
         <Style Selector="TextBlock.waiting">
             <Setter Property="Foreground" Value="{DynamicResource MeowsWarnText}" />
         </Style>
@@ -97,7 +87,7 @@
                     <StackPanel>
                         <TextBlock Classes="section" Text="{m:Tr nest.copyto}" />
                         <TextBlock Margin="14,0" TextWrapping="Wrap" FontWeight="SemiBold" Text="{Binding CopyRoot}" IsVisible="{Binding HasCopyRoot}" />
-                        <TextBlock Margin="14,0" TextWrapping="Wrap" Opacity="0.45" Text="{m:Tr nest.copyto.none}" IsVisible="{Binding !HasCopyRoot}" />
+                        <TextBlock Margin="14,0" TextWrapping="Wrap" Foreground="{DynamicResource MeowsTextMuted}" Text="{m:Tr nest.copyto.none}" IsVisible="{Binding !HasCopyRoot}" />
                         <Button Content="{m:Tr nest.copyto.pick}" Command="{Binding PickCopyRootCommand}" Margin="14,8" FontSize="11" />
                         <TextBlock Classes="label" Margin="14,0,14,8" TextWrapping="Wrap" Text="{m:Tr nest.copyto.how}" />
 

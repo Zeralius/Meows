@@ -148,6 +148,12 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
         _picker = picker;
 
         ResetOrderCommand = new RelayCommand(ResetOrder);
+        ChoosePersonaCommand = new RelayCommand(parameter =>
+        {
+            if (parameter is string name)
+                ChoosePersona?.Invoke(name);
+        });
+        OpenPluginsCommand = new RelayCommand(() => OpenPlugins?.Invoke());
         WeekPageCommand = new RelayCommand(() => _ = WeekPageAsync(), () => _picker is not null);
 
         _notifications.Changed += Refresh;
@@ -169,6 +175,37 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
     public ObservableCollection<HomePluginLine> Plugins { get; } = [];
 
     public bool HasPlugins => Plugins.Count > 0;
+
+    /// <summary>Whether each card shows its up, down and hide buttons. Off until asked for.</summary>
+    public bool IsArranging
+    {
+        get => _isArranging;
+        set => SetField(ref _isArranging, value);
+    }
+
+    private bool _isArranging;
+
+    /// <summary>
+    /// Nothing on and nothing hidden: somebody new, or somebody who switched everything off.
+    /// Home then says where to start rather than one faint line pointing at another tab.
+    /// </summary>
+    public bool IsWelcome => !HasPlugins && !HasHiddenPlugins;
+
+    /// <summary>Plugins are on, but every one of them is hidden from Home.</summary>
+    public bool AllHidden => !HasPlugins && HasHiddenPlugins;
+
+    /// <summary>The ready-made sets, as buttons on the welcome card. Set by the window after construction.</summary>
+    public IReadOnlyList<string> Personas { get; set; } = [];
+
+    /// <summary>Switches a persona on. Set by the window.</summary>
+    public Action<string>? ChoosePersona { get; set; }
+
+    /// <summary>Brings the Plugins tab to the front. Set by the window.</summary>
+    public Action? OpenPlugins { get; set; }
+
+    public RelayCommand ChoosePersonaCommand { get; }
+
+    public RelayCommand OpenPluginsCommand { get; }
 
     public ObservableCollection<HomeHiddenLine> HiddenPlugins { get; } = [];
 
@@ -334,6 +371,8 @@ public sealed class HomeViewModel : ObservableObject, IDisposable
         OnPropertyChanged(nameof(HasRunning));
         OnPropertyChanged(nameof(HasPlugins));
         OnPropertyChanged(nameof(HasHiddenPlugins));
+        OnPropertyChanged(nameof(IsWelcome));
+        OnPropertyChanged(nameof(AllHidden));
         OnPropertyChanged(nameof(HasRecent));
         OnPropertyChanged(nameof(HasOvernight));
         OnPropertyChanged(nameof(SinceText));

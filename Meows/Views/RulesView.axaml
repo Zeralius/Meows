@@ -27,12 +27,12 @@
             <Setter Property="FontSize" Value="15" />
         </Style>
         <Style Selector="TextBlock.hint">
-            <Setter Property="Opacity" Value="0.55" />
+            <Setter Property="Foreground" Value="{DynamicResource MeowsTextMuted}" />
             <Setter Property="FontSize" Value="12" />
             <Setter Property="TextWrapping" Value="Wrap" />
         </Style>
         <Style Selector="TextBlock.word">
-            <Setter Property="Opacity" Value="0.6" />
+            <Setter Property="Foreground" Value="{DynamicResource MeowsTextMuted}" />
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
         <Style Selector="TextBlock.trouble">
@@ -173,7 +173,7 @@
                                 <StackPanel Grid.Column="1" Spacing="3">
                                     <TextBlock Text="{Binding Sentence}" TextWrapping="Wrap" FontWeight="SemiBold" />
                                     <TextBlock Classes="trouble" Text="{Binding Problem}" IsVisible="{Binding HasProblem}" />
-                                    <TextBlock Text="{Binding LastText}" Opacity="0.55" FontSize="11" TextWrapping="Wrap" />
+                                    <TextBlock Text="{Binding LastText}" Foreground="{DynamicResource MeowsTextMuted}" FontSize="11" TextWrapping="Wrap" />
                                 </StackPanel>
                                 <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6" VerticalAlignment="Top">
                                     <Button Classes="small"
