@@ -18,7 +18,7 @@ where it lives so the claim can be checked rather than trusted, and how much roo
 | **npm cache** | So npm does not fetch the same tarball twice |
 | **pip cache** | Wheels pip kept after building or downloading |
 | **Crash dumps** | Memory dumps from things that crashed |
-| **bin and obj** | Compiler output under a projects folder you pick |
+| **bin and obj** | Compiler output under a projects folder you pick, only where a project file (`.csproj`, `.vcxproj`, …) sits beside it, so a tool's own `bin` is never taken |
 | **Unity Library and Temp** | What Unity imports every asset into. Reimported on next open |
 
 Nothing empty is ever offered, so a card only appears when it has something to say.

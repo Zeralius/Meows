@@ -20,6 +20,7 @@ public static class RecycleBin
     private const ushort FOF_NOCONFIRMATION = 0x0010;
     private const ushort FOF_ALLOWUNDO = 0x0040;
     private const ushort FOF_NOERRORUI = 0x0400;
+    private const ushort FOF_WANTNUKEWARNING = 0x4000;
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode, Pack = 8)]
     private struct SHFILEOPSTRUCT
@@ -54,17 +55,32 @@ public static class RecycleBin
         // about the neighbour: false when nothing is next door (silently dropping the path), true
         // when something is, which is the dangerous case.
         var unsafePaths = paths.Where(p => !WalkRules.SurvivesNormalising(p)).ToList();
-        var existing = paths.Where(WalkRules.SurvivesNormalising)
+        var candidates = paths.Where(WalkRules.SurvivesNormalising)
             .Where(Exists)
             .Select(Path.GetFullPath)
             .Distinct()
             .ToList();
 
+        // Anything the bin cannot take would be deleted for good, silently, so it is held back
+        // here with the reason rather than handed to the shell.
+        var noBin = candidates
+            .Select(p => (Path: p, Why: BinReach.Check(p)))
+            .Where(x => x.Why != BinRefusal.None)
+            .ToList();
+        var existing = candidates.Except(noBin.Select(x => x.Path)).ToList();
+
+        var refusals = new List<string>();
+        if (unsafePaths.Count > 0)
+            refusals.Add(Refusal(unsafePaths.Count));
+        foreach (var group in noBin.GroupBy(x => x.Why))
+            refusals.Add(NoBin(group.Key, group.Count()));
+        var refused = unsafePaths.Count + noBin.Count;
+
         if (existing.Count == 0)
         {
-            return unsafePaths.Count == 0
+            return refused == 0
                 ? new DeleteOutcome(0, 0, null)
-                : new DeleteOutcome(0, unsafePaths.Count, Refusal(unsafePaths.Count));
+                : new DeleteOutcome(0, refused, string.Join(" ", refusals));
         }
 
         if (!OperatingSystem.IsWindows())
@@ -80,7 +96,9 @@ public static class RecycleBin
             wFunc = FO_DELETE,
             pFrom = buffer,
             pTo = null,
-            fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI,
+            // FOF_WANTNUKEWARNING is the backstop for a case BinReach did not foresee: Windows
+            // asks rather than deleting for good without a word.
+            fFlags = FOF_ALLOWUNDO | FOF_NOCONFIRMATION | FOF_SILENT | FOF_NOERRORUI | FOF_WANTNUKEWARNING,
         };
 
         int result;
@@ -100,19 +118,29 @@ public static class RecycleBin
             return new DeleteOutcome(0, existing.Count, MeowsText.Current["disk.delete.aborted"]);
 
         // Check the disk rather than trusting the return code.
-        var stillThere = existing.Count(Exists) + unsafePaths.Count;
-        var deleted = existing.Count - existing.Count(Exists);
+        var leftover = existing.Count(Exists);
+        var stillThere = leftover + refused;
+        var deleted = existing.Count - leftover;
 
         if (stillThere == 0)
             return new DeleteOutcome(deleted, 0, null);
 
-        var reason = unsafePaths.Count > 0 && existing.Count(Exists) == 0
-            ? Refusal(unsafePaths.Count)
-            : MeowsText.Current.Format("disk.delete.leftover", stillThere) +
-              (unsafePaths.Count > 0 ? " " + Refusal(unsafePaths.Count) : "");
+        if (leftover > 0)
+            refusals.Insert(0, MeowsText.Current.Format("disk.delete.leftover", stillThere));
 
-        return new DeleteOutcome(deleted, stillThere, reason);
+        return new DeleteOutcome(deleted, stillThere, string.Join(" ", refusals));
     }
+
+    /// <summary>Explains what was held back because the bin could not take it.</summary>
+    private static string NoBin(BinRefusal why, int count) =>
+        MeowsText.Current.Format(why switch
+        {
+            BinRefusal.Network => "disk.delete.nobin.network",
+            BinRefusal.Removable => "disk.delete.nobin.removable",
+            BinRefusal.Switched => "disk.delete.nobin.switched",
+            BinRefusal.TooLarge => "disk.delete.nobin.toolarge",
+            _ => "disk.delete.nobin.toolong",
+        }, count);
 
     /// <summary>Explains what was refused and why.</summary>
     private static string Refusal(int count) =>

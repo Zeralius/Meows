@@ -133,6 +133,38 @@ public sealed class CarryTests : IDisposable
         Assert.True(File.Exists(Path.Combine(videos, "new.txt")));
     }
 
+    /// <summary>Runs the callback on the copying thread, so the test can change a file mid-copy.</summary>
+    private sealed class During(Action<CarryProgress> act) : IProgress<CarryProgress>
+    {
+        public void Report(CarryProgress value) => act(value);
+    }
+
+    [Fact]
+    public void A_file_rewritten_at_the_same_size_while_it_was_copied_stops_the_carry()
+    {
+        // A database or a save game: written in place, same length, so a count and a size
+        // say nothing changed. Deleting the original would lose the newer write.
+        var videos = Videos();
+        var movie = Path.Combine(videos, "a.mp4");
+        var plan = FolderMove.Plan(videos, _d, p => Drives(p));
+        var newer = Enumerable.Range(0, 300_000).Select(i => (byte)(i + 7)).ToArray();
+
+        var outcome = FolderMove.Carry(plan, new During(p =>
+        {
+            if (p.Current.EndsWith("a.mp4", StringComparison.Ordinal))
+            {
+                File.WriteAllBytes(movie, newer);
+                File.SetLastWriteTimeUtc(movie, DateTime.UtcNow.AddMinutes(1));
+            }
+        }), CancellationToken.None);
+
+        Assert.False(outcome.Done);
+        Assert.Equal("changed", outcome.Failure);
+        Assert.Null(FolderMove.LinkTarget(videos));
+        Assert.False(Directory.Exists(plan.Target));
+        Assert.Equal(newer, File.ReadAllBytes(movie));
+    }
+
     [Fact]
     public void A_carried_folder_comes_home_and_the_carried_copy_goes()
     {

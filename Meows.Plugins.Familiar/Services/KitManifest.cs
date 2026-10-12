@@ -52,6 +52,13 @@ public sealed class KitItem
 
     public int Height { get; set; }
 
+    /// <summary>
+    /// Where the picture as it first came is kept, relative to the kit folder, once something
+    /// has been done to it: <c>originals/goblin.jpg</c>. Null until then. Per item rather than
+    /// guessed from the name, since goblin.jpg and goblin.png can be two different pictures.
+    /// </summary>
+    public string? Original { get; set; }
+
     [JsonIgnore]
     public string FileName => Path.GetFileName(File);
 }

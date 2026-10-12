@@ -83,6 +83,7 @@ public sealed class TrailViewModel : ObservableObject, IDisposable, ISearchable,
     private string? _errorMessage;
     private string? _lastBackup;
     private bool _isConfirmingTidy;
+    private DateTime _tidyArmedAt;
     private bool _hasRead;
 
     public TrailViewModel(IMeowsHost host)
@@ -311,7 +312,20 @@ public sealed class TrailViewModel : ObservableObject, IDisposable, ISearchable,
         if (!_isConfirmingTidy)
         {
             _isConfirmingTidy = true;
+            _tidyArmedAt = DateTime.UtcNow;
             RaiseTidy();
+            return;
+        }
+
+        // The second press has to be a decision. One this soon after arming is the same
+        // double-click, and one long after is somebody who forgot it was armed: that one
+        // arms it again rather than doing it.
+        var since = DateTime.UtcNow - _tidyArmedAt;
+        if (since < TimeSpan.FromMilliseconds(500))
+            return;
+        if (since > TimeSpan.FromSeconds(10))
+        {
+            _tidyArmedAt = DateTime.UtcNow;
             return;
         }
 

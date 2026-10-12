@@ -1275,7 +1275,10 @@ public sealed class KibbleViewModel : ObservableObject, IDisposable, IHandoffTar
 
         destination.Refresh();
         StatusMessage = _host.Text.Format("kibble.status.sentcomic",
-            files.Count, Path.GetFileName(result.Destination!), destination.RunwayText);
+            files.Count, Path.GetFileName(result.Destination!), destination.RunwayText)
+            + (result.Detail is { } leftovers ? " " + leftovers : "");
+        if (result.Detail is not null)
+            _host.Log(LogLevel.Warning, $"Comic {Path.GetFileName(result.Destination!)}: {result.Detail}");
         _host.Log($"Queued comic {Path.GetFileName(result.Destination!)} ({files.Count} pages) into {destination.Name}");
         RaiseGridState();
     }

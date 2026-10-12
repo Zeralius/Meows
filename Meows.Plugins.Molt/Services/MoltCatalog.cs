@@ -254,9 +254,14 @@ public static class MoltCatalog
                 children.Any(c => c.Name.Equals("Assets", StringComparison.OrdinalIgnoreCase)) &&
                 children.Any(c => c.Name.Equals("ProjectSettings", StringComparison.OrdinalIgnoreCase));
 
+            // A bin or obj is only build output when a project that builds into it sits beside
+            // it. Without this, ffmpeg's bin, a portable JDK's bin and every tool's bin under a
+            // broad folder would all land on the card.
+            var isBuildProject = HasProjectFile(current);
+
             foreach (var child in walkable)
             {
-                if (child.Name is "bin" or "obj")
+                if (isBuildProject && child.Name is "bin" or "obj")
                 {
                     build.Paths.Add(child.FullName);
                     build.Size += FolderSize.Of(child);
@@ -279,6 +284,23 @@ public static class MoltCatalog
         }
 
         return [build, unity];
+    }
+
+    /// <summary>The project files whose builds write bin and obj next to themselves.</summary>
+    private static readonly string[] ProjectExtensions =
+        [".csproj", ".fsproj", ".vbproj", ".vcxproj", ".sqlproj", ".proj"];
+
+    private static bool HasProjectFile(DirectoryInfo folder)
+    {
+        try
+        {
+            return folder.EnumerateFiles("*.*proj").Any(f =>
+                ProjectExtensions.Contains(f.Extension, StringComparer.OrdinalIgnoreCase));
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     private static string TempOf(MoltOptions options) => options.TempFolder ?? Path.GetTempPath();

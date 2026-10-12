@@ -541,6 +541,19 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
         ErrorMessage = null;
         var paths = doomed.Select(d => d.FullPath).ToList();
 
+        // The scan may be hours old. The copies only go if every one of them is still what was
+        // hashed, and at least one copy that stays still is too; otherwise the last copy of
+        // something could go to the bin on the strength of a match that no longer holds.
+        var keeping = set.Files.Where(f => !doomed.Contains(f)).ToList();
+        var (stale, kept) = await Task.Run(() =>
+            (doomed.Where(d => !StillAsScanned(d.File)).ToList(), keeping.Any(k => StillAsScanned(k.File))));
+        if (stale.Count > 0 || !kept)
+        {
+            ErrorMessage = _host.Text["purrge.changed"];
+            _host.Log(LogLevel.Warning, $"Purrge {what}: refused, the set changed since the scan");
+            return;
+        }
+
         var outcome = await Task.Run(() => RecycleBin.Send(paths));
 
         // Only remove rows for files that actually went. A partial failure should show.
@@ -570,6 +583,20 @@ public sealed class PurrgeViewModel : ObservableObject, IDisposable, IHandoffTar
 
         foreach (var file in gone)
             _host.Store.Record("recycled", file.FullPath, what, new Dictionary<string, string> { ["size"] = file.File.Size.ToString() });
+    }
+
+    /// <summary>Whether the file is still there with the size and date it had when it was hashed.</summary>
+    private static bool StillAsScanned(DuplicateFile file)
+    {
+        try
+        {
+            var info = new FileInfo(file.Path);
+            return info.Exists && info.Length == file.Size && info.LastWriteTimeUtc == file.ModifiedUtc;
+        }
+        catch (Exception)
+        {
+            return false;
+        }
     }
 
     private async Task LoadThumbnailsAsync()

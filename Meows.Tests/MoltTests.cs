@@ -19,6 +19,14 @@ public sealed class MoltCatalogTests : IDisposable
     private static void File(string folder, string name, int bytes) =>
         System.IO.File.WriteAllBytes(Path.Combine(folder, name), new byte[bytes]);
 
+    /// <summary>A project folder: the project file is what makes its bin and obj build output.</summary>
+    private string Project(string name)
+    {
+        var folder = Folder(name);
+        File(folder, name + ".csproj", 10);
+        return folder;
+    }
+
     /// <summary>
     /// Everything points at the throwaway tree, so these never measure the real machine. Keeps
     /// them fast and gives the same result anywhere.
@@ -39,6 +47,8 @@ public sealed class MoltCatalogTests : IDisposable
     [Fact]
     public void Bin_and_obj_under_the_chosen_folder_are_found()
     {
+        Project("ProjectA");
+        Project("ProjectB");
         File(Folder("ProjectA", "bin"), "a.dll", 5000);
         File(Folder("ProjectA", "obj"), "a.pdb", 3000);
         File(Folder("ProjectB", "bin"), "b.dll", 2000);
@@ -52,6 +62,7 @@ public sealed class MoltCatalogTests : IDisposable
     [Fact]
     public void Source_next_to_the_output_is_never_touched()
     {
+        Project("ProjectA");
         File(Folder("ProjectA"), "Program.cs", 900);
         File(Folder("ProjectA", "bin"), "a.dll", 5000);
 
@@ -65,6 +76,7 @@ public sealed class MoltCatalogTests : IDisposable
     [Fact]
     public void A_bin_is_taken_whole_rather_than_walked_into()
     {
+        Project("ProjectA");
         var bin = Folder("ProjectA", "bin");
         File(bin, "a.dll", 1000);
         File(Folder("ProjectA", "bin", "Debug", "net10.0"), "deep.dll", 4000);
@@ -79,9 +91,26 @@ public sealed class MoltCatalogTests : IDisposable
     [Fact]
     public void Folders_that_would_only_slow_the_hunt_are_skipped()
     {
+        Project("ProjectA");
         File(Folder("ProjectA", "node_modules", "pkg", "bin"), "nested.dll", 9000);
         File(Folder("ProjectA", ".git", "bin"), "gitbin.dll", 9000);
         File(Folder("ProjectA", "bin"), "real.dll", 1000);
+
+        var build = BuildOutput();
+
+        Assert.Single(build.Paths);
+        Assert.Equal(1000, build.Size);
+    }
+
+    [Fact]
+    public void A_bin_with_no_project_beside_it_is_a_tool_and_left_alone()
+    {
+        // ffmpeg, a portable JDK: their bin is the program, not something a build makes again.
+        File(Folder("Tools", "ffmpeg", "bin"), "ffmpeg.exe", 9000);
+        File(Folder("Tools", "jdk", "bin"), "java.exe", 9000);
+        File(Folder("Tools", "jdk", "obj"), "odd.bin", 9000);
+        Project("ProjectA");
+        File(Folder("ProjectA", "bin"), "a.dll", 1000);
 
         var build = BuildOutput();
 
@@ -102,6 +131,7 @@ public sealed class MoltCatalogTests : IDisposable
     [Fact]
     public void Every_entry_says_what_it_costs_to_lose()
     {
+        Project("ProjectA");
         File(Folder("ProjectA", "bin"), "a.dll", 100);
 
         foreach (var entry in Build())
@@ -117,7 +147,7 @@ public sealed class MoltCatalogTests : IDisposable
     public void Nothing_empty_is_offered()
     {
         // No bin, no obj, so the build entry has nothing to say and is left out.
-        Folder("ProjectA");
+        Project("ProjectA");
 
         Assert.DoesNotContain(Build(), s => s.Id == "build");
         Assert.All(Build(), s => Assert.NotEmpty(s.Paths));

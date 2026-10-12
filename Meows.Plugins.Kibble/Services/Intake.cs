@@ -357,15 +357,41 @@ public static class Intake
 
             File.Move(temp, target);
 
-            // A comic is as old as the material in it, so keeping the source date takes the
-            // oldest page. Using the newest would push a set of old art to the back.
-            File.SetLastWriteTimeUtc(target,
-                stamp == IntakeStamp.KeepSource ? pages.Min(x => x.Modified) : DateTime.UtcNow);
+            // From here the comic is in the queue, so nothing below may turn this into a
+            // failure: a "Failed" with the archive already queued records no undo, and a retry
+            // would queue the same pages twice.
+            try
+            {
+                // A comic is as old as the material in it, so keeping the source date takes the
+                // oldest page. Using the newest would push a set of old art to the back.
+                File.SetLastWriteTimeUtc(target,
+                    stamp == IntakeStamp.KeepSource ? pages.Min(x => x.Modified) : DateTime.UtcNow);
+            }
+            catch (Exception)
+            {
+                // The date only decides where it sorts. The bot will still post it.
+            }
 
+            // Each page on its own, so a locked one is reported rather than stopping the rest.
+            // Its bytes are in the archive either way, and undo puts every page back from there.
+            var stuck = new List<string>();
             foreach (var page in ordered)
-                File.Delete(page);
+            {
+                try
+                {
+                    File.Delete(page);
+                }
+                catch (Exception)
+                {
+                    stuck.Add(Path.GetFileName(page));
+                }
+            }
 
-            return new IntakeResult(IntakeOutcome.Sent, ordered[0], target, null, pages);
+            var leftovers = stuck.Count == 0
+                ? null
+                : MeowsText.Current.Format("kibble.comic.leftover", stuck.Count, string.Join(", ", stuck));
+
+            return new IntakeResult(IntakeOutcome.Sent, ordered[0], target, leftovers, pages);
         }
         catch (Exception ex)
         {
@@ -560,15 +586,25 @@ public static class Intake
 
                 for (var i = 0; i < pages.Count; i++)
                 {
-                    if (File.Exists(pages[i].Path))
-                        continue;
+                    var into = pages[i].Path;
 
-                    Directory.CreateDirectory(Path.GetDirectoryName(pages[i].Path)!);
-                    entries[i].ExtractToFile(pages[i].Path);
+                    // Still there because it could not be removed at send time: that is the page
+                    // itself. Something else under its name since is not, and the archive is about
+                    // to go, so this page comes back beside it rather than being lost.
+                    if (File.Exists(into))
+                    {
+                        if (new FileInfo(into).Length == entries[i].Length)
+                            continue;
+
+                        into = UniquePath(Path.GetDirectoryName(into)!, Path.GetFileName(into));
+                    }
+
+                    Directory.CreateDirectory(Path.GetDirectoryName(into)!);
+                    entries[i].ExtractToFile(into);
 
                     // The entry times were synthetic, written only to pin page order, so the
                     // real ones come back from what was recorded at send time.
-                    File.SetLastWriteTimeUtc(pages[i].Path, pages[i].Modified);
+                    File.SetLastWriteTimeUtc(into, pages[i].Modified);
                 }
             }
 
