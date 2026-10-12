@@ -11,6 +11,13 @@ public sealed class MyPluginPlugin : IMeowsPlugin
     public string DisplayName => "MyPlugin";
 
     /// <summary>
+    /// What it is in plain words, shown instead of the name when someone switches the cat names
+    /// off, which is how Meows starts: Purrge is Duplicates, Chonk is Disk usage. A key, so it
+    /// is translated.
+    /// </summary>
+    public string PlainName => "PLUGIN-ID.name.plain";
+
+    /// <summary>
     /// A key from the Strings folder, so the card reads in whatever language the window is in.
     /// A plain sentence works too and is shown exactly as written.
     /// </summary>

@@ -270,7 +270,7 @@ public sealed class BotSetupViewModel : ObservableObject
             BotSetup.WriteToken(workspace.Root, TokenInput.Trim());
             // Clear it straight away. No reason to keep it around.
             TokenInput = "";
-            StatusMessage = "Token written to .env";
+            StatusMessage = MeowsText.Current["tp.status.token"];
             _log("Wrote BOT_TOKEN to .env");
             Refresh();
         }

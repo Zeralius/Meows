@@ -85,7 +85,7 @@ public sealed class DeviantArtTarget : OAuthTarget
     {
         var composed = Compose(draft, images);
         if (!composed.CanGo)
-            return PostResult.Failed("The draft does not fit here.");
+            return PostResult.Failed(Meows.Plugins.Abstractions.MeowsText.Current["scruff.post.misfit"]);
 
         try
         {

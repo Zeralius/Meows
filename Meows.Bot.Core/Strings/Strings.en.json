@@ -5,5 +5,11 @@
   "bot.runway.days": "{0} days left",
   "bot.runway.dry": "dry",
   "bot.runway.hours": "{0} hours left",
-  "bot.runway.unscheduled": "not scheduled"
+  "bot.runway.unscheduled": "not scheduled",
+  "bot.slim.cannot": "Not something Portion can shrink.",
+  "bot.slim.nobin": "The original could not be sent to the Recycle Bin.",
+  "bot.slim.notsmall": "Could not make it small enough.",
+  "bot.slim.pages": "The rebuilt comic read back with {0} of {1} pages, so the original was left alone.",
+  "bot.slim.stillthere": "The original is still there, so the new file was not put in its place.",
+  "bot.slim.undecodable": "The shrunk picture did not decode, so the original was left alone."
 }

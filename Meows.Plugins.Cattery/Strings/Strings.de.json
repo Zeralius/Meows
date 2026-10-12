@@ -29,6 +29,7 @@
   "cattery.remote.both": "{0} nicht gepusht, {1} zurück",
   "cattery.remote.even": "gepusht",
   "cattery.remote.none": "kein Upstream",
+  "cattery.root.remove": "In diesem Ordner nicht mehr suchen",
   "cattery.roots": "PROJEKTORDNER",
   "cattery.sort.lastcommit": "Neuester Commit zuerst",
   "cattery.sort.name": "Nach Name",

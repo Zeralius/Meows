@@ -130,11 +130,11 @@ public sealed class MastodonTarget : IApiTarget
     public async Task<PostResult> PostAsync(Draft draft, IReadOnlyList<Outgoing> images, CancellationToken token)
     {
         if (Login is null)
-            return PostResult.Failed("Not signed in.");
+            return PostResult.Failed(Meows.Plugins.Abstractions.MeowsText.Current["scruff.post.signedout"]);
 
         var composed = Compose(draft, images);
         if (!composed.CanGo)
-            return PostResult.Failed("The draft does not fit here.");
+            return PostResult.Failed(Meows.Plugins.Abstractions.MeowsText.Current["scruff.post.misfit"]);
 
         try
         {

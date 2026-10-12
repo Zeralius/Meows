@@ -2,8 +2,8 @@
 
 One issue, one branch, one review. File the issue first (the templates ask for
 everything the work needs), then work on `feature/<n>-<slug>` branched from
-`main`, then open a pull request back to `main`. Nothing lands on `main`
-directly.
+`main`, then open a pull request back to `main`. A contribution lands on
+`main` through its pull request.
 
 ## Scope discipline
 
@@ -34,6 +34,9 @@ suite on the clean tree, restore, and say which it was in the pull request.
 
 ## Versions and docs
 
-Do not bump versions or write changelogs unless asked. Plugin work adds its
-README and its row in the root README table; contract work updates
-PLUGIN-GUIDE.md and the versioning notes in README.md.
+Leave the version and the changelog to the maintainer, who moves the version
+with every change that lands, the way README.md's Versioning section says.
+Plugin work adds its README and its row in the root README table; contract
+work updates PLUGIN-GUIDE.md and the versioning notes in README.md.
+
+String catalogues stay sorted by key, English and German alike.

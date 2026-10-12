@@ -347,13 +347,13 @@ public static class Slimmer
     public static Func<string, string?> RemoveOriginal { get; set; } = path =>
     {
         var outcome = Meows.Disk.RecycleBin.Send([path]);
-        return outcome.Failed > 0 ? outcome.FailureReason ?? "The original could not be sent to the Recycle Bin." : null;
+        return outcome.Failed > 0 ? outcome.FailureReason ?? Meows.Plugins.Abstractions.MeowsText.Current["bot.slim.nobin"] : null;
     };
 
     public static SlimOutcome Shrink(Heavy heavy)
     {
         if (!heavy.CanShrink)
-            return SlimOutcome.Failed("Not something Portion can shrink.", heavy.Size);
+            return SlimOutcome.Failed(Meows.Plugins.Abstractions.MeowsText.Current["bot.slim.cannot"], heavy.Size);
 
         return heavy.Kind == MediaKind.Comic ? ShrinkComic(heavy) : ShrinkPhoto(heavy);
     }
@@ -366,10 +366,10 @@ public static class Slimmer
             var fitted = Preparer.Fit(Preparer.Clean(original), Weigher.PhotoLimits);
 
             if (fitted.Unreadable || fitted.Bytes.LongLength > MediaRules.PhotoLimitBytes || fitted.Bytes.LongLength >= original.LongLength)
-                return SlimOutcome.Failed("Could not make it small enough.", heavy.Size);
+                return SlimOutcome.Failed(Meows.Plugins.Abstractions.MeowsText.Current["bot.slim.notsmall"], heavy.Size);
 
             if (Preparer.Decode(fitted.Bytes) is not { } check)
-                return SlimOutcome.Failed("The shrunk picture did not decode, so the original was left alone.", heavy.Size);
+                return SlimOutcome.Failed(Meows.Plugins.Abstractions.MeowsText.Current["bot.slim.undecodable"], heavy.Size);
             check.Dispose();
 
             var final = Path.ChangeExtension(heavy.Path, fitted.Extension);
@@ -426,7 +426,7 @@ public static class Slimmer
             if (pagesAfter != heavy.Pages)
             {
                 File.Delete(temp);
-                return SlimOutcome.Failed($"The rebuilt comic read back with {pagesAfter} of {heavy.Pages} pages, so the original was left alone.", heavy.Size);
+                return SlimOutcome.Failed(Meows.Plugins.Abstractions.MeowsText.Current.Format("bot.slim.pages", pagesAfter, heavy.Pages), heavy.Size);
             }
 
             return Swap(heavy.Path, heavy.Path, temp, heavy.Size, after);
@@ -461,7 +461,7 @@ public static class Slimmer
         if (failure is not null || File.Exists(original))
         {
             File.Delete(temp);
-            return SlimOutcome.Failed(failure ?? "The original is still there, so the new file was not put in its place.", before);
+            return SlimOutcome.Failed(failure ?? Meows.Plugins.Abstractions.MeowsText.Current["bot.slim.stillthere"], before);
         }
 
         File.Move(temp, final, overwrite: false);

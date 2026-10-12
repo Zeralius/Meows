@@ -5,5 +5,11 @@
   "bot.runway.days": "noch {0} Tage",
   "bot.runway.dry": "leer",
   "bot.runway.hours": "noch {0} Stunden",
-  "bot.runway.unscheduled": "nicht eingeplant"
+  "bot.runway.unscheduled": "nicht eingeplant",
+  "bot.slim.cannot": "Nichts, was Portion verkleinern kann.",
+  "bot.slim.nobin": "Das Original ließ sich nicht in den Papierkorb legen.",
+  "bot.slim.notsmall": "Ließ sich nicht klein genug machen.",
+  "bot.slim.pages": "Der neu gebaute Comic ließ sich mit {0} von {1} Seiten wieder lesen, also blieb das Original unangetastet.",
+  "bot.slim.stillthere": "Das Original ist noch da, also kam die neue Datei nicht an seine Stelle.",
+  "bot.slim.undecodable": "Das verkleinerte Bild ließ sich nicht lesen, also blieb das Original unangetastet."
 }

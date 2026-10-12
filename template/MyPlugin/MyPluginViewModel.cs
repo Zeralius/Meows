@@ -2,7 +2,7 @@ using Meows.Plugins.Abstractions;
 
 namespace MyPlugin;
 
-public sealed class MyPluginViewModel : ObservableObject, IDisposable
+public sealed class MyPluginViewModel : ObservableObject, IDisposable, IGlanceable, ISearchable
 {
     private readonly IMeowsHost _host;
 
@@ -44,6 +44,16 @@ public sealed class MyPluginViewModel : ObservableObject, IDisposable
         _host.Log("MyPlugin said hello.");
         Status = _host.Text.Format("PLUGIN-ID.said", DateTime.Now.ToString("HH:mm:ss"));
     }
+
+    /// <summary>
+    /// The line on this plugin's Home card: what the tab would say if asked "anything?", or null
+    /// until there is news. From memory, never from the disk. Set IsTrouble only for something
+    /// that wants doing.
+    /// </summary>
+    public Glance? Glance() => null;
+
+    /// <summary>Ctrl+K reaching into this tab. Answer from what is already loaded, never from the disk.</summary>
+    public IReadOnlyList<SearchHit> Search(string query, int limit) => [];
 
     public void Dispose() => _language.Dispose();
 }

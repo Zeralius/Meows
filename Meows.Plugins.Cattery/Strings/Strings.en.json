@@ -29,6 +29,7 @@
   "cattery.remote.both": "{0} not pushed, {1} behind",
   "cattery.remote.even": "pushed",
   "cattery.remote.none": "no upstream",
+  "cattery.root.remove": "Stop looking in this folder",
   "cattery.roots": "PROJECT FOLDERS",
   "cattery.sort.lastcommit": "Latest commit first",
   "cattery.sort.name": "By name",

@@ -22,6 +22,7 @@
   "larder.library.free": "{0} free on this drive",
   "larder.library.line": "{0} games, {1}; {2} never launched, {3}",
   "larder.library.missing": "Not there today",
+  "larder.library.remove": "Forget this library",
   "larder.name.plain": "Steam games",
   "larder.never": "{0} never launched, holding {1}.",
   "larder.played.never": "never launched",

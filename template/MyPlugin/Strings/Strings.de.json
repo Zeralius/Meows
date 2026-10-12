@@ -1,7 +1,8 @@
 {
   "PLUGIN-ID.description": "Ein Satz, der auf dem Plugins-Tab steht.",
-  "PLUGIN-ID.title": "MyPlugin",
   "PLUGIN-ID.hello": "Hallo sagen",
-  "PLUGIN-ID.where": "Einstellungen und alles andere Gespeicherte liegen in {0}",
-  "PLUGIN-ID.said": "Um {0} Hallo gesagt. Steht unten rechts im Protokoll."
+  "PLUGIN-ID.name.plain": "Was es tut, in zwei Wörtern",
+  "PLUGIN-ID.said": "Um {0} Hallo gesagt. Steht unten rechts im Protokoll.",
+  "PLUGIN-ID.title": "MyPlugin",
+  "PLUGIN-ID.where": "Einstellungen und alles andere Gespeicherte liegen in {0}"
 }

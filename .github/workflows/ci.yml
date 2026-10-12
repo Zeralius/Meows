@@ -6,6 +6,10 @@ on:
   pull_request:
   workflow_dispatch:
 
+# Reads the code and nothing more.
+permissions:
+  contents: read
+
 jobs:
   build-and-test:
     # Windows is required, not a preference: the app is a WinExe and Purrge deletes through
@@ -13,9 +17,9 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
 
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/setup-dotnet@26b0ec14cb23fa6904739307f278c14f94c95bf1 # v5
         with:
           dotnet-version: '10.0.x'
 
@@ -24,8 +28,9 @@ jobs:
 
       # The whole solution: the shell, every plugin, the tests, and the five under examples/,
       # which are built and smoke-tested here and never staged into a release.
+      # Warnings as errors: the build has none, and a new one should be seen before it lands.
       - name: Build
-        run: dotnet build --no-restore --configuration Release
+        run: dotnet build --no-restore --configuration Release -p:TreatWarningsAsErrors=true
 
       - name: Test
         run: dotnet test --no-build --configuration Release --verbosity normal

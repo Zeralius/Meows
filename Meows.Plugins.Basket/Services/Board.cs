@@ -67,9 +67,12 @@ public static class Board
         if (lists.Count > 0)
             return;
 
-        lists.Add(new BasketList { Title = "To do" });
-        lists.Add(new BasketList { Title = "Doing" });
-        lists.Add(new BasketList { Title = "Done" });
+        // In the language the board is made in. They are the user's titles from then on, so a
+        // German board keeps "Erledigt" after a switch to English, like any list renamed by hand.
+        var text = MeowsText.Current;
+        lists.Add(new BasketList { Title = text["basket.default.todo"] });
+        lists.Add(new BasketList { Title = text["basket.default.doing"] });
+        lists.Add(new BasketList { Title = text["basket.default.done"] });
     }
 
     public static IEnumerable<(BasketList List, BasketCard Card)> AllCards(IEnumerable<BasketList> lists)

@@ -1,7 +1,7 @@
 # Kitten
 
 Makes another one. A developer tool, not a plugin: it writes a new in-tree plugin from a name,
-the way the fifteen before it were written by hand, and then proves the result builds.
+the way the thirty-odd before it were written by hand, and then proves the result builds.
 
 ```bash
 dotnet run --project Meows.Kitten -- Whiskers --plain "Print queue" --icon 🧵 --category group.disk

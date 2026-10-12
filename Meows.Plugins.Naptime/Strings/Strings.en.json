@@ -24,6 +24,8 @@
   "naptime.streak": "{0}-day streak",
   "naptime.summary": "{0} of {1} today, {2} weeks met",
   "naptime.target": "{0}x a week",
+  "naptime.target.down": "Lower the target",
+  "naptime.target.up": "Raise the target",
   "naptime.task.watch": "Naptime, watching the calendar",
   "naptime.title": "Naptime",
   "naptime.untitled": "Something with no name yet",

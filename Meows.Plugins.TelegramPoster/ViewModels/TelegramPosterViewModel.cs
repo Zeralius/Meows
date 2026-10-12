@@ -617,7 +617,7 @@ public sealed class TelegramPosterViewModel : ObservableObject, IDisposable, ISe
             foreach (var group in Groups)
                 group.AcceptChanges();
 
-            StatusMessage = "Saved config.json";
+            StatusMessage = _host.Text["tp.status.saved"];
             _host.Log($"Wrote {_workspace.ConfigPath}");
 
             if (IsBotRunning)

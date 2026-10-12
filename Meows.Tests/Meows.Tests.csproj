@@ -19,8 +19,8 @@
     <!-- Every plugin's view is built, shown and themed for real, without a window. Compiled bindings
          catch a typo; only a running view catches a template that does not resolve or a binding
          that throws when the data arrives. -->
-    <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.1" />
-    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.4" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.4" />
   </ItemGroup>
 
   <ItemGroup>
